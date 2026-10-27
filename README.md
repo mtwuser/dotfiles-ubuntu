@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -165,8 +165,10 @@ cd ~/dotfiles-ubuntu
 │       ├── antigravity-agents.desktop ←   → ~/.local/share/applications/
 │       └── antigravity-ide.desktop    ←   → ~/.local/share/applications/
 │
-├── .github/workflows/
-│   └── ci.yml                         ← GitHub Actions CI verification workflow
+├── .github/
+│   ├── ISSUE_TEMPLATE/                ← GitHub Issue Forms (bug report, feature request, config)
+│   ├── PULL_REQUEST_TEMPLATE.md       ← Pull Request verification checklist
+│   └── workflows/ci.yml               ← GitHub Actions CI verification workflow
 │
 ├── templates/                         ← NOT stow — project starter templates
 │   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (rules, skills, governance)
@@ -201,6 +203,7 @@ cd ~/dotfiles-ubuntu
 ├── audit.sh                           ← detect drift & residual files
 ├── VERSION                            ← semantic version (single source of truth)
 ├── CHANGELOG.md                       ← release history (Keep a Changelog + SemVer)
+├── CODE_OF_CONDUCT.md                 ← Contributor Covenant v2.1
 ├── CONTRIBUTING.md                    ← contribution & architecture guidelines
 ├── SECURITY.md                        ← secret & identity isolation policy
 ├── LICENSE                            ← MIT License
@@ -712,6 +715,6 @@ If you need to track SSH **config** (not keys), create the `ssh/` module with on
 
 ## Versioning, CI & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.0.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.1.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate Bash syntax, Python 3.14 lifecycle hooks (`ruff`), `hooks.json` integrity, `AGENTS.md` token budget (`< 18 KB`), and `SKILL.md` frontmatter (`kebab-case`).
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on adding external package recipes, skills, or lifecycle hooks.

@@ -1,0 +1,31 @@
+name: Feature / Skill / Recipe Request
+description: Propose a new Antigravity skill, lifecycle hook, project template, or external Ubuntu package recipe
+title: "[Feat]: "
+labels: ["enhancement"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Proposal Category
+      options:
+        - "Antigravity 2.0 Global Skill (antigravity/.gemini/config/skills/)"
+        - "Antigravity 2.0 Lifecycle Hook or Universal Rule (AGENTS.md / hooks.json)"
+        - "External Ubuntu Package Recipe (system/external/)"
+        - "Project Starter Template (templates/)"
+        - "System Engine Enhancement (bootstrap.sh / backup.sh / audit.sh)"
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Motivation
+      description: What workflow gap or recurring developer friction does this proposal solve?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Design / Implementation
+      description: Describe how the feature, skill, or recipe should work while respecting repository invariants (zero secrets, token budget < 18 KB for AGENTS.md, GNU Stow tree unfolding).
+    validations:
+      required: true

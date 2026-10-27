@@ -1,0 +1,56 @@
+name: Bug Report
+description: Report a bug in bootstrap/backup/audit scripts, GNU Stow modules, or Antigravity 2.0 hooks & skills
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue! Please ensure no personal secrets, OAuth tokens, or private paths are included in logs.
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which subsystem of `dotfiles-ubuntu` is affected?
+      options:
+        - "Ubuntu System Scripts (bootstrap.sh, backup.sh, audit.sh)"
+        - "External Package Recipes (system/external/)"
+        - "GNU Stow Dotfile Modules (bash/, git/, antigravity/)"
+        - "Antigravity 2.0 Rules & Skills (antigravity/.gemini/config/)"
+        - "Antigravity 2.0 Lifecycle Hooks (hooks.json, scripts/*.py)"
+        - "Project Starter Templates (templates/fastapi-hexagonal/)"
+        - "CI / Verification Scripts (scripts/verify-repo.sh)"
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what happened vs. what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Commands or actions that trigger the issue.
+      placeholder: |
+        1. Run `./bootstrap.sh --antigravity`
+        2. Run `./scripts/audit-global-config.sh`
+        3. Observe output...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: OS & Tooling Environment
+      description: Ubuntu version, Python version, GNU Stow version, and Antigravity surface (Agents / IDE / CLI).
+      placeholder: "Ubuntu 26.04 LTS, Python 3.14, Stow 2.4, Antigravity 2.0"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Output / Logs
+      description: Paste any relevant terminal output or `./scripts/verify-repo.sh` diagnostics (sanitized of personal secrets).
+      render: shell

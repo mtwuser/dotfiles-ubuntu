@@ -7,7 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-10-27
+## [1.1.0] - 2026-10-27
+
+### Added
+- **GitHub Community Standards Completeness**:
+  - `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1).
+  - `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, and `.github/ISSUE_TEMPLATE/config.yml` (structured GitHub Issue Forms with `SECURITY.md` contact link).
+  - `.github/PULL_REQUEST_TEMPLATE.md` with pre-merge verification checklist (`./scripts/verify-repo.sh`, secret isolation, and token budget gate).
+- **Antigravity 2.0 Global Skills & Layer 2 Template Enrichment (`/enrich`)**:
+  - `antigravity/.gemini/config/skills/architecture-review/SKILL.md`: Added the **5-Dimension Pre-Development Gate** (*Normative Specs → Reference Docs → Diagrams → Root Guides/Rules → Future Roadmaps*) and **4 Deterministic Verification Gates** (Zero-Residue Grep, Bilingual Structural Parity, Language Purity, and Relative Link Integrity).
+  - `antigravity/.gemini/config/skills/governance/SKILL.md`: Updated `Part 2` with the **3-Stage Knowledge Extraction & Architectural Integration Pipeline** (*Reference Extraction & Gap Matrix → Normative Specs & Roadmaps → Raw Source Decommissioning*).
+  - `templates/fastapi-hexagonal/rules/testing.md` and `templates/fastapi-hexagonal/skills/testing/SKILL.md`: Added the `1:1 File Mapping & Decommissioning (orphan-test-file)` rule to prevent orphaned test files when removing modules or features.
+  - `scripts/verify-repo.sh`: Extended `[1/6] Open-Source Metadata & SemVer` to verify `CODE_OF_CONDUCT.md`, `.github/PULL_REQUEST_TEMPLATE.md`, and `.github/ISSUE_TEMPLATE/*.yml`.
+
+---
+
+## [1.0.0] - 2026-10-26
 
 ### Added
 - **Declarative Ubuntu 26.04 LTS ("Resolute Raccoon") System Engine**:

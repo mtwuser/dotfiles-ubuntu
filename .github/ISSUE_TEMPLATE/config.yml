@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security Policy & Vulnerability Reporting
+    url: https://github.com/mtwuser/dotfiles-ubuntu/blob/master/SECURITY.md
+    about: Please review SECURITY.md before reporting secret-isolation or credential-handling vulnerabilities.
