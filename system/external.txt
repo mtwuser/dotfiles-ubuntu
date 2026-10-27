@@ -1,0 +1,10 @@
+apt-repo/docker.sh
+apt-repo/google-chrome.sh
+apt-repo/google-cloud-cli.sh
+apt-repo/protonvpn.sh
+deb-url/autofirma.sh
+deb-url/discord.sh
+deb-url/proton-mail.sh
+deb-url/proton-pass.sh
+script/antigravity-agents.sh
+script/antigravity-ide.sh

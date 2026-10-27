@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Antigravity IDE
+Comment=Google Antigravity IDE v2.0
+Exec=/opt/antigravity-ide/antigravity-ide
+Icon=/opt/antigravity-ide/resources/app/resources/linux/code.png
+Type=Application
+Terminal=false
+Categories=Development;IDE;
+MimeType=application/x-antigravity-workspace;

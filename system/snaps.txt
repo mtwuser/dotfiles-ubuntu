@@ -1,0 +1,9 @@
+canonical-livepatch
+desktop-security-center
+firefox
+firmware-updater
+libreoffice
+prompting-client
+snap-store
+snapd-desktop-integration
+spotify

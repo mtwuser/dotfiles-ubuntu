@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Antigravity Agents
+Comment=Google Antigravity Agents v2.0
+Exec=/opt/antigravity-agents/antigravity
+Icon=applications-development
+Type=Application
+Terminal=false
+Categories=Development;IDE;
+MimeType=application/x-antigravity-workspace;

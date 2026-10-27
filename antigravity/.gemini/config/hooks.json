@@ -1,0 +1,48 @@
+{
+  "pre-tool-guard": {
+    "PreToolUse": [
+      {
+        "matcher": "write_file|edit_file|replace_file_content|multi_replace_file_content|write_to_file|run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/pre_tool_guard.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "auto-format": {
+    "PostToolUse": [
+      {
+        "matcher": "edit_file|write_file|replace_file_content|multi_replace_file_content|write_to_file",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/post_edit_format.py",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "verify-tests": {
+    "Stop": [
+      {
+        "type": "command",
+        "command": "./scripts/stop_verify_tests.py",
+        "timeout": 150
+      }
+    ]
+  },
+  "lint-check": {
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "./scripts/post_invocation_lint.py",
+        "timeout": 15
+      }
+    ]
+  }
+}

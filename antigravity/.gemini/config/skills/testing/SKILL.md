@@ -1,0 +1,109 @@
+---
+name: testing
+description: "Use when writing new tests, auditing test suites for quality, or consolidating tests during refactors. Covers AAA pattern, mock strategies, naming conventions, and coverage audits."
+---
+
+# How to Write and Audit Tests
+
+## Part 1 — Writing Tests
+
+### Test Writing Standards (AAA / DAMP)
+
+All tests follow the **AAA pattern**:
+1. **Arrange** (`# Arrange`) — set up state and mocks
+2. **Act** (`# Act`) — execute the single action
+3. **Assert** (`# Assert`) — verify the result
+
+**Explicit AAA comment separation**: Always write `# Arrange`, `# Act`, and `# Assert` as **three separate comments** in every test method. Never combine them into `# Arrange & Act` or `# Act & Assert` (which violates automated test linters such as `check_tests`).
+**DAMP over DRY**: Each test should be readable top-to-bottom. Use literal values; do not use computed expectations.
+Every test class and method **MUST** have a docstring explaining _what_ it's testing and _why_.
+
+### Service Constructor Rule — CRITICAL
+
+> **Every service constructor MUST inject mocked dependencies unless the test exercises that dependency.**
+
+This applies to **all** test tiers. Services often create other services in `__init__`. Bare `MyService()` instantiates the entire dependency tree with real imports — this is the #1 cause of slow tests.
+
+```
+# ❌ WRONG — ExternalService() imports heavy dependencies (~20s)
+factory = FactoryService()
+
+# ✅ RIGHT — Inject mock, no real imports
+factory = FactoryService(external_service=mock())
+```
+
+**Self-check**: Does the constructor create other objects? If yes → mock or inject them.
+
+### Patch Targets
+- Patch where the object is **looked up at runtime**. When a module uses `from source import func`, patch at `consumer.func` (the consumer holds its own reference). When it uses `import source` and calls `source.func`, patch at `source.func`.
+- When code moves between modules, ALL patch targets in tests must be updated.
+
+### Test Naming Convention
+
+Test files: `test_{source_file}.py` (or equivalent for your stack).
+Test classes: `Test{SourceClassName}` — ONE class per test file. NEVER append suffixes like `Coverage`, `Expanded`, `Extended`.
+Test methods: `test_<method>_<scenario>_<expected>`.
+
+### Anti-Characterization Trap — CRITICAL
+
+When adding tests to close coverage gaps on pre-existing code:
+1. **Cross-check the caller/template contract**: Before writing a router or service test, check the HTML template (`hx-post`, `hx-get`, `hx-target`) and project rules. If an HTMX endpoint returns JSON or a missing ID returns `200 {"error": ...}`, **fix the production code first** — never write a test that locks in the bug.
+2. **Never mutate existing test scenarios for branch coverage**: If a loop branch requires multiple items to execute, add a new test method (`test_<method>_second_item`) instead of altering an existing single-item test.
+
+---
+
+## Part 2 — Auditing and Consolidating Tests
+
+> **When to use**: Use this skill when asked to review, align, or consolidate tests for a module, or when migrating tests during a code refactor.
+
+### Test Consolidation Checklist
+
+When asked to consolidate tests, follow these phases strictly:
+
+**Phase 1 — Scope (Know what to ignore)**
+
+// delegate: flash
+1. **Identify excluded directories**: Framework-generated boilerplate (admin, config, migrations) and ops-only management commands. Skip testing these entirely.
+2. **Identify testable base files**: All logic files NOT in the standard coverage omit list.
+
+**Phase 2 — Classification Audit**
+Find and fix misclassifications:
+3. **Database access in unit tier**: If a test uses real database calls, migrate it to an integration tier.
+4. **Mocking in integration tier**: If an integration test uses `@patch` to mock database objects, it is a disguised unit test. Convert it or delete it if redundant.
+
+**Phase 3 — Structural Verification**
+
+// delegate: flash
+5. **File mapping (logic files only)**: Ensure every source file with **executable logic** has a corresponding test file. Purely declarative schema/model files without custom methods or validators and trivial 1-line DI singleton getters already covered by router/controller tests should NOT have artificial test files that only test framework/ORM/Pydantic defaults.
+6. **One Class per File**: All test methods within the file MUST reside under a single class named `Test{SourceClassName}`. Fragmented mini-classes are strictly forbidden.
+7. **File placement**: Test content matches the file name (no view tests living inside model test files).
+8. **No redundancy**: Unit + integration should together cover 100%. No single line should be redundantly tested in both tiers if a mock solves it in unit.
+
+**Phase 4 — Execution & Verification**
+9. Run full test suite → 0 failures, 100% coverage maintained.
+10. Ensure performance metrics stay fast (e.g., `< 1s` per unit test).
+
+**Phase 5 — Diagnosing False-Positive Coverage & Drops**
+11. **The 100% Coverage Illusion**: If the suite shows 100% coverage but contains failing tests, it usually means a unit test is correctly covering the logic, while an outdated integration test executes the same path and fails. **Solution**: Purge the redundant integration test.
+12. **Transitive Coverage Drops**: If deleting an integration test drops coverage in an unrelated file, it means the integration test was organically covering that file while its native unit tests were incomplete. **Solution**: Restore the coverage organically by writing the missing native unit tests.
+
+### Refactoring Tests (File Migrations)
+
+When moving source files between modules, **tests MUST be migrated in the same changeset.** A test count decrease after a refactor implies orphaned tests.
+
+#### Unit Tests (Low Risk)
+1. Move the test file alongside the source file.
+2. Update all import paths inside the test file to point to the new source module.
+3. Update all `@patch` targets to reflect the new module path.
+
+#### Integration Tests (Higher Risk)
+1. Search for ALL integration test files referencing the moved module.
+2. Update all imports and patch targets in affected test files.
+3. If an integration test now covers lines that could easily be covered by unit mocks, convert it to a unit test.
+
+#### Post-Refactor Verification
+1. **Pure Refactor**: Test count must equal or exceed the pre-refactor count.
+2. **Feature Decommissioning**: When production modules, classes, or endpoints are intentionally deleted, purge their corresponding unit test files (`orphan-test-file` gate) and obsolete test methods in the same changeset (`skills/refactoring/SKILL.md` §Code Decommissioning).
+3. **Default-Parameter Sensitivity**: Never rely on default parameter values alone to satisfy 100% line/branch coverage. When a function computes a hash, query filter, or state transition over fields with defaults, include explicit tests proving that mutating each field changes the output.
+4. Compare coverage before and after. Any new uncovered lines correlate to a missed test migration.
+5. Verify no orphaned test files exist. Every unit test file must map to an actual current source file.
