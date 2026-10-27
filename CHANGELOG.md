@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-10-27
+
+### Added
+- **Accessibility Statement (`ACCESSIBILITY.md`)**:
+  - Added `ACCESSIBILITY.md` documenting terminal screen-reader compatibility, color-independent CLI status output, keyboard-only and non-interactive script execution, GNOME `a11y` dconf preservation, known limitations, and barrier reporting guidelines.
+  - Updated `scripts/verify-repo.sh` and `README.md` to track and verify `ACCESSIBILITY.md`.
+
+---
+
 ## [1.1.0] - 2026-10-27
 
 ### Added
