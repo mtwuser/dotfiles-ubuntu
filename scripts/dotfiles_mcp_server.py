@@ -397,11 +397,17 @@ def _read_os_pretty_name(os_release: Path | None = None) -> str:
     return f"{platform.system()} {platform.release()}"
 
 
+def _is_running_in_container(marker_path: Path | None = None) -> bool:
+    marker = marker_path or Path("/.dockerenv")
+    return marker.is_file()
+
+
 def _read_git_commit(repo_dir: Path | None = None) -> str:
     base_dir = repo_dir or REPO_DIR
+    env_fallback = os.environ.get("DOTFILES_GIT_COMMIT", "").strip()
     git_bin = shutil.which("git")
     if not git_bin:
-        return "unknown"
+        return env_fallback or "unknown"
     try:
         proc = subprocess.run(  # noqa: S603
             [git_bin, "rev-parse", "--short", "HEAD"],
@@ -415,7 +421,7 @@ def _read_git_commit(repo_dir: Path | None = None) -> str:
             return proc.stdout.strip()
     except OSError:
         pass
-    return "unknown"
+    return env_fallback or "unknown"
 
 
 def _parse_skill_frontmatter(skill_md: Path, repo_dir: Path | None = None) -> dict[str, Any]:
@@ -674,6 +680,7 @@ class DotfilesMCPServer:
                 "layer_role": manifest.get("layer_role", "workstation"),
                 "description": manifest.get("description", ""),
                 "hostname": socket.gethostname(),
+                "in_container": _is_running_in_container(),
                 "os_pretty_name": _read_os_pretty_name(),
                 "python_version": platform.python_version(),
                 "git_commit": _read_git_commit(self.repo_dir),
@@ -895,6 +902,7 @@ class DotfilesMCPServer:
                 "layer_id": manifest.get("layer_id"),
                 "layer_role": manifest.get("layer_role"),
                 "hostname": socket.gethostname(),
+                "in_container": _is_running_in_container(),
                 "os_pretty_name": _read_os_pretty_name(),
                 "git_commit": _read_git_commit(target_dir),
                 "manifest_counts": {
@@ -1735,21 +1743,41 @@ def main(argv: list[str] | None = None) -> int:
         help="Disable writing mcp_events.jsonl and mcp_alerts.jsonl to disk.",
     )
     args = parser.parse_args(argv)
+    resolved_layer_id = args.layer_id or os.environ.get("DOTFILES_LAYER_ID") or None
+    resolved_layer_role = args.layer_role or os.environ.get("DOTFILES_LAYER_ROLE") or None
 
     if args.self_test:
-        with tempfile.TemporaryDirectory() as tmp_log:
-            test_log_dir = None if args.no_log else Path(args.log_dir or tmp_log)
-            server = DotfilesMCPServer(
-                repo_dir=REPO_DIR,
-                layer_id_override=args.layer_id,
-                layer_role_override=args.layer_role,
-                log_dir=test_log_dir,
+        if args.no_log:
+            return run_self_test(
+                DotfilesMCPServer(
+                    repo_dir=REPO_DIR,
+                    layer_id_override=resolved_layer_id,
+                    layer_role_override=resolved_layer_role,
+                    log_dir=None,
+                )
             )
-            rc = run_self_test(server)
-            if test_log_dir is not None:
+        try:
+            with tempfile.TemporaryDirectory() as tmp_log:
+                test_log_dir = Path(args.log_dir or tmp_log)
+                server = DotfilesMCPServer(
+                    repo_dir=REPO_DIR,
+                    layer_id_override=resolved_layer_id,
+                    layer_role_override=resolved_layer_role,
+                    log_dir=test_log_dir,
+                )
+                rc = run_self_test(server)
                 _require((test_log_dir / "mcp_events.jsonl").is_file(), "Missing mcp_events.jsonl")
                 _require((test_log_dir / "mcp_alerts.jsonl").is_file(), "Missing mcp_alerts.jsonl")
-            return rc
+                return rc
+        except OSError:
+            return run_self_test(
+                DotfilesMCPServer(
+                    repo_dir=REPO_DIR,
+                    layer_id_override=resolved_layer_id,
+                    layer_role_override=resolved_layer_role,
+                    log_dir=None,
+                )
+            )
 
     resolved_log_dir = (
         None
@@ -1758,8 +1786,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     server = DotfilesMCPServer(
         repo_dir=REPO_DIR,
-        layer_id_override=args.layer_id,
-        layer_role_override=args.layer_role,
+        layer_id_override=resolved_layer_id,
+        layer_role_override=resolved_layer_role,
         log_dir=resolved_log_dir,
     )
     run_stdio_loop(server)

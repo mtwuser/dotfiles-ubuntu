@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import json
 import subprocess
+import tempfile
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
@@ -59,16 +60,27 @@ def test_read_os_pretty_name_fallback_when_file_missing_or_without_key(tmp_path:
 
 
 def test_read_git_commit_handles_missing_git_and_oserror(
+    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
     monkeypatch.setattr("shutil.which", lambda _name: None)
+    monkeypatch.delenv("DOTFILES_GIT_COMMIT", raising=False)
+    fake_marker = tmp_path / ".dockerenv"
+    fake_marker.write_text("", encoding="utf-8")
 
     # Act
     no_git_result = dotfiles_mcp_server._read_git_commit()
+    monkeypatch.setenv("DOTFILES_GIT_COMMIT", "abc1234")
+    env_fallback_result = dotfiles_mcp_server._read_git_commit()
+    in_container_true = dotfiles_mcp_server._is_running_in_container(fake_marker)
+    in_container_false = dotfiles_mcp_server._is_running_in_container(tmp_path / "missing")
 
     # Assert
     assert no_git_result == "unknown"
+    assert env_fallback_result == "abc1234"
+    assert in_container_true is True
+    assert in_container_false is False
 
 
 def test_read_git_commit_handles_nonzero_and_oserror_with_git_present(
@@ -579,9 +591,14 @@ def test_main_runs_self_test_and_stdio_loop(monkeypatch: pytest.MonkeyPatch) -> 
         lambda _srv: called_stdio.append(True),
     )
 
+    def _raise_ro_oserror(*_args: object, **_kwargs: object) -> object:
+        raise OSError("Read-only file system")
+
     # Act
     rc_self_test = dotfiles_mcp_server.main(["--self-test"])
     rc_self_test_no_log = dotfiles_mcp_server.main(["--self-test", "--no-log"])
+    monkeypatch.setattr(tempfile, "TemporaryDirectory", _raise_ro_oserror)
+    rc_self_test_ro = dotfiles_mcp_server.main(["--self-test"])
     rc_stdio = dotfiles_mcp_server.main(
         ["--layer-id", "test-layer", "--layer-role", "team", "--no-log"]
     )
@@ -589,6 +606,7 @@ def test_main_runs_self_test_and_stdio_loop(monkeypatch: pytest.MonkeyPatch) -> 
     # Assert
     assert rc_self_test == 0
     assert rc_self_test_no_log == 0
+    assert rc_self_test_ro == 0
     assert rc_stdio == 0
     assert called_stdio == [True]
 

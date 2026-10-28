@@ -104,7 +104,7 @@ for module_dir in */; do
       warn "[$module_name] ~/$relpath → missing"
       STOW_ISSUES=$((STOW_ISSUES + 1))
     fi
-  done < <(find "$module_name" -type f -not -path '*/.git/*' -printf '%P\n')
+  done < <(find "$module_name" -type f -not -path '*/.git/*' -not -path '*/__pycache__/*' -not -name '*.pyc' -printf '%P\n')
 done
 
 if [ "$STOW_ISSUES" -eq 0 ]; then

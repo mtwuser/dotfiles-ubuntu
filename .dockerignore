@@ -1,0 +1,27 @@
+# Git metadata (commit SHA is injected via --build-arg GIT_COMMIT)
+.git/
+.gitignore
+
+# Local virtual environments & test/linter caches
+venv/
+.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+**/*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+tests/
+
+# Runtime logs & machine-local backups/secrets
+logs/
+*.backup.*
+**/*.backup.*
+.bashrc.local
+.gitconfig.local
+.audit-ignore
+.env
+.env.*

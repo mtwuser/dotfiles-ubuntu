@@ -1,8 +1,11 @@
-.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all clean
+.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
 PYTHON ?= python3
 VENV_DIR ?= venv
 VENV_BIN := $(VENV_DIR)/bin
+DOCKER_IMAGE ?= dotfiles-ubuntu-mcp
+DOCKER_TAG ?= $(shell tr -d '[:space:]' < VERSION)
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 help:
 	@echo "dotfiles-ubuntu development & verification targets:"
@@ -19,6 +22,9 @@ help:
 	@echo "  make audit            Run read-only system & symlink drift audit (./audit.sh)"
 	@echo "  make layer-list       List mounted git subtree context layers (./scripts/layer-subtree.sh list)"
 	@echo "  make layer-pull-all   Pull latest changes across all mounted layers/* subtrees"
+	@echo "  make docker-build     Build the hermetic Ubuntu 26.04 MCP container image ($(DOCKER_IMAGE):$(DOCKER_TAG))"
+	@echo "  make docker-self-test Run in-container MCP self-test (--read-only --network=none)"
+	@echo "  make docker-mcp       Start interactive stdio MCP server inside hardened container"
 	@echo "  make clean            Remove caches, coverage artifacts, and ./venv"
 
 $(VENV_BIN)/pytest:
@@ -70,6 +76,15 @@ layer-list:
 
 layer-pull-all:
 	./scripts/layer-subtree.sh pull-all
+
+docker-build:
+	docker build --build-arg GIT_COMMIT=$(GIT_COMMIT) -t $(DOCKER_IMAGE):$(DOCKER_TAG) -t $(DOCKER_IMAGE):latest .
+
+docker-self-test:
+	docker run --rm --read-only --network=none --cap-drop=ALL $(DOCKER_IMAGE):latest --self-test --no-log
+
+docker-mcp:
+	docker run -i --rm --read-only --network=none --cap-drop=ALL $(DOCKER_IMAGE):latest --no-log
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov logs

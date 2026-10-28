@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-10-28
+
+### Added
+- **Docker Containerization for Contextual MCP Hub & Multi-Stage Sidecar Injection (`Dockerfile`, `.dockerignore`, `Makefile`)**:
+  - Added an official, hardened `ubuntu:26.04` `Dockerfile` (non-root `USER ubuntu`, build-time `dotfiles_mcp_server.py --self-test` & `layer-subtree.sh list` verification gates, optional `INSTALL_RUNTIME_DEPS` and `MCP_ENV` build args) and `.dockerignore` supporting three complementary Docker MCP deployment architectures:
+    1. **Pattern A — Standalone Hermetic MCP Hub (`docker run -i --rm`)**: Zero-install distribution of Corporate, Departmental, and Team context layers (including pre-mounted `layers/*` subtrees) in a kernel-isolated sandbox (`--read-only --network=none --cap-drop=ALL`).
+    2. **Pattern B — Multi-Stage Sidecar Injection (`COPY --from=dotfiles-ubuntu-mcp /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu` + `docker exec -i`)**: Injects governance layers into `tst`/`pre`/`pro` microservice images in a single `Dockerfile` line without requiring Git SSH keys or tokens during `docker build`, enabling live `audit_node_drift` inside the running service container.
+    3. **Pattern C — Local Compose / Devcontainer Bind-Mount (`-v ~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro` + `docker exec -i`)**: Zero-rebuild live introspection of local `dev` containers.
+  - Added `make docker-build`, `make docker-self-test`, and `make docker-mcp` targets in `Makefile`.
+  - Extended `scripts/dotfiles_mcp_server.py` with container runtime detection (`in_container` in `dotfiles://layer/identity` and `get_layer_overview`), `DOTFILES_GIT_COMMIT` fallback when `.git/` is excluded by `.dockerignore`, and `DOTFILES_LAYER_ID` / `DOTFILES_LAYER_ROLE` environment variable overrides.
+  - Extended `scripts/verify-repo.sh`, `tests/unit/test_dotfiles_mcp_server.py`, and `tests/imp/test_cli_scripts.py` to validate the `Dockerfile` and container runtime contracts at **100.00% statement and branch coverage** (`88 passed`).
+
+---
+
 ## [1.5.0] - 2026-10-28
 
 ### Added

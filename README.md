@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -170,7 +170,7 @@ Tier 3: Application Development Repositories (e.g., checkout-service, billing-ap
 | Perspective | How It Works | When a Company Should Use It |
 |-------------|--------------|------------------------------|
 | **Mode A — Without MCP**<br>*(Pure Git + GNU Stow + Templates)* | 1. Company forks `dotfiles-ubuntu` $\rightarrow$ Teams fork the Corporate repo.<br>2. Developers clone their Team fork (`~/dotfiles-ubuntu`) and run `./bootstrap.sh --antigravity`.<br>3. GNU Stow links `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` locally.<br>4. Application repos copy `templates/<stack>/` into `<app>/.agents/`.<br>5. Sync runs via `/sopen` (`git pull`) and `/enrich` (upward PRs). | Ideal for organizations wanting **zero MCP server configuration** and 100% local file-based rules, deterministic lifecycle hooks, and stack templates. |
-| **Mode B — With MCP**<br>*(Contextual MCP Server + `git subtree` `layers/*` + `dev/tst/pre/pro`)* | Everything in Mode A **plus**:<br>1. Team/Workstation forks mount Departmental & Sibling-Service forks into `layers/<name>/` via `./scripts/layer-subtree.sh add` (`0 bytes` added to `always_on` `AGENTS.md`).<br>2. `scripts/dotfiles_mcp_server.py` runs over `stdio` (locally, via `docker exec -i`, or via `ssh`).<br>3. Agents query cross-layer rules (`layer="all"`), audit container drift, and discover `dev/tst/pre/pro` MCPs with inherited `effective_guardrails` and JSONL audit logs (`logs/mcp_*.jsonl`). | Ideal when applications cross **multiple departments** (Security, Data, SRE), **multiple microservices/containers**, or **multiple environments (`dev/tst/pre/pro`)** and need on-demand context without exceeding the 20,000-token rule budget. |
+| **Mode B — With MCP**<br>*(Contextual MCP Server + `git subtree` `layers/*` + `dev/tst/pre/pro` + Docker)* | Everything in Mode A **plus**:<br>1. Team/Workstation forks mount Departmental & Sibling-Service forks into `layers/<name>/` via `./scripts/layer-subtree.sh add` (`0 bytes` added to `always_on` `AGENTS.md`).<br>2. `scripts/dotfiles_mcp_server.py` runs over `stdio` (locally, as a standalone hermetic Hub container via `docker run -i --rm`, inside microservice containers via `COPY --from` + `docker exec -i` or `-v :ro`, or via `ssh`).<br>3. Agents query cross-layer rules (`layer="all"`), audit container drift, and discover `dev/tst/pre/pro` MCPs with inherited `effective_guardrails` and JSONL audit logs (`logs/mcp_*.jsonl`). | Ideal when applications cross **multiple departments** (Security, Data, SRE), **multiple microservices/containers**, or **multiple environments (`dev/tst/pre/pro`)** and need on-demand context without exceeding the 20,000-token rule budget. |
 
 #### Quick Integration Sequence for a Company
 
@@ -289,7 +289,9 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── bootstrap.sh                       ← restore system from manifests
 ├── backup.sh                          ← capture current system state
 ├── audit.sh                           ← detect drift & residual files
-├── Makefile                           ← dev/test automation (make install, install-runtime, test-cov, lint, verify)
+├── Dockerfile                         ← Ubuntu 26.04 MCP container (docker run -i --rm & multi-stage COPY --from)
+├── .dockerignore                      ← clean container build context filter
+├── Makefile                           ← dev/test/docker automation (make install, test-cov, lint, verify, docker-build)
 ├── pyproject.toml                     ← pytest, 100% branch coverage, ruff & mypy --strict config
 ├── requirements.txt                   ← base runtime dependencies (0 packages in upstream; extensible in forks)
 ├── requirements-dev.txt               ← dev/test dependencies (-r requirements.txt + pytest, pytest-cov, ruff, mypy)
@@ -855,18 +857,21 @@ make lint
 
 # 4. Run the complete 8-stage repository & CI verification suite
 make verify
+
+# 5. (Optional) Build and verify the hermetic Ubuntu 26.04 MCP Docker image
+make docker-build && make docker-self-test
 ```
 
 ### Versioning & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.5.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.6.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
-  1. Open-source metadata, SemVer sync, and all relative Markdown links across `.md` files.
+  1. Open-source metadata, SemVer sync, `Dockerfile` / `.dockerignore`, and all relative Markdown links across `.md` files.
   2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.
   3. Python lifecycle hooks and MCP server compilation, `ruff check`, and `mypy --strict` (0 errors).
   4. `hooks.json` schema and script target resolution.
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
-  7. Contextual MCP Server & Subtree Orchestrator (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1).
+  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1; Ubuntu 26.04 non-root `Dockerfile`).
   8. Automated test suite (`tests/unit/` + `tests/imp/` + `tests/e2e/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.

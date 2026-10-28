@@ -249,3 +249,29 @@ def test_layer_subtree_auto_resolves_upstream_url_for_pull_push_and_pull_all(
         "[dry-run] git subtree pull --prefix=layers/dept-data "
         "https://example.com/dept-data.git main --squash" in pull_all.stdout
     )
+
+
+def test_dockerfile_dockerignore_and_makefile_docker_targets_contract() -> None:
+    # Arrange
+    dockerfile = REPO_DIR / "Dockerfile"
+    dockerignore = REPO_DIR / ".dockerignore"
+    makefile = REPO_DIR / "Makefile"
+
+    # Act
+    df_text = dockerfile.read_text(encoding="utf-8")
+    di_text = dockerignore.read_text(encoding="utf-8")
+    mk_text = makefile.read_text(encoding="utf-8")
+
+    # Assert
+    assert "FROM ubuntu:26.04" in df_text
+    assert "WORKDIR /opt/dotfiles-ubuntu" in df_text
+    assert "USER ubuntu" in df_text
+    assert (
+        'ENTRYPOINT ["python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]' in df_text
+    )
+    assert ".git/" in di_text
+    assert "venv/" in di_text
+    assert "tests/" in di_text
+    assert "docker-build:" in mk_text
+    assert "docker-self-test:" in mk_text
+    assert "docker-mcp:" in mk_text

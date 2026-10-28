@@ -93,11 +93,12 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 2. **Customizing Layer Identity, Mounted Subtrees & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
    - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, or `workstation`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
    - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
-3. **Run the Deterministic MCP & Subtree Self-Tests**:
+3. **Run the Deterministic MCP, Subtree & Container Self-Tests**:
    ```bash
    ./scripts/layer-subtree.sh list
    ./scripts/layer-subtree.sh pull-all
    ./scripts/dotfiles_mcp_server.py --self-test
+   make docker-build && make docker-self-test
    ./scripts/verify-repo.sh
    ```
 

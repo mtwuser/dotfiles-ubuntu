@@ -139,19 +139,92 @@ Add `dotfiles-ubuntu` under `"mcpServers"`:
 
 ---
 
-### 3.3. Configure Across Docker Containers / Devcontainers (`docker exec -i`)
+### 3.3. Three Docker MCP Deployment Patterns (`Dockerfile`: `docker run -i --rm`, `COPY --from` + `docker exec -i`, & Bind-Mount `-v :ro`)
 
-If your architecture runs multiple containers (for example, `checkout-api` and `payment-worker`) that include a copy or fork of `dotfiles-ubuntu` at `/opt/dotfiles-ubuntu`, your host IDE can connect to **each container's MCP server directly over `docker exec -i`** — without exposing any HTTP ports inside the containers:
+`dotfiles-ubuntu` ships with an official, hardened Ubuntu 26.04 [`Dockerfile`](../../Dockerfile) (`make docker-build`, `make docker-self-test`, `make docker-mcp`) and [`.dockerignore`](../../.dockerignore) that enable **three complementary Docker architectures** depending on whether you need a **portable Governance Hub** or **live inside-container drift inspection**:
+
+```mermaid
+flowchart LR
+    IDE["🤖 IDE / AI Agent\n(Antigravity · Copilot · Cursor)"]
+
+    subgraph PatA["Pattern A: Standalone Hermetic MCP Hub (docker run -i --rm)"]
+        HubImg["🐳 Image: dotfiles-ubuntu-mcp:latest\n• Pre-packages Corporate + layers/dept-* subtrees\n• Runs with --read-only --network=none --cap-drop=ALL\n• Zero local git clone or Python setup required"]
+    end
+
+    subgraph PatB["Pattern B: Multi-Stage Sidecar Injection (COPY --from + docker exec -i)"]
+        AppImg["📦 Running Service Container: checkout-api\n• Dockerfile: COPY --from=dotfiles-ubuntu-mcp /opt/dotfiles-ubuntu\n  (Zero Git SSH keys/tokens needed during docker build!)\n• Runs audit_node_drift inside the live service container"]
+    end
+
+    subgraph PatC["Pattern C: Local Compose Bind-Mount (-v :ro + docker exec -i)"]
+        DevCont["🛠️ Local Devcontainer / Compose Service\n• Volume: ~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro\n• Instant live updates without rebuilding images"]
+    end
+
+    IDE <-->|"stdio: docker run -i --rm"| PatA
+    IDE <-->|"stdio: docker exec -i"| PatB
+    IDE <-->|"stdio: docker exec -i"| PatC
+```
+
+#### Pattern A — Standalone Hermetic MCP Hub Container (`docker run -i --rm`)
+Build the repository (including any mounted `layers/*` subtrees) into a self-contained image:
+
+```bash
+cd ~/dotfiles-ubuntu
+make docker-build        # Builds dotfiles-ubuntu-mcp:<version> and :latest
+make docker-self-test    # Verifies MCP self-test inside --read-only --network=none container
+```
+
+Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent can run the Corporate/Team/Departmental MCP Hub in a **kernel-isolated sandbox** (`--read-only --network=none --cap-drop=ALL`) without cloning the repositories locally:
 
 ```json
 {
   "mcpServers": {
-    "dotfiles-host": {
-      "command": "python3",
+    "dotfiles-hermetic-hub": {
+      "command": "docker",
       "args": [
-        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+        "run",
+        "-i",
+        "--rm",
+        "--read-only",
+        "--network=none",
+        "--cap-drop=ALL",
+        "dotfiles-ubuntu-mcp:latest",
+        "--no-log"
       ]
-    },
+    }
+  }
+}
+```
+
+> **Optional Persistent Logs in Pattern A**: If you want the hermetic container to write `mcp_events.jsonl` and `mcp_alerts.jsonl` to your host, mount a host log directory (`"-v", "/home/<your-user>/dotfiles-ubuntu/logs:/opt/dotfiles-ubuntu/logs"`) and omit `"--no-log"`.
+
+#### Pattern B — Multi-Stage Sidecar Injection into Microservice Containers (`COPY --from` + `docker exec -i`)
+When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` to inspect the **actual runtime environment inside a microservice container** (`checkout-api`, `payment-worker`), you don't need to run `git clone` (or pass private Git SSH keys/tokens) inside the microservice's `Dockerfile`. Instead, copy `/opt/dotfiles-ubuntu` from your `dotfiles-ubuntu-mcp` image in a single line:
+
+```dockerfile
+# Inside checkout-api/Dockerfile:
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:1.6.0 AS governance-layer
+
+FROM ubuntu:26.04
+# ... install checkout-api runtime packages ...
+COPY --from=governance-layer /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu
+```
+
+#### Pattern C — Local Docker Compose / Devcontainer Bind-Mount (`-v :ro` + `docker exec -i`)
+During local `dev` with Docker Compose, you can mount your local `~/dotfiles-ubuntu` directly into any running service container without modifying its `Dockerfile`:
+
+```yaml
+# Inside docker-compose.yml:
+services:
+  checkout-api:
+    volumes:
+      - ~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro
+```
+
+For both **Pattern B** and **Pattern C**, your host IDE connects to each running service container over `docker exec -i` (zero open network ports):
+
+```json
+{
+  "mcpServers": {
     "dotfiles-container-api": {
       "command": "docker",
       "args": [
@@ -159,7 +232,8 @@ If your architecture runs multiple containers (for example, `checkout-api` and `
         "-i",
         "checkout-api-container",
         "python3",
-        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py",
+        "--no-log"
       ]
     },
     "dotfiles-container-worker": {
@@ -169,16 +243,19 @@ If your architecture runs multiple containers (for example, `checkout-api` and `
         "-i",
         "payment-worker-container",
         "python3",
-        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py",
+        "--no-log"
       ]
     }
   }
 }
 ```
 
-**Why this pattern is powerful for containerized microservices**:
-- Each container runs `audit_node_drift` **inside its own container namespace**, reporting the exact APT packages, Python/Node runtimes, and configuration files present inside that container.
-- Zero network surface area: communication flows entirely through Docker's local `stdio` pipe.
+| Docker Pattern | Primary Goal | Can Inspect Host/Service APT Drift? | Requires Local Clone on Host? |
+|----------------|--------------|:-----------------------------------:|:-----------------------------:|
+| **Pattern A (`docker run -i --rm`)** | Zero-install distribution & hermetic sandbox for Corporate/Departmental/Team rules, `docs/`, `layers/*`, & federated MCP discovery | Inspects the Hub image itself (`in_container: true`) | **No** (runs directly from registry image) |
+| **Pattern B (`COPY --from` + `docker exec -i`)** | Bake layer context into `tst`/`pre`/`pro` microservice images without Git credentials during `docker build` | **Yes** — audits the live microservice container (`in_container: true`) | **No** |
+| **Pattern C (`-v :ro` + `docker exec -i`)** | Zero-rebuild live introspection of local `dev` containers | **Yes** — audits the live `dev` container using host's latest `~/dotfiles-ubuntu` | **Yes** (`~/dotfiles-ubuntu` mounted `:ro`) |
 
 ---
 

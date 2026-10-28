@@ -1,6 +1,6 @@
 [project]
 name = "dotfiles-ubuntu"
-version = "1.5.0"
+version = "1.6.0"
 description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 governance suite, and Contextual MCP Server"
 readme = "README.md"
 license = { file = "LICENSE" }
