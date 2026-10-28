@@ -1,6 +1,6 @@
 # Architecture 03: Contextual Layer & System MCP Server (`dotfiles-mcp`)
 
-> **Normative Specification — Subsystem 3 (`scripts/dotfiles_mcp_server.py` & `system/mcp-layer.json`)**
+> **Normative Specification — Subsystem 3 ([`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py) & [`system/mcp-layer.json`](../../system/mcp-layer.json))**
 >
 > This document defines the technical specification, protocol contracts (`Resources`, `Tools`, `Prompts`), security invariants, and federation schema for operating any `dotfiles-ubuntu` instance or fork as a **Model Context Protocol (MCP) Server** representing a specific governance layer, container, server, or application node.
 

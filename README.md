@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -204,12 +204,13 @@ Organizations can use this repository's hierarchical fork model to standardize A
 ├── templates/                         ← NOT stow — project starter templates
 │   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (rules, skills, governance)
 │
-├── scripts/                           ← NOT stow — utility & CI verification scripts
+├── scripts/                           ← NOT stow — utility, MCP & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
+│   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server (stdio)
 │   └── verify-repo.sh                 ←   Deterministic CI & pre-commit verification suite
 │
-├── system/                            ← NOT stow — declarative system manifests
+├── system/                            ← NOT stow — declarative system & MCP layer manifests
 │   ├── packages-manual.txt            ←   APT packages (manual only, official Ubuntu 26.04 repos)
 │   ├── snaps.txt                      ←   Snap application packages (excludes base/runtime snaps)
 │   ├── npm-globals.txt                ←   NPM global packages
@@ -217,6 +218,7 @@ Organizations can use this repository's hierarchical fork model to standardize A
 │   ├── gnome-extensions.txt           ←   GNOME Shell extensions
 │   ├── gnome-settings.dconf           ←   GNOME desktop settings (declarative dconf)
 │   ├── nvm-default.txt                ←   Default Node.js version
+│   ├── mcp-layer.json                 ←   Contextual MCP layer identity & federated MCP topology
 │   └── external/                      ←   Catalog of available external package recipes
 │       ├── apt-repo/                  ←     Packages with own DEB822 APT repo (.sources)
 │       │   ├── docker.sh, google-chrome.sh
@@ -252,8 +254,8 @@ Organizations can use this repository's hierarchical fork model to standardize A
 | `antigravity/` | ✅ | `~/.gemini/config/*`, `~/.local/share/applications/*` | Antigravity config + .desktop entries |
 | `docs/` | ❌ | — | Navigable documentation hub & enterprise Human-AI governance architecture |
 | `templates/` | ❌ | — | Project starter templates (copied manually) |
-| `scripts/` | ❌ | — | Utility & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `verify-repo.sh`) |
-| `system/` | ❌ | — | Package manifests & external recipe catalog (consumed by `bootstrap.sh`, `backup.sh`, `audit.sh`) |
+| `scripts/` | ❌ | — | Utility, MCP & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh`) |
+| `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
 
 ---
 
@@ -438,6 +440,7 @@ The `system/` directory contains plain-text manifests of installed software, con
 | `system/external/{apt-repo,deb-url,script}/` | **Recipe catalog** for third-party software (Docker, Chrome, GCloud CLI, Proton, Discord, AutoFirma, Antigravity). Only recipes listed in `system/external.txt` are required by `audit.sh` or installed by `bootstrap.sh --external`. To enable a new recipe from the catalog on a fresh machine, add its relative path (e.g. `apt-repo/docker.sh`) to `system/external.txt` and run `./bootstrap.sh --external`. |
 | `system/gnome-extensions.txt` | Installed GNOME Shell extension UUIDs |
 | `system/gnome-settings.dconf` | Declarative GNOME desktop settings (keybindings, interface, touchpad, dock, tiling) — excludes private/ephemeral state |
+| `system/mcp-layer.json` | Declarative layer/node identity (`corporate`, `team`, `service-node`, `workstation`), upstream lineage, and federated MCP topology served by `scripts/dotfiles_mcp_server.py` |
 
 ---
 

@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "layer_id": "dotfiles-ubuntu-default",
+  "layer_role": "workstation",
+  "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Reference Layer (Corporate / Workstation Baseline)",
+  "upstream_layer": {
+    "layer_id": "mtwuser/dotfiles-ubuntu",
+    "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git"
+  },
+  "default_stack_templates": [
+    "fastapi-hexagonal"
+  ],
+  "federated_mcps": [
+    {
+      "mcp_id": "google-developer-knowledge",
+      "role": "documentation-grounding",
+      "layer": "corporate",
+      "description": "Official Google Cloud, Gemini, Android, Firebase, and Web documentation retrieval.",
+      "required_guardrails": [
+        "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
+        "AGENTS.md §12 (Generated Output Verification)"
+      ]
+    }
+  ]
+}

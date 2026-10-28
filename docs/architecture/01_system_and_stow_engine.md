@@ -102,7 +102,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `git/` | **Stow Module** | `~/.gitconfig` | Includes untracked `~/.gitconfig.local` via `[include]` |
 | `antigravity/` | **Stow Module** | `~/.gemini/config/*`, `~/.local/share/applications/*` | Uses `prepare_antigravity_dirs()` to enforce tree unfolding |
 | `system/` | Non-Stow | — | Declarative package & GNOME manifests + `external/` catalog |
-| `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `verify-repo.sh` |
+| `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh` |
 | `templates/` | Non-Stow | — | Layer 2 project starter templates (`fastapi-hexagonal/`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
 

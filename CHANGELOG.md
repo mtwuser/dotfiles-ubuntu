@@ -7,14 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.3.0] - 2026-10-28
 
 ### Added
+- **Zero-Dependency Contextual Layer & System MCP Server (`scripts/dotfiles_mcp_server.py` & `system/mcp-layer.json`)**:
+  - Implemented `scripts/dotfiles_mcp_server.py` in pure Python >= 3.10 standard library (JSON-RPC 2.0 over `stdio`, supporting both newline-delimited and `Content-Length` framed streams, plus `--self-test`, `--layer-id`, `--layer-role`, `--version`, and `--help` CLI flags).
+  - Exposed 8 MCP `Resources` (`dotfiles://layer/identity`, `dotfiles://system/manifests`, `dotfiles://governance/rules`, `dotfiles://governance/hooks`, `dotfiles://governance/skills`, `dotfiles://governance/templates`, `dotfiles://docs/index`, `dotfiles://mcp/topology`), 6 read-only `Tools` (`get_layer_overview`, `audit_node_drift`, `read_layer_document` with strict `REPO_DIR` path-traversal protection, `query_governance_rules`, `discover_federated_mcps`, `compare_layer_patterns`), and 3 `Prompts` (`orient-on-layer`, `audit-container-or-node`, `orchestrate-federated-mcps`).
+  - Added `system/mcp-layer.json` declaring the layer's role, upstream repository lineage, default stack templates, and federated MCP servers with mandatory pre-call safety guardrails.
+  - Extended `scripts/verify-repo.sh` (`[7/7]`) to lint `scripts/dotfiles_mcp_server.py` with `ruff check`, validate `system/mcp-layer.json`, and execute `./scripts/dotfiles_mcp_server.py --self-test` in CI.
 - **Contextual Layer & System MCP Server Specification & Multi-Service Orchestration Guide (`docs/`)**:
   - Added `docs/architecture/03_contextual_mcp_and_federation.md` defining the Dual-Plane Model (GNU Stow local plane vs. MCP distributed plane), 5 non-negotiable security & zero-dependency invariants (Python >= 3.10 stdlib, strictly read-only, path containment inside `REPO_DIR`), JSON-RPC 2.0 contracts for 8 `Resources`, 6 `Tools`, and 3 `Prompts`, and the `system/mcp-layer.json` federation schema.
   - Added `docs/reference/contextual_mcp_and_multi_service_orchestration.md` detailing both **Mode A (Standalone Container/Node MCP Use Case)** and **Mode B (Enterprise Multi-Service Context Mesh)**, plus step-by-step configuration recipes for Google Antigravity 2.0 (`~/.gemini/config/mcp_config.json`), Docker containers (`docker exec -i`), remote SSH servers (`ssh -T -o BatchMode=yes`), multi-fork layers, VS Code & GitHub Copilot (`.vscode/mcp.json`), Cursor, and Claude Code.
   - Updated `docs/README.md`, `docs/reference/enterprise_pair_programming_governance.md` (§7), `docs/reference/developer_and_extension_guide.md` (§5), `docs/architecture/02_antigravity_governance_and_hooks.md`, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `ACCESSIBILITY.md` for full cross-document coherence.
-  - Enhanced `scripts/verify-repo.sh` Check `[1/6]` to validate the new `docs/` files and enforce a deterministic relative Markdown link integrity gate across all `.md` files in the repository.
+  - Enhanced `scripts/verify-repo.sh` Check `[1/7]` to validate the new `docs/` files and enforce a deterministic relative Markdown link integrity gate across all `.md` files in the repository.
 
 ---
 

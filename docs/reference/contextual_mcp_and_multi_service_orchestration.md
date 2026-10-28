@@ -88,7 +88,7 @@ flowchart TD
 1. **Context Before Action (Guardrailed MCP Execution)**:
    - Suppose an agent needs to inspect or troubleshoot `staging-db-01`, which has a `postgres-mcp` server attached.
    - Before touching the database MCP, the agent queries `dotfiles-node-staging` via `discover_federated_mcps()`.
-   - The node's [`system/mcp-layer.json`](../architecture/03_contextual_mcp_and_federation.md#4-declarative-layer--mcp-federation-schema-systemmcp-layerjson) returns not only the `postgres-mcp` descriptor, but also its **`required_guardrails`** (e.g., *"Strictly read-only queries; never run `DROP`/`TRUNCATE` without explicit human approval per `accidental-data-loss-prevention`; schema changes must go through `osa db` migrations in `checkout-api`"*).
+   - The node's [`system/mcp-layer.json`](../../system/mcp-layer.json) returns not only the `postgres-mcp` descriptor, but also its **`required_guardrails`** (e.g., *"Strictly read-only queries; never run `DROP`/`TRUNCATE` without explicit human approval per `accidental-data-loss-prevention`; schema changes must go through `osa db` migrations in `checkout-api`"*).
 2. **Cross-Service Drift Diagnosis**:
    - A feature works in `checkout-api` but fails in `payment-worker` due to a native library mismatch (`libpq` / `cairo` / Node version).
    - The agent calls `audit_node_drift` and reads `dotfiles://system/manifests` on both `dotfiles-node-api` and `dotfiles-node-worker`, immediately pinpointing the exact package discrepancy between the two containers.
@@ -280,7 +280,7 @@ Because `scripts/dotfiles_mcp_server.py` implements the standard Model Context P
 
 ## 4. Customizing `system/mcp-layer.json` for Your Fork or Service Node
 
-When you fork `dotfiles-ubuntu` for a team or attach it to a microservice container, edit [`system/mcp-layer.json`](../architecture/03_contextual_mcp_and_federation.md#4-declarative-layer--mcp-federation-schema-systemmcp-layerjson) to declare the layer's role, upstream parent, and any specialized MCP servers that operate in that environment:
+When you fork `dotfiles-ubuntu` for a team or attach it to a microservice container, edit [`system/mcp-layer.json`](../../system/mcp-layer.json) to declare the layer's role, upstream parent, and any specialized MCP servers that operate in that environment:
 
 ```json
 {

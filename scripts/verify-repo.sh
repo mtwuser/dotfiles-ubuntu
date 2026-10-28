@@ -2,12 +2,13 @@
 # verify-repo.sh — Deterministic CI & pre-commit verification for dotfiles-ubuntu
 #
 # Checks:
-#   1. VERSION file & SemVer format + CHANGELOG.md sync
+#   1. VERSION file & SemVer format + CHANGELOG.md sync + Relative Markdown links
 #   2. Bash syntax (bash -n) & executable bits across all .sh scripts
-#   3. Python lifecycle hooks syntax (py_compile), permissions (+x), and ruff check
+#   3. Python lifecycle hooks & MCP server syntax (py_compile), permissions (+x), and ruff check
 #   4. hooks.json validity and script path resolution
 #   5. AGENTS.md token-budget size gate (< 18,000 bytes)
 #   6. SKILL.md YAML frontmatter (kebab-case name, description, < 500 lines)
+#   7. Contextual MCP Server (scripts/dotfiles_mcp_server.py --self-test & system/mcp-layer.json)
 #
 # Usage: ./scripts/verify-repo.sh [--help | --version]
 
@@ -45,7 +46,7 @@ echo "═══ dotfiles-ubuntu Repository Verification (v$VERSION_STR) ══�
 echo ""
 
 # 1. Version & Open-Source Metadata
-echo "[1/6] Open-Source Metadata & SemVer"
+echo "[1/7] Open-Source Metadata, SemVer & Relative Links"
 if [[ "$VERSION_STR" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   pass "VERSION ($VERSION_STR) is valid SemVer"
 else
@@ -117,7 +118,7 @@ fi
 
 # 2. Bash Scripts Syntax & Permissions
 echo ""
-echo "[2/6] Shell Scripts Syntax (bash -n) & Permissions"
+echo "[2/7] Shell Scripts Syntax (bash -n) & Permissions"
 SH_COUNT=0
 for sh_file in bootstrap.sh backup.sh audit.sh scripts/*.sh system/external/*/*.sh; do
   [ -f "$sh_file" ] || continue
@@ -133,11 +134,11 @@ for exec_sh in bootstrap.sh backup.sh audit.sh scripts/*.sh; do
 done
 pass "Verified syntax across $SH_COUNT shell scripts"
 
-# 3. Python Lifecycle Hooks
+# 3. Python Lifecycle Hooks & MCP Server
 echo ""
-echo "[3/6] Python Lifecycle Hooks (antigravity/.gemini/config/scripts/)"
+echo "[3/7] Python Lifecycle Hooks & MCP Scripts"
 PY_COUNT=0
-for py_file in antigravity/.gemini/config/scripts/*.py; do
+for py_file in antigravity/.gemini/config/scripts/*.py scripts/*.py; do
   [ -f "$py_file" ] || continue
   PY_COUNT=$((PY_COUNT + 1))
   if [ ! -x "$py_file" ]; then
@@ -147,7 +148,7 @@ for py_file in antigravity/.gemini/config/scripts/*.py; do
     fail "py_compile failed on $py_file"
   fi
 done
-pass "Compiled $PY_COUNT Python hook scripts cleanly"
+pass "Compiled $PY_COUNT Python scripts cleanly"
 
 RUFF_BIN="$(command -v ruff || true)"
 if [ -z "$RUFF_BIN" ]; then
@@ -160,16 +161,16 @@ if [ -z "$RUFF_BIN" ]; then
 fi
 
 if [ -n "$RUFF_BIN" ]; then
-  if "$RUFF_BIN" check --target-version py313 antigravity/.gemini/config/scripts/; then
-    pass "ruff check (--target-version py313) passed on lifecycle hook scripts"
+  if "$RUFF_BIN" check --target-version py313 antigravity/.gemini/config/scripts/ scripts/dotfiles_mcp_server.py; then
+    pass "ruff check (--target-version py313) passed on lifecycle hook & MCP scripts"
   else
-    fail "ruff check reported issues in antigravity/.gemini/config/scripts/"
+    fail "ruff check reported issues in Python scripts"
   fi
 fi
 
 # 4. hooks.json Schema & Target Verification
 echo ""
-echo "[4/6] hooks.json Schema & Script References"
+echo "[4/7] hooks.json Schema & Script References"
 if python3 - <<'PYEOF'
 import json
 from pathlib import Path
@@ -220,7 +221,7 @@ fi
 
 # 5. AGENTS.md Token Budget Gate
 echo ""
-echo "[5/6] Antigravity 2.0 Rules Token Budget Gate"
+echo "[5/7] Antigravity 2.0 Rules Token Budget Gate"
 AGENTS_FILE="antigravity/.gemini/config/AGENTS.md"
 AGENTS_BYTES=$(wc -c < "$AGENTS_FILE")
 MAX_AGENTS_BYTES=18000
@@ -232,7 +233,7 @@ fi
 
 # 6. SKILL.md Frontmatter & Progressive Disclosure Gate
 echo ""
-echo "[6/6] SKILL.md Frontmatter (kebab-case) & Line Budget (< 500 lines)"
+echo "[6/7] SKILL.md Frontmatter (kebab-case) & Line Budget (< 500 lines)"
 if python3 - <<'PYEOF'
 from pathlib import Path
 import re
@@ -289,6 +290,21 @@ then
   pass "All SKILL.md files comply with Antigravity 2.0 frontmatter & size standards"
 else
   fail "SKILL.md frontmatter verification failed"
+fi
+
+# 7. Contextual MCP Server & Layer Topology Manifest
+echo ""
+echo "[7/7] Contextual MCP Server (scripts/dotfiles_mcp_server.py & system/mcp-layer.json)"
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") == "1.0" and "federated_mcps" in d'; then
+  pass "system/mcp-layer.json is valid JSON and matches schema v1.0"
+else
+  fail "system/mcp-layer.json is missing or invalid"
+fi
+
+if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then
+  pass "scripts/dotfiles_mcp_server.py --self-test passed (8 resources, 6 tools, 3 prompts, path-containment gate)"
+else
+  fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi
 
 echo ""
