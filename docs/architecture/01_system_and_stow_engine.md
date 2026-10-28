@@ -113,7 +113,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
 | `layers/` | Non-Stow (Optional) | — | Mounted `git subtree` context forks (`layers/<name>/` managed via `scripts/layer-subtree.sh` & queried via MCP) |
 | `logs/` | Non-Stow (Ignored) | — | Structured JSONL audit & alert logs generated in MCP mode (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |
-| `tests/` | Non-Stow | — | Automated unit (`tests/unit/`) & integration (`tests/imp/`) test suite (100% branch coverage) |
+| `tests/` | Non-Stow | — | Automated unit (`tests/unit/`), integration (`tests/imp/`), & end-to-end (`tests/e2e/`) test suite (100% branch coverage) |
 | `venv/` | Non-Stow (Ignored) | — | Optional local Python virtual environment created via `make install` (`requirements-dev.txt` $\rightarrow$ `-r requirements.txt`) |
 
 ### 4.2. Collision Safety & Identity Migration (`bootstrap.sh`)

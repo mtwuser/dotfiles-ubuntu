@@ -279,9 +279,12 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   ├── test_post_invocation_lint.py
 │   │   ├── test_stop_verify_tests.py
 │   │   └── test_dotfiles_mcp_server.py
-│   └── imp/                           ←   stdio JSON-RPC 2.0 & Bash CLI contract tests
-│       ├── test_mcp_and_hooks_stdio.py
-│       └── test_cli_scripts.py
+│   ├── imp/                           ←   stdio JSON-RPC 2.0 & Bash CLI contract tests
+│   │   ├── test_mcp_and_hooks_stdio.py
+│   │   └── test_cli_scripts.py
+│   └── e2e/                           ←   chained multi-node MCP federation, git subtree & full agent-turn hook tests
+│       ├── test_chained_mcp_federation_e2e.py
+│       └── test_agent_turn_lifecycle_hooks_e2e.py
 │
 ├── bootstrap.sh                       ← restore system from manifests
 ├── backup.sh                          ← capture current system state
@@ -314,7 +317,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 | `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
 | `layers/` | ❌ | — | Optional mounted `git subtree` context forks (`layers/<name>/` for departmental/service/environment orchestration) |
 | `logs/` | ❌ | — | Gitignored runtime MCP audit & alert logs (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |
-| `tests/` | ❌ | — | Unit (`tests/unit/`) & integration (`tests/imp/`) test suite with 100% branch coverage |
+| `tests/` | ❌ | — | Unit (`tests/unit/`), integration (`tests/imp/`), and end-to-end (`tests/e2e/`) test suite with 100% branch coverage |
 
 ---
 
@@ -844,7 +847,7 @@ cd ~/dotfiles-ubuntu
 # 1. Create ./venv and install requirements-dev.txt (chains -r requirements.txt + pytest, pytest-cov, ruff, mypy)
 make install
 
-# 2. Run the full test suite (tests/unit/ + tests/imp/) with 100% branch coverage gate
+# 2. Run the full test suite (tests/unit/ + tests/imp/ + tests/e2e/) with 100% branch coverage gate
 make test-cov
 
 # 3. Run Ruff linter + Mypy --strict type checker
@@ -865,5 +868,5 @@ make verify
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
   7. Contextual MCP Server & Subtree Orchestrator (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1).
-  8. Automated test suite (`tests/unit/` + `tests/imp/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
+  8. Automated test suite (`tests/unit/` + `tests/imp/` + `tests/e2e/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.

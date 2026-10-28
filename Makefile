@@ -1,4 +1,4 @@
-.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-cov test-all lint format typecheck verify audit layer-list layer-pull-all clean
+.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all clean
 
 PYTHON ?= python3
 VENV_DIR ?= venv
@@ -8,9 +8,10 @@ help:
 	@echo "dotfiles-ubuntu development & verification targets:"
 	@echo "  make install          Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
 	@echo "  make install-runtime  Create ./venv and install only runtime base requirements.txt"
-	@echo "  make test             Run all unit and implementation tests"
+	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
 	@echo "  make test-imp         Run implementation/integration tests (tests/imp/)"
+	@echo "  make test-e2e         Run end-to-end chained MCP & hook lifecycle tests (tests/e2e/)"
 	@echo "  make test-cov         Run full test suite with 100% branch coverage gate"
 	@echo "  make lint             Run ruff check and mypy --strict"
 	@echo "  make format           Auto-format Python files with ruff format & ruff check --fix"
@@ -33,7 +34,7 @@ install-runtime:
 	$(VENV_BIN)/pip install -r requirements.txt -q
 
 test: $(VENV_BIN)/pytest
-	$(VENV_BIN)/pytest tests/unit/ tests/imp/
+	$(VENV_BIN)/pytest tests/unit/ tests/imp/ tests/e2e/
 
 test-unit: $(VENV_BIN)/pytest
 	$(VENV_BIN)/pytest tests/unit/
@@ -41,8 +42,11 @@ test-unit: $(VENV_BIN)/pytest
 test-imp: $(VENV_BIN)/pytest
 	$(VENV_BIN)/pytest tests/imp/
 
+test-e2e: $(VENV_BIN)/pytest
+	$(VENV_BIN)/pytest tests/e2e/
+
 test-cov test-all: $(VENV_BIN)/pytest
-	$(VENV_BIN)/pytest tests/unit/ tests/imp/ --cov --cov-report=term-missing --cov-branch --no-cov-on-fail
+	$(VENV_BIN)/pytest tests/unit/ tests/imp/ tests/e2e/ --cov --cov-report=term-missing --cov-branch --no-cov-on-fail
 
 lint: $(VENV_BIN)/pytest
 	$(VENV_BIN)/ruff check antigravity/.gemini/config/scripts/ scripts/ tests/

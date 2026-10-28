@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Enterprise Integration Playbook (With or Without MCP) & Cross-Document Unification (`docs/` & `README.md`)**:
   - Expanded `README.md` (`Path 3`) and `docs/reference/enterprise_pair_programming_governance.md` (`§2`) with the 4-tier organizational integration flow (`Public Open-Source Upstream → Tier 1: Corporate Reference Fork → Tier 2A: Departmental Forks & Tier 2B: Team/Stack Forks → Tier 3: Application Development Repositories`) and a side-by-step comparison of **Perspective A (Without MCP: Pure Git + GNU Stow + Templates)** versus **Perspective B (With MCP: Contextual MCP Server + `layers/*` Subtree Graph + `dev/tst/pre/pro` Environments)**.
   - Unified all resource/script/check counts and cross-references across `docs/README.md`, `docs/architecture/02_antigravity_governance_and_hooks.md`, `docs/reference/developer_and_extension_guide.md`, and `SECURITY.md`.
+- **End-to-End Test Suite (`tests/e2e/` & `make test-e2e`)**:
+  - Completed the 3-tier testing pyramid (`tests/{unit,imp,e2e}`) with `tests/e2e/test_chained_mcp_federation_e2e.py` (validating chained multi-node `stdio` MCP communication from a Corporate/Team Hub MCP with mounted `layers/*` to a downstream Service Node MCP in `pre` environment, plus real `git subtree add` $\rightarrow$ `pull-all` $\rightarrow$ live MCP rule discovery across local Git repositories) and `tests/e2e/test_agent_turn_lifecycle_hooks_e2e.py` (simulating a complete 4-hook Antigravity agent turn `PreToolUse → PostToolUse → PostInvocation → Stop`), achieving `87 passed` at **100.00% statement and branch coverage**.
 
 ---
 

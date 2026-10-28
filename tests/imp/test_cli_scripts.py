@@ -99,7 +99,7 @@ def test_all_test_init_files_are_strictly_zero_bytes() -> None:
     non_empty = [str(p.relative_to(REPO_DIR)) for p in init_files if p.stat().st_size != 0]
 
     # Assert
-    assert len(init_files) == 3
+    assert len(init_files) == 4
     assert non_empty == []
 
 

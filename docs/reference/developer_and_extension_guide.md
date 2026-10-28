@@ -103,7 +103,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 
 ---
 
-## 6. Python Virtual Environment (`venv`), Automated Testing (`tests/{unit,imp}`) & 100% Coverage Gate
+## 6. Python Virtual Environment (`venv`), Automated Testing (`tests/{unit,imp,e2e}`) & 100% Coverage Gate
 
 `dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/fastapi-hexagonal/` prescribe:
 
@@ -112,7 +112,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 - **Multi-Environment Fork Extensibility (`tst`, `pre`, `pro`)**: If a corporate, team, or service-node fork extends `dotfiles-ubuntu` with custom MCP tools or scripts that require third-party runtime libraries, shared runtime packages can be added to `requirements.txt` (`make install-runtime`), and environment-specific MCP dependencies (`tst`, `pre`, `pro`) can be declared in `requirements-<env>.txt` files starting with `-r requirements.txt`.
 - **Development & Testing (`./venv` + [`requirements-dev.txt`](../../requirements-dev.txt))**: `requirements-dev.txt` chains `-r requirements.txt` and adds the development/verification toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`) managed via [`Makefile`](../../Makefile) (`make install`) and [`pyproject.toml`](../../pyproject.toml).
 
-### 6.2. Test Suite Architecture (`tests/unit/` & `tests/imp/`)
+### 6.2. Test Suite Architecture (`tests/unit/`, `tests/imp/` & `tests/e2e/`)
 - **`tests/unit/` (1:1 Module Mapping & 100% Branch Coverage)**:
   - `test_pre_tool_guard.py` $\rightarrow$ `antigravity/.gemini/config/scripts/pre_tool_guard.py`
   - `test_post_edit_format.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_edit_format.py`
@@ -122,6 +122,9 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 - **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0 & Bash CLI Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh` (`list`, `pull`, `push`, `pull-all`), and `bash -n` syntax across all 17 `.sh` scripts and external package recipes.
+- **`tests/e2e/` (End-to-End Chained Multi-Node MCP Federation, `git subtree` & Full Agent Turn Simulation)**:
+  - `test_chained_mcp_federation_e2e.py`: Spawns chained `stdio` MCP server instances (`Corporate/Team Hub MCP` with mounted `layers/*` $\rightarrow$ `Downstream Service Node MCP` in `pre` environment) to validate end-to-end discovery, `effective_guardrails` inheritance, cross-node package manifest comparison, JSONL diagnostics (`dotfiles://mcp/diagnostics`), and real `git subtree add` + `pull-all` + live MCP rule discovery across local Git repositories.
+  - `test_agent_turn_lifecycle_hooks_e2e.py`: Executes a full 4-hook agent turn (`PreToolUse` $\rightarrow$ `PostToolUse` $\rightarrow$ `PostInvocation` $\rightarrow$ `Stop`) against a real temporary Git workspace.
 - **Mandatory Quality Gates**:
   - Every test function must contain explicit `# Arrange`, `# Act`, and `# Assert` comments.
   - All `tests/**/__init__.py` files must be **0 bytes** (package marker purity).

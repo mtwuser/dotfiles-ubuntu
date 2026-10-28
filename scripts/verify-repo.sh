@@ -183,7 +183,7 @@ fi
 MYPY_BIN="$(resolve_tool mypy)"
 if [ -n "$MYPY_BIN" ]; then
   if "$MYPY_BIN" antigravity/.gemini/config/scripts/ scripts/ tests/ >/dev/null; then
-    pass "mypy --strict passed (0 errors across 15 source & test files)"
+    pass "mypy --strict passed (0 errors across 18 source & test files)"
   else
     fail "mypy --strict reported type errors"
   fi
@@ -336,11 +336,11 @@ else
   fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi
 
-# 8. Automated Test Suite (tests/unit/ & tests/imp/) & 100% Coverage Gate
+# 8. Automated Test Suite (tests/unit/, tests/imp/ & tests/e2e/) & 100% Coverage Gate
 echo ""
-echo "[8/8] Automated Test Suite (tests/unit/ & tests/imp/) & 100% Coverage Gate"
+echo "[8/8] Automated Test Suite (tests/unit/, tests/imp/ & tests/e2e/) & 100% Coverage Gate"
 INIT_ERRORS=0
-for init_file in tests/__init__.py tests/unit/__init__.py tests/imp/__init__.py; do
+for init_file in tests/__init__.py tests/unit/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
   if [ ! -f "$init_file" ] || [ -s "$init_file" ]; then
     fail "$init_file must exist and be 0 bytes (package marker purity)"
     INIT_ERRORS=$((INIT_ERRORS + 1))
@@ -352,8 +352,8 @@ fi
 
 PYTEST_BIN="$(resolve_tool pytest)"
 if [ -n "$PYTEST_BIN" ]; then
-  if PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ -q --tb=short --cov --cov-branch --cov-fail-under=100 >/dev/null; then
-    pass "pytest passed (tests/unit/ + tests/imp/) with 100.00% statement and branch coverage"
+  if PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-fail-under=100 >/dev/null; then
+    pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"
   else
     fail "pytest suite or 100% branch coverage gate failed"
   fi
