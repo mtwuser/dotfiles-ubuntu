@@ -47,13 +47,13 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
    cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity
    ```
 
-### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`) or the MCP Server (`scripts/dotfiles_mcp_server.py`)
+### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`), the MCP Server (`scripts/dotfiles_mcp_server.py`), or Subtree/Docker Tooling (`scripts/layer-subtree.sh`, `Dockerfile`)
 
 All Python scripts in `antigravity/.gemini/config/scripts/*.py` and `scripts/dotfiles_mcp_server.py` must:
 - Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`).
 - Include `from __future__ import annotations` and pass `mypy --strict` and `ruff check` with 0 errors.
 - Be executable (`chmod +x`).
-- Maintain **100% statement and branch coverage** in `tests/unit/` with explicit `# Arrange`, `# Act`, `# Assert` comments and `0-byte` `tests/**/__init__.py` files.
+- Maintain **100% statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` with explicit `# Arrange`, `# Act`, `# Assert` comments and `0-byte` `tests/**/__init__.py` files.
 
 ---
 
@@ -63,7 +63,7 @@ All Python scripts in `antigravity/.gemini/config/scripts/*.py` and `scripts/dot
 - **[`requirements.txt`](requirements.txt)** — Base runtime dependencies (empty in the upstream repository because `scripts/dotfiles_mcp_server.py` and the `~/.gemini/config/scripts/*.py` hooks use 100% Ubuntu 26.04 LTS `Python 3.14` standard library; extensible in corporate/service forks or via `requirements-<env>.txt`).
 - **[`requirements-dev.txt`](requirements-dev.txt)** — Chains `-r requirements.txt` and installs the development, testing, and linting toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`) into `./venv`.
 
-Contributors modifying Python scripts, hooks, or tests should initialize `./venv` via [`Makefile`](Makefile):
+Contributors modifying Python scripts, hooks, MCP/Docker tooling, or tests should initialize `./venv` via [`Makefile`](Makefile):
 
 ```bash
 cd ~/dotfiles-ubuntu
@@ -71,16 +71,19 @@ cd ~/dotfiles-ubuntu
 # 1. Create ./venv and install dev/test tools from requirements-dev.txt (chains -r requirements.txt)
 make install
 
-# 2. Run unit + integration tests with 100% statement and branch coverage gate
+# 2. Run unit + integration + end-to-end tests with 100% statement and branch coverage gate
 make test-cov
 
 # 3. Run Ruff linter + Mypy --strict type checking
 make lint
 
-# 4. Run full 8-stage repository verification suite (Bash, Python, hooks.json, AGENTS.md budget, SKILL.md, MCP self-test, pytest 100% cov)
+# 4. Run full 8-stage repository verification suite (Bash, Python, hooks.json, AGENTS.md budget, SKILL.md, MCP/Subtree/Docker contract, pytest 100% cov)
 make verify
 
-# 5. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
+# 5. (Optional) Build and verify the hardened Ubuntu 26.04 MCP Docker image
+make docker-build && make docker-self-test
+
+# 6. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
 ./scripts/audit-global-config.sh
 ```
 

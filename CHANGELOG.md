@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.1] - 2026-10-28
+
+### Changed
+- **Community & Security Documentation Alignment (`SECURITY.md`, `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md`) & Docker Layer Cache Optimization (`Dockerfile`)**:
+  - Updated [`SECURITY.md`](SECURITY.md) with a dedicated isolation row for **Hardened Docker Container Isolation (`Dockerfile` & `.dockerignore`)** covering non-root `USER ubuntu` (`1000:1000`) execution, air-gapped read-only sandbox flags (`--read-only --network=none --cap-drop=ALL`), and build-context secret exclusion.
+  - Updated [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) to reflect the complete `tests/{unit,imp,e2e}/` 100% branch-coverage test tiers, `scripts/layer-subtree.sh`, and `make docker-build && make docker-self-test` verification commands.
+  - Optimized [`Dockerfile`](Dockerfile) build-arg ordering (`GIT_COMMIT`, `LAYER_ID`, `LAYER_ROLE`, `MCP_ENV` placed after the `apt-get` layer) so new Git commits never invalidate the base OS package layer cache.
+
+---
+
 ## [1.6.0] - 2026-10-28
 
 ### Added

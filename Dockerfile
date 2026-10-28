@@ -17,10 +17,6 @@ LABEL org.opencontainers.image.title="dotfiles-ubuntu-mcp" \
       org.opencontainers.image.licenses="MIT"
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG GIT_COMMIT="unknown"
-ARG LAYER_ID=""
-ARG LAYER_ROLE=""
-ARG MCP_ENV=""
 ARG INSTALL_RUNTIME_DEPS="false"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,6 +30,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /opt/dotfiles-ubuntu
 COPY . /opt/dotfiles-ubuntu/
+
+ARG GIT_COMMIT="unknown"
+ARG LAYER_ID=""
+ARG LAYER_ROLE=""
+ARG MCP_ENV=""
 
 RUN mkdir -p /opt/dotfiles-ubuntu/logs \
     && chmod +x /opt/dotfiles-ubuntu/bootstrap.sh \
