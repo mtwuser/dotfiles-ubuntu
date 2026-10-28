@@ -56,7 +56,9 @@ for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CO
            docs/README.md \
            docs/architecture/01_system_and_stow_engine.md \
            docs/architecture/02_antigravity_governance_and_hooks.md \
+           docs/architecture/03_contextual_mcp_and_federation.md \
            docs/reference/enterprise_pair_programming_governance.md \
+           docs/reference/contextual_mcp_and_multi_service_orchestration.md \
            docs/reference/developer_and_extension_guide.md \
            .github/PULL_REQUEST_TEMPLATE.md \
            .github/ISSUE_TEMPLATE/bug_report.yml \
@@ -73,6 +75,44 @@ if grep -q "## \[$VERSION_STR\]" CHANGELOG.md; then
   pass "CHANGELOG.md documents release [$VERSION_STR]"
 else
   fail "CHANGELOG.md is missing section for [$VERSION_STR]"
+fi
+
+if python3 - <<'PYEOF'
+from pathlib import Path
+import re
+import sys
+
+repo = Path(".")
+link_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+broken: list[str] = []
+checked = 0
+
+for md in sorted(repo.rglob("*.md")):
+    text = md.read_text(encoding="utf-8")
+    stripped = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    stripped = re.sub(r"`\[[^\]]+\]\([^)]+\)`", "", stripped)
+    for m in link_re.finditer(stripped):
+        label, target = m.group(1), m.group(2).strip()
+        if target.startswith(("http://", "https://", "mailto:", "#")):
+            continue
+        path_part = target.split("#")[0]
+        if not path_part:
+            continue
+        resolved = (md.parent / path_part).resolve()
+        checked += 1
+        if not resolved.exists():
+            broken.append(f"{md}: [{label}]({target})")
+
+if broken:
+    for item in broken:
+        print(f"  Broken relative link: {item}", file=sys.stderr)
+    sys.exit(1)
+print(f"  Verified {checked} relative Markdown links across all .md files")
+PYEOF
+then
+  pass "All relative Markdown links resolve to existing files"
+else
+  fail "Broken relative Markdown links detected"
 fi
 
 # 2. Bash Scripts Syntax & Permissions

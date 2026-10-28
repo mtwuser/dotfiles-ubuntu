@@ -14,7 +14,7 @@ Because this repository is primarily a command-line system engine, dotfile suite
    - All scripts are 100% operable via standard keyboard input and support deterministic non-interactive flags (`./bootstrap.sh --all`, `./bootstrap.sh --antigravity`, `./bootstrap.sh --stow`, `./audit.sh`, `./scripts/verify-repo.sh`) suitable for assistive technologies and automated readers.
    - Every CLI entrypoint supports `--help` (`-h`) and `--version` (`-v`) with structured plain-text usage summaries.
 3. **Screen-Reader-Friendly Documentation**:
-   - All documentation (`README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `SKILL.md` files) uses strict hierarchical Markdown headings (`#` through `####`), descriptive link text, and plain-text tables compatible with screen readers.
+   - All documentation (`README.md`, [`docs/README.md`](docs/README.md), `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `SKILL.md` files) uses strict hierarchical Markdown headings (`#` through `####`), descriptive link text, and plain-text tables compatible with screen readers.
 4. **GNOME Desktop Accessibility Preservation**:
    - `backup.sh` and `bootstrap.sh --gnome` preserve declarative `dconf` settings on Ubuntu 26.04 LTS, allowing users to version-control their personal GNOME accessibility preferences (`org.gnome.desktop.a11y`, high contrast, text scaling factor, screen reader toggles) in their own fork.
 

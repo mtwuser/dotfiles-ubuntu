@@ -15,8 +15,8 @@ This repository is designed to be **modular** — you can use the entire suite o
    - **Antigravity IDE** — `/opt/antigravity-ide` (state in `~/.gemini/antigravity-ide/`)
    - **Antigravity CLI (`agy`)** — `~/.local/bin/agy` (settings in `~/.gemini/antigravity-cli/`)
 
-> **Enterprise Use Case — Distributed "pAIr programming" Governance at Scale**:
-> Beyond individual workstations, this fork-and-stow model allows organizations to orchestrate Human-AI collaboration across **Corporate**, **Team**, and **Project** tiers, pairing bidirectional rule evolution (`/learn` $\rightarrow$ `/enrich`) with navigable repository documentation (`docs/`). See **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** (and the navigable hub at **[`docs/README.md`](docs/README.md)**) for the full architecture and VS Code / GitHub Copilot mapping.
+> **Enterprise Use Case — Distributed "pAIr programming" Governance & Contextual MCP Federation**:
+> Beyond individual workstations, this fork-and-stow model allows organizations to orchestrate Human-AI collaboration across **Corporate**, **Team**, and **Project** tiers, pairing bidirectional rule evolution (`/learn` $\rightarrow$ `/enrich`) with navigable repository documentation (`docs/`). Furthermore, any instance or fork of `dotfiles-ubuntu` hosted on a system, container, or remote server can run as a **zero-dependency, read-only Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`) to expose live environment drift, layer rules, and federated MCP topologies across multi-service architectures. See **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**, **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)**, and the navigable hub at **[`docs/README.md`](docs/README.md)**.
 
 ---
 
@@ -151,8 +151,12 @@ Organizations can use this repository's hierarchical fork model to standardize A
 2. **Team / Stack Blueprints (`Layer B`)**: Maintain team forks or `templates/<stack>/` catalogs for specific architectures (e.g., Python/FastAPI Hexagonal DDD, Data/BigQuery, Web Islands).
 3. **Project Context & Navigable Docs (`Layer C` + `docs/`)**: Combine project-local `.agents/` rules and `WORKTASK.md` trackers with a structured, indexed `docs/` directory (`docs/README.md`, `docs/architecture/`) maintained alongside code (or automated with **Google Jules**, **Gemini Code Assist Enterprise**, **NotebookLM**, and **Google Developer Knowledge MCP**).
 4. **Organic Bidirectional Evolution**: Strategic standards flow downward (`Corporate → Team → Project` via `/sopen`), while battle-tested patterns discovered in projects (`/learn`) are promoted upward (`/enrich` `Project → Team → Corporate`) to benefit the entire organization immediately.
+5. **Optional Contextual MCP Server & Multi-Service Orchestration (`scripts/dotfiles_mcp_server.py`)**: Run any fork or container instance of `dotfiles-ubuntu` as a zero-dependency, read-only MCP server over `stdio`, `docker exec -i`, or `ssh` — either as a **standalone container/node health & docs introspector** or as a **Federated Context Mesh** orchestrating multiple MCPs across complex multi-service topologies.
 
-📖 **Full Architecture, Google Tooling Guide & VS Code / GitHub Copilot Mapping**: **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** (and navigable documentation hub at **[`docs/README.md`](docs/README.md)**).
+📖 **Full Architecture & Setup Guides**:
+- **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** — Corporate $\rightarrow$ Team $\rightarrow$ Project governance, Google AI docs tooling, and 1:1 VS Code / GitHub Copilot mapping.
+- **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** — Standalone & federated MCP server architecture and step-by-step configuration (`mcp_config.json`, `.vscode/mcp.json`, Docker containers, remote SSH servers).
+- **[`docs/README.md`](docs/README.md)** — Navigable documentation index and subsystem map.
 
 ---
 
@@ -185,10 +189,12 @@ Organizations can use this repository's hierarchical fork model to standardize A
 │   ├── README.md                      ←   Documentation index, subsystem map & AI agent lookup
 │   ├── architecture/                  ←   Normative technical specifications
 │   │   ├── 01_system_and_stow_engine.md           ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
-│   │   └── 02_antigravity_governance_and_hooks.md ← Token budget, 4 hook JSON contracts, 11 skills
+│   │   ├── 02_antigravity_governance_and_hooks.md ← Token budget, 4 hook JSON contracts, 11 skills
+│   │   └── 03_contextual_mcp_and_federation.md    ← Zero-dependency MCP server contract & schema
 │   └── reference/                     ←   Enterprise use cases & maintainer extension guides
-│       ├── enterprise_pair_programming_governance.md ← Enterprise Human-AI governance & Copilot mapping
-│       └── developer_and_extension_guide.md       ← Maintainer playbook for evolving dotfiles-ubuntu
+│       ├── enterprise_pair_programming_governance.md         ← Enterprise Human-AI governance & Copilot mapping
+│       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
+│       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
 ├── .github/
 │   ├── ISSUE_TEMPLATE/                ← GitHub Issue Forms (bug report, feature request, config)

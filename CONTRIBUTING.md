@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to **dotfiles-ubuntu** — the declarative Ubuntu 26.04 LTS system manager and Google Antigravity 2.0 customization suite.
 
+> **Navigable Architecture & Maintainer Documentation**: Before modifying scripts, stow modules, templates, or the MCP server, consult **[`docs/README.md`](docs/README.md)** and the step-by-step maintainer playbook at **[`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md)**.
+
 ---
 
 ## 1. Repository Architecture & Design Invariants

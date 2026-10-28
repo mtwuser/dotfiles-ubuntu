@@ -11,6 +11,7 @@
 | **Antigravity OAuth & IDE State (`~/.gemini/*.json`, `mcp_config.json`, `brain/`)** | Kept machine-local via GNU Stow **tree unfolding**. `bootstrap.sh` ensures `~/.gemini/config/` is a real directory and links only `AGENTS.md`, `hooks.json`, `scripts/`, and shared `skills/<name>/`. |
 | **SSH / GPG / Netrc Credentials** | Explicitly blocked in `.gitignore` (`.ssh/id_*`, `.ssh/known_hosts`, `.gnupg/`, `.netrc`). |
 | **Agent Tool Execution Safety (`PreToolUse`)** | `antigravity/.gemini/config/scripts/pre_tool_guard.py` deterministically intercepts and denies (`"decision": "deny"`) automatic execution of mutating `git` commands (`add`, `commit`, `push`, `reset --hard`, `clean -f`), manual edits to `alembic/versions/`, and non-empty writes to consumer `__init__.py` files. |
+| **Contextual MCP Server Isolation (`scripts/dotfiles_mcp_server.py`)** | Strictly read-only, zero-dependency `stdio` server ([`docs/architecture/03_contextual_mcp_and_federation.md`](docs/architecture/03_contextual_mcp_and_federation.md)). Exposes zero arbitrary shell execution or file-mutation tools, enforces `Path.resolve()` containment inside the repository root (`REPO_DIR`), and structurally excludes `~/.bashrc.local`, `~/.gitconfig.local`, `.env`, and `~/.gemini/*.json`. |
 
 ---
 

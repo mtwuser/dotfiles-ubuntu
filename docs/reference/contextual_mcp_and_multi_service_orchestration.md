@@ -1,0 +1,337 @@
+# Contextual MCP Server & Multi-Service Orchestration Guide
+
+> **Reference & Configuration Guide — Operating `dotfiles-ubuntu` as a Node/Layer MCP Server**
+>
+> Just as `dotfiles-ubuntu` contextualizes engineering patterns across organizational layers (`Corporate → Team → Project`) via GNU Stow on a local workstation, any instance or fork of `dotfiles-ubuntu` hosted on a **system, container, remote server, or team repository** can also run as a **lightweight Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`).
+>
+> This capability is **100% optional, read-only, and zero-dependency** (pure Python 3 standard library). You can adopt it in **two ways**:
+> 1. **As a Standalone Node / Container MCP Use Case**: Turn any Ubuntu workstation, Docker container, Devcontainer, or remote server into a self-describing, auditable node that AI agents can inspect for package drift, configuration health, and navigable documentation (`docs/`).
+> 2. **As an Extension of the [Enterprise "pAIr programming" Governance Model](enterprise_pair_programming_governance.md)**: Orchestrate multiple customized `dotfiles-ubuntu` forks across **Corporate, Team, and Multi-Service / Multi-Container architectures**, creating a **Federated Context Mesh** where AI agents discover both the specialized MCPs of each service and the exact governance rules that apply to them.
+
+---
+
+## 1. Why Turn `dotfiles-ubuntu` into a Contextual MCP Server?
+
+### 1.1. The Boundary Problem in Complex Architectures
+
+On a single developer laptop, **GNU Stow** (`./bootstrap.sh --stow`) is unbeatable: it links [`AGENTS.md`](../../antigravity/.gemini/config/AGENTS.md) and [`hooks.json`](../../antigravity/.gemini/config/hooks.json) directly into `~/.gemini/config/`, giving the AI agent zero-latency rules and deterministic `PreToolUse` safety guards.
+
+However, as soon as an engineering workflow involves **multiple containers, microservices, remote servers, or multiple team forks**, filesystem symlinks hit a physical wall:
+- A symlink in `~/.gemini/config/` on your host laptop **cannot** inspect whether a worker container is missing an APT library declared in its [`system/packages-manual.txt`](../../system/packages-manual.txt).
+- A local symlink **cannot** read the `Layer B` templates of another team's fork or the `docs/` of a remote service node.
+- A flat `mcp_config.json` with 20 raw infrastructure MCP servers (databases, queues, cloud APIs) tells the AI agent *how to call* those tools, but gives **zero context** about *which architectural rules, migration restrictions, or safety guardrails govern each environment*.
+
+### 1.2. The Solution: Every Node & Layer as a Self-Describing MCP Context Provider
+
+When `dotfiles-ubuntu` (or a customized fork of it) is present in a layer, container, or server, running `scripts/dotfiles_mcp_server.py` exposes that environment's **declarative truth** and **live health** over MCP:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                 dotfiles-ubuntu Contextual MCP Server (stdio)                │
+├───────────────────────────┬──────────────────────────┬───────────────────────┤
+│ 1. System & Drift Context │ 2. Governance & Docs     │ 3. MCP Federation     │
+│ • system/*.txt manifests  │ • Layer AGENTS.md rules  │ • system/mcp-layer    │
+│ • audit_node_drift tool   │ • templates/<stack>/     │ • Downstream MCP list │
+│ • OS / Git / Version info │ • Navigable docs/ graph  │ • Mandatory guardrails│
+└───────────────────────────┴──────────────────────────┴───────────────────────┘
+```
+
+---
+
+## 2. Two Adoption Modes: Standalone vs. Multi-Layer Enterprise Federation
+
+### Mode A: Standalone System or Container Introspection (Independent Use Case)
+
+Even for a single developer or a single project using Docker Compose, attaching the `dotfiles-ubuntu` MCP server to your environment allows your AI assistant (Antigravity 2.0, VS Code Copilot, Cursor, or Claude Code) to:
+- **Audit Environment Drift On Demand**: Ask the agent *"Check if my workstation or container has drifted from `dotfiles-ubuntu`"* $\rightarrow$ the agent calls `audit_node_drift` (`verify-repo.sh` / `audit.sh`) and reports missing packages, broken symlinks, or uncommitted manifest changes.
+- **Query Rules & Templates Programmatically**: Ask the agent *"Which FastAPI testing rules apply to module decommissioning?"* $\rightarrow$ the agent calls `query_governance_rules(query="decommissioning")` and retrieves the exact rule section without scanning the filesystem manually.
+- **Navigate `docs/` via MCP Resources**: Any MCP-compatible client can browse `dotfiles://docs/index` and call `read_layer_document` to read architecture specs on demand.
+
+### Mode B: Multi-Layer & Multi-Service Orchestration (Enterprise Extension)
+
+In complex enterprise architectures where multiple services, containers, servers, and teams interact, organizations customize forks of `dotfiles-ubuntu` for each layer and service node.
+
+Instead of managing an unstructured list of disconnected MCP servers, the customized `dotfiles-ubuntu` instances form a **Hierarchical Context Mesh**:
+
+```mermaid
+flowchart TD
+    Agent["🤖 Orchestrating AI Agent\n(Google Antigravity 2.0 / VS Code Copilot)"]
+
+    subgraph Tier1["Tier 1: Corporate Governance Fork"]
+        CorpMCP["📡 mcp: dotfiles-corporate\n(layer_role: corporate)\n• Global Security & Compliance (AGENTS.md)\n• Approved Enterprise MCP Registry"]
+    end
+
+    subgraph Tier2["Tier 2: Team / Domain Forks"]
+        BackendMCP["📡 mcp: dotfiles-team-backend\n(layer_role: team)\n• templates/fastapi-hexagonal/\n• API & Database Migration Standards"]
+        DataMCP["📡 mcp: dotfiles-team-data\n(layer_role: team)\n• templates/gcp-data-platform/\n• Pipeline & FinOps Guardrails"]
+    end
+
+    subgraph Tier3["Tier 3: Multi-Container / Multi-Server Application Nodes"]
+        NodeAPI["📦 Container: checkout-api\n📡 mcp: dotfiles-node-api\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
+        NodeWorker["📦 Container: payment-worker\n📡 mcp: dotfiles-node-worker\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
+        NodeStaging["🖥️ Remote Server: staging-db-01\n📡 mcp: dotfiles-node-staging\n• SSH stdio transport\n•Federates: postgres-mcp, redis-mcp"]
+    end
+
+    Agent <-->|"1. Read Corporate Standards"| CorpMCP
+    CorpMCP -.->|"Declares downstream team layers"| BackendMCP
+    CorpMCP -.->|"Declares downstream team layers"| DataMCP
+    Agent <-->|"2. Read Stack Blueprints & Guardrails"| BackendMCP
+    BackendMCP -.->|"Declares service nodes"| NodeAPI
+    BackendMCP -.->|"Declares service nodes"| NodeWorker
+    BackendMCP -.->|"Declares staging nodes"| NodeStaging
+    Agent <-->|"3. Audit live container drift & docs"| NodeAPI
+    Agent <-->|"4. Discover node MCPs + required safety rules"| NodeStaging
+```
+
+#### How Contextual MCP Orchestration Works in Practice
+
+1. **Context Before Action (Guardrailed MCP Execution)**:
+   - Suppose an agent needs to inspect or troubleshoot `staging-db-01`, which has a `postgres-mcp` server attached.
+   - Before touching the database MCP, the agent queries `dotfiles-node-staging` via `discover_federated_mcps()`.
+   - The node's [`system/mcp-layer.json`](../architecture/03_contextual_mcp_and_federation.md#4-declarative-layer--mcp-federation-schema-systemmcp-layerjson) returns not only the `postgres-mcp` descriptor, but also its **`required_guardrails`** (e.g., *"Strictly read-only queries; never run `DROP`/`TRUNCATE` without explicit human approval per `accidental-data-loss-prevention`; schema changes must go through `osa db` migrations in `checkout-api`"*).
+2. **Cross-Service Drift Diagnosis**:
+   - A feature works in `checkout-api` but fails in `payment-worker` due to a native library mismatch (`libpq` / `cairo` / Node version).
+   - The agent calls `audit_node_drift` and reads `dotfiles://system/manifests` on both `dotfiles-node-api` and `dotfiles-node-worker`, immediately pinpointing the exact package discrepancy between the two containers.
+3. **Cross-Layer `/enrich` Discovery**:
+   - Using `compare_layer_patterns`, the agent compares a microservice's `.agents/rules/` and `.agents/skills/` against both `dotfiles-team-backend` (`Layer B`) and `dotfiles-corporate` (`Layer A`), identifying which local rules should be promoted to the team fork versus the corporate fork.
+
+---
+
+## 3. Step-by-Step Configuration Guide
+
+Because `scripts/dotfiles_mcp_server.py` communicates over standard `stdio` using only the Python 3 standard library, it requires **zero background daemons, zero open network ports, and zero `pip install` steps**.
+
+Below are the exact configuration recipes for local workstations, Docker containers, remote SSH servers, and multi-IDE setups.
+
+---
+
+### 3.1. Verify the MCP Server Locally first
+
+Before adding the server to your IDE, you can verify that it responds cleanly on your machine:
+
+```bash
+cd ~/dotfiles-ubuntu
+./scripts/dotfiles_mcp_server.py --self-test
+```
+
+---
+
+### 3.2. Configure in Google Antigravity 2.0 (`~/.gemini/config/mcp_config.json`)
+
+In Google Antigravity 2.0 (Agents Desktop, IDE, and CLI), MCP servers are configured in `~/.gemini/config/mcp_config.json` (which is intentionally untracked by GNU Stow so each machine can define its own local and remote topology).
+
+Add `dotfiles-ubuntu` under `"mcpServers"`:
+
+```json
+{
+  "mcpServers": {
+    "dotfiles-local": {
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+> **Tip**: Replace `/home/<your-user>/dotfiles-ubuntu` with your absolute home path (e.g., `/home/alice/dotfiles-ubuntu`), as JSON configuration files do not expand `~`.
+
+---
+
+### 3.3. Configure Across Docker Containers / Devcontainers (`docker exec -i`)
+
+If your architecture runs multiple containers (for example, `checkout-api` and `payment-worker`) that include a copy or fork of `dotfiles-ubuntu` at `/opt/dotfiles-ubuntu`, your host IDE can connect to **each container's MCP server directly over `docker exec -i`** — without exposing any HTTP ports inside the containers:
+
+```json
+{
+  "mcpServers": {
+    "dotfiles-host": {
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    },
+    "dotfiles-container-api": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "checkout-api-container",
+        "python3",
+        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    },
+    "dotfiles-container-worker": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "payment-worker-container",
+        "python3",
+        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+**Why this pattern is powerful for containerized microservices**:
+- Each container runs `audit_node_drift` **inside its own container namespace**, reporting the exact APT packages, Python/Node runtimes, and configuration files present inside that container.
+- Zero network surface area: communication flows entirely through Docker's local `stdio` pipe.
+
+---
+
+### 3.4. Configure Across Remote Servers or VMs (`ssh` over `stdio`)
+
+To give your local AI agent read-only visibility into the configuration, package manifests, and layer rules of a remote Ubuntu server (e.g., a staging node, build server, or data node) where `dotfiles-ubuntu` is cloned at `~/dotfiles-ubuntu`, use standard `ssh` as the MCP transport:
+
+```json
+{
+  "mcpServers": {
+    "dotfiles-staging-node": {
+      "command": "ssh",
+      "args": [
+        "-T",
+        "-o", "BatchMode=yes",
+        "deploy@staging-node-01.internal",
+        "python3",
+        "/home/deploy/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+**Security & Operational Advantages**:
+- Uses your existing SSH keys, bastion hosts (`~/.ssh/config`), and OS-level user permissions (`BatchMode=yes` ensures non-interactive fail-fast if the key is not loaded).
+- No web server or open port needs to be exposed on `staging-node-01.internal`.
+- Because `dotfiles_mcp_server.py` is strictly read-only, the agent can inspect drift (`audit_node_drift`), manifests (`dotfiles://system/manifests`), and node documentation (`dotfiles://docs/index`) without being able to mutate the remote server.
+
+---
+
+### 3.5. Configure Multi-Layer Forks Simultaneously (`Corporate + Team + Node`)
+
+In an enterprise setting where a tech lead or architect works across organizational layers, multiple forks of `dotfiles-ubuntu` can be mounted simultaneously:
+
+```json
+{
+  "mcpServers": {
+    "dotfiles-layer-corporate": {
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py",
+        "--layer-role", "corporate",
+        "--layer-id", "acme-corp/dotfiles-enterprise"
+      ]
+    },
+    "dotfiles-layer-team-backend": {
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-team-backend/scripts/dotfiles_mcp_server.py",
+        "--layer-role", "team",
+        "--layer-id", "acme-corp/dotfiles-backend-hexagonal"
+      ]
+    }
+  }
+}
+```
+
+> Notice that `--layer-role` and `--layer-id` can be passed as CLI flags (overriding `system/mcp-layer.json` on the fly) or committed declaratively inside each fork's `system/mcp-layer.json`.
+
+---
+
+### 3.6. Configure in VS Code (GitHub Copilot), Cursor, and Claude Code
+
+Because `scripts/dotfiles_mcp_server.py` implements the standard Model Context Protocol over `stdio`, the exact same command works in every MCP-capable editor:
+
+#### VS Code & GitHub Copilot (`.vscode/mcp.json` in workspace or User `settings.json`)
+
+```json
+{
+  "servers": {
+    "dotfiles-ubuntu": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+#### Cursor (`~/.cursor/mcp.json`) & Claude Code (`~/.claude.json` or `.mcp.json`)
+
+```json
+{
+  "mcpServers": {
+    "dotfiles-ubuntu": {
+      "command": "python3",
+      "args": [
+        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+---
+
+## 4. Customizing `system/mcp-layer.json` for Your Fork or Service Node
+
+When you fork `dotfiles-ubuntu` for a team or attach it to a microservice container, edit [`system/mcp-layer.json`](../architecture/03_contextual_mcp_and_federation.md#4-declarative-layer--mcp-federation-schema-systemmcp-layerjson) to declare the layer's role, upstream parent, and any specialized MCP servers that operate in that environment:
+
+```json
+{
+  "schema_version": "1.0",
+  "layer_id": "acme-checkout-service-node",
+  "layer_role": "service-node",
+  "description": "Checkout Service Ubuntu 26.04 Container Node (FastAPI Hexagonal + PostgreSQL)",
+  "upstream_layer": {
+    "layer_id": "acme-corp/dotfiles-backend-hexagonal",
+    "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git"
+  },
+  "default_stack_templates": [
+    "fastapi-hexagonal"
+  ],
+  "federated_mcps": [
+    {
+      "mcp_id": "checkout-postgres-mcp",
+      "role": "database",
+      "layer": "service-node",
+      "description": "Read-only schema & query introspection for the Checkout PostgreSQL database.",
+      "required_guardrails": [
+        "accidental-data-loss-prevention: NEVER execute DROP, TRUNCATE, or unguarded DELETE.",
+        "fastapi-database: Schema changes must exclusively use Zero-Touch Alembic migrations, never manual DDL."
+      ]
+    },
+    {
+      "mcp_id": "checkout-observability-mcp",
+      "role": "telemetry",
+      "layer": "service-node",
+      "description": "OpenTelemetry traces and container log inspection for checkout-service.",
+      "required_guardrails": [
+        "AGENTS.md §15: Run pre-debug diagnostic sweep before deep-debugging runtime errors."
+      ]
+    }
+  ]
+}
+```
+
+When an AI agent connects to this node and runs `discover_federated_mcps`, it immediately learns:
+1. Which specialized MCP servers (`checkout-postgres-mcp`, `checkout-observability-mcp`) belong to this service.
+2. Which **mandatory safety and architectural guardrails** (`required_guardrails`) must be respected before invoking them.
+
+---
+
+## 5. Summary of Precautions & Design Boundaries
+
+| Principle | How `dotfiles-ubuntu` Enforces It |
+|-----------|-----------------------------------|
+| **Never replace local Stow hooks with MCP** | Local `AGENTS.md` and `PreToolUse` (`pre_tool_guard.py`) remain symlinked in `~/.gemini/config/` for zero-latency, non-bypassable local enforcement. MCP is used for cross-node, cross-container, and cross-layer introspection. |
+| **Zero external dependencies** | `scripts/dotfiles_mcp_server.py` uses 100% Python 3 standard library. No `pip install`, no virtualenv required on target containers or servers. |
+| **Strictly read-only by default** | Zero tools for arbitrary shell commands, file editing, or package installation. Only deterministic read/audit operations (`verify-repo.sh`, `audit.sh`, doc/rule readers) are exposed. |
+| **Zero secret exposure** | Path containment locks all file reads strictly inside the repository root (`REPO_DIR`). Machine-local files (`~/.bashrc.local`, `~/.gitconfig.local`, `.env`, `~/.gemini/*.json`) cannot be read via MCP. |
+
+📖 **Normative Protocol & Schema Reference**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**.

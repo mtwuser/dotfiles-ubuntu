@@ -175,10 +175,26 @@ Consider a technology company (**Acme Corp**) with 150 engineers across Backend,
 
 ---
 
-## 7. Summary: The Compound Effect of Distributed "pAIr programming"
+## 7. Extending to Distributed Topologies: Contextual Layer & System MCP Federation
 
-By treating **environment configuration**, **hierarchical AI rules**, **procedural skills**, and **navigable repository documentation (`docs/`)** as a single unified system:
+On a single developer workstation, GNU Stow symlinks (`~/.gemini/config/`) distribute rules with zero latency. However, enterprise systems rarely live on a single machine: they span **multiple Docker containers, microservices, staging/production servers, and separate team forks** where local filesystem symlinks cannot reach.
+
+To bridge this boundary without adding external dependencies, `dotfiles-ubuntu` can also operate as a **lightweight, read-only Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`) at any layer or node:
+
+- **As a Standalone Node / Container MCP**: Any Ubuntu container, Devcontainer, or remote server hosting `dotfiles-ubuntu` can expose its declarative manifests (`system/*`), live drift status (`audit_node_drift`), and local `docs/` over standard `stdio` (`docker exec -i` or `ssh` — zero open network ports required).
+- **As an Enterprise Federated Context Mesh**: Customized forks of `dotfiles-ubuntu` at the **Corporate (`Layer A`)**, **Team (`Layer B`)**, and **Service Node (`Layer C`)** levels can each run as a Layer MCP Server (`system/mcp-layer.json`), allowing an orchestrating AI agent to:
+  1. Query corporate and team architectural standards across repositories.
+  2. Diagnose environment and package drift across multiple microservice containers simultaneously.
+  3. Discover downstream domain MCPs (databases, queues, observability) **together with the mandatory safety guardrails** that govern them before executing any tool call.
+
+📖 **Full Use Case & Step-by-Step Configuration Guide**: **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](contextual_mcp_and_multi_service_orchestration.md)** (and normative protocol specification at **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**).
+
+---
+
+## 8. Summary: The Compound Effect of Distributed "pAIr programming"
+
+By treating **environment configuration**, **hierarchical AI rules**, **procedural skills**, **navigable repository documentation (`docs/`)**, and **optional MCP layer federation** as a single unified system:
 
 - **Organizational Knowledge Compounds**: Best practices flow upward from real project trenches (`Project → Team → Corporate`), while strategic architecture decisions distribute downward (`Corporate → Team → Project`) automatically.
-- **Inter-Team Variability Drops**: Every repository shares the same testing rigor, commit discipline, security guards, and task-tracking lifecycle (`WORKROAD → WORKTASK → CHANGELOG`), making cross-team mobility effortless.
-- **AI Agents Operate with Maximum Precision**: Armed simultaneously with corporate standards, team blueprints, project rules, and a navigable `docs/` knowledge graph, AI agents spend less time guessing and more time delivering production-grade software alongside human engineers.
+- **Inter-Team & Cross-Container Variability Drops**: Every repository and service container shares the same testing rigor, commit discipline, security guards, auditable system manifests, and task-tracking lifecycle (`WORKROAD → WORKTASK → CHANGELOG`).
+- **AI Agents Operate with Maximum Precision**: Armed simultaneously with corporate standards, team blueprints, project rules, a navigable `docs/` knowledge graph, and live MCP node introspection, AI agents spend less time guessing and more time delivering production-grade software alongside human engineers.

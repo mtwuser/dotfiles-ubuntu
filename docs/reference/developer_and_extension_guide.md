@@ -80,3 +80,20 @@ To support a new technology stack or team archetype (for example, `templates/gcp
    ```
 4. **Release Versioning (`VERSION` + `CHANGELOG.md`)**:
    - Bump [`VERSION`](../../VERSION) following Semantic Versioning (`MAJOR.MINOR.PATCH`), add the matching `## [X.Y.Z] - YYYY-MM-DD` section in [`CHANGELOG.md`](../../CHANGELOG.md), and update the version badge in [`README.md`](../../README.md).
+
+---
+
+## 5. Extending or Customizing the Contextual MCP Server (`scripts/dotfiles_mcp_server.py`)
+
+When extending the optional Contextual Layer & System MCP Server ([`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)):
+
+1. **Preserve the Zero-Dependency & Read-Only Invariants**:
+   - Use **only** the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`). Never import third-party packages that would require `pip install`.
+   - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
+2. **Customizing Layer Identity & Federated MCPs (`system/mcp-layer.json`)**:
+   - Fork maintainers can edit `system/mcp-layer.json` to set `layer_id`, `layer_role` (`corporate`, `team`, `service-node`, or `workstation`), `upstream_layer`, and `federated_mcps` (along with their `required_guardrails`).
+3. **Run the Deterministic MCP Self-Test**:
+   ```bash
+   ./scripts/dotfiles_mcp_server.py --self-test
+   ./scripts/verify-repo.sh
+   ```

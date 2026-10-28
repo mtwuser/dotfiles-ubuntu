@@ -16,6 +16,8 @@ Google Antigravity 2.0 operates across three local developer surfaces that share
 | **Antigravity IDE** | `/opt/antigravity-ide/antigravity-ide` | `~/.gemini/antigravity-ide/` | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
 | **Antigravity CLI (`agy`)** | `~/.local/bin/agy` | `~/.gemini/antigravity-cli/` | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
 
+> **Cross-Container & Multi-Layer Extension**: While GNU Stow links `~/.gemini/config/` on the local host with zero latency, these same governance assets (`AGENTS.md`, `hooks.json`, `skills/`, `templates/`) can also be exposed across isolated Docker containers, remote SSH servers, and multi-team forks via the optional Contextual MCP Server ([`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md)).
+
 ---
 
 ## 2. Token Budget Engineering & Progressive Disclosure
