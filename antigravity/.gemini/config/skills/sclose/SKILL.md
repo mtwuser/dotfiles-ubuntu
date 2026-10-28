@@ -86,7 +86,7 @@ Follow commit rules in `/continue` (`skills/continue/SKILL.md` §3) — provide 
 
 ## 3.5. Global Config Sync (Post-Commits)
 
-If any shared rules, skills, or system config in `dotfiles-ubuntu` were modified during this session, include them in the commit delivery:
+If any shared rules, skills, or system config in `dotfiles-ubuntu` were modified during this session, run `cd ~/dotfiles-ubuntu && make verify` first to confirm all 8 verification gates pass, then include them in the commit delivery:
 
 ```bash
 ### dotfiles-ubuntu

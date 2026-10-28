@@ -12,8 +12,11 @@ MCP_SERVER = REPO_DIR / "scripts" / "dotfiles_mcp_server.py"
 HOOKS_DIR = REPO_DIR / "antigravity" / ".gemini" / "config" / "scripts"
 
 
-def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip() -> None:
+def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip(
+    tmp_path: Path,
+) -> None:
     # Arrange
+    log_dir = tmp_path / "mcp_logs"
     line_req = (
         json.dumps(
             {
@@ -40,14 +43,14 @@ def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip() -> None:
 
     # Act
     proc_line = subprocess.run(
-        [sys.executable, str(MCP_SERVER)],
+        [sys.executable, str(MCP_SERVER), "--log-dir", str(log_dir)],
         input=line_req.encode("utf-8"),
         capture_output=True,
         timeout=10,
         check=True,
     )
     proc_framed = subprocess.run(
-        [sys.executable, str(MCP_SERVER)],
+        [sys.executable, str(MCP_SERVER), "--log-dir", str(log_dir)],
         input=framed_req,
         capture_output=True,
         timeout=10,
@@ -63,6 +66,8 @@ def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip() -> None:
     resp_framed = json.loads(payload.decode("utf-8"))
     fed = json.loads(resp_framed["result"]["content"][0]["text"])
     assert fed["federated_mcp_count"] == 1
+    assert (log_dir / "mcp_events.jsonl").is_file()
+    assert (log_dir / "mcp_alerts.jsonl").is_file()
 
 
 def test_pre_tool_guard_subprocess_denies_git_push_and_allows_pytest() -> None:

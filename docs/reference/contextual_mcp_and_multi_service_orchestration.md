@@ -350,11 +350,16 @@ cd ~/dotfiles-ubuntu
 # Or via Makefile:
 make layer-list
 
-# 4. Update a mounted departmental or service layer on demand
-./scripts/layer-subtree.sh pull dept-security git@github.com:acme-corp/dotfiles-dept-security.git main
+# 4. Update a single mounted layer (auto-resolves repo URL & branch from layers/<name>/system/mcp-layer.json)
+./scripts/layer-subtree.sh pull dept-security
 
-# 5. Promote a reusable departmental rule or MCP guardrail upstream (/enrich -> subtree push)
-./scripts/layer-subtree.sh push dept-data git@github.com:acme-corp/dotfiles-dept-data.git feat/enrich-bq-guardrail
+# 5. Update ALL mounted layers in layers/* in a single command
+./scripts/layer-subtree.sh pull-all
+# Or via Makefile:
+make layer-pull-all
+
+# 6. Promote a reusable departmental rule or MCP guardrail upstream (/enrich -> subtree push)
+./scripts/layer-subtree.sh push dept-data feat/enrich-bq-guardrail
 ```
 
 ### 5.2. How the AI Agent Queries the Mounted Subtree Graph & Environments (`dev/tst/pre/pro`)

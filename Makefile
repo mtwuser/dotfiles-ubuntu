@@ -1,4 +1,4 @@
-.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-cov test-all lint format typecheck verify audit layer-list clean
+.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-cov test-all lint format typecheck verify audit layer-list layer-pull-all clean
 
 PYTHON ?= python3
 VENV_DIR ?= venv
@@ -17,6 +17,7 @@ help:
 	@echo "  make verify           Run full repository & CI verification suite (./scripts/verify-repo.sh)"
 	@echo "  make audit            Run read-only system & symlink drift audit (./audit.sh)"
 	@echo "  make layer-list       List mounted git subtree context layers (./scripts/layer-subtree.sh list)"
+	@echo "  make layer-pull-all   Pull latest changes across all mounted layers/* subtrees"
 	@echo "  make clean            Remove caches, coverage artifacts, and ./venv"
 
 $(VENV_BIN)/pytest:
@@ -62,6 +63,9 @@ audit:
 
 layer-list:
 	./scripts/layer-subtree.sh list
+
+layer-pull-all:
+	./scripts/layer-subtree.sh pull-all
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov logs

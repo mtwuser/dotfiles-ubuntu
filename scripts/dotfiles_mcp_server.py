@@ -393,6 +393,15 @@ class DotfilesMCPServer:
                 ),
                 "mimeType": "application/json",
             },
+            {
+                "uri": "dotfiles://mcp/diagnostics",
+                "name": "Runtime MCP Event & Alert Diagnostics (logs/mcp_*.jsonl)",
+                "description": (
+                    "Live telemetry summary of recent MCP calls, response sizes, "
+                    "and token-budget/truncation/security alerts from logs/."
+                ),
+                "mimeType": "application/json",
+            },
         ]
 
     def read_resource(self, uri: str) -> dict[str, Any]:
@@ -521,6 +530,46 @@ class DotfilesMCPServer:
                 "uri": uri,
                 "mimeType": "application/json",
                 "text": json.dumps(manifest, indent=2),
+            }
+
+        if uri == "dotfiles://mcp/diagnostics":
+            active_log_dir = self.log_dir or (self.repo_dir / "logs")
+            events_path = active_log_dir / "mcp_events.jsonl"
+            alerts_path = active_log_dir / "mcp_alerts.jsonl"
+            events = (
+                [json.loads(line) for line in _read_non_empty_lines(events_path)]
+                if events_path.is_file()
+                else []
+            )
+            alerts = (
+                [json.loads(line) for line in _read_non_empty_lines(alerts_path)]
+                if alerts_path.is_file()
+                else []
+            )
+            by_code: dict[str, int] = {}
+            for al in alerts:
+                code = str(al.get("code", "UNKNOWN"))
+                by_code[code] = by_code.get(code, 0) + 1
+            max_bytes = max((int(ev.get("response_bytes", 0)) for ev in events), default=0)
+            diag_payload: dict[str, Any] = {
+                "logging_enabled": self.log_dir is not None,
+                "log_dir": str(self.log_dir) if self.log_dir else None,
+                "events_summary": {
+                    "total_events": len(events),
+                    "error_events": sum(1 for ev in events if ev.get("status") == "error"),
+                    "max_response_bytes": max_bytes,
+                    "recent_events": events[-5:],
+                },
+                "alerts_summary": {
+                    "total_alerts": len(alerts),
+                    "by_code": by_code,
+                    "recent_alerts": alerts[-10:],
+                },
+            }
+            return {
+                "uri": uri,
+                "mimeType": "application/json",
+                "text": json.dumps(diag_payload, indent=2),
             }
 
         raise ValueError(f"Unknown resource URI: {uri!r}")
@@ -1415,14 +1464,14 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     _require(bool(init_resp and "result" in init_resp), "initialize failed")
     print("  ✅ initialize handshake ok")
 
-    # 2. Resources list & read all 8 resources
+    # 2. Resources list & read all 9 resources
     res_list = (
         server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}})
         or {}
     )
     _require(
-        bool(res_list and len(res_list["result"]["resources"]) == 8),
-        "Expected 8 resources",
+        bool(res_list and len(res_list["result"]["resources"]) == 9),
+        "Expected 9 resources",
     )
     for res in res_list["result"]["resources"]:
         uri = res["uri"]
@@ -1440,7 +1489,7 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         _require(bool(read_resp and "result" in read_resp), f"Failed reading {uri}")
         text = read_resp["result"]["contents"][0]["text"]
         _require(len(text) > 0, f"Empty resource payload for {uri}")
-    print("  ✅ resources/list & resources/read verified across all 8 resources")
+    print("  ✅ resources/list & resources/read verified across all 9 resources")
 
     # 3. Tools list & call
     tools_list = server.handle_request(
@@ -1543,6 +1592,18 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     _require(
         bool(traversal_attempt and "error" in traversal_attempt),
         "Path traversal must be rejected",
+    )
+    diag_after = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 101,
+            "method": "resources/read",
+            "params": {"uri": "dotfiles://mcp/diagnostics"},
+        }
+    )
+    _require(
+        bool(diag_after and "result" in diag_after),
+        "Failed reading dotfiles://mcp/diagnostics after tools",
     )
     print("  ✅ tools/list, tools/call & path-containment security gate verified")
 

@@ -109,6 +109,9 @@ def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:
 
     # Act
     list_proc = subprocess.run([script, "list"], cwd=REPO_DIR, capture_output=True, text=True)
+    pull_all_proc = subprocess.run(
+        [script, "pull-all"], cwd=REPO_DIR, capture_output=True, text=True
+    )
     add_proc = subprocess.run(
         [
             script,
@@ -164,6 +167,8 @@ def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:
     # Assert
     assert list_proc.returncode == 0
     assert "Mounted Context Subtree Layers" in list_proc.stdout
+    assert pull_all_proc.returncode == 0
+    assert "Pulling All Mounted Subtree Layers" in pull_all_proc.stdout
     assert add_proc.returncode == 0
     assert (
         "[dry-run] git subtree add --prefix=layers/dept-security "
@@ -183,3 +188,64 @@ def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:
     assert "[dry-run] git pull --ff-only" in sync_proc.stdout
     assert bad_name_proc.returncode != 0
     assert "kebab-case" in bad_name_proc.stderr
+
+
+def test_layer_subtree_auto_resolves_upstream_url_for_pull_push_and_pull_all(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    script = str(REPO_DIR / "scripts" / "layer-subtree.sh")
+    (tmp_path / "VERSION").write_text("1.4.0\n", encoding="utf-8")
+    dept_sys = tmp_path / "layers" / "dept-data" / "system"
+    dept_sys.mkdir(parents=True)
+    (dept_sys / "mcp-layer.json").write_text(
+        '{"layer_id": "acme-dept-data", "layer_role": "department", '
+        '"upstream_layer": {"repository": "https://example.com/dept-data.git", "branch": "main"}}',
+        encoding="utf-8",
+    )
+    env = {"PATH": "/usr/bin:/bin", "DOTFILES_REPO_DIR": str(tmp_path)}
+
+    # Act
+    list_proc = subprocess.run(
+        [script, "list"], cwd=tmp_path, env=env, capture_output=True, text=True
+    )
+    pull_auto = subprocess.run(
+        [script, "--dry-run", "pull", "dept-data"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    push_auto = subprocess.run(
+        [script, "--dry-run", "push", "dept-data", "feat/promote-rule"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    pull_all = subprocess.run(
+        [script, "--dry-run", "pull-all"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    # Assert
+    assert list_proc.returncode == 0
+    assert "layers/dept-data  [id=acme-dept-data, role=department" in list_proc.stdout
+    assert pull_auto.returncode == 0
+    assert (
+        "[dry-run] git subtree pull --prefix=layers/dept-data "
+        "https://example.com/dept-data.git main --squash" in pull_auto.stdout
+    )
+    assert push_auto.returncode == 0
+    assert (
+        "[dry-run] git subtree push --prefix=layers/dept-data "
+        "https://example.com/dept-data.git feat/promote-rule" in push_auto.stdout
+    )
+    assert pull_all.returncode == 0
+    assert (
+        "[dry-run] git subtree pull --prefix=layers/dept-data "
+        "https://example.com/dept-data.git main --squash" in pull_all.stdout
+    )

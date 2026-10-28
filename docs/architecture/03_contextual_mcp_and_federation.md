@@ -77,11 +77,11 @@ The server implements the Model Context Protocol (`protocolVersion: "2024-11-05"
 
 ### 3.1. MCP Resources (`resources/list` & `resources/read`)
 
-Each `dotfiles-ubuntu` instance exposes seven canonical URI resources representing its identity, system manifests, governance rules, documentation graph, and federated MCP topology:
+Each `dotfiles-ubuntu` instance exposes nine canonical URI resources representing its identity, system manifests, governance rules, documentation graph, federated MCP topology, and live runtime diagnostics:
 
 | Resource URI | MIME Type | Source Files in Repository | Returned Payload Description |
 |--------------|-----------|----------------------------|------------------------------|
-| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `git rev-parse` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `team`, `service-node`, `workstation`), `hostname`, `os_pretty_name`, `git_commit`, and `upstream_layer`. |
+| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `git rev-parse` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, `workstation`), `hostname`, `os_pretty_name`, `git_commit`, and `upstream_layer`. |
 | `dotfiles://system/manifests` | `application/json` | `system/*.txt` (`packages-manual`, `snaps`, `npm-globals`, `nvm-default`, `external`, `gnome-extensions`) | Structured JSON dictionary containing counts and package lists for every declarative manifest tracked by this node/container. |
 | `dotfiles://governance/rules` | `text/markdown` | `antigravity/.gemini/config/AGENTS.md` | The complete `Layer A` universal behavioral and engineering rules active in this repository fork. |
 | `dotfiles://governance/hooks` | `application/json` | `antigravity/.gemini/config/hooks.json` | Lifecycle hook configuration (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`) active in this layer. |
@@ -89,6 +89,7 @@ Each `dotfiles-ubuntu` instance exposes seven canonical URI resources representi
 | `dotfiles://governance/templates` | `application/json` | `templates/*/` | Inventory of `Layer B` stack starter templates available in this fork, including their `rules/`, `skills/`, and `governance/` files. |
 | `dotfiles://docs/index` | `text/markdown` | `docs/README.md` | The navigable documentation index and subsystem map for this repository or layer. |
 | `dotfiles://mcp/topology` | `application/json` | `system/mcp-layer.json` | Declarative federation manifest listing downstream or sibling MCP servers associated with this layer, container, or service node, along with the governance rules that apply when calling them. |
+| `dotfiles://mcp/diagnostics` | `application/json` | `logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl` | Live telemetry summary of recent MCP JSON-RPC calls (`total_events`, `error_events`, `max_response_bytes`, `recent_events`) and structured runtime warnings/alerts (`total_alerts`, `by_code`, `recent_alerts`). |
 
 ### 3.2. MCP Tools (`tools/list` & `tools/call`)
 
@@ -96,8 +97,7 @@ The server exposes six read-only, deterministic tools for live node auditing, ta
 
 | Tool Name | Input Arguments (`inputSchema`) | Execution Logic & Security Gate | Output Summary |
 |-----------|---------------------------------|---------------------------------|----------------|
-| **`get_layer_overview`** | *(none)* | Aggregates `VERSION`, `system/mcp-layer.json`, manifest counts, skill/template counts, and doc index into a **4-Channel Executive Digest** (`1. Node & System State`, `2. Governance & Stack Contracts`, `3. Active Invariants & Hooks`, `4. Navigable Docs & Federated MCPs`). | Structured JSON digest for instant agent orientation (< 2 KB). |
-| **`get_layer_overview`** | `layer`: optional string (`"root"` or a mounted subtree name/`layer_id` in `layers/*`) | Returns a compact **4-Channel Executive Digest** of the target layer: (1) Node & System State, (2) Governance & Stack Contracts, (3) Active Invariants & Hooks, and (4) Navigable Docs, Mounted `layers/*` Subtrees, Supported Environments (`dev`, `tst`, `pre`, `pro`), & Federated MCPs. | JSON digest (`< 2 KB`) giving an agent immediate situational awareness. |
+| **`get_layer_overview`** | `layer`: optional string (`"root"` or a mounted subtree name/`layer_id` in `layers/*`) | Returns a compact **4-Channel Executive Digest** of the target layer: (1) Node & System State, (2) Governance & Stack Contracts, (3) Active Invariants, Token-Budget Utilization & Warnings, and (4) Navigable Docs, Mounted `layers/*` Subtrees, Supported Environments (`dev`, `tst`, `pre`, `pro`), & Federated MCPs. | JSON digest (`< 2 KB`) giving an agent immediate situational awareness. |
 | **`audit_node_drift`** | `mode`: `"verify-repo"` \| `"system-audit"` \| `"both"` (default `"verify-repo"`) | Executes `./scripts/verify-repo.sh` and/or `./audit.sh` in read-only mode via `subprocess.run(..., shell=False, timeout=30)` with `NO_COLOR=1`. Never runs `--clean`. | JSON report with `healthy` (boolean), `exit_code`, and clean text output showing any symlink, package, or metadata drift on that container/server. |
 | **`read_layer_document`** | `relative_path`: string, `layer`: optional string (`"root"` or a mounted subtree in `layers/*`) | Resolves `(target_layer_dir / relative_path).resolve()`, verifies `target.is_relative_to(target_layer_dir)`, and enforces an allowlist of readable directories (`docs/`, `templates/`, `antigravity/`, `system/`, root `.md` files). | Full Markdown or text content of the requested specification. |
 | **`query_governance_rules`** | `query`: string, `scope`: `"all"` \| `"global"` \| `"templates"` \| `"docs"`, `layer`: `"all"` \| `"root"` \| `<subtree>` (default `"all"`) | Case-insensitive section-aware search across `AGENTS.md`, `templates/*/rules/*.md`, and `docs/**/*.md` across the root layer and/or all mounted `git subtree` layers (`layers/*/`). | Matching rule sections with file paths and line numbers. |

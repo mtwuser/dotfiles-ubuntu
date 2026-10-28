@@ -24,7 +24,7 @@ _FILE_WRITE_TOOLS = frozenset(
 )
 
 _MUTATING_GIT_RE = re.compile(
-    r"(?:^|[;&|]\s*|\n\s*)git\s+(?:-C\s+\S+\s+)*(?:add|commit|push|reset\s+--hard|clean\s+-[a-zA-Z]*f)\b"
+    r"(?:^|[;&|]\s*|\n\s*)git\s+(?:-C\s+\S+\s+)*(?:add|commit|push|reset\s+--hard|clean\s+-[a-zA-Z]*f|subtree\s+(?:add|pull|push|merge))\b"
 )
 _ALEMBIC_MUTATE_RE = re.compile(r"(?:^|[;&|]\s*|\n\s*)alembic\s+(?:revision|upgrade|downgrade)\b")
 

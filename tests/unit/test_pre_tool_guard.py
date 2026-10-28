@@ -143,14 +143,22 @@ def test_check_command_allows_empty_command() -> None:
 
 def test_check_command_blocks_mutating_git_commands() -> None:
     # Arrange
-    args: dict[str, object] = {"CommandLine": "cd repo && git commit -m 'feat: test'"}
+    args_commit: dict[str, object] = {"CommandLine": "cd repo && git commit -m 'feat: test'"}
+    args_subtree: dict[str, object] = {
+        "CommandLine": (
+            "git subtree add --prefix=layers/sec https://example.com/sec.git main --squash"
+        )
+    }
 
     # Act
-    allowed, reason = pre_tool_guard._check_command(args)
+    allowed_commit, reason_commit = pre_tool_guard._check_command(args_commit)
+    allowed_subtree, reason_subtree = pre_tool_guard._check_command(args_subtree)
 
     # Assert
-    assert allowed is False
-    assert "Commit Discipline" in reason
+    assert allowed_commit is False
+    assert "Commit Discipline" in reason_commit
+    assert allowed_subtree is False
+    assert "Commit Discipline" in reason_subtree
 
 
 def test_check_command_blocks_alembic_mutation_commands() -> None:

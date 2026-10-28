@@ -324,14 +324,14 @@ else
   fail "system/mcp-layer.json is missing or invalid"
 fi
 
-if ./scripts/layer-subtree.sh list >/dev/null; then
-  pass "scripts/layer-subtree.sh list executed cleanly"
+if ./scripts/layer-subtree.sh list >/dev/null && ./scripts/layer-subtree.sh pull-all >/dev/null; then
+  pass "scripts/layer-subtree.sh list & pull-all executed cleanly"
 else
-  fail "scripts/layer-subtree.sh list failed"
+  fail "scripts/layer-subtree.sh list or pull-all failed"
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then
-  pass "scripts/dotfiles_mcp_server.py --self-test passed (8 resources, 6 tools, 3 prompts, path-containment gate)"
+  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 6 tools, 3 prompts, path-containment gate)"
 else
   fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi

@@ -30,9 +30,11 @@ Layer A — Universal (dotfiles-ubuntu)
 │   │   │  Examples: payment flow rules, healthcare compliance, API naming for X company.
 │   │   │  Location: <product>/.agents/
 │   │   │
-│   │   └── Layer D — Team/Org Overrides
-│   │       Organizational preferences layered on top.
-│   │       Not managed here — future consideration.
+│   │   └── Layer D — Multi-Dimensional Subtree Layers (Department / Team / Sibling Service)
+│   │       Cross-cutting departmental or sibling-service forks mounted under
+│   │       ~/dotfiles-ubuntu/layers/<layer-name>/ via ./scripts/layer-subtree.sh.
+│   │       Queried on demand via MCP (compare_layer_patterns) and promoted via
+│   │       ./scripts/layer-subtree.sh push <layer-name> <target-branch>.
 │   │
 │   └── (other products using the same framework)
 │
@@ -104,8 +106,9 @@ For each candidate, determine the correct target layer:
 
 | If the pattern... | Target Layer |
 |---|---|
-| Applies to ANY project regardless of stack | **A (dotfiles-ubuntu)** |
-| Applies to any project using THIS framework | **B (framework repo)** |
+| Applies to ANY project regardless of stack | **A (dotfiles-ubuntu root)** |
+| Applies to a cross-cutting department, team, or mounted service layer | **D (`~/dotfiles-ubuntu/layers/<layer-name>/` via `layer-subtree.sh push`)** |
+| Applies to any project using THIS framework | **B (framework repo or `templates/<stack>/`)** |
 | Only applies to this specific product/domain | **C (stays in project)** |
 
 > [!IMPORTANT]

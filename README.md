@@ -295,7 +295,7 @@ Managed by the `antigravity/` stow module. Applied to **all projects** automatic
 Contains:
 - **AGENTS.md** — Universal rules (reusability, robustness, strict typing, AAA testing, zero-residue governance, model delegation)
 - **hooks.json + scripts/** — Automated Python 3.14 lifecycle hooks:
-  - `pre_tool_guard.py` (`PreToolUse`) — Deterministically blocks non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`) or `alembic` commands
+  - `pre_tool_guard.py` (`PreToolUse`) — Deterministically blocks non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`, `subtree add|pull|push|merge`) or `alembic` commands
   - `post_edit_format.py` (`PostToolUse`) — Runs `ruff format` automatically whenever the agent edits a `.py` file
   - `post_invocation_lint.py` (`PostInvocation`) — Runs `ruff check`, AST architecture/test checks (`check_project`, `check_tests`), and `always_on` rule token-budget checks (`AGENTS.md` 18 KB cap & 80 KB / ~20k-token combined workspace budget) on modified and untracked Python files at the end of a turn (`force_continue` on errors)
   - `stop_verify_tests.py` (`Stop`) — Verifies affected unit tests pass on modified and untracked Python workspaces before concluding a task

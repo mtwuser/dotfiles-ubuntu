@@ -17,6 +17,7 @@ description: restore session state and initialize workspace — first command in
    - If pull succeeds → config is up to date from other machines
    - If pull fails (conflicts) → notify user: "dotfiles-ubuntu has conflicts. Resolve manually before continuing."
    - Do NOT auto-resolve conflicts in shared config
+   - If `~/dotfiles-ubuntu/layers/` has mounted subtrees (`./scripts/layer-subtree.sh list`) or `~/dotfiles-ubuntu/logs/mcp_alerts.jsonl` contains recent `CRITICAL`/`WARN` entries, surface a one-line note in the session header.
 3. **If not found** → skip silently (user may not use dotfiles on this machine)
 
 > [!NOTE]
