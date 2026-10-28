@@ -23,6 +23,7 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
+logs/
 venv/
 .venv/
 

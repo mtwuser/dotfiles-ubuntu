@@ -366,6 +366,9 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
   - Calling `read_layer_document(relative_path="docs/README.md", layer="svc-fraud")` reads the architecture index of a sibling service directly.
 - **Environment-Aware Federated MCP Discovery (`environment="dev" | "tst" | "pre" | "pro"`)**:
   - Calling `discover_federated_mcps(layer="all", environment="pre")` returns only the MCP servers enabled for pre-production across the root layer and all mounted subtrees, together with the `pre` environment profile (`access_mode: "strictly-read-only"`, `requirements_file: "requirements-pre.txt"`, and `default_guardrails`).
+  - Every discovered MCP entry automatically includes **`effective_guardrails`** (merging Root `baseline_guardrails` + Subtree `baseline_guardrails` + Environment `default_guardrails` + MCP `required_guardrails`) as well as `activation_policy` (`"on-demand"`), `when_to_invoke`, and `avoid_when` so child layers cannot drop corporate guardrails and agents only invoke underlying MCPs when strictly needed.
+- **Structured Runtime Audit & Alert Logs (`logs/mcp_events.jsonl` & `logs/mcp_alerts.jsonl`)**:
+  - Every MCP tool call, resource read, token-budget warning (`TOKEN_BUDGET_NEAR_LIMIT`, `TOKEN_BUDGET_EXCEEDED`), truncation warning (`RESPONSE_TRUNCATED`), or fan-out alert (`MCP_FANOUT_WARNING`) is automatically logged to `logs/mcp_events.jsonl` and `logs/mcp_alerts.jsonl` (with 512 KB rotation and `--log-dir` / `--no-log` flags).
 
 ---
 

@@ -95,6 +95,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 [ "$module" = "templates" ] && continue
 [ "$module" = "docs" ] && continue
 [ "$module" = "layers" ] && continue
+[ "$module" = "logs" ] && continue
 [ "$module" = "tests" ] && continue
 [ "$module" = "venv" ] && continue
 [ "$module" = ".venv" ] && continue
@@ -111,6 +112,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `templates/` | Non-Stow | — | Layer 2 project starter templates (`fastapi-hexagonal/`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
 | `layers/` | Non-Stow (Optional) | — | Mounted `git subtree` context forks (`layers/<name>/` managed via `scripts/layer-subtree.sh` & queried via MCP) |
+| `logs/` | Non-Stow (Ignored) | — | Structured JSONL audit & alert logs generated in MCP mode (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |
 | `tests/` | Non-Stow | — | Automated unit (`tests/unit/`) & integration (`tests/imp/`) test suite (100% branch coverage) |
 | `venv/` | Non-Stow (Ignored) | — | Optional local Python virtual environment created via `make install` (`requirements-dev.txt` $\rightarrow$ `-r requirements.txt`) |
 

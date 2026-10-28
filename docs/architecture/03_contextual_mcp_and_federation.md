@@ -198,11 +198,51 @@ flowchart TD
 
 ---
 
-## 6. Verification & Self-Test Contract
+## 6. Controlled On-Demand MCP Orchestration, Runtime Warnings & Structured Logging (`logs/`)
+
+To prevent **two opposite failure modes** in multi-dimensional context graphs — **(1) silent context/token truncation** and **(2) uncontrolled MCP fan-out or missing corporate guardrails** — `dotfiles-ubuntu` enforces deterministic runtime controls across both planes:
+
+### 6.1. Hierarchical Guardrail Inheritance (`effective_guardrails`) & On-Demand Activation Policy
+
+When `discover_federated_mcps` resolves MCP servers across the root repository, mounted `layers/*` subtrees, and target `dev/tst/pre/pro` environments, a downstream subtree can **never** strip or bypass parent corporate or environment safety rules. For every discovered MCP entry, `scripts/dotfiles_mcp_server.py` computes **`effective_guardrails`** as the deduplicated union of four hierarchical levels:
+
+$$\text{effective\_guardrails} = \text{Root } \texttt{baseline\_guardrails} \cup \text{Subtree } \texttt{baseline\_guardrails} \cup \text{Environment } \texttt{default\_guardrails} \cup \text{MCP } \texttt{required\_guardrails}$$
+
+Additionally, every federated MCP entry carries explicit **on-demand routing metadata** so the AI agent neither under-uses nor over-uses underlying MCP servers:
+- `activation_policy`: `"on-demand"` (never poll or invoke speculatively).
+- `when_to_invoke`: Explicit task trigger condition for invoking the MCP.
+- `avoid_when`: Explicit condition under which the agent must skip the MCP and use local context instead.
+
+### 6.2. Runtime Warning & Alert Catalog (In-Band + Out-of-Band)
+
+Both `post_invocation_lint.py` (local `PostInvocation` hook) and `scripts/dotfiles_mcp_server.py` actively monitor token budgets, truncation boundaries, subtree lineage, and MCP fan-out:
+
+| Warning Code | Severity | Trigger Condition | Purpose |
+|--------------|:--------:|-------------------|---------|
+| `TOKEN_BUDGET_NEAR_LIMIT` | `WARN` | `AGENTS.md` $\ge 16,000$ bytes ($88\%$ of 18 KB cap) | Early warning before `AGENTS.md` reaches the 18,000-byte ceiling (`channel_3_active_invariants_and_hooks.agents_md_budget_utilization_pct`). |
+| `TOKEN_BUDGET_EXCEEDED` | `CRITICAL` | `AGENTS.md` $> 18,000$ bytes | Alerts that `AGENTS.md` exceeds the hard cap and risks silent rule truncation in the IDE. |
+| `WORKSPACE_RULES_BUDGET_EXCEEDED` | `WARN` | Combined `always_on` rules (`AGENTS.md` + workspace `.agents/rules/*.md`) $> 80,000$ bytes (~20k tokens) | Emitted by `post_invocation_lint.py` (`check_rules_token_budget`) when combined active rules exceed the 20,000-token budget. |
+| `RESPONSE_TRUNCATED` | `WARN` | `query_governance_rules` matches $> 15$ sections or a section exceeds $1,500$ chars | Alerts the AI agent in-band (`truncated: true`) that results were capped and recommends narrowing `query`, `scope`, or `layer`. |
+| `LARGE_MCP_PAYLOAD_WARNING` | `WARN` | Any MCP JSON-RPC response exceeds $16,000$ bytes (~4,000 tokens) | Alerts when a single MCP call consumes significant context window capacity. |
+| `MCP_FANOUT_WARNING` | `WARN` | Unfiltered `discover_federated_mcps` returns $> 3$ MCPs without `environment` or `filter_role` | Prevents indiscriminate multi-MCP fan-out across layers and environments. |
+| `SUBTREE_LINEAGE_WARNING` | `WARN` | A mounted `layers/<name>/` subtree is missing `upstream_layer.repository` | Detects orphan subtrees lacking upstream Git lineage. |
+| `NODE_DRIFT_DETECTED` | `WARN` | `audit_node_drift` detects non-zero exit from `verify-repo.sh` or `audit.sh` | Records repository or OS/Stow drift in `logs/mcp_alerts.jsonl`. |
+| `SECURITY_OR_VALIDATION_ERROR` | `ERROR` | Path traversal attempt (`../`), invalid `layer`/`environment`, or missing file | Records security containment or parameter validation rejections in `logs/mcp_alerts.jsonl`. |
+
+### 6.3. Structured JSONL Audit & Alert Logs (`logs/mcp_events.jsonl` & `logs/mcp_alerts.jsonl`)
+
+When running in MCP mode, `scripts/dotfiles_mcp_server.py` automatically writes structured JSON Lines to `<repo>/logs/` (configurable via `--log-dir <path>`, `DOTFILES_MCP_LOG_DIR`, or disabled via `--no-log`):
+- **`logs/mcp_events.jsonl`**: Records every JSON-RPC request (`ts`, `method`, `name`, `layer`, `environment`, `duration_ms`, `response_bytes`, `approx_tokens`, `warning_count`, `status`).
+- **`logs/mcp_alerts.jsonl`**: Dedicated stream of `WARN`, `ERROR`, and `CRITICAL` alerts for instant operator inspection (`tail -f ~/dotfiles-ubuntu/logs/mcp_alerts.jsonl`).
+- **Automatic Size Rotation & Container Safety**: Each log file automatically rotates to `.jsonl.1` at `512 KB`, is ignored by Git and GNU Stow (`[ "$module" = "logs" ] && continue`), and gracefully suppresses `OSError` when mounted on a read-only container filesystem (`:ro`).
+
+---
+
+## 7. Verification & Self-Test Contract
 
 To guarantee that `scripts/dotfiles_mcp_server.py` and `scripts/layer-subtree.sh` remain deterministic and pass CI on every commit:
-1. **CLI Flags (`--help`, `--version`, `--self-test`, `list`)**:
-   - Running `./scripts/dotfiles_mcp_server.py --self-test` executes an in-process JSON-RPC 2.0 round-trip test verifying `initialize`, `resources/list`, `resources/read`, `tools/list`, `tools/call` (`get_layer_overview`, `discover_federated_mcps`, `query_governance_rules`), and `prompts/list` without requiring an external MCP client.
+1. **CLI Flags (`--help`, `--version`, `--self-test`, `--log-dir`, `--no-log`, `list`)**:
+   - Running `./scripts/dotfiles_mcp_server.py --self-test` executes an in-process JSON-RPC 2.0 round-trip test verifying `initialize`, `resources/list`, `resources/read`, `tools/list`, `tools/call` (`get_layer_overview`, `discover_federated_mcps`, `query_governance_rules`), `prompts/list`, and JSONL event/alert log generation without requiring an external MCP client.
    - Running `./scripts/layer-subtree.sh list` inspects `layers/*/` and reports all mounted context subtrees.
 2. **CI Gate Integration (`scripts/verify-repo.sh`)**:
    - `scripts/verify-repo.sh` compiles `scripts/dotfiles_mcp_server.py` (`py_compile`), lints it with `ruff check` and `mypy --strict`, validates `system/mcp-layer.json` schema (`v1.1`), runs `./scripts/layer-subtree.sh list` and `./scripts/dotfiles_mcp_server.py --self-test`, and enforces **100.00% statement and branch coverage** via `pytest`.

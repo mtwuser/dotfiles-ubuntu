@@ -131,6 +131,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--stow" ] || [ "$MODE" = "interactive" 
       [ "$module" = "templates" ] && continue
       [ "$module" = "docs" ] && continue
       [ "$module" = "layers" ] && continue
+      [ "$module" = "logs" ] && continue
       [ "$module" = "tests" ] && continue
       [ "$module" = "venv" ] && continue
       [ "$module" = ".venv" ] && continue

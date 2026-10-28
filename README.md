@@ -273,6 +273,7 @@ Organizations can use this repository's hierarchical fork model to standardize A
 | `scripts/` | ❌ | — | Utility, MCP, subtree & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `layer-subtree.sh`, `verify-repo.sh`) |
 | `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
 | `layers/` | ❌ | — | Optional mounted `git subtree` context forks (`layers/<name>/` for departmental/service/environment orchestration) |
+| `logs/` | ❌ | — | Gitignored runtime MCP audit & alert logs (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |
 | `tests/` | ❌ | — | Unit (`tests/unit/`) & integration (`tests/imp/`) test suite with 100% branch coverage |
 
 ---
@@ -296,7 +297,7 @@ Contains:
 - **hooks.json + scripts/** — Automated Python 3.14 lifecycle hooks:
   - `pre_tool_guard.py` (`PreToolUse`) — Deterministically blocks non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`) or `alembic` commands
   - `post_edit_format.py` (`PostToolUse`) — Runs `ruff format` automatically whenever the agent edits a `.py` file
-  - `post_invocation_lint.py` (`PostInvocation`) — Runs `ruff check` and AST architecture/test checks (`check_project`, `check_tests`) on modified and untracked Python files at the end of a turn (`force_continue` on errors)
+  - `post_invocation_lint.py` (`PostInvocation`) — Runs `ruff check`, AST architecture/test checks (`check_project`, `check_tests`), and `always_on` rule token-budget checks (`AGENTS.md` 18 KB cap & 80 KB / ~20k-token combined workspace budget) on modified and untracked Python files at the end of a turn (`force_continue` on errors)
   - `stop_verify_tests.py` (`Stop`) — Verifies affected unit tests pass on modified and untracked Python workspaces before concluding a task
 - **skills/** — 6 interactive slash-command skills and 5 procedural engineering skills:
 

@@ -13,6 +13,11 @@
   "default_stack_templates": [
     "fastapi-hexagonal"
   ],
+  "baseline_guardrails": [
+    "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
+    "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
+  ],
   "environments": {
     "dev": {
       "description": "Local workstation or devcontainer development environment",
@@ -56,6 +61,7 @@
       "mcp_id": "google-developer-knowledge",
       "role": "documentation-grounding",
       "layer": "corporate",
+      "activation_policy": "on-demand",
       "environments": [
         "dev",
         "tst",
@@ -63,6 +69,8 @@
         "pro"
       ],
       "description": "Official Google Cloud, Gemini, Android, Firebase, and Web documentation retrieval.",
+      "when_to_invoke": "Invoke on demand when verifying official Google Cloud, Gemini, Android, Firebase, or Web API specifications.",
+      "avoid_when": "Do not invoke when inspecting local repository code, internal domain models, or offline unit tests.",
       "required_guardrails": [
         "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
         "AGENTS.md §12 (Generated Output Verification)"

@@ -581,9 +581,76 @@ def test_main_runs_self_test_and_stdio_loop(monkeypatch: pytest.MonkeyPatch) -> 
 
     # Act
     rc_self_test = dotfiles_mcp_server.main(["--self-test"])
-    rc_stdio = dotfiles_mcp_server.main(["--layer-id", "test-layer", "--layer-role", "team"])
+    rc_self_test_no_log = dotfiles_mcp_server.main(["--self-test", "--no-log"])
+    rc_stdio = dotfiles_mcp_server.main(
+        ["--layer-id", "test-layer", "--layer-role", "team", "--no-log"]
+    )
 
     # Assert
     assert rc_self_test == 0
+    assert rc_self_test_no_log == 0
     assert rc_stdio == 0
     assert called_stdio == [True]
+
+
+def test_structured_logging_rotation_token_budget_and_fanout_warnings(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    events_log = log_dir / "mcp_events.jsonl"
+    events_log.write_text("X" * (dotfiles_mcp_server.MAX_LOG_FILE_BYTES + 10), encoding="utf-8")
+
+    agents_file = tmp_path / "antigravity/.gemini/config/AGENTS.md"
+    agents_file.parent.mkdir(parents=True)
+    agents_file.write_text("A" * 18500, encoding="utf-8")
+
+    root_sys = tmp_path / "system"
+    root_sys.mkdir()
+    (root_sys / "mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "corp-root",
+                "layer_role": "corporate",
+                "baseline_guardrails": ["root-guardrail"],
+                "federated_mcps": [{"mcp_id": f"mcp-{i}", "role": f"role-{i}"} for i in range(4)],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    sub_no_manifest = tmp_path / "layers" / "sub-no-manifest"
+    sub_no_manifest.mkdir(parents=True)
+    sub_empty_up = tmp_path / "layers" / "sub-empty-upstream" / "system"
+    sub_empty_up.mkdir(parents=True)
+    (sub_empty_up / "mcp-layer.json").write_text(
+        json.dumps({"layer_id": "sub-empty", "upstream_layer": {}}),
+        encoding="utf-8",
+    )
+
+    server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=log_dir)
+
+    # Act
+    overview_resp = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 100,
+            "method": "tools/call",
+            "params": {"name": "get_layer_overview", "arguments": {"layer": "root"}},
+        }
+    )
+    fanout_resp = server.call_tool("discover_federated_mcps", {"layer": "root"})
+
+    # Assert
+    assert overview_resp is not None
+    assert (log_dir / "mcp_events.jsonl.1").is_file()
+    assert (log_dir / "mcp_events.jsonl").is_file()
+    assert (log_dir / "mcp_alerts.jsonl").is_file()
+    overview_data = json.loads(overview_resp["result"]["content"][0]["text"])
+    codes = [w["code"] for w in overview_data["channel_3_active_invariants_and_hooks"]["warnings"]]
+    assert "TOKEN_BUDGET_EXCEEDED" in codes
+    assert "SUBTREE_LINEAGE_WARNING" in codes
+    fanout_data = json.loads(fanout_resp["content"][0]["text"])
+    assert fanout_data["warnings"][0]["code"] == "MCP_FANOUT_WARNING"
+    assert "root-guardrail" in fanout_data["federated_mcps"][0]["effective_guardrails"]

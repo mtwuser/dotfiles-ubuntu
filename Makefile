@@ -64,5 +64,5 @@ layer-list:
 	./scripts/layer-subtree.sh list
 
 clean:
-	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov
+	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov logs
 	find . -type d -name "__pycache__" -exec rm -rf {} +

@@ -247,3 +247,38 @@ def test_main_omits_force_continue_when_invocation_limit_reached(
     result = json.loads(stdout_buf.getvalue())
     assert "terminationBehavior" not in result
     assert "F401 unused import" in result["injectSteps"][0]["ephemeralMessage"]
+
+
+def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    missing_agents = tmp_path / "missing_AGENTS.md"
+    oversized_agents = tmp_path / "oversized_AGENTS.md"
+    oversized_agents.write_text("A" * 18500, encoding="utf-8")
+
+    ws_dir = tmp_path / "ws"
+    rules_dir = ws_dir / ".agents" / "rules"
+    rules_dir.mkdir(parents=True)
+    (rules_dir / "always_rule.md").write_text(
+        "---\ntrigger: always_on\n---\n" + ("B" * 65000),
+        encoding="utf-8",
+    )
+    (rules_dir / "conditional_rule.md").write_text(
+        "---\ntrigger: model_decision\n---\n" + ("C" * 50000),
+        encoding="utf-8",
+    )
+
+    # Act
+    warnings_missing = post_invocation_lint.check_rules_token_budget(
+        [str(tmp_path / "no_rules_ws")], agents_md_path=missing_agents
+    )
+    warnings_exceeded = post_invocation_lint.check_rules_token_budget(
+        [str(ws_dir)], agents_md_path=oversized_agents
+    )
+
+    # Assert
+    assert warnings_missing == []
+    assert len(warnings_exceeded) == 2
+    assert "[TOKEN_BUDGET_EXCEEDED]" in warnings_exceeded[0]
+    assert "[WORKSPACE_RULES_BUDGET_EXCEEDED]" in warnings_exceeded[1]

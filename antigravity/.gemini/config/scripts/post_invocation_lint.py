@@ -17,6 +17,39 @@ from pathlib import Path
 
 _MAX_SUMMARY_LINES = 15
 _MAX_FORCE_CONTINUE_INVOCATIONS = 5
+_AGENTS_MD_MAX_BYTES = 18000
+_TOTAL_RULES_BUDGET_MAX_BYTES = 80000
+
+
+def check_rules_token_budget(
+    workspace_paths: list[str],
+    agents_md_path: Path | None = None,
+) -> list[str]:
+    """Check if active always_on rules exceed token budget limits."""
+    global_agents = agents_md_path or (Path(__file__).resolve().parent.parent / "AGENTS.md")
+    total_bytes = 0
+    warnings: list[str] = []
+    if global_agents.is_file():
+        agents_size = global_agents.stat().st_size
+        total_bytes += agents_size
+        if agents_size > _AGENTS_MD_MAX_BYTES:
+            warnings.append(
+                f"[TOKEN_BUDGET_EXCEEDED] {global_agents}: {agents_size} bytes "
+                f"(exceeds {_AGENTS_MD_MAX_BYTES}-byte AGENTS.md cap; context truncation risk)"
+            )
+    for ws in workspace_paths:
+        rules_dir = Path(ws) / ".agents" / "rules"
+        if rules_dir.is_dir():
+            for rf in sorted(rules_dir.glob("*.md")):
+                content = rf.read_text(encoding="utf-8", errors="ignore")
+                if "trigger: model_decision" not in content[:300]:
+                    total_bytes += len(content.encode("utf-8"))
+    if total_bytes > _TOTAL_RULES_BUDGET_MAX_BYTES:
+        warnings.append(
+            f"[WORKSPACE_RULES_BUDGET_EXCEEDED] Combined always_on rules total "
+            f"{total_bytes} bytes (~{total_bytes // 4} tokens > 20,000-token budget)"
+        )
+    return warnings
 
 
 def find_ruff(workspace_paths: list[str]) -> str | None:
@@ -111,7 +144,7 @@ def main() -> None:
         json.dump({}, sys.stdout)
         return
 
-    all_lines: list[str] = []
+    all_lines: list[str] = check_rules_token_budget(workspace_paths)
     for ws in workspace_paths:
         ws_files = get_changed_python_files(ws)
         if not ws_files:

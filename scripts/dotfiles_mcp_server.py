@@ -12,6 +12,7 @@ Configuration guide: docs/reference/contextual_mcp_and_multi_service_orchestrati
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import platform
@@ -20,6 +21,8 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +38,10 @@ VALID_LAYER_ROLES = (
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+AGENTS_MD_WARN_BYTES = 16000
+AGENTS_MD_MAX_BYTES = 18000
+MCP_PAYLOAD_WARN_BYTES = 16000
+MAX_LOG_FILE_BYTES = 524288
 ALLOWED_READ_PREFIXES = ("docs/", "templates/", "antigravity/", "system/")
 ALLOWED_ROOT_FILES = {
     "README.md",
@@ -120,6 +127,18 @@ def _read_non_empty_lines(path: Path) -> list[str]:
     ]
 
 
+def _merge_unique_strings(*groups: list[str]) -> list[str]:
+    seen: set[str] = set()
+    merged: list[str] = []
+    for group in groups:
+        for item in group:
+            clean = str(item).strip()
+            if clean and clean not in seen:
+                seen.add(clean)
+                merged.append(clean)
+    return merged
+
+
 class DotfilesMCPServer:
     """Read-only MCP server exposing dotfiles-ubuntu system & governance context."""
 
@@ -128,10 +147,80 @@ class DotfilesMCPServer:
         repo_dir: Path = REPO_DIR,
         layer_id_override: str | None = None,
         layer_role_override: str | None = None,
+        log_dir: Path | None = None,
     ) -> None:
         self.repo_dir = repo_dir.resolve()
         self.layer_id_override = layer_id_override
         self.layer_role_override = layer_role_override
+        self.log_dir = log_dir.resolve() if log_dir is not None else None
+
+    def _write_jsonl(self, filename: str, record: dict[str, Any]) -> None:
+        if self.log_dir is None:
+            return
+        with contextlib.suppress(OSError):
+            self.log_dir.mkdir(parents=True, exist_ok=True)
+            target = self.log_dir / filename
+            if target.is_file() and target.stat().st_size >= MAX_LOG_FILE_BYTES:
+                target.replace(self.log_dir / f"{filename}.1")
+            with target.open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(record) + "\n")
+
+    def _emit_warning(
+        self,
+        severity: str,
+        code: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        alert = {
+            "ts": datetime.now(UTC).isoformat(),
+            "severity": severity,
+            "code": code,
+            "message": message,
+            "details": details or {},
+        }
+        self._write_jsonl("mcp_alerts.jsonl", alert)
+        return alert
+
+    def _evaluate_layer_warnings(
+        self,
+        target_dir: Path,
+        agents_bytes: int,
+    ) -> list[dict[str, Any]]:
+        warnings: list[dict[str, Any]] = []
+        if agents_bytes > AGENTS_MD_MAX_BYTES:
+            warnings.append(
+                self._emit_warning(
+                    "CRITICAL",
+                    "TOKEN_BUDGET_EXCEEDED",
+                    f"AGENTS.md is {agents_bytes} bytes (exceeds {AGENTS_MD_MAX_BYTES}-byte cap; "
+                    "context truncation risk).",
+                    {"agents_md_bytes": agents_bytes, "cap_bytes": AGENTS_MD_MAX_BYTES},
+                )
+            )
+        elif agents_bytes >= AGENTS_MD_WARN_BYTES:
+            warnings.append(
+                self._emit_warning(
+                    "WARN",
+                    "TOKEN_BUDGET_NEAR_LIMIT",
+                    f"AGENTS.md is {agents_bytes} bytes (>= {AGENTS_MD_WARN_BYTES}-byte warning "
+                    f"threshold; {AGENTS_MD_MAX_BYTES - agents_bytes} bytes remaining).",
+                    {"agents_md_bytes": agents_bytes, "cap_bytes": AGENTS_MD_MAX_BYTES},
+                )
+            )
+        if target_dir == self.repo_dir:
+            for entry in self._discover_mounted_layers():
+                if not entry["has_upstream"]:
+                    warnings.append(
+                        self._emit_warning(
+                            "WARN",
+                            "SUBTREE_LINEAGE_WARNING",
+                            f"Mounted subtree {entry['relative_path']!r} is missing "
+                            "upstream_layer.repository in system/mcp-layer.json.",
+                            {"layer": entry["name"]},
+                        )
+                    )
+        return warnings
 
     def _load_layer_manifest(self, target_dir: Path | None = None) -> dict[str, Any]:
         base_dir = (target_dir or self.repo_dir).resolve()
@@ -149,6 +238,7 @@ class DotfilesMCPServer:
             "mounted_layers_dir": "layers",
             "mounted_layers": [],
             "default_stack_templates": ["fastapi-hexagonal"],
+            "baseline_guardrails": [],
             "environments": {},
             "federated_mcps": [],
         }
@@ -171,6 +261,13 @@ class DotfilesMCPServer:
         for sub in sorted(layers_dir.iterdir()):
             if not sub.is_dir() or sub.name.startswith("."):
                 continue
+            raw_manifest_path = sub / "system" / "mcp-layer.json"
+            has_upstream = True
+            if raw_manifest_path.is_file():
+                raw_data = json.loads(raw_manifest_path.read_text(encoding="utf-8"))
+                if isinstance(raw_data, dict) and "upstream_layer" in raw_data:
+                    up = raw_data.get("upstream_layer")
+                    has_upstream = bool(isinstance(up, dict) and up.get("repository"))
             sub_manifest = self._load_layer_manifest(sub)
             discovered.append(
                 {
@@ -182,6 +279,7 @@ class DotfilesMCPServer:
                     "has_docs": (sub / "docs").is_dir(),
                     "has_rules": (sub / "antigravity/.gemini/config/AGENTS.md").is_file(),
                     "has_templates": (sub / "templates").is_dir(),
+                    "has_upstream": has_upstream,
                     "federated_mcp_count": len(sub_manifest.get("federated_mcps", [])),
                 }
             )
@@ -650,6 +748,7 @@ class DotfilesMCPServer:
             )
             agents_file = target_dir / "antigravity/.gemini/config/AGENTS.md"
             agents_bytes = agents_file.stat().st_size if agents_file.is_file() else 0
+            warnings = self._evaluate_layer_warnings(target_dir, agents_bytes)
             digest = {
                 "channel_1_node_and_system_state": {
                     "version": _read_version(target_dir),
@@ -670,10 +769,15 @@ class DotfilesMCPServer:
                     "global_skills_count": len(skills_names),
                     "global_skills": skills_names,
                     "stack_templates": template_names,
+                    "baseline_guardrails": manifest.get("baseline_guardrails", []),
                 },
                 "channel_3_active_invariants_and_hooks": {
                     "agents_md_bytes": agents_bytes,
-                    "agents_md_budget_cap_bytes": 18000,
+                    "agents_md_estimated_tokens": agents_bytes // 4,
+                    "agents_md_budget_cap_bytes": AGENTS_MD_MAX_BYTES,
+                    "agents_md_budget_utilization_pct": round(
+                        (agents_bytes / AGENTS_MD_MAX_BYTES) * 100, 1
+                    ),
                     "active_lifecycle_hooks": [
                         "PreToolUse (pre_tool_guard.py)",
                         "PostToolUse (post_edit_format.py)",
@@ -681,6 +785,8 @@ class DotfilesMCPServer:
                         "Stop (stop_verify_tests.py)",
                     ],
                     "mcp_security_mode": "strictly-read-only-path-contained",
+                    "log_dir": str(self.log_dir) if self.log_dir else None,
+                    "warnings": warnings,
                 },
                 "channel_4_navigable_docs_and_federated_mcps": {
                     "docs_index": "docs/README.md",
@@ -732,6 +838,17 @@ class DotfilesMCPServer:
                     "passed": check_ok,
                     "output": clean_out,
                 }
+            if not results["healthy"]:
+                results["warnings"] = [
+                    self._emit_warning(
+                        "WARN",
+                        "NODE_DRIFT_DETECTED",
+                        "Repository verification or system drift audit reported issues.",
+                        {"mode": mode},
+                    )
+                ]
+            else:
+                results["warnings"] = []
             return {
                 "content": [{"type": "text", "text": json.dumps(results, indent=2)}],
                 "isError": False,
@@ -774,6 +891,7 @@ class DotfilesMCPServer:
                     candidate_files.extend(sorted((ldir / "docs").rglob("*.md")))
 
             matches: list[dict[str, Any]] = []
+            excerpt_truncated = False
             q_lower = query.lower()
             for file_path in candidate_files:
                 if not file_path.is_file():
@@ -790,8 +908,11 @@ class DotfilesMCPServer:
                     body: list[str],
                     fp: Path = file_path,
                 ) -> None:
+                    nonlocal excerpt_truncated
                     joined = "\n".join(body)
                     if q_lower in joined.lower() or q_lower in heading.lower():
+                        if len(joined) > 1500:
+                            excerpt_truncated = True
                         matches.append(
                             {
                                 "file": str(fp.relative_to(self.repo_dir)),
@@ -815,6 +936,24 @@ class DotfilesMCPServer:
                 if section_lines:
                     _flush_section(current_heading, section_start, len(lines), section_lines)
 
+            total_matches = len(matches)
+            query_warnings: list[dict[str, Any]] = []
+            if total_matches > 15 or excerpt_truncated:
+                query_warnings.append(
+                    self._emit_warning(
+                        "WARN",
+                        "RESPONSE_TRUNCATED",
+                        f"Query matched {total_matches} section(s) (returning top "
+                        f"{min(total_matches, 15)}). Narrow 'query', 'scope', or 'layer' "
+                        "to inspect full sections without truncation.",
+                        {
+                            "query": query,
+                            "total_matches": total_matches,
+                            "excerpt_truncated": excerpt_truncated,
+                        },
+                    )
+                )
+
             return {
                 "content": [
                     {
@@ -824,7 +963,10 @@ class DotfilesMCPServer:
                                 "query": query,
                                 "scope": scope,
                                 "layer": layer_arg,
-                                "match_count": len(matches),
+                                "total_matches_found": total_matches,
+                                "match_count": min(total_matches, 15),
+                                "truncated": bool(query_warnings),
+                                "warnings": query_warnings,
                                 "matches": matches[:15],
                             },
                             indent=2,
@@ -854,13 +996,38 @@ class DotfilesMCPServer:
             else:
                 target_dirs = [self._resolve_layer_dir(layer_arg)]
 
+            env_profiles = root_manifest.get("environments", {})
+            active_env_profile = env_profiles.get(env_arg) if env_arg else None
+            env_guardrails = (
+                active_env_profile.get("default_guardrails", [])
+                if isinstance(active_env_profile, dict)
+                else []
+            )
+            root_baseline = root_manifest.get("baseline_guardrails", [])
+
             mcps: list[dict[str, Any]] = []
             for tdir in target_dirs:
                 t_manifest = self._load_layer_manifest(tdir)
                 source_layer_id = t_manifest.get("layer_id", tdir.name)
+                layer_baseline = t_manifest.get("baseline_guardrails", [])
                 for raw_mcp in t_manifest.get("federated_mcps", []):
                     mcp_copy = dict(raw_mcp)
                     mcp_copy.setdefault("source_layer", source_layer_id)
+                    mcp_copy.setdefault("activation_policy", "on-demand")
+                    mcp_copy.setdefault(
+                        "when_to_invoke",
+                        "Invoke on demand when the task requires this layer/service capability.",
+                    )
+                    mcp_copy.setdefault(
+                        "avoid_when",
+                        "Avoid invoking when local repository files or narrower layers suffice.",
+                    )
+                    mcp_copy["effective_guardrails"] = _merge_unique_strings(
+                        root_baseline,
+                        layer_baseline,
+                        env_guardrails,
+                        mcp_copy.get("required_guardrails", []),
+                    )
                     mcps.append(mcp_copy)
 
             if filter_role:
@@ -876,16 +1043,29 @@ class DotfilesMCPServer:
                     m for m in mcps if env_arg in m.get("environments", list(VALID_ENVIRONMENTS))
                 ]
 
-            env_profiles = root_manifest.get("environments", {})
+            mcp_warnings: list[dict[str, Any]] = []
+            if len(mcps) > 3 and not filter_role and not env_arg:
+                mcp_warnings.append(
+                    self._emit_warning(
+                        "WARN",
+                        "MCP_FANOUT_WARNING",
+                        f"Unfiltered discovery returned {len(mcps)} MCPs across multiple layers. "
+                        "Specify 'environment' (dev/tst/pre/pro), 'layer', or 'filter_role' "
+                        "to prevent excessive MCP fan-out.",
+                        {"returned_mcp_count": len(mcps), "layer": layer_arg},
+                    )
+                )
+
             payload: dict[str, Any] = {
                 "layer_id": root_manifest.get("layer_id"),
                 "layer_role": root_manifest.get("layer_role"),
                 "upstream_layer": root_manifest.get("upstream_layer"),
                 "queried_layer": layer_arg,
                 "active_environment": env_arg or "all",
-                "environment_profile": env_profiles.get(env_arg) if env_arg else None,
+                "environment_profile": active_env_profile,
                 "mounted_layers": self._discover_mounted_layers(),
                 "federated_mcp_count": len(mcps),
+                "warnings": mcp_warnings,
                 "federated_mcps": mcps,
             }
             return {
@@ -1115,8 +1295,45 @@ class DotfilesMCPServer:
                         "message": f"Method not found: {method}",
                     },
                 }
-            return {"jsonrpc": "2.0", "id": msg_id, "result": result}
+            resp: dict[str, Any] = {"jsonrpc": "2.0", "id": msg_id, "result": result}
+            resp_bytes = len(json.dumps(resp).encode("utf-8"))
+            if resp_bytes > MCP_PAYLOAD_WARN_BYTES:
+                self._emit_warning(
+                    "WARN",
+                    "LARGE_MCP_PAYLOAD_WARNING",
+                    f"MCP response for {method!r} is {resp_bytes} bytes "
+                    f"(~{resp_bytes // 4} tokens > {MCP_PAYLOAD_WARN_BYTES}-byte soft cap).",
+                    {"method": method, "response_bytes": resp_bytes},
+                )
+            self._write_jsonl(
+                "mcp_events.jsonl",
+                {
+                    "ts": datetime.now(UTC).isoformat(),
+                    "method": method,
+                    "target": str(params.get("name") or params.get("uri") or method),
+                    "status": "ok",
+                    "response_bytes": resp_bytes,
+                    "estimated_tokens": resp_bytes // 4,
+                },
+            )
+            return resp
         except (ValueError, FileNotFoundError, KeyError) as exc:
+            self._emit_warning(
+                "WARN",
+                "SECURITY_OR_VALIDATION_ERROR",
+                str(exc),
+                {"method": method},
+            )
+            self._write_jsonl(
+                "mcp_events.jsonl",
+                {
+                    "ts": datetime.now(UTC).isoformat(),
+                    "method": method,
+                    "target": str(params.get("name") or params.get("uri") or method),
+                    "status": "error",
+                    "error": str(exc),
+                },
+            )
             return {
                 "jsonrpc": "2.0",
                 "id": msg_id,
@@ -1383,16 +1600,44 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Override layer_role from system/mcp-layer.json.",
     )
+    parser.add_argument(
+        "--log-dir",
+        default=None,
+        help="Directory for structured JSONL event & alert logs (default: ./logs).",
+    )
+    parser.add_argument(
+        "--no-log",
+        action="store_true",
+        help="Disable writing mcp_events.jsonl and mcp_alerts.jsonl to disk.",
+    )
     args = parser.parse_args(argv)
 
+    if args.self_test:
+        with tempfile.TemporaryDirectory() as tmp_log:
+            test_log_dir = None if args.no_log else Path(args.log_dir or tmp_log)
+            server = DotfilesMCPServer(
+                repo_dir=REPO_DIR,
+                layer_id_override=args.layer_id,
+                layer_role_override=args.layer_role,
+                log_dir=test_log_dir,
+            )
+            rc = run_self_test(server)
+            if test_log_dir is not None:
+                _require((test_log_dir / "mcp_events.jsonl").is_file(), "Missing mcp_events.jsonl")
+                _require((test_log_dir / "mcp_alerts.jsonl").is_file(), "Missing mcp_alerts.jsonl")
+            return rc
+
+    resolved_log_dir = (
+        None
+        if args.no_log
+        else Path(args.log_dir or os.environ.get("DOTFILES_MCP_LOG_DIR", str(REPO_DIR / "logs")))
+    )
     server = DotfilesMCPServer(
         repo_dir=REPO_DIR,
         layer_id_override=args.layer_id,
         layer_role_override=args.layer_role,
+        log_dir=resolved_log_dir,
     )
-    if args.self_test:
-        return run_self_test(server)
-
     run_stdio_loop(server)
     return 0
 
