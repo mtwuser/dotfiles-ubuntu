@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
+  - name: Community Q&A & Architecture Discussions
+    url: https://github.com/mtwuser/dotfiles-ubuntu/discussions
+    about: Ask questions about Ubuntu 26.04 setup, 3-tier corporate/team governance, git subtree layers, or Docker MCP orchestration in GitHub Discussions.
   - name: Security Policy & Vulnerability Reporting
     url: https://github.com/mtwuser/dotfiles-ubuntu/blob/master/SECURITY.md
     about: Please review SECURITY.md before reporting secret-isolation or credential-handling vulnerabilities.

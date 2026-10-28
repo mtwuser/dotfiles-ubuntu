@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in bootstrap/backup/audit scripts, GNU Stow modules, or Antigravity 2.0 hooks & skills
+description: Report a bug in bootstrap/backup/audit scripts, GNU Stow modules, Antigravity 2.0 hooks/skills, or the Contextual MCP Server & Docker container
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -18,8 +18,9 @@ body:
         - "GNU Stow Dotfile Modules (bash/, git/, antigravity/)"
         - "Antigravity 2.0 Rules & Skills (antigravity/.gemini/config/)"
         - "Antigravity 2.0 Lifecycle Hooks (hooks.json, scripts/*.py)"
+        - "Contextual MCP Server, Subtree Graph & Docker (scripts/dotfiles_mcp_server.py, layer-subtree.sh, Dockerfile)"
         - "Project Starter Templates (templates/fastapi-hexagonal/)"
-        - "CI / Verification Scripts (scripts/verify-repo.sh)"
+        - "Automated Test Suite & CI Verification (tests/{unit,imp,e2e}/, scripts/verify-repo.sh)"
     validations:
       required: true
   - type: textarea

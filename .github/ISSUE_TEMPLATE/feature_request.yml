@@ -1,5 +1,5 @@
 name: Feature / Skill / Recipe Request
-description: Propose a new Antigravity skill, lifecycle hook, project template, or external Ubuntu package recipe
+description: Propose a new Antigravity skill, lifecycle hook, MCP/subtree/Docker capability, project template, or external Ubuntu package recipe
 title: "[Feat]: "
 labels: ["enhancement"]
 body:
@@ -10,6 +10,7 @@ body:
       options:
         - "Antigravity 2.0 Global Skill (antigravity/.gemini/config/skills/)"
         - "Antigravity 2.0 Lifecycle Hook or Universal Rule (AGENTS.md / hooks.json)"
+        - "Contextual MCP Server, Subtree Graph or Docker Orchestration (scripts/dotfiles_mcp_server.py, layers/*, Dockerfile)"
         - "External Ubuntu Package Recipe (system/external/)"
         - "Project Starter Template (templates/)"
         - "System Engine Enhancement (bootstrap.sh / backup.sh / audit.sh)"

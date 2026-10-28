@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.2] - 2026-10-28
+
+### Changed
+- **GitHub Issue Templates & Discussions Integration (`.github/ISSUE_TEMPLATE/*.yml`)**:
+  - Updated [`.github/ISSUE_TEMPLATE/config.yml`](.github/ISSUE_TEMPLATE/config.yml) (`blank_issues_enabled: false`) to add a direct link to **GitHub Discussions** (`Community Q&A & Architecture Discussions`) alongside [`SECURITY.md`](SECURITY.md).
+  - Updated [`.github/ISSUE_TEMPLATE/bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) and [`.github/ISSUE_TEMPLATE/feature_request.yml`](.github/ISSUE_TEMPLATE/feature_request.yml) component/category dropdowns to include the **Contextual MCP Server, Subtree Graph & Docker (`scripts/dotfiles_mcp_server.py`, `layer-subtree.sh`, `Dockerfile`)** and the **Automated Test Suite (`tests/{unit,imp,e2e}/`)**.
+
+---
+
 ## [1.6.1] - 2026-10-28
 
 ### Changed
