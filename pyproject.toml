@@ -1,0 +1,56 @@
+[project]
+name = "dotfiles-ubuntu"
+version = "1.4.0"
+description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 governance suite, and Contextual MCP Server"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+    "scripts",
+    "antigravity/.gemini/config/scripts",
+]
+addopts = "-q --tb=short -W error::DeprecationWarning"
+
+[tool.coverage.run]
+branch = true
+source = [
+    "scripts",
+    "antigravity/.gemini/config/scripts",
+]
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "S", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S108", "S603", "S607"]
+
+[tool.mypy]
+strict = true
+mypy_path = [
+    "scripts",
+    "antigravity/.gemini/config/scripts",
+]

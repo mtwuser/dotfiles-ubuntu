@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.4.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -231,9 +231,24 @@ Organizations can use this repository's hierarchical fork model to standardize A
 │           ├── antigravity-ide.sh
 │           └── antigravity-agents.sh
 │
+├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
+│   ├── unit/                          ←   1:1 unit tests for all 5 Python hooks & MCP server
+│   │   ├── test_pre_tool_guard.py
+│   │   ├── test_post_edit_format.py
+│   │   ├── test_post_invocation_lint.py
+│   │   ├── test_stop_verify_tests.py
+│   │   └── test_dotfiles_mcp_server.py
+│   └── imp/                           ←   stdio JSON-RPC 2.0 & Bash CLI contract tests
+│       ├── test_mcp_and_hooks_stdio.py
+│       └── test_cli_scripts.py
+│
 ├── bootstrap.sh                       ← restore system from manifests
 ├── backup.sh                          ← capture current system state
 ├── audit.sh                           ← detect drift & residual files
+├── Makefile                           ← dev/test automation (make install, install-runtime, test-cov, lint, verify)
+├── pyproject.toml                     ← pytest, 100% branch coverage, ruff & mypy --strict config
+├── requirements.txt                   ← base runtime dependencies (0 packages in upstream; extensible in forks)
+├── requirements-dev.txt               ← dev/test dependencies (-r requirements.txt + pytest, pytest-cov, ruff, mypy)
 ├── VERSION                            ← semantic version (single source of truth)
 ├── ACCESSIBILITY.md                   ← accessibility commitment & terminal/a11y support
 ├── CHANGELOG.md                       ← release history (Keep a Changelog + SemVer)
@@ -256,6 +271,7 @@ Organizations can use this repository's hierarchical fork model to standardize A
 | `templates/` | ❌ | — | Project starter templates (copied manually) |
 | `scripts/` | ❌ | — | Utility, MCP & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh`) |
 | `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
+| `tests/` | ❌ | — | Unit (`tests/unit/`) & integration (`tests/imp/`) test suite with 100% branch coverage |
 
 ---
 
@@ -760,8 +776,51 @@ If you need to track SSH **config** (not keys), create the `ssh/` module with on
 
 ---
 
-## Versioning, CI & Contributing
+## Development, Testing, Virtual Environment & CI
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.2.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
-- **Repository Verification & CI**: Run `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate Bash syntax, Python 3.14 lifecycle hooks (`ruff`), `hooks.json` integrity, `AGENTS.md` token budget (`< 18 KB`), and `SKILL.md` frontmatter (`kebab-case`).
-- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on adding external package recipes, skills, or lifecycle hooks.
+### Layered Dependency Model (`requirements.txt` $\leftarrow$ `requirements-dev.txt` & Environment Profiles)
+
+`dotfiles-ubuntu` separates **base runtime dependencies** from **development/testing tools** using chained requirement files (`-r requirements.txt`), enabling clean extensibility across corporate, team, and multi-environment (`tst`, `pre`, `pro`) MCP forks:
+
+| Mode / File | Python Requirement | Packages Included | Virtual Environment (`venv`) Needed? |
+|-------------|--------------------|-------------------|:------------------------------------:|
+| **Base Runtime** ([`requirements.txt`](requirements.txt) — `bootstrap.sh`, `backup.sh`, `audit.sh`, `~/.gemini/config/scripts/*.py` hooks, and `scripts/dotfiles_mcp_server.py`) | Ubuntu 26.04 LTS system `python3` (**Python 3.14**; MCP server is also backward-compatible with Python >= 3.10 for older containers/remote hosts) | **Zero (`0`) in upstream base** — 100% Python Standard Library *(extensible in forks that add custom runtime MCP tools)* | **No** in upstream base (or `make install-runtime` if a fork adds runtime packages to `requirements.txt`) |
+| **Development, Linting & Testing** ([`requirements-dev.txt`](requirements-dev.txt) — chains `-r requirements.txt`) | Python 3.14 (or >= 3.13) | `-r requirements.txt` + `pytest`, `pytest-cov`, `ruff`, `mypy` | **Yes** (`./venv` created via `make install`) |
+| **Multi-Environment MCP / Service Forks** (`requirements-tst.txt`, `requirements-pre.txt`, `requirements-pro.txt` — optional in forks) | System or container `python3` | `-r requirements.txt` + environment-specific SDKs or MCP connectors | Optional per node (`pip install -r requirements-<env>.txt`) |
+
+> **Why keep `requirements.txt` separate from `requirements-dev.txt`?**
+> 1. **Zero Runtime Pollution**: In the upstream repository, both the Contextual MCP Server and the 4 lifecycle hooks use **100% Python Standard Library** and run directly on Ubuntu 26.04 LTS's native `/usr/bin/python3` (`Python 3.14`) without a `venv`. Keeping `pytest`, `mypy`, and `ruff` in `requirements-dev.txt` ensures that production/staging containers or remote SSH nodes never install test/lint packages if they run `pip install -r requirements.txt`.
+> 2. **Multi-Environment MCP Extensibility (`tst`, `pre`, `pro`)**: When a team or platform fork customizes `dotfiles-ubuntu` as a service-node MCP layer across `tst`, `pre`, or `pro` environments, it can place shared runtime libraries in `requirements.txt` (or environment-specific libraries in `requirements-<env>.txt` starting with `-r requirements.txt`), while `requirements-dev.txt` automatically inherits `-r requirements.txt` for local testing and CI.
+> 3. **Automatic Hook Discovery**: When `post_edit_format.py`, `post_invocation_lint.py`, or `stop_verify_tests.py` run inside any project, they automatically discover `ruff` and `pytest` from `<workspace>/venv/bin/`. Running `make install` (`requirements-dev.txt`) creates `./venv` inside `~/dotfiles-ubuntu` so those hooks also operate on `dotfiles-ubuntu` itself.
+
+### Setting Up the Local Development `venv` & Running Tests
+
+```bash
+cd ~/dotfiles-ubuntu
+
+# 1. Create ./venv and install requirements-dev.txt (chains -r requirements.txt + pytest, pytest-cov, ruff, mypy)
+make install
+
+# 2. Run the full test suite (tests/unit/ + tests/imp/) with 100% branch coverage gate
+make test-cov
+
+# 3. Run Ruff linter + Mypy --strict type checker
+make lint
+
+# 4. Run the complete 8-stage repository & CI verification suite
+make verify
+```
+
+### Versioning & Contributing
+
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.4.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
+  1. Open-source metadata, SemVer sync, and all relative Markdown links across `.md` files.
+  2. Bash syntax (`bash -n`) and executable permissions across all 16 shell scripts and external recipes.
+  3. Python lifecycle hooks and MCP server compilation, `ruff check`, and `mypy --strict` (0 errors).
+  4. `hooks.json` schema and script target resolution.
+  5. `AGENTS.md` token budget (`< 18 KB`).
+  6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
+  7. Contextual MCP Server (`./scripts/dotfiles_mcp_server.py --self-test` & `system/mcp-layer.json`).
+  8. Automated test suite (`tests/unit/` + `tests/imp/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
+- **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.

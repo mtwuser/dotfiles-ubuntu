@@ -40,30 +40,32 @@ ALLOWED_ROOT_FILES = {
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 
 
-def _read_version() -> str:
-    version_file = REPO_DIR / "VERSION"
+def _read_version(repo_dir: Path | None = None) -> str:
+    base_dir = repo_dir or REPO_DIR
+    version_file = base_dir / "VERSION"
     if version_file.is_file():
         return version_file.read_text(encoding="utf-8").strip()
     return "0.0.0"
 
 
-def _read_os_pretty_name() -> str:
-    os_release = Path("/etc/os-release")
-    if os_release.is_file():
-        for line in os_release.read_text(encoding="utf-8", errors="ignore").splitlines():
+def _read_os_pretty_name(os_release: Path | None = None) -> str:
+    release_file = os_release or Path("/etc/os-release")
+    if release_file.is_file():
+        for line in release_file.read_text(encoding="utf-8", errors="ignore").splitlines():
             if line.startswith("PRETTY_NAME="):
                 return line.split("=", 1)[1].strip().strip('"')
     return f"{platform.system()} {platform.release()}"
 
 
-def _read_git_commit() -> str:
+def _read_git_commit(repo_dir: Path | None = None) -> str:
+    base_dir = repo_dir or REPO_DIR
     git_bin = shutil.which("git")
     if not git_bin:
         return "unknown"
     try:
         proc = subprocess.run(  # noqa: S603
             [git_bin, "rev-parse", "--short", "HEAD"],
-            cwd=REPO_DIR,
+            cwd=base_dir,
             capture_output=True,
             text=True,
             timeout=5,
@@ -76,7 +78,8 @@ def _read_git_commit() -> str:
     return "unknown"
 
 
-def _parse_skill_frontmatter(skill_md: Path) -> dict[str, Any]:
+def _parse_skill_frontmatter(skill_md: Path, repo_dir: Path | None = None) -> dict[str, Any]:
+    base_dir = repo_dir or REPO_DIR
     lines = skill_md.read_text(encoding="utf-8").splitlines()
     name = skill_md.parent.name
     description = ""
@@ -94,7 +97,7 @@ def _parse_skill_frontmatter(skill_md: Path) -> dict[str, Any]:
     return {
         "name": name,
         "description": description,
-        "path": str(skill_md.relative_to(REPO_DIR)),
+        "path": str(skill_md.relative_to(base_dir)),
         "line_count": len(lines),
     }
 
@@ -249,14 +252,14 @@ class DotfilesMCPServer:
         if uri == "dotfiles://layer/identity":
             manifest = self._load_layer_manifest()
             payload = {
-                "version": _read_version(),
+                "version": _read_version(self.repo_dir),
                 "layer_id": manifest.get("layer_id", "dotfiles-ubuntu-default"),
                 "layer_role": manifest.get("layer_role", "workstation"),
                 "description": manifest.get("description", ""),
                 "hostname": socket.gethostname(),
                 "os_pretty_name": _read_os_pretty_name(),
                 "python_version": platform.python_version(),
-                "git_commit": _read_git_commit(),
+                "git_commit": _read_git_commit(self.repo_dir),
                 "repo_path": str(self.repo_dir),
                 "upstream_layer": manifest.get("upstream_layer", {}),
             }
@@ -313,7 +316,10 @@ class DotfilesMCPServer:
 
         if uri == "dotfiles://governance/skills":
             skills_root = self.repo_dir / "antigravity/.gemini/config/skills"
-            skills = [_parse_skill_frontmatter(sf) for sf in sorted(skills_root.glob("*/SKILL.md"))]
+            skills = [
+                _parse_skill_frontmatter(sf, self.repo_dir)
+                for sf in sorted(skills_root.glob("*/SKILL.md"))
+            ]
             return {
                 "uri": uri,
                 "mimeType": "application/json",
@@ -332,7 +338,7 @@ class DotfilesMCPServer:
                         for p in sorted((tpl_dir / "rules").glob("*.md"))
                     ]
                     skills = [
-                        _parse_skill_frontmatter(p)
+                        _parse_skill_frontmatter(p, self.repo_dir)
                         for p in sorted((tpl_dir / "skills").glob("*/SKILL.md"))
                     ]
                     gov = [
@@ -533,12 +539,12 @@ class DotfilesMCPServer:
             agents_bytes = (self.repo_dir / "antigravity/.gemini/config/AGENTS.md").stat().st_size
             digest = {
                 "channel_1_node_and_system_state": {
-                    "version": _read_version(),
+                    "version": _read_version(self.repo_dir),
                     "layer_id": manifest.get("layer_id"),
                     "layer_role": manifest.get("layer_role"),
                     "hostname": socket.gethostname(),
                     "os_pretty_name": _read_os_pretty_name(),
-                    "git_commit": _read_git_commit(),
+                    "git_commit": _read_git_commit(self.repo_dir),
                     "manifest_counts": sys_manifests["counts"],
                 },
                 "channel_2_governance_and_stack_contracts": {
@@ -722,7 +728,8 @@ class DotfilesMCPServer:
 
             global_skills_root = self.repo_dir / "antigravity/.gemini/config/skills"
             layer_a_skills = {
-                _parse_skill_frontmatter(sf)["name"] for sf in global_skills_root.glob("*/SKILL.md")
+                _parse_skill_frontmatter(sf, self.repo_dir)["name"]
+                for sf in global_skills_root.glob("*/SKILL.md")
             } | {sf.parent.name for sf in global_skills_root.glob("*/SKILL.md")}
 
             layer_b_rules: set[str] = set()
@@ -732,7 +739,7 @@ class DotfilesMCPServer:
                 for rf in templates_root.glob("*/rules/*.md"):
                     layer_b_rules.add(rf.name)
                 for sf in templates_root.glob("*/skills/*/SKILL.md"):
-                    layer_b_skills.add(_parse_skill_frontmatter(sf)["name"])
+                    layer_b_skills.add(_parse_skill_frontmatter(sf, self.repo_dir)["name"])
                     layer_b_skills.add(sf.parent.name)
 
             comparison = {
@@ -1018,8 +1025,9 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     print("  ✅ initialize handshake ok")
 
     # 2. Resources list & read all 8 resources
-    res_list = server.handle_request(
-        {"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}}
+    res_list = (
+        server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}})
+        or {}
     )
     _require(
         bool(res_list and len(res_list["result"]["resources"]) == 8),
@@ -1027,13 +1035,16 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     )
     for res in res_list["result"]["resources"]:
         uri = res["uri"]
-        read_resp = server.handle_request(
-            {
-                "jsonrpc": "2.0",
-                "id": 3,
-                "method": "resources/read",
-                "params": {"uri": uri},
-            }
+        read_resp = (
+            server.handle_request(
+                {
+                    "jsonrpc": "2.0",
+                    "id": 3,
+                    "method": "resources/read",
+                    "params": {"uri": uri},
+                }
+            )
+            or {}
         )
         _require(bool(read_resp and "result" in read_resp), f"Failed reading {uri}")
         text = read_resp["result"]["contents"][0]["text"]
@@ -1145,8 +1156,9 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     print("  ✅ tools/list, tools/call & path-containment security gate verified")
 
     # 5. Prompts list & get
-    prompts_list = server.handle_request(
-        {"jsonrpc": "2.0", "id": 11, "method": "prompts/list", "params": {}}
+    prompts_list = (
+        server.handle_request({"jsonrpc": "2.0", "id": 11, "method": "prompts/list", "params": {}})
+        or {}
     )
     _require(
         bool(prompts_list and len(prompts_list["result"]["prompts"]) == 3),

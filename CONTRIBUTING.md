@@ -47,27 +47,40 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
    cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity
    ```
 
-### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`)
+### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`) or the MCP Server (`scripts/dotfiles_mcp_server.py`)
 
-All lifecycle hook scripts in `antigravity/.gemini/config/scripts/*.py` must:
-- Target **Python >= 3.14** with `from __future__ import annotations` and strict type annotations.
+All Python scripts in `antigravity/.gemini/config/scripts/*.py` and `scripts/dotfiles_mcp_server.py` must:
+- Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`).
+- Include `from __future__ import annotations` and pass `mypy --strict` and `ruff check` with 0 errors.
 - Be executable (`chmod +x`).
-- Read hook JSON payload from `sys.stdin` and never fail fatally if `stdin` is empty or malformed.
-- Pass `ruff check` and `ruff format --check` with 0 warnings.
+- Maintain **100% statement and branch coverage** in `tests/unit/` with explicit `# Arrange`, `# Act`, `# Assert` comments and `0-byte` `tests/**/__init__.py` files.
 
 ---
 
-## 3. Pre-Commit Verification Checklist
+## 3. Development Environment (`venv`), Testing & Pre-Commit Verification
 
-Before submitting a Pull Request or committing changes, run the repository verification suite:
+`dotfiles-ubuntu` uses a two-tier dependency layout:
+- **[`requirements.txt`](requirements.txt)** — Base runtime dependencies (empty in the upstream repository because `scripts/dotfiles_mcp_server.py` and the `~/.gemini/config/scripts/*.py` hooks use 100% Ubuntu 26.04 LTS `Python 3.14` standard library; extensible in corporate/service forks or via `requirements-<env>.txt`).
+- **[`requirements-dev.txt`](requirements-dev.txt)** — Chains `-r requirements.txt` and installs the development, testing, and linting toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`) into `./venv`.
+
+Contributors modifying Python scripts, hooks, or tests should initialize `./venv` via [`Makefile`](Makefile):
 
 ```bash
 cd ~/dotfiles-ubuntu
 
-# 1. Run full static & structural verification (Bash, Python/Ruff, hooks.json, AGENTS.md budget, SKILL.md frontmatter)
-./scripts/verify-repo.sh
+# 1. Create ./venv and install dev/test tools from requirements-dev.txt (chains -r requirements.txt)
+make install
 
-# 2. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
+# 2. Run unit + integration tests with 100% statement and branch coverage gate
+make test-cov
+
+# 3. Run Ruff linter + Mypy --strict type checking
+make lint
+
+# 4. Run full 8-stage repository verification suite (Bash, Python, hooks.json, AGENTS.md budget, SKILL.md, MCP self-test, pytest 100% cov)
+make verify
+
+# 5. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
 ./scripts/audit-global-config.sh
 ```
 

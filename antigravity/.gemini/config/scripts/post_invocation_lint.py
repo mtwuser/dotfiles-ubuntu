@@ -67,20 +67,13 @@ def get_changed_python_files(workspace_path: str) -> list[str]:
 def run_osa_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
     """Run fast AST check_project and check_tests if workspace is an OSA repo."""
     ws = Path(workspace_path)
-    if (
-        not (ws / "osa-manifest.yaml").exists()
-        and not (ws / "src" / "osa_framework").exists()
-    ):
+    if not (ws / "osa-manifest.yaml").exists() and not (ws / "src" / "osa_framework").exists():
         return []
 
     src_dir = (
-        ws / "src" / "osa_framework"
-        if (ws / "src" / "osa_framework").exists()
-        else ws / "src"
+        ws / "src" / "osa_framework" if (ws / "src" / "osa_framework").exists() else ws / "src"
     )
-    tests_dir = (
-        ws / "tests" / "unit" if (ws / "tests" / "unit").exists() else ws / "tests"
-    )
+    tests_dir = ws / "tests" / "unit" if (ws / "tests" / "unit").exists() else ws / "tests"
     snippet = (
         "import sys; from pathlib import Path; "
         "from osa_framework.core.testing.architecture_linter import check_project, check_tests; "

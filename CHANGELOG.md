@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-10-28
+
+### Added
+- **Automated Test Suite (`tests/unit/` & `tests/imp/`) with 100% Statement & Branch Coverage**:
+  - Added 1:1 unit tests in `tests/unit/` covering all 5 Python modules in the repository (`test_pre_tool_guard.py`, `test_post_edit_format.py`, `test_post_invocation_lint.py`, `test_stop_verify_tests.py`, and `test_dotfiles_mcp_server.py`) following strict 3-comment AAA (`# Arrange`, `# Act`, `# Assert`) and `0-byte` `__init__.py` package marker purity (`77 passed`, `599 statements`, `254 branches`, **100.00% branch coverage**).
+  - Added integration/subprocess tests in `tests/imp/`:
+    - `tests/imp/test_mcp_and_hooks_stdio.py`: End-to-end `stdio` JSON-RPC 2.0 tests for `scripts/dotfiles_mcp_server.py` (both newline-delimited and `Content-Length` framed streams, `--self-test`, `--version`) and subprocess tests for all 4 Antigravity lifecycle hooks (`pre_tool_guard.py`, `post_edit_format.py`, `post_invocation_lint.py`, `stop_verify_tests.py`).
+    - `tests/imp/test_cli_scripts.py`: Deterministic CLI contract tests (`--help`, `--version`, invalid flag rejection with non-zero exit code) across `bootstrap.sh`, `backup.sh`, `audit.sh`, `scripts/verify-repo.sh`, and `scripts/antigravity-install.sh`, plus `bash -n` syntax verification across all 16 shell scripts and `system/external/*/*.sh` recipes.
+- **Layered Python Dependency Architecture & Self-Contained Development `venv` (`requirements.txt`, `requirements-dev.txt`, `pyproject.toml`, `Makefile`)**:
+  - Added `requirements.txt` (base runtime contract — zero external packages in upstream since runtime hooks and `dotfiles_mcp_server.py` execute directly on Ubuntu 26.04 LTS's system `Python 3.14` standard library, while serving as the base anchor for forks or `requirements-{tst,pre,pro}.txt` environment profiles) and `requirements-dev.txt` (chaining `-r requirements.txt` + `pytest`, `pytest-cov`, `ruff`, `mypy`).
+  - Added `pyproject.toml` (centralized `pytest`, `coverage` 100% branch gate, `ruff` `py314`, and `mypy --strict` configuration) and `Makefile` (`make install`, `make install-runtime`, `make test`, `make test-unit`, `make test-imp`, `make test-cov`, `make lint`, `make typecheck`, `make format`, `make verify`, `make audit`, `make clean`).
+  - Updated `bootstrap.sh`, `audit.sh`, and `.gitignore` to exclude non-stow development directories (`tests/`, `venv/`, `.venv/`, `htmlcov/`, `.pytest_cache/`, `.mypy_cache/`, `.coverage`).
+  - Extended `scripts/verify-repo.sh` (`[1/8]` through `[8/8]`) and `.github/workflows/ci.yml` to run `ruff check`, `mypy --strict` (0 errors across 15 source and test files), `0-byte` `tests/**/__init__.py` checks, and `pytest --cov --cov-branch --cov-fail-under=100` in CI.
+
+### Fixed
+- **`scripts/dotfiles_mcp_server.py` Repository Path & OS Release Parameterization**:
+  - Updated `_read_version`, `_read_git_commit`, `_parse_skill_frontmatter`, and `DotfilesMCPServer` to resolve paths against the instance's `repo_dir` parameter rather than the import-time module constant `REPO_DIR`, and parameterized `_read_os_pretty_name(os_release)` for deterministic unit testing and strict `mypy --strict` compliance.
+
+---
+
 ## [1.3.0] - 2026-10-28
 
 ### Added

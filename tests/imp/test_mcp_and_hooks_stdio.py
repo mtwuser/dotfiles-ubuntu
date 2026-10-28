@@ -1,0 +1,108 @@
+"""Implementation/integration tests for MCP server and lifecycle hooks over stdio."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+REPO_DIR = Path(__file__).resolve().parents[2]
+MCP_SERVER = REPO_DIR / "scripts" / "dotfiles_mcp_server.py"
+HOOKS_DIR = REPO_DIR / "antigravity" / ".gemini" / "config" / "scripts"
+
+
+def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip() -> None:
+    # Arrange
+    line_req = (
+        json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "get_layer_overview", "arguments": {}},
+            }
+        )
+        + "\n"
+    )
+    body = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "discover_federated_mcps",
+                "arguments": {"filter_role": "documentation"},
+            },
+        }
+    ).encode("utf-8")
+    framed_req = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+
+    # Act
+    proc_line = subprocess.run(
+        [sys.executable, str(MCP_SERVER)],
+        input=line_req.encode("utf-8"),
+        capture_output=True,
+        timeout=10,
+        check=True,
+    )
+    proc_framed = subprocess.run(
+        [sys.executable, str(MCP_SERVER)],
+        input=framed_req,
+        capture_output=True,
+        timeout=10,
+        check=True,
+    )
+
+    # Assert
+    resp_line = json.loads(proc_line.stdout.decode("utf-8").strip())
+    overview = json.loads(resp_line["result"]["content"][0]["text"])
+    assert "channel_1_node_and_system_state" in overview
+    assert proc_framed.stdout.startswith(b"Content-Length:")
+    _, payload = proc_framed.stdout.split(b"\r\n\r\n", 1)
+    resp_framed = json.loads(payload.decode("utf-8"))
+    fed = json.loads(resp_framed["result"]["content"][0]["text"])
+    assert fed["federated_mcp_count"] == 1
+
+
+def test_pre_tool_guard_subprocess_denies_git_push_and_allows_pytest() -> None:
+    # Arrange
+    guard_script = HOOKS_DIR / "pre_tool_guard.py"
+    deny_payload = json.dumps(
+        {
+            "toolCall": {
+                "name": "run_command",
+                "args": {"CommandLine": "git push origin master"},
+            }
+        }
+    )
+    allow_payload = json.dumps(
+        {
+            "toolCall": {
+                "name": "run_command",
+                "args": {"CommandLine": "pytest -q"},
+            }
+        }
+    )
+
+    # Act
+    deny_proc = subprocess.run(
+        [sys.executable, str(guard_script)],
+        input=deny_payload,
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=True,
+    )
+    allow_proc = subprocess.run(
+        [sys.executable, str(guard_script)],
+        input=allow_payload,
+        capture_output=True,
+        text=True,
+        timeout=5,
+        check=True,
+    )
+
+    # Assert
+    assert json.loads(deny_proc.stdout)["decision"] == "deny"
+    assert json.loads(allow_proc.stdout)["decision"] == "allow"

@@ -135,7 +135,7 @@ Add `dotfiles-ubuntu` under `"mcpServers"`:
 }
 ```
 
-> **Tip**: Replace `/home/<your-user>/dotfiles-ubuntu` with your absolute home path (e.g., `/home/alice/dotfiles-ubuntu`), as JSON configuration files do not expand `~`.
+> **Tip**: Replace `/home/<your-user>/dotfiles-ubuntu` with your absolute home path (e.g., `/home/alice/dotfiles-ubuntu`), as JSON configuration files do not expand `~`. In the upstream base repository, `dotfiles_mcp_server.py` uses only the Python standard library (`requirements.txt` has 0 external packages), so `"command": "python3"` invokes the operating system's native interpreter (`/usr/bin/python3` — Python 3.14 on Ubuntu 26.04 LTS, or Python >= 3.10 on older containers/nodes) directly without needing a `venv`. If a custom service-node fork adds runtime packages to `requirements.txt` (or an environment profile such as `requirements-tst.txt`, `requirements-pre.txt`, `requirements-pro.txt`), run `make install-runtime` (or `venv/bin/pip install -r requirements-<env>.txt`) on that node and point `"command"` to `"/path/to/dotfiles-ubuntu/venv/bin/python"`.
 
 ---
 

@@ -55,9 +55,7 @@ def has_python_changes(workspace_path: str) -> bool:
             timeout=5,
         )
         all_files = unstaged.stdout + staged.stdout + untracked.stdout
-        return any(
-            f.strip().endswith(".py") for f in all_files.splitlines() if f.strip()
-        )
+        return any(f.strip().endswith(".py") for f in all_files.splitlines() if f.strip())
     return True
 
 

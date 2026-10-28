@@ -1,0 +1,20 @@
+# =============================================================================
+# Runtime Base Dependencies — dotfiles-ubuntu
+# =============================================================================
+# By default, the upstream base repository requires ZERO third-party pip
+# packages at runtime:
+#   - bootstrap.sh, backup.sh, and audit.sh
+#   - Antigravity 2.0 lifecycle hooks (antigravity/.gemini/config/scripts/*.py)
+#   - Contextual MCP Server (scripts/dotfiles_mcp_server.py)
+# all execute directly using the Python 3.14 Standard Library included in
+# Ubuntu 26.04 LTS (/usr/bin/python3).
+#
+# EXTENSIBILITY FOR FORKS & MULTI-ENVIRONMENT MCP NODES (tst / pre / pro):
+#   - If your corporate, team, or service-node fork adds custom MCP tools or
+#     automation scripts that require runtime packages, declare common runtime
+#     dependencies in this file (`requirements.txt`).
+#   - For environment-specific MCP or node dependencies (e.g., tst, pre, pro),
+#     create `requirements-<env>.txt` starting with `-r requirements.txt`.
+#   - For development, linting, and testing, use `requirements-dev.txt`
+#     (which inherits `-r requirements.txt` automatically via `make install`).
+# =============================================================================

@@ -26,9 +26,7 @@ _FILE_WRITE_TOOLS = frozenset(
 _MUTATING_GIT_RE = re.compile(
     r"(?:^|[;&|]\s*|\n\s*)git\s+(?:-C\s+\S+\s+)*(?:add|commit|push|reset\s+--hard|clean\s+-[a-zA-Z]*f)\b"
 )
-_ALEMBIC_MUTATE_RE = re.compile(
-    r"(?:^|[;&|]\s*|\n\s*)alembic\s+(?:revision|upgrade|downgrade)\b"
-)
+_ALEMBIC_MUTATE_RE = re.compile(r"(?:^|[;&|]\s*|\n\s*)alembic\s+(?:revision|upgrade|downgrade)\b")
 
 
 def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
@@ -52,10 +50,7 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
         is_consumer_src_init = "/src/" in target and "/src/osa_framework/" not in target
         if is_tests_init or is_consumer_src_init:
             content = str(
-                args.get("Content")
-                or args.get("Replacement")
-                or args.get("CodeContent")
-                or ""
+                args.get("Content") or args.get("Replacement") or args.get("CodeContent") or ""
             )
             if content or args.get("ReplacementChunks"):
                 msg = (

@@ -94,6 +94,10 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 [ "$module" = "scripts" ] && continue
 [ "$module" = "templates" ] && continue
 [ "$module" = "docs" ] && continue
+[ "$module" = "tests" ] && continue
+[ "$module" = "venv" ] && continue
+[ "$module" = ".venv" ] && continue
+[ "$module" = "htmlcov" ] && continue
 ```
 
 | Root Directory | Classification | Target in `$HOME` | Notes |
@@ -105,6 +109,8 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh` |
 | `templates/` | Non-Stow | — | Layer 2 project starter templates (`fastapi-hexagonal/`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
+| `tests/` | Non-Stow | — | Automated unit (`tests/unit/`) & integration (`tests/imp/`) test suite (100% branch coverage) |
+| `venv/` | Non-Stow (Ignored) | — | Optional local Python virtual environment created via `make install` (`requirements-dev.txt` $\rightarrow$ `-r requirements.txt`) |
 
 ### 4.2. Collision Safety & Identity Migration (`bootstrap.sh`)
 

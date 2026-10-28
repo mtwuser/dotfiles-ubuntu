@@ -130,6 +130,10 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--stow" ] || [ "$MODE" = "interactive" 
       [ "$module" = "scripts" ] && continue
       [ "$module" = "templates" ] && continue
       [ "$module" = "docs" ] && continue
+      [ "$module" = "tests" ] && continue
+      [ "$module" = "venv" ] && continue
+      [ "$module" = ".venv" ] && continue
+      [ "$module" = "htmlcov" ] && continue
       echo "  → stow $module"
       if [ "$module" = "antigravity" ]; then
         prepare_antigravity_dirs

@@ -97,3 +97,30 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
    ./scripts/dotfiles_mcp_server.py --self-test
    ./scripts/verify-repo.sh
    ```
+
+---
+
+## 6. Python Virtual Environment (`venv`), Automated Testing (`tests/{unit,imp}`) & 100% Coverage Gate
+
+`dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/fastapi-hexagonal/` prescribe:
+
+### 6.1. Layered Dependency Separation (`requirements.txt` $\leftarrow$ `requirements-dev.txt` & Environment Profiles)
+- **Base Runtime ([`requirements.txt`](../../requirements.txt) — Zero External Dependencies in Upstream)**: Every script executed during normal workstation, container, or remote server operation (`bootstrap.sh`, `backup.sh`, `audit.sh`, `antigravity/.gemini/config/scripts/*.py`, and `scripts/dotfiles_mcp_server.py`) uses **only the Python 3 standard library** and runs directly on Ubuntu 26.04 LTS's native `/usr/bin/python3` (`Python 3.14`; `dotfiles_mcp_server.py` also maintains `Python >= 3.10` compatibility for older containers or remote hosts). Consequently, `requirements.txt` contains zero packages in the upstream base repository, so users cloning `dotfiles-ubuntu` do **not** need a `venv` at runtime.
+- **Multi-Environment Fork Extensibility (`tst`, `pre`, `pro`)**: If a corporate, team, or service-node fork extends `dotfiles-ubuntu` with custom MCP tools or scripts that require third-party runtime libraries, shared runtime packages can be added to `requirements.txt` (`make install-runtime`), and environment-specific MCP dependencies (`tst`, `pre`, `pro`) can be declared in `requirements-<env>.txt` files starting with `-r requirements.txt`.
+- **Development & Testing (`./venv` + [`requirements-dev.txt`](../../requirements-dev.txt))**: `requirements-dev.txt` chains `-r requirements.txt` and adds the development/verification toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`) managed via [`Makefile`](../../Makefile) (`make install`) and [`pyproject.toml`](../../pyproject.toml).
+
+### 6.2. Test Suite Architecture (`tests/unit/` & `tests/imp/`)
+- **`tests/unit/` (1:1 Module Mapping & 100% Branch Coverage)**:
+  - `test_pre_tool_guard.py` $\rightarrow$ `antigravity/.gemini/config/scripts/pre_tool_guard.py`
+  - `test_post_edit_format.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_edit_format.py`
+  - `test_post_invocation_lint.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_invocation_lint.py`
+  - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
+  - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
+- **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0 & Bash CLI Contracts)**:
+  - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
+  - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, and `bash -n` syntax across all 16 `.sh` scripts and external package recipes.
+- **Mandatory Quality Gates**:
+  - Every test function must contain explicit `# Arrange`, `# Act`, and `# Assert` comments.
+  - All `tests/**/__init__.py` files must be **0 bytes** (package marker purity).
+  - `make test-cov` enforces **100.00% statement and branch coverage** (`--cov-branch --cov-fail-under=100`).
+  - `make lint` enforces `ruff check` and `mypy --strict` with 0 errors across all source and test files.
