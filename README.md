@@ -143,19 +143,59 @@ cd ~/dotfiles-ubuntu
 
 ---
 
-### Path 3: Enterprise & Team Human-AI Governance ("pAIr programming" at Scale)
+### Path 3: Enterprise & Team Human-AI Governance ("pAIr programming" at Scale — With or Without MCP)
 
-Organizations can use this repository's hierarchical fork model to standardize AI-assisted software engineering across teams without losing project autonomy:
+Organizations can use this repository as the foundation for company-wide AI-assisted software engineering — starting from a **Corporate Reference Fork** of this open-source repository, branching into **Departmental** and **Team** layers, and applying those standards during daily **Application Development** (**either without MCP** using pure Git + GNU Stow + Templates, **or with MCP** using the built-in Contextual MCP Server and `git subtree` graph):
 
-1. **Corporate Baseline (`Layer A`)**: Maintain an organization-wide fork defining universal security, typing, AAA testing, and commit rules (`AGENTS.md` + `hooks.json` + global `skills/`).
-2. **Team / Stack Blueprints (`Layer B`)**: Maintain team forks or `templates/<stack>/` catalogs for specific architectures (e.g., Python/FastAPI Hexagonal DDD, Data/BigQuery, Web Islands).
-3. **Project Context & Navigable Docs (`Layer C` + `docs/`)**: Combine project-local `.agents/` rules and `WORKTASK.md` trackers with a structured, indexed `docs/` directory (`docs/README.md`, `docs/architecture/`) maintained alongside code (or automated with **Google Jules**, **Gemini Code Assist Enterprise**, **NotebookLM**, and **Google Developer Knowledge MCP**).
-4. **Organic Bidirectional Evolution**: Strategic standards flow downward (`Corporate → Team → Project` via `/sopen`), while battle-tested patterns discovered in projects (`/learn`) are promoted upward (`/enrich` `Project → Team → Corporate`) to benefit the entire organization immediately.
-5. **Optional Contextual MCP Server & Multi-Service Orchestration (`scripts/dotfiles_mcp_server.py`)**: Run any fork or container instance of `dotfiles-ubuntu` as a zero-dependency, read-only MCP server over `stdio`, `docker exec -i`, or `ssh` — either as a **standalone container/node health & docs introspector** or as a **Federated Context Mesh** orchestrating multiple MCPs across complex multi-service topologies.
+```
+Tier 0: Public Open-Source Upstream (mtwuser/dotfiles-ubuntu)
+   │  git fork + ./scripts/layer-subtree.sh sync-upstream
+   ▼
+Tier 1: Corporate Reference Layer (e.g., acme-corp/dotfiles-ubuntu)
+   │  • Company-wide AGENTS.md, hooks.json (PreToolUse/Stop guards), 11 global skills
+   ├──► Tier 2A: Departmental Forks (e.g., acme-dept-security, acme-dept-data, acme-dept-sre)
+   │       • Cross-cutting security/data/cloud compliance rules, docs/, departmental MCPs
+   └──► Tier 2B: Team / Stack Forks (e.g., acme-team-backend, acme-team-frontend)
+           • Stack starter templates (templates/fastapi-hexagonal/, etc.)
+           • Optionally mounts Tier 2A Departmental forks in layers/<dept>/ via git subtree
+           │
+           ▼
+Tier 3: Application Development Repositories (e.g., checkout-service, billing-api)
+   • Scaffolds <app>/.agents/{rules,skills} + WORKTASK.md from Tier 2B templates/<stack>/
+   • Developers work with Corporate + Team + Project context (With or Without MCP)
+```
 
-📖 **Full Architecture & Setup Guides**:
-- **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** — Corporate $\rightarrow$ Team $\rightarrow$ Project governance, Google AI docs tooling, and 1:1 VS Code / GitHub Copilot mapping.
-- **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** — Standalone & federated MCP server architecture and step-by-step configuration (`mcp_config.json`, `.vscode/mcp.json`, Docker containers, remote SSH servers).
+#### Two Complementary Operating Perspectives (Choose One or Combine Both)
+
+| Perspective | How It Works | When a Company Should Use It |
+|-------------|--------------|------------------------------|
+| **Mode A — Without MCP**<br>*(Pure Git + GNU Stow + Templates)* | 1. Company forks `dotfiles-ubuntu` $\rightarrow$ Teams fork the Corporate repo.<br>2. Developers clone their Team fork (`~/dotfiles-ubuntu`) and run `./bootstrap.sh --antigravity`.<br>3. GNU Stow links `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` locally.<br>4. Application repos copy `templates/<stack>/` into `<app>/.agents/`.<br>5. Sync runs via `/sopen` (`git pull`) and `/enrich` (upward PRs). | Ideal for organizations wanting **zero MCP server configuration** and 100% local file-based rules, deterministic lifecycle hooks, and stack templates. |
+| **Mode B — With MCP**<br>*(Contextual MCP Server + `git subtree` `layers/*` + `dev/tst/pre/pro`)* | Everything in Mode A **plus**:<br>1. Team/Workstation forks mount Departmental & Sibling-Service forks into `layers/<name>/` via `./scripts/layer-subtree.sh add` (`0 bytes` added to `always_on` `AGENTS.md`).<br>2. `scripts/dotfiles_mcp_server.py` runs over `stdio` (locally, via `docker exec -i`, or via `ssh`).<br>3. Agents query cross-layer rules (`layer="all"`), audit container drift, and discover `dev/tst/pre/pro` MCPs with inherited `effective_guardrails` and JSONL audit logs (`logs/mcp_*.jsonl`). | Ideal when applications cross **multiple departments** (Security, Data, SRE), **multiple microservices/containers**, or **multiple environments (`dev/tst/pre/pro`)** and need on-demand context without exceeding the 20,000-token rule budget. |
+
+#### Quick Integration Sequence for a Company
+
+```bash
+# 1. [Corporate Architect] Fork mtwuser/dotfiles-ubuntu -> acme-corp/dotfiles-ubuntu
+#    Customize antigravity/.gemini/config/AGENTS.md and system/mcp-layer.json (layer_role: "corporate")
+
+# 2. [Team / Department Lead] Fork acme-corp/dotfiles-ubuntu -> acme-team-backend
+#    Keep synced vertically with Corporate upstream:
+./scripts/layer-subtree.sh sync-upstream git@github.com:acme-corp/dotfiles-ubuntu.git main
+
+# 3. [Optional — Multi-Dimensional Context] Mount Departmental forks into layers/* (--squash):
+./scripts/layer-subtree.sh add dept-security git@github.com:acme-corp/dotfiles-dept-security.git main
+./scripts/layer-subtree.sh add dept-data     git@github.com:acme-corp/dotfiles-dept-data.git main
+
+# 4. [Developer] Clone the Team fork, activate GNU Stow hooks, and scaffold an application repo:
+git clone git@github.com:acme-corp/dotfiles-team-backend.git ~/dotfiles-ubuntu
+cd ~/dotfiles-ubuntu && ./bootstrap.sh --antigravity
+cp -r ~/dotfiles-ubuntu/templates/fastapi-hexagonal/{rules,skills} /path/to/my-app/.agents/
+cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app/
+```
+
+📖 **Full Architecture & Enterprise Integration Guides**:
+- **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** — Complete step-by-step Company Integration Playbook (`Corporate → Department/Team → Application`, with or without MCP), Google AI docs tooling, and 1:1 VS Code / GitHub Copilot mapping.
+- **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** — Standalone & federated MCP server architecture, `git subtree` (`layers/*`) workflows, `dev/tst/pre/pro` environment profiles, and IDE/Docker/SSH recipes.
 - **[`docs/README.md`](docs/README.md)** — Navigable documentation index and subsystem map.
 
 ---
@@ -819,11 +859,11 @@ make verify
 - **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.4.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
   1. Open-source metadata, SemVer sync, and all relative Markdown links across `.md` files.
-  2. Bash syntax (`bash -n`) and executable permissions across all 16 shell scripts and external recipes.
+  2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.
   3. Python lifecycle hooks and MCP server compilation, `ruff check`, and `mypy --strict` (0 errors).
   4. `hooks.json` schema and script target resolution.
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
-  7. Contextual MCP Server (`./scripts/dotfiles_mcp_server.py --self-test` & `system/mcp-layer.json`).
+  7. Contextual MCP Server & Subtree Orchestrator (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1).
   8. Automated test suite (`tests/unit/` + `tests/imp/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.

@@ -47,7 +47,7 @@ To support a new technology stack or team archetype (for example, `templates/gcp
        ├── CHANGELOG.md
        └── SESSION.md
    ```
-2. **Verify `SKILL.md` Frontmatter**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/6]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
+2. **Verify `SKILL.md` Frontmatter**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 3. **Keep `always_on` Rules Compact**: Remember that a project's `always_on` rules share the 20,000-token `defaultRulesBudget` with `~/.gemini/config/AGENTS.md`. Use `trigger: model_decision` for testing, governance, and documentation rules.
 
 ---
@@ -58,7 +58,7 @@ To support a new technology stack or team archetype (for example, `templates/gcp
    - **Prefer `apt-repo/`** whenever the vendor publishes an official signed APT repository (automatic security updates via `apt upgrade`).
    - Use **`deb-url/`** for standalone `.deb` packages without an APT repo.
    - Use **`script/`** for `/opt/` binary tarballs or custom installers.
-2. Ensure the script passes `bash -n` (verified automatically by `./scripts/verify-repo.sh` Check `[2/6]`).
+2. Ensure the script passes `bash -n` (verified automatically by `./scripts/verify-repo.sh` Check `[2/8]`).
 3. Do **not** add the recipe to `system/external.txt` unless it is installed on the reference machine — `./backup.sh` populates `system/external.txt` automatically by evaluating each recipe's `CHECK` / `CHECK_CMD`.
 
 ---
@@ -91,11 +91,12 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
    - Use **only** the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`). Never import third-party packages that would require `pip install`.
    - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
 2. **Customizing Layer Identity, Mounted Subtrees & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
-   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, or `workstation`), `upstream_layer`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`).
-   - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]` and are auto-discovered by `scripts/dotfiles_mcp_server.py`.
+   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, or `workstation`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
+   - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
 3. **Run the Deterministic MCP & Subtree Self-Tests**:
    ```bash
    ./scripts/layer-subtree.sh list
+   ./scripts/layer-subtree.sh pull-all
    ./scripts/dotfiles_mcp_server.py --self-test
    ./scripts/verify-repo.sh
    ```
@@ -120,7 +121,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
 - **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0 & Bash CLI Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
-  - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, and `bash -n` syntax across all 16 `.sh` scripts and external package recipes.
+  - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh` (`list`, `pull`, `push`, `pull-all`), and `bash -n` syntax across all 17 `.sh` scripts and external package recipes.
 - **Mandatory Quality Gates**:
   - Every test function must contain explicit `# Arrange`, `# Act`, and `# Assert` comments.
   - All `tests/**/__init__.py` files must be **0 bytes** (package marker purity).

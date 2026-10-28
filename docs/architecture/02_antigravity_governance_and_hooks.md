@@ -43,7 +43,7 @@ Antigravity 2.0 enforces two strict runtime limits when loading rules into the L
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Hard Gate**: `scripts/verify-repo.sh` (Check `[5/6]`) fails CI if `antigravity/.gemini/config/AGENTS.md` exceeds **18,000 bytes**.
+- **Hard Gate**: `scripts/verify-repo.sh` (Check `[5/8]`) fails CI if `antigravity/.gemini/config/AGENTS.md` exceeds **18,000 bytes**, and `post_invocation_lint.py` (`check_rules_token_budget`) warns at runtime if `AGENTS.md` exceeds `18,000 bytes` (`[TOKEN_BUDGET_EXCEEDED]`) or if combined `always_on` rules across `AGENTS.md` + workspace `.agents/rules/*.md` exceed `80,000 bytes` (~20,000 tokens, `[WORKSPACE_RULES_BUDGET_EXCEEDED]`).
 - **Rule vs. Skill Separation**: *Rules* govern **what** invariants must hold (concise mandates); *Skills* teach **how** to execute multi-step workflows (loaded on demand).
 
 ---
@@ -85,27 +85,27 @@ sequenceDiagram
 
 | Hook Event | Script | Matcher | Input (`stdin` JSON keys) | Output (`stdout` JSON contract) | Enforcement Behavior |
 |------------|--------|---------|---------------------------|---------------------------------|----------------------|
-| **`PreToolUse`** | [`pre_tool_guard.py`](../../antigravity/.gemini/config/scripts/pre_tool_guard.py) | `write_file\|edit_file\|replace_file_content\|multi_replace_file_content\|write_to_file\|run_command` | `toolName` (`tool_name`), `toolArgs` (`tool_input` / `parameters`) | `{"decision": "allow"}` or `{"decision": "deny", "reason": "...", "systemMessage": "..."}` | **Hard-blocks**:<br>1. Non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`.<br>2. Manual edits to `alembic/versions/*.py`.<br>3. Automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`) or `alembic` (`revision`, `upgrade`, `downgrade`) commands. |
+| **`PreToolUse`** | [`pre_tool_guard.py`](../../antigravity/.gemini/config/scripts/pre_tool_guard.py) | `write_file\|edit_file\|replace_file_content\|multi_replace_file_content\|write_to_file\|run_command` | `toolName` (`tool_name`), `toolArgs` (`tool_input` / `parameters`) | `{"decision": "allow"}` or `{"decision": "deny", "reason": "...", "systemMessage": "..."}` | **Hard-blocks**:<br>1. Non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`.<br>2. Manual edits to `alembic/versions/*.py`.<br>3. Automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`, `subtree add\|pull\|push\|merge`) or `alembic` (`revision`, `upgrade`, `downgrade`) commands. |
 | **`PostToolUse`** | [`post_edit_format.py`](../../antigravity/.gemini/config/scripts/post_edit_format.py) | `edit_file\|write_file\|...` | `toolArgs.Path` / `TargetFile`, `workspacePaths` | `{}` (silent formatting) | Runs `ruff format` on any edited `.py` file immediately after the write completes. |
-| **`PostInvocation`** | [`post_invocation_lint.py`](../../antigravity/.gemini/config/scripts/post_invocation_lint.py) | *(All turns)* | `workspacePaths`, `invocationCount` | `{"injectSteps": [{"role": "user", "content": "...", "isEphemeral": true}], "terminationBehavior": "force_continue"}` | Detects modified **and untracked** (`git ls-files --others`) `.py` files; runs `ruff check` and AST `check_project`/`check_tests` (when `osa_framework` is present). Forces the agent to fix violations in the same turn (up to `_MAX_FORCE_CONTINUE_INVOCATIONS = 5`). |
+| **`PostInvocation`** | [`post_invocation_lint.py`](../../antigravity/.gemini/config/scripts/post_invocation_lint.py) | *(All turns)* | `workspacePaths`, `invocationNum` | `{"injectSteps": [{"ephemeralMessage": "..."}], "terminationBehavior": "force_continue"}` | Checks `always_on` rule token budgets (`check_rules_token_budget`: `AGENTS.md <= 18 KB` and combined workspace `always_on` rules `<= 80 KB`), detects modified **and untracked** (`git ls-files --others`) `.py` files, and runs `ruff check` + AST `check_project`/`check_tests` (when `osa_framework` is present). Forces the agent to fix violations in the same turn (up to `_MAX_FORCE_CONTINUE_INVOCATIONS = 5`). |
 | **`Stop`** | [`stop_verify_tests.py`](../../antigravity/.gemini/config/scripts/stop_verify_tests.py) | *(Normal stop: `NO_TOOL_CALL` / `END_TURN`)* | `workspacePaths`, `stopReason` | `{"decision": "allow"}` or `{"decision": "block", "reason": "..."}` | Runs `pytest` on unit tests corresponding to modified/untracked `.py` files and runs AST architecture/test checks before allowing the agent to conclude its turn. |
 
 ---
 
 ## 4. Global Skills Catalog (`antigravity/.gemini/config/skills/`)
 
-Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/6]`).
+Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/8]`).
 
 ### 4.1. Interactive Slash-Command Skills (`/<name>`)
 
 | Skill / Command | Primary Responsibility | Key Artifacts Read / Updated |
 |-----------------|------------------------|------------------------------|
-| **[`sopen`](../../antigravity/.gemini/config/skills/sopen/SKILL.md)** (`/sopen`) | Pulls latest `~/dotfiles-ubuntu` (`--ff-only`), restores session context across 3 tiers (`brain/` $\rightarrow$ `.agents/SESSION.md` $\rightarrow$ `git status`), and triggers project `/start` | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md` |
+| **[`sopen`](../../antigravity/.gemini/config/skills/sopen/SKILL.md)** (`/sopen`) | Pulls latest `~/dotfiles-ubuntu` (`--ff-only`), inspects mounted `layers/*` & `logs/mcp_alerts.jsonl`, restores session context across 3 tiers (`brain/` $\rightarrow$ `.agents/SESSION.md` $\rightarrow$ `git status`), and triggers project `/start` | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md` |
 | **[`continue`](../../antigravity/.gemini/config/skills/continue/SKILL.md)** (`/continue`) | Mid-session checkpoint: snapshots active task progress, promotes completed task blocks (`WORKTASK.md` $\rightarrow$ `CHANGELOG.md`), and delivers commit blocks | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md`, `CHANGELOG.md` |
-| **[`sclose`](../../antigravity/.gemini/config/skills/sclose/SKILL.md)** (`/sclose`) | End-of-session closure: runs governance promotion (Zero-Clutter Invariant), closes `.agents/SESSION.md`, emits knowledge signals, and delivers per-repo commits | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md` |
+| **[`sclose`](../../antigravity/.gemini/config/skills/sclose/SKILL.md)** (`/sclose`) | End-of-session closure: runs governance promotion (Zero-Clutter Invariant), closes `.agents/SESSION.md`, runs `make verify` if `dotfiles-ubuntu` changed, emits knowledge signals, and delivers per-repo commits | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md` |
 | **[`priority`](../../antigravity/.gemini/config/skills/priority/SKILL.md)** (`/priority`) | Enforces the deterministic priority chain (`WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/`) and Phase 0.5 deep-analysis | `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `roadmaps/*.md` |
 | **[`review`](../../antigravity/.gemini/config/skills/review/SKILL.md)** (`/review`) | Audits module architecture, service boundaries, 1:1 test mapping (logic files only), AAA comment separation, and 100% coverage | `src/**`, `tests/unit/**`, `tests/imp/**` |
-| **[`enrich`](../../antigravity/.gemini/config/skills/enrich/SKILL.md)** (`/enrich`) | Scans active workspace `.agents/` against `~/dotfiles-ubuntu`, proposes upward promotions (`Layer C → B → A`) and downward syncs, and runs `stow -t ~ -R antigravity` | `.agents/rules/*.md`, `.agents/skills/**`, `~/dotfiles-ubuntu/antigravity/` |
+| **[`enrich`](../../antigravity/.gemini/config/skills/enrich/SKILL.md)** (`/enrich`) | Scans active workspace `.agents/` against `~/dotfiles-ubuntu` (`Layer A`), `templates/*` (`Layer B`), and mounted `layers/*` subtrees (`Layer D`), proposes upward promotions (`layer-subtree.sh push`) and downward syncs, and runs `stow -t ~ -R antigravity` | `.agents/rules/*.md`, `.agents/skills/**`, `~/dotfiles-ubuntu/antigravity/`, `~/dotfiles-ubuntu/layers/*` |
 
 ### 4.2. Procedural Engineering Skills (Auto-Activated by Task Context)
 
