@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.6.2-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.6.3-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -864,12 +864,12 @@ make docker-build && make docker-self-test
 
 ### Versioning & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.6.2`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.6.3`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
   1. Open-source metadata, SemVer sync, `Dockerfile` / `.dockerignore`, and all relative Markdown links across `.md` files.
   2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.
   3. Python lifecycle hooks and MCP server compilation, `ruff check`, and `mypy --strict` (0 errors).
-  4. `hooks.json` schema and script target resolution.
+  4. `hooks.json` schema, script target resolution, and deterministic **hook-to-documentation contract parity** (`pre_tool_guard.py` & `post_invocation_lint.py` vs. `AGENTS.md`, `SECURITY.md`, and `docs/architecture/02..03`).
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
   7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1; Ubuntu 26.04 non-root `Dockerfile`).

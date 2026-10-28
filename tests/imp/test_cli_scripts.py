@@ -275,3 +275,47 @@ def test_dockerfile_dockerignore_and_makefile_docker_targets_contract() -> None:
     assert "docker-build:" in mk_text
     assert "docker-self-test:" in mk_text
     assert "docker-mcp:" in mk_text
+
+
+def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
+    # Arrange
+    import json
+
+    import dotfiles_mcp_server
+    import post_invocation_lint
+    import pre_tool_guard
+
+    config_dir = REPO_DIR / "antigravity/.gemini/config"
+    hooks_data = json.loads((config_dir / "hooks.json").read_text(encoding="utf-8"))
+    agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
+    arch_02 = (REPO_DIR / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(
+        encoding="utf-8"
+    )
+    arch_03 = (REPO_DIR / "docs/architecture/03_contextual_mcp_and_federation.md").read_text(
+        encoding="utf-8"
+    )
+    security_md = (REPO_DIR / "SECURITY.md").read_text(encoding="utf-8")
+    readme_md = (REPO_DIR / "README.md").read_text(encoding="utf-8")
+
+    # Act
+    pre_matcher = set(hooks_data["pre-tool-guard"]["PreToolUse"][0]["matcher"].split("|"))
+    post_matcher = set(hooks_data["auto-format"]["PostToolUse"][0]["matcher"].split("|"))
+
+    # Assert
+    assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
+    assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
+    assert post_invocation_lint._AGENTS_MD_MAX_BYTES == dotfiles_mcp_server.AGENTS_MD_MAX_BYTES
+    for token in (*pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS, "alembic/versions/", "__init__.py"):
+        assert token in arch_02
+        assert token in security_md
+        assert token in readme_md
+    for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"):
+        assert agents_token in agents_md
+    for budget_token in (
+        "18,000",
+        "80,000",
+        "TOKEN_BUDGET_EXCEEDED",
+        "WORKSPACE_RULES_BUDGET_EXCEEDED",
+    ):
+        assert budget_token in arch_02
+        assert budget_token in arch_03

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.3] - 2026-10-29
+
+### Added
+- **Deterministic Hook-to-Documentation Contract Parity Gate (`scripts/verify-repo.sh` Check `[4/8]`, `pre_tool_guard.py`, `tests/imp/test_cli_scripts.py`)**:
+  - Extended Check `[4/8]` in [`scripts/verify-repo.sh`](scripts/verify-repo.sh) and added `test_hooks_json_and_hook_scripts_maintain_doc_contract_parity` in [`tests/imp/test_cli_scripts.py`](tests/imp/test_cli_scripts.py) to prevent drift between enforced Python lifecycle hook rules and documentation:
+    1. Verifies exact matcher-set parity between `antigravity/.gemini/config/hooks.json` (`PreToolUse` / `PostToolUse`) and `pre_tool_guard._FILE_WRITE_TOOLS`.
+    2. Verifies that every blocked git subcommand (`_DOCUMENTED_GIT_SUBCOMMANDS`: `add`, `commit`, `push`, `reset --hard`, `clean -f`, `subtree`), alembic subcommand (`_DOCUMENTED_ALEMBIC_SUBCOMMANDS`), and file guard (`alembic/versions/`, `0 bytes` `__init__.py`) is both matched by `_MUTATING_GIT_RE` / `_ALEMBIC_MUTATE_RE` and documented across `AGENTS.md`, `SECURITY.md`, `README.md`, and `docs/architecture/02_antigravity_governance_and_hooks.md`.
+    3. Verifies that `post_invocation_lint.py` token-budget constants (`18,000` and `80,000` bytes) and warning codes match `dotfiles_mcp_server.py` and `docs/architecture/02..03`.
+
+---
+
 ## [1.6.2] - 2026-10-28
 
 ### Changed

@@ -200,15 +200,15 @@ else
   fail "mypy not found (run 'make install' or 'pip install -r requirements-dev.txt')"
 fi
 
-# 4. hooks.json Schema & Target Verification
+# 4. hooks.json Schema, Script References & Hook-to-Doc Contract Parity
 echo ""
-echo "[4/8] hooks.json Schema & Script References"
+echo "[4/8] hooks.json Schema, Script References & Hook-to-Doc Contract Parity"
 if python3 - <<'PYEOF'
 import json
 from pathlib import Path
 import sys
 
-repo = Path(".")
+repo = Path(".").resolve()
 config_dir = repo / "antigravity/.gemini/config"
 hooks_path = config_dir / "hooks.json"
 data = json.loads(hooks_path.read_text(encoding="utf-8"))
@@ -218,6 +218,7 @@ if not isinstance(data, dict) or not data:
 
 valid_events = {"PreToolUse", "PostToolUse", "PostInvocation", "Stop"}
 commands: list[str] = []
+event_matchers: dict[str, set[str]] = {}
 
 for group_name, group_cfg in data.items():
     if not isinstance(group_cfg, dict):
@@ -227,6 +228,9 @@ for group_name, group_cfg in data.items():
             print(f"Unknown lifecycle event '{event_name}' in group '{group_name}'", file=sys.stderr)
             sys.exit(1)
         for entry in entries:
+            matcher = entry.get("matcher")
+            if isinstance(matcher, str) and matcher:
+                event_matchers.setdefault(event_name, set()).update(matcher.split("|"))
             if "command" in entry:
                 commands.append(entry["command"])
             for h in entry.get("hooks", []):
@@ -243,12 +247,83 @@ for cmd in commands:
     if not script_path.is_file():
         print(f"Missing hook script referenced in hooks.json: {script_path}", file=sys.stderr)
         sys.exit(1)
-print(f"  Verified {len(commands)} lifecycle hook command(s) in hooks.json")
+
+# Deterministic Hook-to-Documentation Contract Parity Gate
+sys.path.insert(0, str(config_dir / "scripts"))
+sys.path.insert(0, str(repo / "scripts"))
+import pre_tool_guard  # noqa: E402
+import post_invocation_lint  # noqa: E402
+import dotfiles_mcp_server  # noqa: E402
+
+expected_pre_tools = set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
+if event_matchers.get("PreToolUse") != expected_pre_tools:
+    print(
+        f"hooks.json PreToolUse matcher {event_matchers.get('PreToolUse')} != {expected_pre_tools}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+if event_matchers.get("PostToolUse") != set(pre_tool_guard._FILE_WRITE_TOOLS):
+    print(
+        f"hooks.json PostToolUse matcher {event_matchers.get('PostToolUse')} != {set(pre_tool_guard._FILE_WRITE_TOOLS)}",
+        file=sys.stderr,
+    )
+    sys.exit(1)
+
+# Verify every documented git/alembic subcommand is enforced by pre_tool_guard regexes
+for git_sub in pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS:
+    sample_cmd = f"git {git_sub} test-arg" if git_sub != "subtree" else "git subtree add --prefix=layers/x repo main"
+    if not pre_tool_guard._MUTATING_GIT_RE.search(sample_cmd):
+        print(f"pre_tool_guard._MUTATING_GIT_RE does not match documented git subcommand: {git_sub}", file=sys.stderr)
+        sys.exit(1)
+
+for alembic_sub in pre_tool_guard._DOCUMENTED_ALEMBIC_SUBCOMMANDS:
+    if not pre_tool_guard._ALEMBIC_MUTATE_RE.search(f"alembic {alembic_sub} head"):
+        print(f"pre_tool_guard._ALEMBIC_MUTATE_RE does not match documented alembic subcommand: {alembic_sub}", file=sys.stderr)
+        sys.exit(1)
+
+# Cross-check enforced hook contracts against AGENTS.md, Architecture 02, Architecture 03, SECURITY.md, and README.md
+agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
+arch_02 = (repo / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(encoding="utf-8")
+arch_03 = (repo / "docs/architecture/03_contextual_mcp_and_federation.md").read_text(encoding="utf-8")
+security_md = (repo / "SECURITY.md").read_text(encoding="utf-8")
+readme_md = (repo / "README.md").read_text(encoding="utf-8")
+
+for doc_name, doc_text in [
+    ("docs/architecture/02_antigravity_governance_and_hooks.md", arch_02),
+    ("SECURITY.md", security_md),
+    ("README.md", readme_md),
+]:
+    for token in (*pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS, "alembic/versions/", "__init__.py"):
+        if token not in doc_text:
+            print(f"Hook-to-doc drift: '{token}' enforced by pre_tool_guard.py is missing from {doc_name}", file=sys.stderr)
+            sys.exit(1)
+
+for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands", "git add", "git commit", "git push"):
+    if agents_token not in agents_md:
+        print(f"Hook-to-doc drift: '{agents_token}' missing from AGENTS.md", file=sys.stderr)
+        sys.exit(1)
+
+if post_invocation_lint._AGENTS_MD_MAX_BYTES != dotfiles_mcp_server.AGENTS_MD_MAX_BYTES:
+    print("Token budget cap mismatch between post_invocation_lint.py and dotfiles_mcp_server.py", file=sys.stderr)
+    sys.exit(1)
+
+for budget_token in (
+    str(post_invocation_lint._AGENTS_MD_MAX_BYTES // 1000) + ",000",
+    str(post_invocation_lint._TOTAL_RULES_BUDGET_MAX_BYTES // 1000) + ",000",
+    "TOKEN_BUDGET_EXCEEDED",
+    "WORKSPACE_RULES_BUDGET_EXCEEDED",
+):
+    if budget_token not in arch_02 or budget_token not in arch_03:
+        print(f"Hook-to-doc drift: token budget contract '{budget_token}' missing from Architecture 02/03 docs", file=sys.stderr)
+        sys.exit(1)
+
+print(f"  Verified {len(commands)} lifecycle hook command(s) and full hook-to-doc contract parity")
 PYEOF
 then
-  pass "hooks.json is valid JSON and all referenced scripts exist"
+  pass "hooks.json schema, matcher sets, and hook-to-doc parity verified (AGENTS.md, Arch 02/03, SECURITY.md, README.md)"
 else
-  fail "hooks.json validation failed"
+  fail "hooks.json or hook-to-doc parity validation failed"
 fi
 
 # 5. AGENTS.md Token Budget Gate

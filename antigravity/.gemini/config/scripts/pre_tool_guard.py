@@ -6,8 +6,11 @@ Hard-blocks (zero prompt tokens, 100% deterministic):
 1. Non-empty writes/edits to consumer ``src/**/__init__.py`` or ``tests/**/__init__.py``.
 2. Manual creation/editing of migration files under ``alembic/versions/*.py``.
 3. Automatic execution of mutating git commands (``git add``, ``git commit``,
-   ``git push``, ``git reset --hard``) or manual ``alembic revision/upgrade``.
+   ``git push``, ``git reset --hard``, ``git clean -f``,
+   ``git subtree add|pull|push|merge``) or manual ``alembic revision/upgrade/downgrade``.
 """
+
+from __future__ import annotations
 
 import json
 import re
@@ -21,6 +24,20 @@ _FILE_WRITE_TOOLS = frozenset(
         "multi_replace_file_content",
         "write_to_file",
     }
+)
+
+_DOCUMENTED_GIT_SUBCOMMANDS: tuple[str, ...] = (
+    "add",
+    "commit",
+    "push",
+    "reset --hard",
+    "clean -f",
+    "subtree",
+)
+_DOCUMENTED_ALEMBIC_SUBCOMMANDS: tuple[str, ...] = (
+    "revision",
+    "upgrade",
+    "downgrade",
 )
 
 _MUTATING_GIT_RE = re.compile(
@@ -74,7 +91,8 @@ def _check_command(args: dict[str, object]) -> tuple[bool, str]:
         msg = (
             "Blocked by pre_tool_guard (Commit Discipline): "
             "Never auto-run mutating git commands (git add, git commit, git push, "
-            "git reset --hard). Present commit blocks for the user to run."
+            "git reset --hard, git clean -f, git subtree). "
+            "Present commit blocks for the user to run."
         )
         return False, msg
 
