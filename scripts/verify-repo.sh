@@ -53,6 +53,11 @@ else
 fi
 
 for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md \
+           docs/README.md \
+           docs/architecture/01_system_and_stow_engine.md \
+           docs/architecture/02_antigravity_governance_and_hooks.md \
+           docs/reference/enterprise_pair_programming_governance.md \
+           docs/reference/developer_and_extension_guide.md \
            .github/PULL_REQUEST_TEMPLATE.md \
            .github/ISSUE_TEMPLATE/bug_report.yml \
            .github/ISSUE_TEMPLATE/feature_request.yml \

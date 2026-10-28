@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-10-28
+
+### Added
+- **Navigable Documentation Hub, Normative Architecture Specs & Enterprise "pAIr programming" Guide (`docs/`)**:
+  - Added `docs/README.md` providing a navigable documentation index, document hierarchy map, Mermaid subsystem diagram, and quick-lookup table for both humans and AI agents.
+  - Added `docs/architecture/01_system_and_stow_engine.md` specifying the Ubuntu 26.04 LTS tripartite lifecycle (`backup.sh` $\leftrightarrow$ `audit.sh` $\leftrightarrow$ `bootstrap.sh`), 3-stage APT filtering pipeline, `system/external/{apt-repo,deb-url,script}/` plugin contracts, and GNU Stow tree-unfolding invariants.
+  - Added `docs/architecture/02_antigravity_governance_and_hooks.md` specifying the 3-surface `~/.gemini/config/` architecture, the 20,000-token `defaultRulesBudget` & 18 KB `AGENTS.md` cap, sequence diagram and `stdin`/`stdout` JSON contracts for all 4 Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), and the 11 global skills catalog.
+  - Added `docs/reference/enterprise_pair_programming_governance.md` detailing the **Enterprise Use Case — Distributed Human-AI Governance ("pAIr programming") at Scale** (3-tier `Corporate → Team → Project` hierarchy, bidirectional `/learn` $\rightarrow$ `/enrich` evolution, navigable `docs/` with **Google Jules**, **Gemini Code Assist Enterprise**, **Google Developer Knowledge MCP**, **Google NotebookLM**, and **`google-genai` SDK**, plus 1:1 portability matrix to **VS Code & GitHub Copilot**, **Cursor**, and **Claude Code**).
+  - Added `docs/reference/developer_and_extension_guide.md` as a maintainer playbook for evolving `dotfiles-ubuntu` (adding stow vs. non-stow root directories, creating Layer 2 stack templates, authoring external package recipes, and running CI/symlink verification).
+  - Updated `bootstrap.sh` and `audit.sh` to skip the non-stow `docs/` root directory, and updated `README.md` and `scripts/verify-repo.sh` to verify the complete `docs/` hierarchy.
+
+---
+
 ## [1.1.1] - 2026-10-27
 
 ### Added

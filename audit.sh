@@ -74,6 +74,7 @@ for module_dir in */; do
   [ "$module_name" = "system" ] && continue
   [ "$module_name" = "scripts" ] && continue
   [ "$module_name" = "templates" ] && continue
+  [ "$module_name" = "docs" ] && continue
   [ "$module_name" = ".git" ] && continue
   [ ! -d "$module_name" ] && continue
 

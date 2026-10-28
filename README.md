@@ -1,25 +1,28 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
 
-Declarative system manager, dotfile engine, and **Google Antigravity 2.0** customization suite for **Ubuntu 26.04 LTS ("Resolute Raccoon")**.
+Declarative system manager, dotfile engine, and **Distributed Human-AI Governance ("pAIr programming") Platform** for **Ubuntu 26.04 LTS ("Resolute Raccoon")** and **Google Antigravity 2.0 / Gemini** *(directly extrapolable to **VS Code & GitHub Copilot**, **Cursor**, and **Claude Code**)*.
 
 This repository is designed to be **modular** — you can use the entire suite or pick only the pieces you need:
 1. **Ubuntu System Backup, Audit & Restore (`backup.sh`, `audit.sh`, `bootstrap.sh`)** — snapshot your installed APT packages, Snaps, NPM globals, external tools, and GNOME desktop settings into plain-text manifests, audit system drift at any time, or rebuild a machine from scratch.
 2. **Dotfile Symlink Management (`bash/`, `git/`)** — manage `~/.bashrc`, `~/.profile`, and `~/.gitconfig` via [GNU Stow](https://www.gnu.org/software/stow/) while keeping personal identity and secrets in untracked local overrides (`~/.bashrc.local`, `~/.gitconfig.local`).
-3. **Google Antigravity 2.0 Configuration (`antigravity/`, `templates/`)** — universal `AGENTS.md` behavioral rules, Python 3.14 lifecycle hooks (`PreToolUse` safety guards, auto-format, lint + AST checks, test gate), 11 reusable skills (`/sopen`, `/sclose`, `/continue`, `/enrich`, `/priority`, `/review`, etc.), and project starter templates (`templates/fastapi-hexagonal/`) shared across all three Antigravity surfaces:
+3. **Google Antigravity 2.0 & Multi-Tier AI Governance (`antigravity/`, `templates/`, `docs/`)** — universal `AGENTS.md` behavioral rules, Python 3.14 lifecycle hooks (`PreToolUse` safety guards, auto-format, lint + AST checks, test gate), 11 reusable skills (`/sopen`, `/sclose`, `/continue`, `/enrich`, `/priority`, `/review`, etc.), and project starter templates (`templates/fastapi-hexagonal/`) shared across all three Antigravity surfaces:
    - **Antigravity 2.0 (Agents Desktop App)** — `/opt/antigravity-agents` (state in `~/.gemini/antigravity/`)
    - **Antigravity IDE** — `/opt/antigravity-ide` (state in `~/.gemini/antigravity-ide/`)
    - **Antigravity CLI (`agy`)** — `~/.local/bin/agy` (settings in `~/.gemini/antigravity-cli/`)
 
+> **Enterprise Use Case — Distributed "pAIr programming" Governance at Scale**:
+> Beyond individual workstations, this fork-and-stow model allows organizations to orchestrate Human-AI collaboration across **Corporate**, **Team**, and **Project** tiers, pairing bidirectional rule evolution (`/learn` $\rightarrow$ `/enrich`) with navigable repository documentation (`docs/`). See **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** (and the navigable hub at **[`docs/README.md`](docs/README.md)**) for the full architecture and VS Code / GitHub Copilot mapping.
+
 ---
 
-## Quick Start: 2 Main Ways to Use This Repository
+## Quick Start: 3 Main Ways to Use This Repository
 
-You can use this repository **just for Google Antigravity 2.0** (without touching your Ubuntu system or shell), or **fork it to manage, audit, and restore your own Ubuntu 26.04 workstation**.
+You can use this repository **just for Google Antigravity 2.0** (standalone), **fork it to manage and restore your own Ubuntu 26.04 workstation**, or **adopt it as an enterprise/multi-team Human-AI governance platform**.
 
 ---
 
@@ -140,6 +143,19 @@ cd ~/dotfiles-ubuntu
 
 ---
 
+### Path 3: Enterprise & Team Human-AI Governance ("pAIr programming" at Scale)
+
+Organizations can use this repository's hierarchical fork model to standardize AI-assisted software engineering across teams without losing project autonomy:
+
+1. **Corporate Baseline (`Layer A`)**: Maintain an organization-wide fork defining universal security, typing, AAA testing, and commit rules (`AGENTS.md` + `hooks.json` + global `skills/`).
+2. **Team / Stack Blueprints (`Layer B`)**: Maintain team forks or `templates/<stack>/` catalogs for specific architectures (e.g., Python/FastAPI Hexagonal DDD, Data/BigQuery, Web Islands).
+3. **Project Context & Navigable Docs (`Layer C` + `docs/`)**: Combine project-local `.agents/` rules and `WORKTASK.md` trackers with a structured, indexed `docs/` directory (`docs/README.md`, `docs/architecture/`) maintained alongside code (or automated with **Google Jules**, **Gemini Code Assist Enterprise**, **NotebookLM**, and **Google Developer Knowledge MCP**).
+4. **Organic Bidirectional Evolution**: Strategic standards flow downward (`Corporate → Team → Project` via `/sopen`), while battle-tested patterns discovered in projects (`/learn`) are promoted upward (`/enrich` `Project → Team → Corporate`) to benefit the entire organization immediately.
+
+📖 **Full Architecture, Google Tooling Guide & VS Code / GitHub Copilot Mapping**: **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** (and navigable documentation hub at **[`docs/README.md`](docs/README.md)**).
+
+---
+
 ## Repository Structure
 
 ```
@@ -164,6 +180,15 @@ cd ~/dotfiles-ubuntu
 │   └── .local/share/applications/
 │       ├── antigravity-agents.desktop ←   → ~/.local/share/applications/
 │       └── antigravity-ide.desktop    ←   → ~/.local/share/applications/
+│
+├── docs/                              ← NOT stow — navigable architecture & reference hub
+│   ├── README.md                      ←   Documentation index, subsystem map & AI agent lookup
+│   ├── architecture/                  ←   Normative technical specifications
+│   │   ├── 01_system_and_stow_engine.md           ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
+│   │   └── 02_antigravity_governance_and_hooks.md ← Token budget, 4 hook JSON contracts, 11 skills
+│   └── reference/                     ←   Enterprise use cases & maintainer extension guides
+│       ├── enterprise_pair_programming_governance.md ← Enterprise Human-AI governance & Copilot mapping
+│       └── developer_and_extension_guide.md       ← Maintainer playbook for evolving dotfiles-ubuntu
 │
 ├── .github/
 │   ├── ISSUE_TEMPLATE/                ← GitHub Issue Forms (bug report, feature request, config)
@@ -219,6 +244,7 @@ cd ~/dotfiles-ubuntu
 | `bash/` | ✅ | `~/.bashrc`, `~/.profile` | Shell configuration |
 | `git/` | ✅ | `~/.gitconfig` | Git global settings |
 | `antigravity/` | ✅ | `~/.gemini/config/*`, `~/.local/share/applications/*` | Antigravity config + .desktop entries |
+| `docs/` | ❌ | — | Navigable documentation hub & enterprise Human-AI governance architecture |
 | `templates/` | ❌ | — | Project starter templates (copied manually) |
 | `scripts/` | ❌ | — | Utility & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `verify-repo.sh`) |
 | `system/` | ❌ | — | Package manifests & external recipe catalog (consumed by `bootstrap.sh`, `backup.sh`, `audit.sh`) |
@@ -306,14 +332,25 @@ my-project/
 │   ├── skills/                 ← Project-specific procedural guides
 │   │   └── start/SKILL.md      ← Project startup sequence (`/start`)
 │   └── SESSION.md              ← Session state (cross-machine recovery)
-├── BACKLOG.md      ← Tech debt observations
+├── BACKLOG.md                  ← Tech debt observations
 ├── CHANGELOG.md                ← Completed work
 ├── WORKROAD.md                 ← Planned roadmap
 ├── WORKTASK.md                 ← Active work items
-└── WORKVALI.md                 ← Manual validation tracker
+├── WORKVALI.md                 ← Manual validation tracker
+└── docs/                       ← Navigable repository knowledge (architecture, reference, index)
 ```
 
 Custom rules **extend** the shared layer. They live in the project's own git repo and travel with it.
+
+### Navigable Repository Knowledge (`docs/`) & Cross-IDE Portability
+
+When an AI agent operates inside a repository configured with this model, it draws simultaneously on **4 pillars of context**:
+1. **Organization / Corporate Rules (`Layer A`)** — universal engineering rigor, security, and AAA testing (`AGENTS.md`).
+2. **Team / Stack Blueprints (`Layer B`)** — architectural and tech-stack conventions (`templates/`).
+3. **Project Rules, Skills & Tasks (`Layer C`)** — domain invariants (`.agents/`) and active work state (`WORKTASK.md`, `SESSION.md`).
+4. **Navigable Repository Documentation (`docs/`)** — structured architecture specs (`docs/architecture/`), reference guides (`docs/reference/`), and a navigable index (`docs/README.md`) maintained in-flow or automated with **Google Jules**, **Gemini Code Assist Enterprise**, **NotebookLM**, and **Google Developer Knowledge MCP**.
+
+> **Portability to VS Code & GitHub Copilot**: While natively implemented for **Google Antigravity 2.0 & Gemini**, this exact Markdown-driven hierarchy maps 1:1 to **VS Code & GitHub Copilot** (`AGENTS.md`, `.github/copilot-instructions.md`, `.github/instructions/*.instructions.md`, `.github/prompts/*.prompt.md`), **Cursor** (`.cursor/rules/*.mdc`), and **Claude Code**. See **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)** for the full architecture and equivalence table.
 
 ### Dynamic Workspace Detection
 
@@ -716,6 +753,6 @@ If you need to track SSH **config** (not keys), create the `ssh/` module with on
 
 ## Versioning, CI & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.1.1`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.2.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate Bash syntax, Python 3.14 lifecycle hooks (`ruff`), `hooks.json` integrity, `AGENTS.md` token budget (`< 18 KB`), and `SKILL.md` frontmatter (`kebab-case`).
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) for guidelines on adding external package recipes, skills, or lifecycle hooks.
