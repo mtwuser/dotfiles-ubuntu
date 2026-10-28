@@ -75,6 +75,7 @@ for module_dir in */; do
   [ "$module_name" = "scripts" ] && continue
   [ "$module_name" = "templates" ] && continue
   [ "$module_name" = "docs" ] && continue
+  [ "$module_name" = "layers" ] && continue
   [ "$module_name" = "tests" ] && continue
   [ "$module_name" = "venv" ] && continue
   [ "$module_name" = ".venv" ] && continue

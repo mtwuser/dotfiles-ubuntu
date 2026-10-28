@@ -94,6 +94,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 [ "$module" = "scripts" ] && continue
 [ "$module" = "templates" ] && continue
 [ "$module" = "docs" ] && continue
+[ "$module" = "layers" ] && continue
 [ "$module" = "tests" ] && continue
 [ "$module" = "venv" ] && continue
 [ "$module" = ".venv" ] && continue
@@ -106,9 +107,10 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `git/` | **Stow Module** | `~/.gitconfig` | Includes untracked `~/.gitconfig.local` via `[include]` |
 | `antigravity/` | **Stow Module** | `~/.gemini/config/*`, `~/.local/share/applications/*` | Uses `prepare_antigravity_dirs()` to enforce tree unfolding |
 | `system/` | Non-Stow | — | Declarative package & GNOME manifests + `external/` catalog |
-| `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh` |
+| `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `layer-subtree.sh`, `verify-repo.sh` |
 | `templates/` | Non-Stow | — | Layer 2 project starter templates (`fastapi-hexagonal/`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
+| `layers/` | Non-Stow (Optional) | — | Mounted `git subtree` context forks (`layers/<name>/` managed via `scripts/layer-subtree.sh` & queried via MCP) |
 | `tests/` | Non-Stow | — | Automated unit (`tests/unit/`) & integration (`tests/imp/`) test suite (100% branch coverage) |
 | `venv/` | Non-Stow (Ignored) | — | Optional local Python virtual environment created via `make install` (`requirements-dev.txt` $\rightarrow$ `-r requirements.txt`) |
 

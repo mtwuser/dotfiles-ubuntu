@@ -322,15 +322,60 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
 When an AI agent connects to this node and runs `discover_federated_mcps`, it immediately learns:
 1. Which specialized MCP servers (`checkout-postgres-mcp`, `checkout-observability-mcp`) belong to this service.
 2. Which **mandatory safety and architectural guardrails** (`required_guardrails`) must be respected before invoking them.
+3. Which **environment profile** (`dev`, `tst`, `pre`, `pro`) applies when filtering via `discover_federated_mcps(environment="pre")`.
 
 ---
 
-## 5. Summary of Precautions & Design Boundaries
+## 5. Multi-Dimensional Context Networks with `git subtree` (`scripts/layer-subtree.sh`)
+
+In complex organizations, a single project often needs context from **multiple horizontal directions at once**: Corporate standards, cross-cutting Departments (Cybersecurity, Data Platform, Cloud/SRE), sibling Microservices (`svc-fraud`, `svc-ledger`), and target deployment Environments (`dev`, `tst`, `pre`, `pro`).
+
+Instead of configuring 10 separate MCP server processes on every developer machine, you can compose a **Multi-Dimensional Context Graph** inside your team or workstation fork by mounting secondary `dotfiles-ubuntu` forks into **`layers/<layer-name>/`** via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh):
+
+### 5.1. End-to-End Workflow: Vertical Upstream Sync + Horizontal Subtree Mounting
+
+```bash
+cd ~/dotfiles-ubuntu
+
+# 1. Vertical Sync: Pull latest baseline improvements from parent fork (Public or Corporate upstream)
+./scripts/layer-subtree.sh sync-upstream
+
+# 2. Horizontal Mount: Attach Departmental & Sibling-Service forks under layers/<name>/ (--squash)
+./scripts/layer-subtree.sh add dept-security git@github.com:acme-corp/dotfiles-dept-security.git main
+./scripts/layer-subtree.sh add dept-data     git@github.com:acme-corp/dotfiles-dept-data.git main
+./scripts/layer-subtree.sh add svc-fraud     git@github.com:acme-corp/dotfiles-svc-fraud.git main
+
+# 3. Inspect all mounted context layers (auto-discovered by dotfiles_mcp_server.py)
+./scripts/layer-subtree.sh list
+# Or via Makefile:
+make layer-list
+
+# 4. Update a mounted departmental or service layer on demand
+./scripts/layer-subtree.sh pull dept-security git@github.com:acme-corp/dotfiles-dept-security.git main
+
+# 5. Promote a reusable departmental rule or MCP guardrail upstream (/enrich -> subtree push)
+./scripts/layer-subtree.sh push dept-data git@github.com:acme-corp/dotfiles-dept-data.git feat/enrich-bq-guardrail
+```
+
+### 5.2. How the AI Agent Queries the Mounted Subtree Graph & Environments (`dev/tst/pre/pro`)
+
+Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_server.py` instance** automatically discovers and indexes all of them with **zero idle token cost** (`layers/` is excluded from GNU Stow so `~/.gemini/config/AGENTS.md` stays `< 18 KB`):
+
+- **Cross-Layer Rule & Doc Search (`layer="all"` or `layer="dept-security"`)**:
+  - Calling `query_governance_rules(query="webhook", layer="all")` searches the root layer **plus every mounted subtree in `layers/*/`** in a single call.
+  - Calling `read_layer_document(relative_path="docs/README.md", layer="svc-fraud")` reads the architecture index of a sibling service directly.
+- **Environment-Aware Federated MCP Discovery (`environment="dev" | "tst" | "pre" | "pro"`)**:
+  - Calling `discover_federated_mcps(layer="all", environment="pre")` returns only the MCP servers enabled for pre-production across the root layer and all mounted subtrees, together with the `pre` environment profile (`access_mode: "strictly-read-only"`, `requirements_file: "requirements-pre.txt"`, and `default_guardrails`).
+
+---
+
+## 6. Summary of Precautions & Design Boundaries
 
 | Principle | How `dotfiles-ubuntu` Enforces It |
 |-----------|-----------------------------------|
 | **Never replace local Stow hooks with MCP** | Local `AGENTS.md` and `PreToolUse` (`pre_tool_guard.py`) remain symlinked in `~/.gemini/config/` for zero-latency, non-bypassable local enforcement. MCP is used for cross-node, cross-container, and cross-layer introspection. |
-| **Zero external dependencies** | `scripts/dotfiles_mcp_server.py` uses 100% Python 3 standard library. No `pip install`, no virtualenv required on target containers or servers. |
+| **Zero idle token bloat from `layers/*` subtrees** | `bootstrap.sh` and `audit.sh` skip `layers/`. Mounted departmental and sibling-service subtrees are queried on demand via MCP rather than injected into `always_on` prompt context. |
+| **Zero external dependencies at base runtime** | `scripts/dotfiles_mcp_server.py` uses 100% Python 3 standard library (`requirements.txt` has 0 external packages in upstream). Environment-specific extensions can use `requirements-{tst,pre,pro}.txt` chaining `-r requirements.txt`. |
 | **Strictly read-only by default** | Zero tools for arbitrary shell commands, file editing, or package installation. Only deterministic read/audit operations (`verify-repo.sh`, `audit.sh`, doc/rule readers) are exposed. |
 | **Zero secret exposure** | Path containment locks all file reads strictly inside the repository root (`REPO_DIR`). Machine-local files (`~/.bashrc.local`, `~/.gitconfig.local`, `.env`, `~/.gemini/*.json`) cannot be read via MCP. |
 

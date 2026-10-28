@@ -204,10 +204,11 @@ Organizations can use this repository's hierarchical fork model to standardize A
 ├── templates/                         ← NOT stow — project starter templates
 │   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (rules, skills, governance)
 │
-├── scripts/                           ← NOT stow — utility, MCP & CI verification scripts
+├── scripts/                           ← NOT stow — utility, MCP, subtree & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server (stdio)
+│   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
 │   └── verify-repo.sh                 ←   Deterministic CI & pre-commit verification suite
 │
 ├── system/                            ← NOT stow — declarative system & MCP layer manifests
@@ -269,8 +270,9 @@ Organizations can use this repository's hierarchical fork model to standardize A
 | `antigravity/` | ✅ | `~/.gemini/config/*`, `~/.local/share/applications/*` | Antigravity config + .desktop entries |
 | `docs/` | ❌ | — | Navigable documentation hub & enterprise Human-AI governance architecture |
 | `templates/` | ❌ | — | Project starter templates (copied manually) |
-| `scripts/` | ❌ | — | Utility, MCP & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `verify-repo.sh`) |
+| `scripts/` | ❌ | — | Utility, MCP, subtree & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `layer-subtree.sh`, `verify-repo.sh`) |
 | `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
+| `layers/` | ❌ | — | Optional mounted `git subtree` context forks (`layers/<name>/` for departmental/service/environment orchestration) |
 | `tests/` | ❌ | — | Unit (`tests/unit/`) & integration (`tests/imp/`) test suite with 100% branch coverage |
 
 ---

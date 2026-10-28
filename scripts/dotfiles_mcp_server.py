@@ -26,7 +26,15 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_DIR = SCRIPT_DIR.parent
 PROTOCOL_VERSION = "2024-11-05"
-VALID_LAYER_ROLES = ("corporate", "team", "service-node", "workstation")
+VALID_LAYER_ROLES = (
+    "corporate",
+    "department",
+    "team",
+    "service-node",
+    "environment-cluster",
+    "workstation",
+)
+VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 ALLOWED_READ_PREFIXES = ("docs/", "templates/", "antigravity/", "system/")
 ALLOWED_ROOT_FILES = {
     "README.md",
@@ -125,38 +133,79 @@ class DotfilesMCPServer:
         self.layer_id_override = layer_id_override
         self.layer_role_override = layer_role_override
 
-    def _load_layer_manifest(self) -> dict[str, Any]:
-        manifest_path = self.repo_dir / "system" / "mcp-layer.json"
+    def _load_layer_manifest(self, target_dir: Path | None = None) -> dict[str, Any]:
+        base_dir = (target_dir or self.repo_dir).resolve()
+        manifest_path = base_dir / "system" / "mcp-layer.json"
         data: dict[str, Any] = {
-            "schema_version": "1.0",
-            "layer_id": "dotfiles-ubuntu-default",
+            "schema_version": "1.1",
+            "layer_id": base_dir.name if base_dir != self.repo_dir else "dotfiles-ubuntu-default",
             "layer_role": "workstation",
             "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Layer",
             "upstream_layer": {
                 "layer_id": "mtwuser/dotfiles-ubuntu",
                 "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
+                "branch": "master",
             },
+            "mounted_layers_dir": "layers",
+            "mounted_layers": [],
             "default_stack_templates": ["fastapi-hexagonal"],
+            "environments": {},
             "federated_mcps": [],
         }
         if manifest_path.is_file():
             loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 data.update(loaded)
-        if self.layer_id_override:
-            data["layer_id"] = self.layer_id_override
-        if self.layer_role_override:
-            data["layer_role"] = self.layer_role_override
+        if base_dir == self.repo_dir:
+            if self.layer_id_override:
+                data["layer_id"] = self.layer_id_override
+            if self.layer_role_override:
+                data["layer_role"] = self.layer_role_override
         return data
 
-    def _resolve_safe_path(self, relative_path: str) -> Path:
+    def _discover_mounted_layers(self) -> list[dict[str, Any]]:
+        layers_dir = self.repo_dir / "layers"
+        discovered: list[dict[str, Any]] = []
+        if not layers_dir.is_dir():
+            return discovered
+        for sub in sorted(layers_dir.iterdir()):
+            if not sub.is_dir() or sub.name.startswith("."):
+                continue
+            sub_manifest = self._load_layer_manifest(sub)
+            discovered.append(
+                {
+                    "name": sub.name,
+                    "relative_path": f"layers/{sub.name}",
+                    "layer_id": sub_manifest.get("layer_id", sub.name),
+                    "layer_role": sub_manifest.get("layer_role", "service-node"),
+                    "version": _read_version(sub),
+                    "has_docs": (sub / "docs").is_dir(),
+                    "has_rules": (sub / "antigravity/.gemini/config/AGENTS.md").is_file(),
+                    "has_templates": (sub / "templates").is_dir(),
+                    "federated_mcp_count": len(sub_manifest.get("federated_mcps", [])),
+                }
+            )
+        return discovered
+
+    def _resolve_layer_dir(self, layer: str | None = None) -> Path:
+        clean = (layer or "").strip()
+        root_id = str(self._load_layer_manifest().get("layer_id", ""))
+        if not clean or clean in ("root", "self", root_id):
+            return self.repo_dir
+        for entry in self._discover_mounted_layers():
+            if clean in (entry["name"], entry["layer_id"]):
+                return (self.repo_dir / str(entry["relative_path"])).resolve()
+        raise ValueError(f"Unknown or unmounted layer: {layer!r}")
+
+    def _resolve_safe_path(self, relative_path: str, base_dir: Path | None = None) -> Path:
+        target_base = (base_dir or self.repo_dir).resolve()
         clean_rel = relative_path.strip().lstrip("/")
         if not clean_rel or ".." in Path(clean_rel).parts:
             raise ValueError(f"Invalid or forbidden relative path: {relative_path!r}")
-        candidate = (self.repo_dir / clean_rel).resolve()
-        if not candidate.is_relative_to(self.repo_dir):
+        candidate = (target_base / clean_rel).resolve()
+        if not candidate.is_relative_to(target_base):
             raise ValueError(f"Path escapes repository root: {relative_path!r}")
-        rel_str = str(candidate.relative_to(self.repo_dir)).replace("\\", "/")
+        rel_str = str(candidate.relative_to(target_base)).replace("\\", "/")
         allowed = rel_str in ALLOWED_ROOT_FILES or any(
             rel_str.startswith(prefix) for prefix in ALLOWED_READ_PREFIXES
         )
@@ -369,6 +418,7 @@ class DotfilesMCPServer:
 
         if uri == "dotfiles://mcp/topology":
             manifest = self._load_layer_manifest()
+            manifest["discovered_mounted_layers"] = self._discover_mounted_layers()
             return {
                 "uri": uri,
                 "mimeType": "application/json",
@@ -386,12 +436,21 @@ class DotfilesMCPServer:
                 "name": "get_layer_overview",
                 "description": (
                     "Return a compact 4-Channel Executive Digest of this dotfiles-ubuntu "
-                    "node/layer (1. Node & System State, 2. Governance & Stack Contracts, "
-                    "3. Active Invariants & Hooks, 4. Navigable Docs & Federated MCPs)."
+                    "node/layer or any mounted git subtree layer in layers/* "
+                    "(1. Node & System State, 2. Governance & Stack Contracts, "
+                    "3. Active Invariants & Hooks, 4. Docs, Mounted Subtrees & Federated MCPs)."
                 ),
                 "inputSchema": {
                     "type": "object",
-                    "properties": {},
+                    "properties": {
+                        "layer": {
+                            "type": "string",
+                            "description": (
+                                "Target layer ('root' or a mounted subtree name/layer_id "
+                                "under layers/*)."
+                            ),
+                        }
+                    },
                     "additionalProperties": False,
                 },
             },
@@ -422,8 +481,8 @@ class DotfilesMCPServer:
                 "name": "read_layer_document",
                 "description": (
                     "Read a Markdown specification, template rule, skill, or manifest "
-                    "file inside this dotfiles-ubuntu repository (strictly confined to "
-                    "docs/, templates/, antigravity/, system/, and root docs)."
+                    "file inside the root repository or a mounted git subtree layer in layers/* "
+                    "(confined to docs/, templates/, antigravity/, system/, and root docs)."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -431,11 +490,18 @@ class DotfilesMCPServer:
                         "relative_path": {
                             "type": "string",
                             "description": (
-                                "Path relative to the repository root, e.g. "
+                                "Path relative to the target layer root, e.g. "
                                 "'docs/architecture/01_system_and_stow_engine.md' or "
                                 "'templates/fastapi-hexagonal/rules/coding.md'."
                             ),
-                        }
+                        },
+                        "layer": {
+                            "type": "string",
+                            "description": (
+                                "Optional layer ('root' or a mounted subtree name/layer_id "
+                                "under layers/*)."
+                            ),
+                        },
                     },
                     "required": ["relative_path"],
                     "additionalProperties": False,
@@ -445,8 +511,8 @@ class DotfilesMCPServer:
                 "name": "query_governance_rules",
                 "description": (
                     "Search across Layer A rules (AGENTS.md), Layer B stack templates "
-                    "(templates/), and architecture docs (docs/) by keyword or topic, "
-                    "returning only matching Markdown sections."
+                    "(templates/), and architecture docs (docs/) across the root layer "
+                    "and/or mounted git subtree layers (layers/*) by keyword or topic."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -464,6 +530,14 @@ class DotfilesMCPServer:
                             "default": "all",
                             "description": "Subset of layer documentation to search.",
                         },
+                        "layer": {
+                            "type": "string",
+                            "default": "all",
+                            "description": (
+                                "'all' (search root + all mounted subtrees in layers/*), "
+                                "'root' (only root layer), or a specific mounted subtree name."
+                            ),
+                        },
                     },
                     "required": ["query"],
                     "additionalProperties": False,
@@ -472,9 +546,9 @@ class DotfilesMCPServer:
             {
                 "name": "discover_federated_mcps",
                 "description": (
-                    "Discover downstream or sibling MCP servers registered in this "
-                    "layer/node (system/mcp-layer.json) along with the mandatory "
-                    "safety guardrails that must be respected before calling them."
+                    "Discover downstream or sibling MCP servers registered in the root "
+                    "layer and/or mounted git subtree layers (layers/*), optionally "
+                    "filtered by role, layer, and target environment (dev, tst, pre, pro)."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -485,7 +559,23 @@ class DotfilesMCPServer:
                                 "Optional role substring filter (e.g. 'database', "
                                 "'documentation', 'telemetry')."
                             ),
-                        }
+                        },
+                        "environment": {
+                            "type": "string",
+                            "enum": ["dev", "tst", "pre", "pro"],
+                            "description": (
+                                "Optional environment filter ('dev', 'tst', 'pre', or 'pro') "
+                                "returning environment-specific guardrails and access mode."
+                            ),
+                        },
+                        "layer": {
+                            "type": "string",
+                            "default": "all",
+                            "description": (
+                                "'all' (aggregate MCPs from root + mounted subtrees in layers/*), "
+                                "'root', or a specific mounted subtree name/layer_id."
+                            ),
+                        },
                     },
                     "additionalProperties": False,
                 },
@@ -494,8 +584,8 @@ class DotfilesMCPServer:
                 "name": "compare_layer_patterns",
                 "description": (
                     "Compare a consumer project's .agents/rules/ and .agents/skills/ "
-                    "names against this layer's Layer A global skills and Layer B "
-                    "templates to assist with /enrich upward promotion or downward sync."
+                    "names against the root layer or a mounted departmental/team subtree "
+                    "layer (layers/*) to assist with /enrich upward promotion or downward sync."
                 ),
                 "inputSchema": {
                     "type": "object",
@@ -516,6 +606,13 @@ class DotfilesMCPServer:
                                 "'fastapi-testing', 'custom-deploy'])."
                             ),
                         },
+                        "layer": {
+                            "type": "string",
+                            "description": (
+                                "Optional target layer ('root' or a mounted subtree "
+                                "name/layer_id in layers/*)."
+                            ),
+                        },
                     },
                     "additionalProperties": False,
                 },
@@ -526,31 +623,53 @@ class DotfilesMCPServer:
         args = arguments or {}
 
         if name == "get_layer_overview":
-            manifest = self._load_layer_manifest()
-            sys_manifests = json.loads(self.read_resource("dotfiles://system/manifests")["text"])
-            skills_data = json.loads(self.read_resource("dotfiles://governance/skills")["text"])
-            templates_data = json.loads(
-                self.read_resource("dotfiles://governance/templates")["text"]
-            )
-            docs_files = [
-                str(p.relative_to(self.repo_dir))
-                for p in sorted((self.repo_dir / "docs").rglob("*.md"))
+            target_dir = self._resolve_layer_dir(args.get("layer"))
+            manifest = self._load_layer_manifest(target_dir)
+            sys_dir = target_dir / "system"
+            apt_pkgs = _read_non_empty_lines(sys_dir / "packages-manual.txt")
+            snaps = _read_non_empty_lines(sys_dir / "snaps.txt")
+            npm_globals = _read_non_empty_lines(sys_dir / "npm-globals.txt")
+            external = _read_non_empty_lines(sys_dir / "external.txt")
+            gnome_ext = _read_non_empty_lines(sys_dir / "gnome-extensions.txt")
+            skills_root = target_dir / "antigravity/.gemini/config/skills"
+            skills_names = [
+                _parse_skill_frontmatter(sf, target_dir)["name"]
+                for sf in sorted(skills_root.glob("*/SKILL.md"))
             ]
-            agents_bytes = (self.repo_dir / "antigravity/.gemini/config/AGENTS.md").stat().st_size
+            templates_root = target_dir / "templates"
+            template_names = (
+                [d.name for d in sorted(templates_root.iterdir()) if d.is_dir()]
+                if templates_root.is_dir()
+                else []
+            )
+            docs_root = target_dir / "docs"
+            docs_files = (
+                [str(p.relative_to(target_dir)) for p in sorted(docs_root.rglob("*.md"))]
+                if docs_root.is_dir()
+                else []
+            )
+            agents_file = target_dir / "antigravity/.gemini/config/AGENTS.md"
+            agents_bytes = agents_file.stat().st_size if agents_file.is_file() else 0
             digest = {
                 "channel_1_node_and_system_state": {
-                    "version": _read_version(self.repo_dir),
+                    "version": _read_version(target_dir),
                     "layer_id": manifest.get("layer_id"),
                     "layer_role": manifest.get("layer_role"),
                     "hostname": socket.gethostname(),
                     "os_pretty_name": _read_os_pretty_name(),
-                    "git_commit": _read_git_commit(self.repo_dir),
-                    "manifest_counts": sys_manifests["counts"],
+                    "git_commit": _read_git_commit(target_dir),
+                    "manifest_counts": {
+                        "apt_manual_packages": len(apt_pkgs),
+                        "snaps": len(snaps),
+                        "npm_globals": len(npm_globals),
+                        "enabled_external_recipes": len(external),
+                        "gnome_extensions": len(gnome_ext),
+                    },
                 },
                 "channel_2_governance_and_stack_contracts": {
-                    "global_skills_count": skills_data["count"],
-                    "global_skills": [s["name"] for s in skills_data["skills"]],
-                    "stack_templates": [t["template_name"] for t in templates_data["templates"]],
+                    "global_skills_count": len(skills_names),
+                    "global_skills": skills_names,
+                    "stack_templates": template_names,
                 },
                 "channel_3_active_invariants_and_hooks": {
                     "agents_md_bytes": agents_bytes,
@@ -566,6 +685,8 @@ class DotfilesMCPServer:
                 "channel_4_navigable_docs_and_federated_mcps": {
                     "docs_index": "docs/README.md",
                     "documents": docs_files,
+                    "mounted_layers": self._discover_mounted_layers(),
+                    "supported_environments": list(manifest.get("environments", {}).keys()),
                     "federated_mcps": manifest.get("federated_mcps", []),
                 },
             }
@@ -618,7 +739,8 @@ class DotfilesMCPServer:
 
         if name == "read_layer_document":
             rel_path = str(args.get("relative_path", ""))
-            target = self._resolve_safe_path(rel_path)
+            target_dir = self._resolve_layer_dir(args.get("layer"))
+            target = self._resolve_safe_path(rel_path, target_dir)
             content = target.read_text(encoding="utf-8")
             return {
                 "content": [{"type": "text", "text": content}],
@@ -630,13 +752,26 @@ class DotfilesMCPServer:
             if not query:
                 raise ValueError("'query' must be a non-empty string")
             scope = str(args.get("scope", "all"))
+            layer_arg = str(args.get("layer", "all")).strip() or "all"
+            if layer_arg == "all":
+                layer_dirs = [
+                    self.repo_dir,
+                    *(
+                        self.repo_dir / str(m["relative_path"])
+                        for m in self._discover_mounted_layers()
+                    ),
+                ]
+            else:
+                layer_dirs = [self._resolve_layer_dir(layer_arg)]
+
             candidate_files: list[Path] = []
-            if scope in ("all", "global"):
-                candidate_files.append(self.repo_dir / "antigravity/.gemini/config/AGENTS.md")
-            if scope in ("all", "templates"):
-                candidate_files.extend(sorted((self.repo_dir / "templates").glob("*/rules/*.md")))
-            if scope in ("all", "docs"):
-                candidate_files.extend(sorted((self.repo_dir / "docs").rglob("*.md")))
+            for ldir in layer_dirs:
+                if scope in ("all", "global"):
+                    candidate_files.append(ldir / "antigravity/.gemini/config/AGENTS.md")
+                if scope in ("all", "templates"):
+                    candidate_files.extend(sorted((ldir / "templates").glob("*/rules/*.md")))
+                if scope in ("all", "docs"):
+                    candidate_files.extend(sorted((ldir / "docs").rglob("*.md")))
 
             matches: list[dict[str, Any]] = []
             q_lower = query.lower()
@@ -688,6 +823,7 @@ class DotfilesMCPServer:
                             {
                                 "query": query,
                                 "scope": scope,
+                                "layer": layer_arg,
                                 "match_count": len(matches),
                                 "matches": matches[:15],
                             },
@@ -699,9 +835,34 @@ class DotfilesMCPServer:
             }
 
         if name == "discover_federated_mcps":
-            manifest = self._load_layer_manifest()
+            root_manifest = self._load_layer_manifest()
             filter_role = str(args.get("filter_role", "")).strip().lower()
-            mcps = manifest.get("federated_mcps", [])
+            env_arg = str(args.get("environment", "")).strip().lower()
+            if env_arg and env_arg not in VALID_ENVIRONMENTS:
+                raise ValueError(
+                    f"Invalid environment {env_arg!r}: must be one of {VALID_ENVIRONMENTS}"
+                )
+            layer_arg = str(args.get("layer", "all")).strip() or "all"
+            if layer_arg == "all":
+                target_dirs = [
+                    self.repo_dir,
+                    *(
+                        self.repo_dir / str(m["relative_path"])
+                        for m in self._discover_mounted_layers()
+                    ),
+                ]
+            else:
+                target_dirs = [self._resolve_layer_dir(layer_arg)]
+
+            mcps: list[dict[str, Any]] = []
+            for tdir in target_dirs:
+                t_manifest = self._load_layer_manifest(tdir)
+                source_layer_id = t_manifest.get("layer_id", tdir.name)
+                for raw_mcp in t_manifest.get("federated_mcps", []):
+                    mcp_copy = dict(raw_mcp)
+                    mcp_copy.setdefault("source_layer", source_layer_id)
+                    mcps.append(mcp_copy)
+
             if filter_role:
                 mcps = [
                     m
@@ -710,10 +871,20 @@ class DotfilesMCPServer:
                     or filter_role in str(m.get("layer", "")).lower()
                     or filter_role in str(m.get("mcp_id", "")).lower()
                 ]
-            payload = {
-                "layer_id": manifest.get("layer_id"),
-                "layer_role": manifest.get("layer_role"),
-                "upstream_layer": manifest.get("upstream_layer"),
+            if env_arg:
+                mcps = [
+                    m for m in mcps if env_arg in m.get("environments", list(VALID_ENVIRONMENTS))
+                ]
+
+            env_profiles = root_manifest.get("environments", {})
+            payload: dict[str, Any] = {
+                "layer_id": root_manifest.get("layer_id"),
+                "layer_role": root_manifest.get("layer_role"),
+                "upstream_layer": root_manifest.get("upstream_layer"),
+                "queried_layer": layer_arg,
+                "active_environment": env_arg or "all",
+                "environment_profile": env_profiles.get(env_arg) if env_arg else None,
+                "mounted_layers": self._discover_mounted_layers(),
                 "federated_mcp_count": len(mcps),
                 "federated_mcps": mcps,
             }
@@ -723,26 +894,29 @@ class DotfilesMCPServer:
             }
 
         if name == "compare_layer_patterns":
+            target_dir = self._resolve_layer_dir(args.get("layer"))
+            target_manifest = self._load_layer_manifest(target_dir)
             proj_rules = [str(r).strip() for r in args.get("project_rules", [])]
             proj_skills = [str(s).strip() for s in args.get("project_skills", [])]
 
-            global_skills_root = self.repo_dir / "antigravity/.gemini/config/skills"
+            global_skills_root = target_dir / "antigravity/.gemini/config/skills"
             layer_a_skills = {
-                _parse_skill_frontmatter(sf, self.repo_dir)["name"]
+                _parse_skill_frontmatter(sf, target_dir)["name"]
                 for sf in global_skills_root.glob("*/SKILL.md")
             } | {sf.parent.name for sf in global_skills_root.glob("*/SKILL.md")}
 
             layer_b_rules: set[str] = set()
             layer_b_skills: set[str] = set()
-            templates_root = self.repo_dir / "templates"
+            templates_root = target_dir / "templates"
             if templates_root.is_dir():
                 for rf in templates_root.glob("*/rules/*.md"):
                     layer_b_rules.add(rf.name)
                 for sf in templates_root.glob("*/skills/*/SKILL.md"):
-                    layer_b_skills.add(_parse_skill_frontmatter(sf, self.repo_dir)["name"])
+                    layer_b_skills.add(_parse_skill_frontmatter(sf, target_dir)["name"])
                     layer_b_skills.add(sf.parent.name)
 
             comparison = {
+                "compared_against_layer": target_manifest.get("layer_id"),
                 "already_in_layer_a_skills": sorted(s for s in proj_skills if s in layer_a_skills),
                 "already_in_layer_b_templates": {
                     "rules": sorted(r for r in proj_rules if r in layer_b_rules),

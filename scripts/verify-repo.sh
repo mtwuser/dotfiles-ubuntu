@@ -315,13 +315,19 @@ else
   fail "SKILL.md frontmatter verification failed"
 fi
 
-# 7. Contextual MCP Server & Layer Topology Manifest
+# 7. Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest
 echo ""
-echo "[7/8] Contextual MCP Server (scripts/dotfiles_mcp_server.py & system/mcp-layer.json)"
-if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") == "1.0" and "federated_mcps" in d'; then
-  pass "system/mcp-layer.json is valid JSON and matches schema v1.0"
+echo "[7/8] Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest"
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") in ("1.0", "1.1") and "federated_mcps" in d and "environments" in d'; then
+  pass "system/mcp-layer.json is valid JSON and matches schema v1.1 (with environments & federated_mcps)"
 else
   fail "system/mcp-layer.json is missing or invalid"
+fi
+
+if ./scripts/layer-subtree.sh list >/dev/null; then
+  pass "scripts/layer-subtree.sh list executed cleanly"
+else
+  fail "scripts/layer-subtree.sh list failed"
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then

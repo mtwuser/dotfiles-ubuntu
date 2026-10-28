@@ -328,10 +328,114 @@ def test_call_tool_discover_federated_mcps_with_filter() -> None:
     # Act
     matched = server.call_tool("discover_federated_mcps", {"filter_role": "documentation"})
     unmatched = server.call_tool("discover_federated_mcps", {"filter_role": "nonexistent-role"})
+    env_filtered = server.call_tool(
+        "discover_federated_mcps", {"environment": "pre", "layer": "root"}
+    )
+    with pytest.raises(ValueError, match="Invalid environment"):
+        server.call_tool("discover_federated_mcps", {"environment": "staging-invalid"})
 
     # Assert
     assert json.loads(matched["content"][0]["text"])["federated_mcp_count"] == 1
     assert json.loads(unmatched["content"][0]["text"])["federated_mcp_count"] == 0
+    env_payload = json.loads(env_filtered["content"][0]["text"])
+    assert env_payload["active_environment"] == "pre"
+    assert env_payload["environment_profile"]["access_mode"] == "strictly-read-only"
+
+
+def test_mounted_subtree_layers_discovery_and_multi_layer_orchestration(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    root_sys = tmp_path / "system"
+    root_sys.mkdir()
+    (root_sys / "mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "corp-root",
+                "layer_role": "corporate",
+                "environments": {"pre": {"access_mode": "strictly-read-only"}},
+                "federated_mcps": [
+                    {
+                        "mcp_id": "corp-sec-mcp",
+                        "role": "security",
+                        "environments": ["pre", "pro"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    layers_dir = tmp_path / "layers"
+    layers_dir.mkdir()
+    (layers_dir / ".hidden").mkdir()
+    (layers_dir / "README.txt").write_text("ignore file", encoding="utf-8")
+
+    dept_dir = layers_dir / "dept-data"
+    (dept_dir / "system").mkdir(parents=True)
+    (dept_dir / "VERSION").write_text("1.4.0\n", encoding="utf-8")
+    (dept_dir / "docs").mkdir()
+    (dept_dir / "docs" / "data_spec.md").write_text(
+        "# Data Spec\n## BigQuery Rules\nPartition by date.\n", encoding="utf-8"
+    )
+    (dept_dir / "system" / "mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "acme-dept-data",
+                "layer_role": "department",
+                "federated_mcps": [
+                    {
+                        "mcp_id": "bq-catalog-mcp",
+                        "role": "database",
+                        "environments": ["dev", "tst"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    server = DotfilesMCPServer(repo_dir=tmp_path)
+
+    # Act
+    discovered = server._discover_mounted_layers()
+    overview_sub = json.loads(
+        server.call_tool("get_layer_overview", {"layer": "acme-dept-data"})["content"][0]["text"]
+    )
+    doc_sub = server.call_tool(
+        "read_layer_document",
+        {"relative_path": "docs/data_spec.md", "layer": "dept-data"},
+    )["content"][0]["text"]
+    query_all = json.loads(
+        server.call_tool("query_governance_rules", {"query": "Partition", "layer": "all"})[
+            "content"
+        ][0]["text"]
+    )
+    query_sub = json.loads(
+        server.call_tool("query_governance_rules", {"query": "Partition", "layer": "dept-data"})[
+            "content"
+        ][0]["text"]
+    )
+    mcps_all = json.loads(
+        server.call_tool("discover_federated_mcps", {"layer": "all"})["content"][0]["text"]
+    )
+    mcps_tst = json.loads(
+        server.call_tool("discover_federated_mcps", {"layer": "dept-data", "environment": "tst"})[
+            "content"
+        ][0]["text"]
+    )
+    with pytest.raises(ValueError, match="Unknown or unmounted layer"):
+        server.call_tool("get_layer_overview", {"layer": "nonexistent-layer"})
+
+    # Assert
+    assert len(discovered) == 1
+    assert discovered[0]["layer_id"] == "acme-dept-data"
+    assert overview_sub["channel_1_node_and_system_state"]["layer_id"] == "acme-dept-data"
+    assert overview_sub["channel_3_active_invariants_and_hooks"]["agents_md_bytes"] == 0
+    assert "Partition by date" in doc_sub
+    assert query_all["match_count"] == 1
+    assert query_sub["match_count"] == 1
+    assert mcps_all["federated_mcp_count"] == 2
+    assert mcps_tst["federated_mcp_count"] == 1
+    assert mcps_tst["federated_mcps"][0]["source_layer"] == "acme-dept-data"
 
 
 def test_call_tool_compare_layer_patterns_without_templates_dir(

@@ -13,6 +13,7 @@ CLI_SCRIPTS = [
     REPO_DIR / "backup.sh",
     REPO_DIR / "audit.sh",
     REPO_DIR / "scripts" / "verify-repo.sh",
+    REPO_DIR / "scripts" / "layer-subtree.sh",
 ]
 
 
@@ -100,3 +101,85 @@ def test_all_test_init_files_are_strictly_zero_bytes() -> None:
     # Assert
     assert len(init_files) == 3
     assert non_empty == []
+
+
+def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:
+    # Arrange
+    script = str(REPO_DIR / "scripts" / "layer-subtree.sh")
+
+    # Act
+    list_proc = subprocess.run([script, "list"], cwd=REPO_DIR, capture_output=True, text=True)
+    add_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "add",
+            "dept-security",
+            "https://example.com/dept-sec.git",
+            "main",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    pull_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "pull",
+            "dept-security",
+            "https://example.com/dept-sec.git",
+            "main",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    push_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "push",
+            "dept-security",
+            "https://example.com/dept-sec.git",
+            "feat/rule",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    sync_proc = subprocess.run(
+        [script, "--dry-run", "sync-upstream"],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    bad_name_proc = subprocess.run(
+        [script, "--dry-run", "add", "INVALID_NAME", "https://example.com/repo.git"],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+
+    # Assert
+    assert list_proc.returncode == 0
+    assert "Mounted Context Subtree Layers" in list_proc.stdout
+    assert add_proc.returncode == 0
+    assert (
+        "[dry-run] git subtree add --prefix=layers/dept-security "
+        "https://example.com/dept-sec.git main --squash" in add_proc.stdout
+    )
+    assert pull_proc.returncode == 0
+    assert (
+        "[dry-run] git subtree pull --prefix=layers/dept-security "
+        "https://example.com/dept-sec.git main --squash" in pull_proc.stdout
+    )
+    assert push_proc.returncode == 0
+    assert (
+        "[dry-run] git subtree push --prefix=layers/dept-security "
+        "https://example.com/dept-sec.git feat/rule" in push_proc.stdout
+    )
+    assert sync_proc.returncode == 0
+    assert "[dry-run] git pull --ff-only" in sync_proc.stdout
+    assert bad_name_proc.returncode != 0
+    assert "kebab-case" in bad_name_proc.stderr

@@ -90,10 +90,12 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 1. **Preserve the Zero-Dependency & Read-Only Invariants**:
    - Use **only** the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`). Never import third-party packages that would require `pip install`.
    - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
-2. **Customizing Layer Identity & Federated MCPs (`system/mcp-layer.json`)**:
-   - Fork maintainers can edit `system/mcp-layer.json` to set `layer_id`, `layer_role` (`corporate`, `team`, `service-node`, or `workstation`), `upstream_layer`, and `federated_mcps` (along with their `required_guardrails`).
-3. **Run the Deterministic MCP Self-Test**:
+2. **Customizing Layer Identity, Mounted Subtrees & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
+   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, or `workstation`), `upstream_layer`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`).
+   - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]` and are auto-discovered by `scripts/dotfiles_mcp_server.py`.
+3. **Run the Deterministic MCP & Subtree Self-Tests**:
    ```bash
+   ./scripts/layer-subtree.sh list
    ./scripts/dotfiles_mcp_server.py --self-test
    ./scripts/verify-repo.sh
    ```

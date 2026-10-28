@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Multi-Dimensional Context Graph Orchestration via `git subtree` (`scripts/layer-subtree.sh` & `layers/`)**:
+  - Added `scripts/layer-subtree.sh` (`list`, `add`, `pull`, `push`, `sync-upstream`, `--dry-run`, `--help`, `--version`) and `make layer-list` to automate vertical upstream fork synchronization (`Public → Corporate → Team`) and horizontal `git subtree --squash` composition of Departmental, Team, and Sibling-Service forks under `layers/<layer-name>/`.
+  - Updated `bootstrap.sh` and `audit.sh` to exclude `layers/` from GNU Stow symlinking, keeping `always_on` prompt rules under the 18 KB `AGENTS.md` token budget while exposing mounted subtrees on demand via the MCP server.
+- **Multi-Layer & Multi-Environment (`dev`, `tst`, `pre`, `pro`) Support in `scripts/dotfiles_mcp_server.py` & `system/mcp-layer.json` (`v1.1`)**:
+  - Upgraded `system/mcp-layer.json` to schema `1.1` with `environments` (`dev`, `tst`, `pre`, `pro` access modes, `requirements-<env>.txt` pointers, and default guardrails) and `mounted_layers_dir`.
+  - Extended `DotfilesMCPServer` to auto-discover mounted subtrees in `layers/*/` and added `layer` (`"root"`, `<subtree>`, or `"all"`) and `environment` (`"dev"`, `"tst"`, `"pre"`, `"pro"`) filtering across `get_layer_overview`, `read_layer_document`, `query_governance_rules`, `discover_federated_mcps`, and `compare_layer_patterns` (verified at **100.00% statement and branch coverage** across 81 unit and integration tests).
+
+---
+
 ## [1.4.0] - 2026-10-28
 
 ### Added

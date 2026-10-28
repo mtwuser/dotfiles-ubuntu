@@ -182,10 +182,10 @@ On a single developer workstation, GNU Stow symlinks (`~/.gemini/config/`) distr
 To bridge this boundary without adding external dependencies, `dotfiles-ubuntu` can also operate as a **lightweight, read-only Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`) at any layer or node:
 
 - **As a Standalone Node / Container MCP**: Any Ubuntu container, Devcontainer, or remote server hosting `dotfiles-ubuntu` can expose its declarative manifests (`system/*`), live drift status (`audit_node_drift`), and local `docs/` over standard `stdio` (`docker exec -i` or `ssh` — zero open network ports required).
-- **As an Enterprise Federated Context Mesh**: Customized forks of `dotfiles-ubuntu` at the **Corporate (`Layer A`)**, **Team (`Layer B`)**, and **Service Node (`Layer C`)** levels can each run as a Layer MCP Server (`system/mcp-layer.json`), allowing an orchestrating AI agent to:
-  1. Query corporate and team architectural standards across repositories.
+- **As an Enterprise Federated Context Mesh & Multi-Dimensional Subtree Graph**: Customized forks of `dotfiles-ubuntu` across **Corporate (`Layer A`)**, **Departmental (`dept-security`, `dept-data`, `dept-sre`)**, **Team (`Layer B`)**, and **Service Node (`Layer C`)** dimensions can be composed via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh) (`git subtree --squash` under `layers/<name>/`) and queried across `dev`, `tst`, `pre`, and `pro` environments via `scripts/dotfiles_mcp_server.py`, allowing an orchestrating AI agent to:
+  1. Query corporate, departmental, and team architectural standards across repositories with zero `always_on` token overhead.
   2. Diagnose environment and package drift across multiple microservice containers simultaneously.
-  3. Discover downstream domain MCPs (databases, queues, observability) **together with the mandatory safety guardrails** that govern them before executing any tool call.
+  3. Discover downstream domain MCPs (databases, queues, observability) filtered by target environment (`dev`, `tst`, `pre`, `pro`) **together with the mandatory safety guardrails** that govern them before executing any tool call.
 
 📖 **Full Use Case & Step-by-Step Configuration Guide**: **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](contextual_mcp_and_multi_service_orchestration.md)** (and normative protocol specification at **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**).
 

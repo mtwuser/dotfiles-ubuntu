@@ -1,20 +1,67 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "layer_id": "dotfiles-ubuntu-default",
   "layer_role": "workstation",
   "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Reference Layer (Corporate / Workstation Baseline)",
   "upstream_layer": {
     "layer_id": "mtwuser/dotfiles-ubuntu",
-    "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git"
+    "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
+    "branch": "master"
   },
+  "mounted_layers_dir": "layers",
+  "mounted_layers": [],
   "default_stack_templates": [
     "fastapi-hexagonal"
   ],
+  "environments": {
+    "dev": {
+      "description": "Local workstation or devcontainer development environment",
+      "access_mode": "read-write-local",
+      "requirements_file": "requirements-dev.txt",
+      "default_guardrails": [
+        "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)",
+        "AGENTS.md §8 (Mandatory Pre-Commit Hygiene Scan)"
+      ]
+    },
+    "tst": {
+      "description": "Automated integration, contract, and QA testing environment",
+      "access_mode": "read-and-test-trigger",
+      "requirements_file": "requirements-tst.txt",
+      "default_guardrails": [
+        "Verify deterministic test isolation before triggering remote QA suites",
+        "Never use production credentials or unmasked PII in tst datasets"
+      ]
+    },
+    "pre": {
+      "description": "Pre-production staging and release validation environment",
+      "access_mode": "strictly-read-only",
+      "requirements_file": "requirements-pre.txt",
+      "default_guardrails": [
+        "Strictly read-only observability, schema drift, and contract inspection",
+        "No manual schema mutations; all migrations must flow through CI/CD"
+      ]
+    },
+    "pro": {
+      "description": "Live production environment",
+      "access_mode": "strictly-read-only-audited",
+      "requirements_file": "requirements-pro.txt",
+      "default_guardrails": [
+        "Strictly read-only telemetry, logs, and drift auditing",
+        "Explicit human operator authorization required before any external remediation"
+      ]
+    }
+  },
   "federated_mcps": [
     {
       "mcp_id": "google-developer-knowledge",
       "role": "documentation-grounding",
       "layer": "corporate",
+      "environments": [
+        "dev",
+        "tst",
+        "pre",
+        "pro"
+      ],
       "description": "Official Google Cloud, Gemini, Android, Firebase, and Web documentation retrieval.",
       "required_guardrails": [
         "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
