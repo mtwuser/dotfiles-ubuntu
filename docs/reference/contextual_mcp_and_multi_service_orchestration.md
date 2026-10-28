@@ -284,23 +284,43 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "layer_id": "acme-checkout-service-node",
   "layer_role": "service-node",
   "description": "Checkout Service Ubuntu 26.04 Container Node (FastAPI Hexagonal + PostgreSQL)",
   "upstream_layer": {
     "layer_id": "acme-corp/dotfiles-backend-hexagonal",
-    "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git"
+    "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git",
+    "branch": "main"
   },
   "default_stack_templates": [
     "fastapi-hexagonal"
   ],
+  "baseline_guardrails": [
+    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)"
+  ],
+  "environments": {
+    "dev": {
+      "access_mode": "read-write-local",
+      "requirements_file": "requirements-dev.txt",
+      "default_guardrails": ["Run local unit & integration tests before committing"]
+    },
+    "pre": {
+      "access_mode": "strictly-read-only",
+      "requirements_file": "requirements-pre.txt",
+      "default_guardrails": ["Strictly read-only schema & query introspection in pre-production"]
+    }
+  },
   "federated_mcps": [
     {
       "mcp_id": "checkout-postgres-mcp",
       "role": "database",
       "layer": "service-node",
+      "activation_policy": "on-demand",
+      "environments": ["dev", "tst", "pre"],
       "description": "Read-only schema & query introspection for the Checkout PostgreSQL database.",
+      "when_to_invoke": "Invoke on demand when inspecting live Checkout table schemas, indexes, or query plans.",
+      "avoid_when": "Avoid when reading static SQLAlchemy models or unit test fixtures.",
       "required_guardrails": [
         "accidental-data-loss-prevention: NEVER execute DROP, TRUNCATE, or unguarded DELETE.",
         "fastapi-database: Schema changes must exclusively use Zero-Touch Alembic migrations, never manual DDL."
@@ -310,7 +330,11 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
       "mcp_id": "checkout-observability-mcp",
       "role": "telemetry",
       "layer": "service-node",
+      "activation_policy": "on-demand",
+      "environments": ["tst", "pre", "pro"],
       "description": "OpenTelemetry traces and container log inspection for checkout-service.",
+      "when_to_invoke": "Invoke when diagnosing runtime errors, latency spikes, or container trace anomalies.",
+      "avoid_when": "Avoid during offline code formatting or unit test execution.",
       "required_guardrails": [
         "AGENTS.md §15: Run pre-debug diagnostic sweep before deep-debugging runtime errors."
       ]

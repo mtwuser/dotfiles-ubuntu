@@ -72,11 +72,11 @@ sequenceDiagram
         alt Ruff or AST check_project/check_tests fails
             Inv-->>Agent: {"injectSteps": [...], "terminationBehavior": "force_continue"}
         end
-        Agent->>Stop: Agent attempts to finish (NO_TOOL_CALL)
+        Agent->>Stop: Agent attempts to finish (NO_TOOL_CALL / model_stop)
         alt Unit tests fail on modified/untracked .py files
-            Stop-->>Agent: {"decision": "block", "reason": "..."}
+            Stop-->>Agent: {"decision": "continue", "reason": "..."}
         else All tests pass
-            Stop-->>Agent: {"decision": "allow"}
+            Stop-->>Agent: {"decision": "stop"}
         end
     end
 ```
@@ -85,10 +85,10 @@ sequenceDiagram
 
 | Hook Event | Script | Matcher | Input (`stdin` JSON keys) | Output (`stdout` JSON contract) | Enforcement Behavior |
 |------------|--------|---------|---------------------------|---------------------------------|----------------------|
-| **`PreToolUse`** | [`pre_tool_guard.py`](../../antigravity/.gemini/config/scripts/pre_tool_guard.py) | `write_file\|edit_file\|replace_file_content\|multi_replace_file_content\|write_to_file\|run_command` | `toolName` (`tool_name`), `toolArgs` (`tool_input` / `parameters`) | `{"decision": "allow"}` or `{"decision": "deny", "reason": "...", "systemMessage": "..."}` | **Hard-blocks**:<br>1. Non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`.<br>2. Manual edits to `alembic/versions/*.py`.<br>3. Automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`, `subtree add\|pull\|push\|merge`) or `alembic` (`revision`, `upgrade`, `downgrade`) commands. |
-| **`PostToolUse`** | [`post_edit_format.py`](../../antigravity/.gemini/config/scripts/post_edit_format.py) | `edit_file\|write_file\|...` | `toolArgs.Path` / `TargetFile`, `workspacePaths` | `{}` (silent formatting) | Runs `ruff format` on any edited `.py` file immediately after the write completes. |
-| **`PostInvocation`** | [`post_invocation_lint.py`](../../antigravity/.gemini/config/scripts/post_invocation_lint.py) | *(All turns)* | `workspacePaths`, `invocationNum` | `{"injectSteps": [{"ephemeralMessage": "..."}], "terminationBehavior": "force_continue"}` | Checks `always_on` rule token budgets (`check_rules_token_budget`: `AGENTS.md <= 18 KB` and combined workspace `always_on` rules `<= 80 KB`), detects modified **and untracked** (`git ls-files --others`) `.py` files, and runs `ruff check` + AST `check_project`/`check_tests` (when `osa_framework` is present). Forces the agent to fix violations in the same turn (up to `_MAX_FORCE_CONTINUE_INVOCATIONS = 5`). |
-| **`Stop`** | [`stop_verify_tests.py`](../../antigravity/.gemini/config/scripts/stop_verify_tests.py) | *(Normal stop: `NO_TOOL_CALL` / `END_TURN`)* | `workspacePaths`, `stopReason` | `{"decision": "allow"}` or `{"decision": "block", "reason": "..."}` | Runs `pytest` on unit tests corresponding to modified/untracked `.py` files and runs AST architecture/test checks before allowing the agent to conclude its turn. |
+| **`PreToolUse`** | [`pre_tool_guard.py`](../../antigravity/.gemini/config/scripts/pre_tool_guard.py) | `write_file\|edit_file\|replace_file_content\|multi_replace_file_content\|write_to_file\|run_command` | `toolCall.name`, `toolCall.args` (`Path`, `TargetFile`, `Content`, `Replacement`, `CodeContent`, `ReplacementChunks`, `CommandLine`) | `{"decision": "allow"}` or `{"decision": "deny", "reason": "..."}` | **Hard-blocks**:<br>1. Non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`.<br>2. Manual edits to `alembic/versions/*.py`.<br>3. Automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`, `subtree add\|pull\|push\|merge`) or `alembic` (`revision`, `upgrade`, `downgrade`) commands. |
+| **`PostToolUse`** | [`post_edit_format.py`](../../antigravity/.gemini/config/scripts/post_edit_format.py) | `edit_file\|write_file\|...` | `toolCall.args.Path` / `TargetFile`, `workspacePaths` | `{}` (silent formatting) | Runs `ruff format` on any edited `.py` file immediately after the write completes. |
+| **`PostInvocation`** | [`post_invocation_lint.py`](../../antigravity/.gemini/config/scripts/post_invocation_lint.py) | *(All turns)* | `workspacePaths`, `invocationNum` | `{}` or `{"injectSteps": [{"ephemeralMessage": "..."}], "terminationBehavior": "force_continue"}` | Checks `always_on` rule token budgets (`check_rules_token_budget`: `AGENTS.md <= 18 KB` and combined workspace `always_on` rules `<= 80 KB`), detects modified **and untracked** (`git ls-files --others`) `.py` files, and runs `ruff check` + AST `check_project`/`check_tests` (when `osa_framework` is present). Forces the agent to fix violations in the same turn (up to `_MAX_FORCE_CONTINUE_INVOCATIONS = 5`). |
+| **`Stop`** | [`stop_verify_tests.py`](../../antigravity/.gemini/config/scripts/stop_verify_tests.py) | *(Normal stop: `NO_TOOL_CALL` / `model_stop`)* | `workspacePaths`, `terminationReason` | `{"decision": "stop"}` or `{"decision": "continue", "reason": "..."}` | Runs `pytest --tb=line -q --no-header -x` across workspaces with modified/untracked `.py` files before allowing the agent to conclude its turn (`decision="continue"` blocks the stop and forces remediation if tests fail). |
 
 ---
 

@@ -625,7 +625,19 @@ def test_structured_logging_rotation_token_budget_and_fanout_warnings(
     sub_empty_up = tmp_path / "layers" / "sub-empty-upstream" / "system"
     sub_empty_up.mkdir(parents=True)
     (sub_empty_up / "mcp-layer.json").write_text(
-        json.dumps({"layer_id": "sub-empty", "upstream_layer": {}}),
+        json.dumps(
+            {
+                "layer_id": "sub-empty",
+                "upstream_layer": {},
+                "environments": {
+                    "pre": {
+                        "access_mode": "strictly-read-only",
+                        "default_guardrails": ["subtree-pre-guardrail"],
+                    }
+                },
+                "federated_mcps": [{"mcp_id": "sub-mcp", "role": "db", "environments": ["pre"]}],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -641,6 +653,9 @@ def test_structured_logging_rotation_token_budget_and_fanout_warnings(
         }
     )
     fanout_resp = server.call_tool("discover_federated_mcps", {"layer": "root"})
+    sub_env_resp = server.call_tool(
+        "discover_federated_mcps", {"layer": "sub-empty-upstream", "environment": "pre"}
+    )
 
     # Assert
     assert overview_resp is not None
@@ -654,3 +669,6 @@ def test_structured_logging_rotation_token_budget_and_fanout_warnings(
     fanout_data = json.loads(fanout_resp["content"][0]["text"])
     assert fanout_data["warnings"][0]["code"] == "MCP_FANOUT_WARNING"
     assert "root-guardrail" in fanout_data["federated_mcps"][0]["effective_guardrails"]
+    sub_env_data = json.loads(sub_env_resp["content"][0]["text"])
+    assert sub_env_data["environment_profile"]["access_mode"] == "strictly-read-only"
+    assert "subtree-pre-guardrail" in sub_env_data["federated_mcps"][0]["effective_guardrails"]

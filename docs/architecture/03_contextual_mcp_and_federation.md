@@ -110,35 +110,67 @@ The server exposes six read-only, deterministic tools for live node auditing, ta
 |-------------|-----------|---------|
 | **`orient-on-layer`** | `task_description` (optional) | Instructs the agent to call `get_layer_overview` and `dotfiles://docs/index` first, returning a 4-Channel Executive Digest of the target node/layer before proposing changes. |
 | **`audit-container-or-node`** | `target_service` (optional) | Guides the agent through executing `audit_node_drift(mode="both")` and cross-checking `dotfiles://system/manifests` to diagnose environment discrepancies across containers or servers. |
-| **`orchestrate-federated-mcps`** | `workflow_goal` (required) | Instructs the agent to call `discover_federated_mcps` and `query_governance_rules` on the layer MCP **before** invoking any downstream infrastructure/database MCP server. |
+| **`orchestrate-federated-mcps`** | `workflow_goal` (required), `environment` (optional), `layer` (optional) | Instructs the agent to call `discover_federated_mcps` (scoped by `environment` and `layer`) and `query_governance_rules` on the layer MCP **before** invoking any downstream infrastructure/database MCP server, enforcing `effective_guardrails` and `activation_policy`. |
 
 ---
 
 ## 4. Declarative Layer & MCP Federation Schema (`system/mcp-layer.json`)
 
-To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`**.
+To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.1"`).
 
-When a team or engineer forks `dotfiles-ubuntu` for a specific corporate layer, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is** and **which MCP servers belong to its context**:
+When a team or engineer forks `dotfiles-ubuntu` for a specific corporate layer, department, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "layer_id": "dotfiles-ubuntu-default",
   "layer_role": "workstation",
   "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Reference Layer (Corporate / Workstation Baseline)",
   "upstream_layer": {
     "layer_id": "mtwuser/dotfiles-ubuntu",
-    "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git"
+    "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
+    "branch": "master"
   },
+  "mounted_layers_dir": "layers",
+  "mounted_layers": [],
   "default_stack_templates": [
     "fastapi-hexagonal"
   ],
+  "baseline_guardrails": [
+    "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
+    "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
+  ],
+  "environments": {
+    "dev": {
+      "description": "Local workstation or devcontainer development environment",
+      "access_mode": "read-write-local",
+      "requirements_file": "requirements-dev.txt",
+      "default_guardrails": [
+        "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)",
+        "AGENTS.md §8 (Mandatory Pre-Commit Hygiene Scan)"
+      ]
+    },
+    "pre": {
+      "description": "Pre-production staging and release validation environment",
+      "access_mode": "strictly-read-only",
+      "requirements_file": "requirements-pre.txt",
+      "default_guardrails": [
+        "Strictly read-only observability, schema drift, and contract inspection",
+        "No manual schema mutations; all migrations must flow through CI/CD"
+      ]
+    }
+  },
   "federated_mcps": [
     {
       "mcp_id": "google-developer-knowledge",
       "role": "documentation-grounding",
       "layer": "corporate",
+      "activation_policy": "on-demand",
+      "environments": ["dev", "tst", "pre", "pro"],
       "description": "Official Google Cloud, Gemini, Android, Firebase, and Web documentation retrieval.",
+      "when_to_invoke": "Invoke on demand when verifying official Google Cloud, Gemini, Android, Firebase, or Web API specifications.",
+      "avoid_when": "Do not invoke when inspecting local repository code, internal domain models, or offline unit tests.",
       "required_guardrails": [
         "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
         "AGENTS.md §12 (Generated Output Verification)"
@@ -232,7 +264,7 @@ Both `post_invocation_lint.py` (local `PostInvocation` hook) and `scripts/dotfil
 ### 6.3. Structured JSONL Audit & Alert Logs (`logs/mcp_events.jsonl` & `logs/mcp_alerts.jsonl`)
 
 When running in MCP mode, `scripts/dotfiles_mcp_server.py` automatically writes structured JSON Lines to `<repo>/logs/` (configurable via `--log-dir <path>`, `DOTFILES_MCP_LOG_DIR`, or disabled via `--no-log`):
-- **`logs/mcp_events.jsonl`**: Records every JSON-RPC request (`ts`, `method`, `name`, `layer`, `environment`, `duration_ms`, `response_bytes`, `approx_tokens`, `warning_count`, `status`).
+- **`logs/mcp_events.jsonl`**: Records every JSON-RPC request (`ts`, `method`, `target`, `layer`, `environment`, `duration_ms`, `response_bytes`, `estimated_tokens`, `warning_count`, `status`).
 - **`logs/mcp_alerts.jsonl`**: Dedicated stream of `WARN`, `ERROR`, and `CRITICAL` alerts for instant operator inspection (`tail -f ~/dotfiles-ubuntu/logs/mcp_alerts.jsonl`).
 - **Automatic Size Rotation & Container Safety**: Each log file automatically rotates to `.jsonl.1` at `512 KB`, is ignored by Git and GNU Stow (`[ "$module" = "logs" ] && continue`), and gracefully suppresses `OSError` when mounted on a read-only container filesystem (`:ro`).
 

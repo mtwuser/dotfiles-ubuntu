@@ -9,7 +9,7 @@
 #   5. AGENTS.md token-budget size gate (< 18,000 bytes)
 #   6. SKILL.md YAML frontmatter (kebab-case name, description, < 500 lines)
 #   7. Contextual MCP Server (scripts/dotfiles_mcp_server.py --self-test & system/mcp-layer.json)
-#   8. Automated Test Suite (tests/unit/ & tests/imp/, 0-byte __init__.py purity, 100% branch coverage)
+#   8. Automated Test Suite (tests/unit/, tests/imp/ & tests/e2e/, 0-byte __init__.py purity, 100% branch coverage)
 #
 # Usage: ./scripts/verify-repo.sh [--help | --version]
 

@@ -144,7 +144,7 @@ done
 
 SUBCOMMAND="${1:-}"
 if [ -z "$SUBCOMMAND" ]; then
-  echo "❌ Missing subcommand (expected: list, add, pull, push, or sync-upstream)." >&2
+  echo "❌ Missing subcommand (expected: list, add, pull, pull-all, push, or sync-upstream)." >&2
   usage >&2
   exit 1
 fi
