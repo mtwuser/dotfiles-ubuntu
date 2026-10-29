@@ -93,13 +93,18 @@ def test_all_shell_scripts_pass_bash_syntax_check() -> None:
 
 def test_all_test_init_files_are_strictly_zero_bytes() -> None:
     # Arrange
-    init_files = sorted((REPO_DIR / "tests").rglob("__init__.py"))
+    init_files = sorted(
+        [
+            REPO_DIR / "scripts" / "dotfiles_mcp" / "__init__.py",
+            *list((REPO_DIR / "tests").rglob("__init__.py")),
+        ]
+    )
 
     # Act
     non_empty = [str(p.relative_to(REPO_DIR)) for p in init_files if p.stat().st_size != 0]
 
     # Assert
-    assert len(init_files) == 4
+    assert len(init_files) == 5
     assert non_empty == []
 
 
@@ -281,9 +286,9 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     # Arrange
     import json
 
-    import dotfiles_mcp_server
     import post_invocation_lint
     import pre_tool_guard
+    from dotfiles_mcp import constants as mcp_constants
 
     config_dir = REPO_DIR / "antigravity/.gemini/config"
     hooks_data = json.loads((config_dir / "hooks.json").read_text(encoding="utf-8"))
@@ -304,7 +309,7 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     # Assert
     assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
     assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
-    assert post_invocation_lint._AGENTS_MD_MAX_BYTES == dotfiles_mcp_server.AGENTS_MD_MAX_BYTES
+    assert post_invocation_lint._AGENTS_MD_MAX_BYTES == mcp_constants.AGENTS_MD_MAX_BYTES
     for token in (*pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS, "alembic/versions/", "__init__.py"):
         assert token in arch_02
         assert token in security_md

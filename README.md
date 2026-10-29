@@ -247,7 +247,8 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── scripts/                           ← NOT stow — utility, MCP, subtree & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server (stdio)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server package (12 modules, < 425 lines each)
+│   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
 │   └── verify-repo.sh                 ←   Deterministic CI & pre-commit verification suite
 │
@@ -315,7 +316,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 | `antigravity/` | ✅ | `~/.gemini/config/*`, `~/.local/share/applications/*` | Antigravity config + .desktop entries |
 | `docs/` | ❌ | — | Navigable documentation hub & enterprise Human-AI governance architecture |
 | `templates/` | ❌ | — | Project starter templates (copied manually) |
-| `scripts/` | ❌ | — | Utility, MCP, subtree & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `layer-subtree.sh`, `verify-repo.sh`) |
+| `scripts/` | ❌ | — | Utility, MCP, subtree & CI scripts (`antigravity-install.sh`, `audit-global-config.sh`, `dotfiles_mcp_server.py`, `dotfiles_mcp/`, `layer-subtree.sh`, `verify-repo.sh`) |
 | `system/` | ❌ | — | Package manifests, MCP layer topology (`mcp-layer.json`), & external recipe catalog |
 | `layers/` | ❌ | — | Optional mounted `git subtree` context forks (`layers/<name>/` for departmental/service/environment orchestration) |
 | `logs/` | ❌ | — | Gitignored runtime MCP audit & alert logs (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |

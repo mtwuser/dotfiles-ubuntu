@@ -13,7 +13,9 @@ from typing import TYPE_CHECKING
 
 import dotfiles_mcp_server
 import pytest
-from dotfiles_mcp_server import DotfilesMCPServer
+from dotfiles_mcp import capsule_engine, constants, manifest_helpers
+from dotfiles_mcp import server as mcp_server_mod
+from dotfiles_mcp.server import DotfilesMCPServer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,10 +25,10 @@ def test_read_version_returns_default_when_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
-    monkeypatch.setattr(dotfiles_mcp_server, "REPO_DIR", tmp_path)
+    monkeypatch.setattr(manifest_helpers, "REPO_DIR", tmp_path)
 
     # Act
-    version = dotfiles_mcp_server._read_version()
+    version = manifest_helpers._read_version()
 
     # Assert
     assert version == "0.0.0"
@@ -38,8 +40,8 @@ def test_read_os_pretty_name_parses_os_release_or_falls_back(tmp_path: Path) -> 
     fake_os_release.write_text('NAME="Ubuntu"\nPRETTY_NAME="Ubuntu 26.04 LTS"\n', encoding="utf-8")
 
     # Act
-    pretty = dotfiles_mcp_server._read_os_pretty_name(fake_os_release)
-    default_pretty = dotfiles_mcp_server._read_os_pretty_name()
+    pretty = manifest_helpers._read_os_pretty_name(fake_os_release)
+    default_pretty = manifest_helpers._read_os_pretty_name()
 
     # Assert
     assert pretty == "Ubuntu 26.04 LTS"
@@ -53,8 +55,8 @@ def test_read_os_pretty_name_fallback_when_file_missing_or_without_key(tmp_path:
     missing_os_release = tmp_path / "does-not-exist"
 
     # Act
-    pretty_no_key = dotfiles_mcp_server._read_os_pretty_name(fake_os_release)
-    pretty_missing = dotfiles_mcp_server._read_os_pretty_name(missing_os_release)
+    pretty_no_key = manifest_helpers._read_os_pretty_name(fake_os_release)
+    pretty_missing = manifest_helpers._read_os_pretty_name(missing_os_release)
 
     # Assert
     assert len(pretty_no_key) > 0
@@ -72,11 +74,11 @@ def test_read_git_commit_handles_missing_git_and_oserror(
     fake_marker.write_text("", encoding="utf-8")
 
     # Act
-    no_git_result = dotfiles_mcp_server._read_git_commit()
+    no_git_result = manifest_helpers._read_git_commit()
     monkeypatch.setenv("DOTFILES_GIT_COMMIT", "abc1234")
-    env_fallback_result = dotfiles_mcp_server._read_git_commit()
-    in_container_true = dotfiles_mcp_server._is_running_in_container(fake_marker)
-    in_container_false = dotfiles_mcp_server._is_running_in_container(tmp_path / "missing")
+    env_fallback_result = manifest_helpers._read_git_commit()
+    in_container_true = manifest_helpers._is_running_in_container(fake_marker)
+    in_container_false = manifest_helpers._is_running_in_container(tmp_path / "missing")
 
     # Assert
     assert no_git_result == "unknown"
@@ -94,13 +96,13 @@ def test_read_git_commit_handles_nonzero_and_oserror_with_git_present(
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
 
     # Act
-    nonzero_result = dotfiles_mcp_server._read_git_commit()
+    nonzero_result = manifest_helpers._read_git_commit()
 
     def _raise_oserror(*_args: object, **_kwargs: object) -> None:
         raise OSError("failed to spawn")
 
     monkeypatch.setattr("subprocess.run", _raise_oserror)
-    oserror_result = dotfiles_mcp_server._read_git_commit()
+    oserror_result = manifest_helpers._read_git_commit()
 
     # Assert
     assert nonzero_result == "unknown"
@@ -109,8 +111,10 @@ def test_read_git_commit_handles_nonzero_and_oserror_with_git_present(
 
 def test_parse_skill_frontmatter_handles_missing_frontmatter_and_fields(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # Arrange
+    monkeypatch.setattr(manifest_helpers, "REPO_DIR", tmp_path)
     skill_dir = tmp_path / "custom-skill"
     skill_dir.mkdir()
     skill_md = skill_dir / "SKILL.md"
@@ -125,14 +129,9 @@ def test_parse_skill_frontmatter_handles_missing_frontmatter_and_fields(
     unclosed_md.write_text("---\nname: unclosed\n", encoding="utf-8")
 
     # Act
-    old_repo = dotfiles_mcp_server.REPO_DIR
-    dotfiles_mcp_server.REPO_DIR = tmp_path
-    try:
-        meta_none = dotfiles_mcp_server._parse_skill_frontmatter(skill_md)
-        meta_partial = dotfiles_mcp_server._parse_skill_frontmatter(partial_md)
-        meta_unclosed = dotfiles_mcp_server._parse_skill_frontmatter(unclosed_md)
-    finally:
-        dotfiles_mcp_server.REPO_DIR = old_repo
+    meta_none = manifest_helpers._parse_skill_frontmatter(skill_md)
+    meta_partial = manifest_helpers._parse_skill_frontmatter(partial_md)
+    meta_unclosed = manifest_helpers._parse_skill_frontmatter(unclosed_md)
 
     # Assert
     assert meta_none["name"] == "custom-skill"
@@ -148,8 +147,8 @@ def test_read_non_empty_lines_handles_missing_file_and_comments(tmp_path: Path) 
     sample.write_text("# comment\n\ncurl\ngit\n", encoding="utf-8")
 
     # Act
-    missing_lines = dotfiles_mcp_server._read_non_empty_lines(tmp_path / "missing.txt")
-    valid_lines = dotfiles_mcp_server._read_non_empty_lines(sample)
+    missing_lines = manifest_helpers._read_non_empty_lines(tmp_path / "missing.txt")
+    valid_lines = manifest_helpers._read_non_empty_lines(sample)
 
     # Assert
     assert missing_lines == []
@@ -545,7 +544,7 @@ def test_run_stdio_loop_processes_line_and_content_length_and_invalid_json(
     monkeypatch.setattr("sys.stdout", SimpleNamespace(buffer=stdout_buffer))
 
     # Act
-    dotfiles_mcp_server.run_stdio_loop(server)
+    mcp_server_mod.run_stdio_loop(server)
 
     # Assert
     output = stdout_buffer.getvalue().decode("utf-8")
@@ -566,7 +565,7 @@ def test_run_stdio_loop_handles_eof_during_headers(
     monkeypatch.setattr("sys.stdout", SimpleNamespace(buffer=stdout_buffer))
 
     # Act
-    dotfiles_mcp_server.run_stdio_loop(server)
+    mcp_server_mod.run_stdio_loop(server)
 
     # Assert
     assert b'"code": -32700' in stdout_buffer.getvalue()
@@ -620,7 +619,7 @@ def test_structured_logging_rotation_token_budget_and_fanout_warnings(
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
     events_log = log_dir / "mcp_events.jsonl"
-    events_log.write_text("X" * (dotfiles_mcp_server.MAX_LOG_FILE_BYTES + 10), encoding="utf-8")
+    events_log.write_text("X" * (constants.MAX_LOG_FILE_BYTES + 10), encoding="utf-8")
 
     agents_file = tmp_path / "antigravity/.gemini/config/AGENTS.md"
     agents_file.parent.mkdir(parents=True)
@@ -914,15 +913,15 @@ def test_unfold_context_capsule_capability_environment_and_tamper_gates(
     )
     cap_l0_default = q_default["matches"][0]["capsule_token"]
 
-    bad_lvl_hdr = dotfiles_mcp_server._b64url_encode(b'{"lvl":"L9"}')
+    bad_lvl_hdr = capsule_engine._b64url_encode(b'{"lvl":"L9"}')
     bad_lvl_token = f"rcap1.{bad_lvl_hdr}.YWJj.123456"
 
     secret = server._resolve_resonance_secret()
-    ck = dotfiles_mcp_server._derive_chain_key(secret, "root", "L0", "ph1", "all")
-    bad_zlib_cipher = dotfiles_mcp_server._b64url_encode(
-        dotfiles_mcp_server._xor_keystream(b"not-valid-zlib", ck)
+    ck = capsule_engine._derive_chain_key(secret, "root", "L0", "ph1", "all")
+    bad_zlib_cipher = capsule_engine._b64url_encode(
+        capsule_engine._xor_keystream(b"not-valid-zlib", ck)
     )
-    hdr_ph1 = dotfiles_mcp_server._b64url_encode(
+    hdr_ph1 = capsule_engine._b64url_encode(
         b'{"lvl":"L0","next":"L1","lyr":"root","env":"all","ph":"ph1"}'
     )
     sig_bad_zlib = hmac.new(
@@ -930,7 +929,7 @@ def test_unfold_context_capsule_capability_environment_and_tamper_gates(
     ).hexdigest()[:24]
     corrupt_zlib_token = f"rcap1.{hdr_ph1}.{bad_zlib_cipher}.{sig_bad_zlib}"
 
-    bad_ph_token = dotfiles_mcp_server._seal_single_capsule(
+    bad_ph_token = capsule_engine._seal_single_capsule(
         {"lvl": "L0", "next": "L1", "lyr": "root", "env": "all", "ph": "ph1"},
         {"ph": "different-ph"},
         ck,

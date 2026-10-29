@@ -1,6 +1,6 @@
 # Architecture 03: Contextual Layer & System MCP Server (`dotfiles-mcp`)
 
-> **Normative Specification — Subsystem 3 ([`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py) & [`system/mcp-layer.json`](../../system/mcp-layer.json))**
+> **Normative Specification — Subsystem 3 ([`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py), `scripts/dotfiles_mcp/`, & [`system/mcp-layer.json`](../../system/mcp-layer.json))**
 >
 > This document defines the technical specification, protocol contracts (`Resources`, `Tools`, `Prompts`), security invariants, and federation schema for operating any `dotfiles-ubuntu` instance or fork as a **Model Context Protocol (MCP) Server** representing a specific governance layer, container, server, or application node.
 
@@ -58,8 +58,8 @@ To preserve the simplicity, security, and reliability of `dotfiles-ubuntu`, the 
 
 1. **100% Optional & Zero-Impact on Traditional Dotfiles Usage**:
    - Users who only use `bootstrap.sh`, `backup.sh`, and `audit.sh` never need to configure or run the MCP server. Nothing runs as a background daemon unless explicitly invoked by an MCP client over `stdio`.
-2. **Zero External Dependencies (Pure Python Standard Library, Python >= 3.10)**:
-   - `scripts/dotfiles_mcp_server.py` MUST use only the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `argparse`) with `from __future__ import annotations`. It must never require `pip install mcp`, `fastapi`, or a virtual environment, ensuring it runs out of the box on any Ubuntu container, CI runner, or remote server where `python3` (3.10 through 3.14+) is present.
+2. **Zero External Dependencies & Modular Package Architecture (Pure Python Standard Library, Python >= 3.10)**:
+   - `scripts/dotfiles_mcp_server.py` (thin CLI entrypoint) and the modular package `scripts/dotfiles_mcp/` (`constants.py`, `catalogs.py`, `manifest_helpers.py`, `surface_weaver.py`, `capsule_engine.py`, `node_base.py`, `resources.py`, `tools_federation.py`, `tools_compaction.py`, `tools_unfold.py`, `tools_surface.py`, `server.py` — every file `< 425` lines with a `0-byte` `__init__.py`) MUST use only the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `argparse`, `zlib`, `hashlib`, `hmac`, `base64`) with `from __future__ import annotations`. It must never require `pip install mcp`, `fastapi`, or a virtual environment, ensuring it runs out of the box on any Ubuntu container, CI runner, or remote server where `python3` (3.10 through 3.14+) is present.
 3. **Strictly Read-Only & Deterministic Execution (No Arbitrary Shell)**:
    - In accordance with [`SECURITY.md`](../../SECURITY.md), the MCP server MUST NEVER expose a generic `run_command` or `exec_shell` tool, nor any tool that modifies files, installs packages, or alters Git state.
    - The only subprocesses it may spawn are deterministic, read-only repository scripts (`./audit.sh` without `--clean`, and `./scripts/verify-repo.sh`) with fixed argument lists (`shell=False`) and strict timeouts.

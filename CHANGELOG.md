@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Agnostic Multi-Layer Surface Governance Projection (`resolve_surface_governance`, Schema `v1.2`) (`scripts/dotfiles_mcp/surface_weaver.py`, `scripts/dotfiles_mcp/tools_surface.py`, `system/mcp-layer.json`, `docs/architecture/03_contextual_mcp_and_federation.md`)**:
+  - Upgraded `system/mcp-layer.json` to strict **`schema_version: "1.2"`** (adding `layer_role: "domain-policy"`, numeric `precedence` `0..100`, and `surface_bindings`) and added Tool #8 **`resolve_surface_governance`** (`target_path`, `architectural_plane`, `scope`, `traits`, `environment`, `resolution_override`, `resonance_key`, `include_capsules`):
+    1. **Stack-Agnostic 4D Surface Selectors**: Infers `architectural_plane` (`schema`, `domain`, `application`, `presentation`, `infrastructure`, `testing`) and `scope` from `target_path`, matching across `0..N` mounted layers (`Root` + `layers/*`) while pruning non-matching layers (`pruned_layers`) at 0 tokens.
+    2. **3-Stage Deterministic Deontic Weaving (*Lex Superior* $\rightarrow$ Mode $\rightarrow$ *Lex Specialis*)**: Orders matched bindings by numeric `precedence` (`0..100`, lower = higher authority), `mode` (`"authoritative"` at `L2` before `"transversal"` at `L1`), and selector `specificity_score` (`_compute_binding_specificity`: `+1` non-wildcard glob, `+2` plane, `+3` scope, `+4` per required trait), then `layer_id` and `binding_id`.
+    3. **Precedence Collision, Asset Verification & Truncation Diagnostics**: Emits `SURFACE_PRECEDENCE_COLLISION` when multiple layers match the same surface at identical `(precedence, mode)`, validates `rule_files` and `canonical_templates` via `_resolve_safe_path` (emitting `SURFACE_ASSET_MISSING` on missing files), and emits `RESPONSE_TRUNCATED` when a `rule_file` exceeds 3 sections or `1,500`-char `L2` excerpts.
+
+### Changed
+- **Modular Package Decomposition of Contextual MCP Server (`scripts/dotfiles_mcp/`, `scripts/dotfiles_mcp_server.py`)**:
+  - Refactored the monolithic `scripts/dotfiles_mcp_server.py` (`3,297` lines) into the modular package `scripts/dotfiles_mcp/` (12 focused modules, every file $\le 420$ lines, `0-byte` `scripts/dotfiles_mcp/__init__.py`) and a thin `359`-line CLI entrypoint (`scripts/dotfiles_mcp_server.py`) with zero legacy re-export shims (`98 passed`, **100.00% statement and branch coverage**).
+
+---
+
 ## [1.7.0] - 2026-10-29
 
 ### Added

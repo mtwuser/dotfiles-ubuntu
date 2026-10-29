@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotfiles_mcp_server import DotfilesMCPServer
+from dotfiles_mcp.server import DotfilesMCPServer
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 MCP_SERVER = REPO_DIR / "scripts" / "dotfiles_mcp_server.py"

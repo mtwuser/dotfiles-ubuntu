@@ -156,7 +156,14 @@ for py_file in antigravity/.gemini/config/scripts/*.py scripts/*.py; do
     fail "Python bytecode compilation failed on $py_file"
   fi
 done
-pass "Compiled $PY_COUNT Python scripts cleanly (in-memory bytecode check)"
+for pkg_py in scripts/dotfiles_mcp/*.py; do
+  [ -f "$pkg_py" ] || continue
+  PY_COUNT=$((PY_COUNT + 1))
+  if ! python3 -B -c 'import pathlib, sys; compile(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), sys.argv[1], "exec")' "$pkg_py"; then
+    fail "Python bytecode compilation failed on $pkg_py"
+  fi
+done
+pass "Compiled $PY_COUNT Python scripts & package modules cleanly (in-memory bytecode check)"
 
 resolve_tool() {
   local tool="$1"
@@ -253,7 +260,7 @@ sys.path.insert(0, str(config_dir / "scripts"))
 sys.path.insert(0, str(repo / "scripts"))
 import pre_tool_guard  # noqa: E402
 import post_invocation_lint  # noqa: E402
-import dotfiles_mcp_server  # noqa: E402
+from dotfiles_mcp import constants as mcp_constants  # noqa: E402
 
 expected_pre_tools = set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
 if event_matchers.get("PreToolUse") != expected_pre_tools:
@@ -304,8 +311,8 @@ for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"
         print(f"Hook-to-doc drift: '{agents_token}' missing from AGENTS.md", file=sys.stderr)
         sys.exit(1)
 
-if post_invocation_lint._AGENTS_MD_MAX_BYTES != dotfiles_mcp_server.AGENTS_MD_MAX_BYTES:
-    print("Token budget cap mismatch between post_invocation_lint.py and dotfiles_mcp_server.py", file=sys.stderr)
+if post_invocation_lint._AGENTS_MD_MAX_BYTES != mcp_constants.AGENTS_MD_MAX_BYTES:
+    print("Token budget cap mismatch between post_invocation_lint.py and dotfiles_mcp/constants.py", file=sys.stderr)
     sys.exit(1)
 
 for budget_token in (
@@ -448,14 +455,14 @@ if [ "$RUNTIME_CONTAINER_MODE" = true ]; then
   pass "Runtime container mode (/.dockerenv without tests/): test suite excluded from production image via .dockerignore"
 else
   INIT_ERRORS=0
-  for init_file in tests/__init__.py tests/unit/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
+  for init_file in scripts/dotfiles_mcp/__init__.py tests/__init__.py tests/unit/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
     if [ ! -f "$init_file" ] || [ -s "$init_file" ]; then
       fail "$init_file must exist and be 0 bytes (package marker purity)"
       INIT_ERRORS=$((INIT_ERRORS + 1))
     fi
   done
   if [ "$INIT_ERRORS" -eq 0 ]; then
-    pass "All tests/**/__init__.py files are 0 bytes (package marker purity)"
+    pass "All package and test __init__.py files are 0 bytes (package marker purity)"
   fi
 
   PYTEST_BIN="$(resolve_tool pytest)"
