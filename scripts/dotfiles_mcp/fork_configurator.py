@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import json
-import re
 import shutil
 from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.constants import (
+    KEBAB_ID_RE,
     ROLE_DEFAULT_PRECEDENCE,
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
@@ -17,8 +17,7 @@ from dotfiles_mcp.manifest_helpers import (
     _merge_unique_strings,
     _parse_skill_frontmatter,
 )
-
-KEBAB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+from dotfiles_mcp.promotion_engine import collect_layer_effective_bindings
 
 
 def discover_layer_template_names(layer_dir: Path) -> list[str]:
@@ -407,7 +406,7 @@ def apply_fork_to_project(
         prec = int(m.get("precedence", 50))
         lid = str(m.get("layer_id", name))
         role = str(m.get("layer_role", "department"))
-        bindings = m.get("surface_bindings", [])
+        bindings = collect_layer_effective_bindings(ldir, m)
         lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
         if name != "root":
             layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"

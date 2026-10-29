@@ -329,8 +329,11 @@ for mcp_token in (
     "unfold_context_capsule",
     "resolve_surface_governance",
     "surface_bindings",
+    "collect_layer_effective_bindings",
+    "promotion_routing",
     "SURFACE_PRECEDENCE_COLLISION",
     "SURFACE_ASSET_MISSING",
+    "TEMPLATE_PACK_MISSING",
     "rcap1",
     "CAPSULE_CAPABILITY_INSUFFICIENT",
     "CAPSULE_RESONANCE_DENIED",
@@ -339,6 +342,35 @@ for mcp_token in (
     if mcp_token not in arch_03:
         print(f"MCP-to-doc drift: '{mcp_token}' missing from Architecture 03 specification", file=sys.stderr)
         sys.exit(1)
+
+import re as _re  # noqa: E402
+
+for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
+    if mod_py.name == "__init__.py":
+        continue
+    if mod_py.name not in arch_03 or mod_py.name not in readme_md:
+        print(f"Module-to-doc drift: '{mod_py.name}' missing from Architecture 03 or README.md", file=sys.stderr)
+        sys.exit(1)
+
+emitted_codes: set[str] = set()
+warn_call_re = _re.compile(r'_emit_warning\(\s*"(?:WARN|ERROR|CRITICAL)"\s*,\s*"([A-Z0-9_]+)"')
+for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
+    emitted_codes.update(warn_call_re.findall(mod_py.read_text(encoding="utf-8")))
+for code in sorted(emitted_codes):
+    if code not in arch_03:
+        print(f"Warning-to-doc drift: emitted warning code '{code}' missing from Architecture 03", file=sys.stderr)
+        sys.exit(1)
+
+ext_guide = (repo / "docs/reference/developer_and_extension_guide.md").read_text(encoding="utf-8")
+for cli_sub in ("init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project", "promote-from-project"):
+    if cli_sub not in readme_md or cli_sub not in ext_guide:
+        print(f"CLI-to-doc drift: layer-config.sh subcommand '{cli_sub}' missing from README.md or developer_and_extension_guide.md", file=sys.stderr)
+        sys.exit(1)
+
+docs_readme = (repo / "docs/README.md").read_text(encoding="utf-8")
+if "(v1.1)" in docs_readme:
+    print("Stale schema version '(v1.1)' found in docs/README.md", file=sys.stderr)
+    sys.exit(1)
 
 print(f"  Verified {len(commands)} lifecycle hook command(s) and full hook-to-doc contract parity")
 PYEOF

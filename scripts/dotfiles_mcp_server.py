@@ -208,6 +208,11 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         bool(surf_res and not surf_res["result"]["isError"]),
         "resolve_surface_governance failed",
     )
+    surf_payload = json.loads(surf_res["result"]["content"][0]["text"])  # type: ignore[index]
+    _require(
+        len(surf_payload.get("resolved_bindings", [])) >= 2,
+        "resolve_surface_governance did not match expected baseline bindings",
+    )
 
     # 4. Path-containment security gate verification
     traversal_attempt = server.handle_request(

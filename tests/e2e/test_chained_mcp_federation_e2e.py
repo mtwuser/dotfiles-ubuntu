@@ -8,6 +8,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+from dotfiles_mcp.fork_configurator import (
+    apply_fork_to_project,
+    configure_fork_manifest,
+    scaffold_template_pack,
+)
+from dotfiles_mcp.promotion_engine import (
+    diff_project_against_layers,
+    promote_project_asset_to_layer,
+)
 from dotfiles_mcp.server import DotfilesMCPServer
 
 REPO_DIR = Path(__file__).resolve().parents[2]
@@ -250,7 +259,6 @@ class TestChainedMCPFederationE2E:
         rules_payload = json.loads(hub_responses[3]["result"]["content"][0]["text"])  # type: ignore[index]
         assert rules_payload["match_count"] == 1
         assert "HMAC-SHA256" in rules_payload["matches"][0]["excerpt"]
-
         node_overview = json.loads(node_responses[1]["result"]["content"][0]["text"])  # type: ignore[index]
         assert (
             node_overview["channel_1_node_and_system_state"]["layer_id"] == "acme-svc-checkout-node"
@@ -259,10 +267,16 @@ class TestChainedMCPFederationE2E:
         assert "libpq5" in node_manifests["apt_manual_packages"]
         hub_diag = json.loads(hub_responses[4]["result"]["contents"][0]["text"])  # type: ignore[index]
         node_diag = json.loads(node_responses[4]["result"]["contents"][0]["text"])  # type: ignore[index]
-        assert hub_diag["events_summary"]["total_events"] == 4
-        assert hub_diag["events_summary"]["error_events"] == 0
-        assert node_diag["events_summary"]["total_events"] == 4
-        assert node_diag["events_summary"]["error_events"] == 0
+        assert hub_diag["events_summary"] == {
+            **hub_diag["events_summary"],
+            "total_events": 4,
+            "error_events": 0,
+        }
+        assert node_diag["events_summary"] == {
+            **node_diag["events_summary"],
+            "total_events": 4,
+            "error_events": 0,
+        }
 
     def test_e2e_git_subtree_add_and_pull_all_with_live_mcp_discovery(self, tmp_path: Path) -> None:
         """Verify git subtree add and pull-all across local repositories with live MCP discovery."""
@@ -271,7 +285,6 @@ class TestChainedMCPFederationE2E:
         team_repo = tmp_path / "team_backend_repo"
         dept_repo.mkdir()
         team_repo.mkdir()
-
         git_env = {
             **os.environ,
             "GIT_AUTHOR_NAME": "Test Bot",
@@ -279,14 +292,13 @@ class TestChainedMCPFederationE2E:
             "GIT_COMMITTER_NAME": "Test Bot",
             "GIT_COMMITTER_EMAIL": "bot@example.com",
         }
-
         subprocess.run(["git", "init", "-b", "master"], cwd=dept_repo, env=git_env, check=True)
         _create_node_fixture(
             dept_repo,
-            layer_id="acme-dept-security",
-            layer_role="department",
-            packages=["curl"],
-            manifest_extra={
+            "acme-dept-security",
+            "department",
+            ["curl"],
+            {
                 "upstream_layer": {
                     "layer_id": "acme-dept-security",
                     "repository": str(dept_repo),
@@ -296,29 +308,11 @@ class TestChainedMCPFederationE2E:
             },
         )
         subprocess.run(["git", "add", "-A"], cwd=dept_repo, env=git_env, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", "chore: initial dept security layer"],
-            cwd=dept_repo,
-            env=git_env,
-            check=True,
-        )
-
+        subprocess.run(["git", "commit", "-m", "init"], cwd=dept_repo, env=git_env, check=True)
         subprocess.run(["git", "init", "-b", "master"], cwd=team_repo, env=git_env, check=True)
-        _create_node_fixture(
-            team_repo,
-            layer_id="acme-team-backend",
-            layer_role="team",
-            packages=["git", "python3"],
-            manifest_extra={},
-        )
+        _create_node_fixture(team_repo, "acme-team-backend", "team", ["git", "python3"], {})
         subprocess.run(["git", "add", "-A"], cwd=team_repo, env=git_env, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", "chore: initial team backend layer"],
-            cwd=team_repo,
-            env=git_env,
-            check=True,
-        )
-
+        subprocess.run(["git", "commit", "-m", "init"], cwd=team_repo, env=git_env, check=True)
         subtree_env = {**git_env, "DOTFILES_REPO_DIR": str(team_repo)}
 
         # Act
@@ -335,12 +329,7 @@ class TestChainedMCPFederationE2E:
             encoding="utf-8",
         )
         subprocess.run(["git", "add", "-A"], cwd=dept_repo, env=git_env, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", "feat: add mTLS mandate"],
-            cwd=dept_repo,
-            env=git_env,
-            check=True,
-        )
+        subprocess.run(["git", "commit", "-m", "mTLS"], cwd=dept_repo, env=git_env, check=True)
         pull_all_proc = subprocess.run(
             [str(SUBTREE_SCRIPT), "pull-all"],
             cwd=team_repo,
@@ -352,8 +341,7 @@ class TestChainedMCPFederationE2E:
         mcp_server = DotfilesMCPServer(repo_dir=team_repo, log_dir=tmp_path / "team_logs")
         rule_search = json.loads(
             mcp_server.call_tool(
-                "query_governance_rules",
-                {"query": "mTLS", "layer": "dept-security"},
+                "query_governance_rules", {"query": "mTLS", "layer": "dept-security"}
             )["content"][0]["text"]
         )
         mcp_discovery = json.loads(
@@ -367,3 +355,102 @@ class TestChainedMCPFederationE2E:
         assert "service-to-service traffic must use mTLS" in rule_search["matches"][0]["excerpt"]
         assert mcp_discovery["federated_mcp_count"] == 1
         assert mcp_discovery["federated_mcps"][0]["mcp_id"] == "vault-mcp"
+
+    def test_e2e_full_fork_lifecycle_downward_projection_mcp_and_upward_promotion(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Verify end-to-end fork setup, MCP surface projection, static apply, and promotion."""
+        # Arrange
+        fork_dir, proj_dir = tmp_path / "fork_repo", tmp_path / "consumer_project"
+        _create_node_fixture(
+            fork_dir,
+            "acme-eu-fork",
+            "domain-policy",
+            ["git", "python3"],
+            {"default_stack_templates": ["fastapi-hexagonal"]},
+        )
+        _create_node_fixture(
+            fork_dir / "layers" / "dept-security",
+            "acme-dept-security",
+            "department",
+            ["curl"],
+            {"precedence": 20, "surface_bindings": []},
+        )
+
+        # Act
+        configure_fork_manifest(
+            fork_dir,
+            layer_id="acme-eu-fork",
+            layer_role="domain-policy",
+            precedence=5,
+            prune_default_templates=True,
+        )
+        scaffold_template_pack(
+            fork_dir,
+            template_name="gdpr-eu",
+            kind="domain-policy-pack",
+            register_binding=False,
+            scopes=["checkout"],
+        )
+        mcp_srv = DotfilesMCPServer(repo_dir=fork_dir, log_dir=tmp_path / "fork_logs")
+        surf_resp = json.loads(
+            mcp_srv.call_tool(
+                "resolve_surface_governance", {"target_path": "src/checkout/service.py"}
+            )["content"][0]["text"]
+        )
+        apply_res = apply_fork_to_project(fork_dir, proj_dir, template_ref="gdpr-eu")
+        (proj_dir / ".agents/assets/gdpr-eu/canonical_snippet.md").write_text(
+            "<!-- Updated GDPR snippet -->\n", encoding="utf-8"
+        )
+        (proj_dir / ".agents/rules/layer-20-dept-security.md").write_text(
+            "# Dept Security Updated\n## Zero Trust\nEnforce mTLS.\n", encoding="utf-8"
+        )
+        (proj_dir / ".agents/rules/security-audit.md").write_text("# Audit\n", encoding="utf-8")
+        cmp_resp = json.loads(
+            mcp_srv.call_tool(
+                "compare_layer_patterns",
+                {
+                    "layer": "all",
+                    "project_rules": [
+                        "policy.md",
+                        "layer-20-dept-security.md",
+                        "security-audit.md",
+                    ],
+                    "project_skills": ["gdpr-eu-guide"],
+                },
+            )["content"][0]["text"]
+        )
+        diff_before = diff_project_against_layers(fork_dir, proj_dir)
+        promote_project_asset_to_layer(
+            fork_dir,
+            proj_dir,
+            source_rel_path=".agents/assets/gdpr-eu/canonical_snippet.md",
+            target_layer="root",
+        )
+        promote_project_asset_to_layer(
+            fork_dir,
+            proj_dir,
+            source_rel_path=".agents/rules/layer-20-dept-security.md",
+            target_layer="dept-security",
+        )
+        promote_project_asset_to_layer(
+            fork_dir,
+            proj_dir,
+            source_rel_path=".agents/rules/security-audit.md",
+            target_layer="root",
+            target_template="gdpr-eu",
+        )
+        diff_after = diff_project_against_layers(fork_dir, proj_dir)
+
+        # Assert
+        assert surf_resp["resolved_bindings"][0]["binding_id"] == "gdpr-eu-surface-binding"
+        assert apply_res["applied_template"] == "gdpr-eu"
+        lineage_md = (proj_dir / ".agents/LAYER_LINEAGE.md").read_text(encoding="utf-8")
+        assert "| `5` | `root` | `acme-eu-fork` | `domain-policy` | `1` |" in lineage_md
+        assert cmp_resp["materialized_layer_rules"] == ["layer-20-dept-security.md"]
+        assert cmp_resp["promotion_routing"][0]["target_layer"] == "dept-security"
+        assert len(diff_before["modified_in_project"]) == 2
+        assert diff_before["novel_in_project"] == ["rules/security-audit.md"]
+        assert diff_after["modified_in_project"] == []
+        assert diff_after["novel_in_project"] == []

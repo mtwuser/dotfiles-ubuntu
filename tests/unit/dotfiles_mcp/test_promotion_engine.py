@@ -179,9 +179,13 @@ class TestPromotionEngine:
         repo_dir = tmp_path / "fork"
         (repo_dir / "templates/base/rules").mkdir(parents=True)
         (repo_dir / "templates/base/skills/sopen").mkdir(parents=True)
+        (repo_dir / "templates/base/assets/sub").mkdir(parents=True)
         (repo_dir / "templates/.hidden").mkdir(parents=True)
         (repo_dir / "templates/base/rules/coding.md").write_text("v1\n", encoding="utf-8")
         (repo_dir / "templates/base/rules/testing.md").write_text("t1\n", encoding="utf-8")
+        (repo_dir / "templates/base/assets/sub/snippet.md").write_text(
+            "asset-v1\n", encoding="utf-8"
+        )
         (repo_dir / "templates/base/skills/sopen/SKILL.md").write_text(
             "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
         )
@@ -210,6 +214,10 @@ class TestPromotionEngine:
             "# Unmounted\n", encoding="utf-8"
         )
         (proj_dir / ".agents/rules/brand-new.md").write_text("# Brand new\n", encoding="utf-8")
+        (proj_dir / ".agents/assets/base/sub").mkdir(parents=True)
+        (proj_dir / ".agents/assets/base/sub/snippet.md").write_text(
+            "asset-v2-mod\n", encoding="utf-8"
+        )
         (proj_dir / ".agents/skills/sopen/SKILL.md").write_text(
             "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
         )
@@ -226,6 +234,7 @@ class TestPromotionEngine:
         assert "skills/sopen/SKILL.md" in in_sync_files
         assert "rules/testing.md" in mod_files
         assert "rules/layer-05-dept-legal.md" in mod_files
+        assert "assets/base/sub/snippet.md" in mod_files
         assert "rules/brand-new.md" in diff["novel_in_project"]
         assert "rules/layer-99-unmounted.md" in diff["novel_in_project"]
         assert empty_diff["in_sync"] == []
@@ -245,6 +254,13 @@ class TestPromotionEngine:
         (proj_dir / ".agents/skills/no-fm").mkdir(parents=True)
 
         (proj_dir / ".agents/rules/legal.md").write_text("# Legal Rule\n", encoding="utf-8")
+        (proj_dir / ".agents/rules/layer-05-dept-legal.md").write_text(
+            "# Updated Dept Legal\n", encoding="utf-8"
+        )
+        (proj_dir / ".agents/assets/gdpr-pack").mkdir(parents=True)
+        (proj_dir / ".agents/assets/gdpr-pack/snippet.md").write_text(
+            "<!-- asset -->\n", encoding="utf-8"
+        )
         (proj_dir / ".agents/rules/huge.md").write_text("X" * 19000, encoding="utf-8")
         (proj_dir / ".agents/skills/good-skill/SKILL.md").write_text(
             "---\nname: good-skill\ndescription: valid skill\n---\n# Guide\n",
@@ -294,12 +310,32 @@ class TestPromotionEngine:
             target_template="gdpr-pack",
             dry_run=False,
         )
+        asset_res = promote_project_asset_to_layer(
+            repo_dir,
+            proj_dir,
+            source_rel_path=".agents/assets/gdpr-pack/snippet.md",
+            target_layer="dept-legal",
+            dry_run=False,
+        )
+        mat_update_res = promote_project_asset_to_layer(
+            repo_dir,
+            proj_dir,
+            source_rel_path=".agents/rules/layer-05-dept-legal.md",
+            target_layer="dept-legal",
+            dry_run=False,
+        )
 
         # Assert
         assert dry_res["dry_run"] is True
         assert (
             sub_rule_res["destination"] == "layers/dept-legal/antigravity/.gemini/config/AGENTS.md"
         )
+        assert (
+            mat_update_res["destination"]
+            == "layers/dept-legal/antigravity/.gemini/config/AGENTS.md"
+        )
+        assert asset_res["destination"] == "layers/dept-legal/templates/gdpr-pack/assets/snippet.md"
+        assert asset_res["target_template"] == "gdpr-pack"
         assert sub_rule_res["subtree_push_command"] is not None
         assert tpl_rule_res["destination"] == "templates/fastapi-hexagonal/rules/legal.md"
         assert tpl_rule_res["subtree_push_command"] is None
@@ -309,6 +345,14 @@ class TestPromotionEngine:
         assert tpl_skill_res["destination"] == (
             "layers/dept-legal/templates/gdpr-pack/skills/good-skill/SKILL.md"
         )
+
+        with pytest.raises(ValueError, match=r"Refusing to overwrite existing AGENTS\.md"):
+            promote_project_asset_to_layer(
+                repo_dir,
+                proj_dir,
+                source_rel_path=".agents/rules/legal.md",
+                target_layer="dept-legal",
+            )
 
         with pytest.raises(ValueError, match="Invalid or missing project source file"):
             promote_project_asset_to_layer(repo_dir, proj_dir, source_rel_path="../outside.md")

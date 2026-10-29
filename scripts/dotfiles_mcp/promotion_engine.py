@@ -9,8 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES
-from dotfiles_mcp.fork_configurator import KEBAB_ID_RE
+from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES, KEBAB_ID_RE
 from dotfiles_mcp.manifest_helpers import _parse_skill_frontmatter
 
 MATERIALIZED_RULE_RE = re.compile(r"^layer-(\d{2})-([a-z0-9-]+)\.md$")
@@ -230,6 +229,14 @@ def diff_project_against_layers(
                     layer_sources.setdefault(
                         f"skills/{sf.parent.name}/SKILL.md", (f"{lname}:{tdir.name}", sf)
                     )
+                assets_dir = tdir / "assets"
+                for af in sorted(assets_dir.rglob("*")):
+                    if af.is_file():
+                        rel_a = str(af.relative_to(assets_dir)).replace("\\", "/")
+                        layer_sources.setdefault(
+                            f"assets/{tdir.name}/{rel_a}",
+                            (f"{lname}:{tdir.name}", af),
+                        )
 
     in_sync: list[dict[str, str]] = []
     modified_in_project: list[dict[str, str]] = []
@@ -243,6 +250,11 @@ def diff_project_against_layers(
     if (agents_dir / "skills").is_dir():
         for sf in sorted((agents_dir / "skills").glob("*/SKILL.md")):
             proj_files.append((f"skills/{sf.parent.name}/SKILL.md", sf))
+    if (agents_dir / "assets").is_dir():
+        for af in sorted((agents_dir / "assets").rglob("*")):
+            if af.is_file():
+                rel_a = str(af.relative_to(agents_dir)).replace("\\", "/")
+                proj_files.append((rel_a, af))
 
     for rel_key, pfile in proj_files:
         m = MATERIALIZED_RULE_RE.match(pfile.name)
@@ -305,7 +317,12 @@ def promote_project_asset_to_layer(
         raise ValueError(f"Target layer directory not found: {target_layer!r}")
 
     content = src_file.read_text(encoding="utf-8")
-    if src_file.name == "SKILL.md":
+    rel_parts = src_file.relative_to(project_dir.resolve()).parts
+    eff_template = target_template
+    if len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets"):
+        eff_template = target_template or rel_parts[2]
+        dest_file = layer_base / "templates" / eff_template / "assets" / Path(*rel_parts[3:])
+    elif src_file.name == "SKILL.md":
         lines = content.splitlines()
         if len(lines) > 500 or not lines or lines[0].strip() != "---":
             raise ValueError("Promoted SKILL.md must have YAML frontmatter and <= 500 lines")
@@ -313,22 +330,26 @@ def promote_project_asset_to_layer(
         if not KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
             raise ValueError("Promoted SKILL.md must have kebab-case name and description")
         dest_file = (
-            layer_base
-            / "templates"
-            / target_template
-            / "skills"
-            / src_file.parent.name
-            / "SKILL.md"
-            if target_template
+            layer_base / "templates" / eff_template / "skills" / src_file.parent.name / "SKILL.md"
+            if eff_template
             else layer_base
             / "antigravity/.gemini/config/skills"
             / src_file.parent.name
             / "SKILL.md"
         )
-    elif target_template:
-        dest_file = layer_base / "templates" / target_template / "rules" / src_file.name
+    elif eff_template:
+        dest_file = layer_base / "templates" / eff_template / "rules" / src_file.name
     else:
         dest_file = layer_base / "antigravity/.gemini/config/AGENTS.md"
+        if (
+            dest_file.is_file()
+            and src_file.name != "AGENTS.md"
+            and not MATERIALIZED_RULE_RE.match(src_file.name)
+        ):
+            raise ValueError(
+                f"Refusing to overwrite existing AGENTS.md with rule {src_file.name!r}; "
+                "specify target_template or promote AGENTS.md / layer-NN-<name>.md"
+            )
         if len(content.encode("utf-8")) > AGENTS_MD_MAX_BYTES:
             raise ValueError(
                 f"Promoted AGENTS.md size ({len(content.encode('utf-8'))} bytes) "
@@ -343,7 +364,7 @@ def promote_project_asset_to_layer(
     return {
         "source": str(src_file.relative_to(project_dir.resolve())),
         "target_layer": eff_layer,
-        "target_template": target_template,
+        "target_template": eff_template,
         "destination": str(dest_file.relative_to(repo_dir.resolve())),
         "sha256": _sha256_file(src_file),
         "subtree_push_command": (

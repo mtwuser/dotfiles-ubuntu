@@ -51,7 +51,7 @@ def _binding_matches_surface(
     glob_ok = not target_path or any(_glob_matches(target_path, g) for g in globs)
     plane_ok = not plane or "*" in planes or plane in planes
     scope_ok = not scope or "*" in scopes or scope in scopes
-    traits_ok = not req_traits or bool(req_traits & traits)
+    traits_ok = not req_traits or "*" in req_traits or bool(req_traits & traits)
     return glob_ok and plane_ok and scope_ok and traits_ok
 
 
@@ -61,8 +61,12 @@ def _compute_binding_specificity(binding: dict[str, Any]) -> int:
         str(p).strip().lower() for p in binding.get("architectural_planes", ["*"]) if str(p).strip()
     ]
     scopes = [str(s).strip().lower() for s in binding.get("scopes", ["*"]) if str(s).strip()]
-    traits = [str(t).strip().lower() for t in binding.get("traits", []) if str(t).strip()]
-    glob_pts = 1 if (globs and "**" not in globs) else 0
+    traits = [
+        str(t).strip().lower()
+        for t in binding.get("traits", [])
+        if str(t).strip() and str(t).strip() != "*"
+    ]
+    glob_pts = 1 if (globs and "**" not in globs and "*" not in globs) else 0
     plane_pts = 2 if (planes and "*" not in planes) else 0
     scope_pts = 3 if (scopes and "*" not in scopes) else 0
     trait_pts = 4 * len(traits)

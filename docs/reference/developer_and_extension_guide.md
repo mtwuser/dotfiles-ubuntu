@@ -45,14 +45,23 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --register-binding
    ```
    This generates `templates/<name>/template.json` (`kind`: `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
-3. **Materialize a Fork into a Target Application Repository (`apply-project` — Without MCP / Static Mode)**:
+3. **Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)**:
    ```bash
+   ./scripts/layer-config.sh list-templates [--json]
    ./scripts/layer-config.sh apply-project /path/to/project \
      --template fastapi-hexagonal \
      --layers all
    ```
-   Copies the chosen template pack plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and writes `.agents/LAYER_LINEAGE.md`.
-4. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
+   Copies the chosen template pack (`rules/`, `skills/`, `governance/`, `assets/`) plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and writes `.agents/LAYER_LINEAGE.md` (with merged effective `surface_bindings` counts).
+4. **Diff & Promote Matured Project Patterns Upstream (`diff-project` & `promote-from-project`)**:
+   ```bash
+   ./scripts/layer-config.sh diff-project /path/to/project [--json]
+   ./scripts/layer-config.sh promote-from-project /path/to/project \
+     --asset .agents/rules/security-audit.md \
+     --to-layer dept-security
+   ```
+   Compares SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promotes rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates.
+5. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 
 ---
 
@@ -124,6 +133,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_post_invocation_lint.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_invocation_lint.py`
   - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
+  - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all executable modules in `scripts/dotfiles_mcp/` (`capsule_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_federation`, `tools_surface`, `tools_unfold`).
 - **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0 & Bash CLI Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh` (`list`, `pull`, `push`, `pull-all`), and `bash -n` syntax across all 17 `.sh` scripts and external package recipes.

@@ -247,7 +247,18 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (14 modules, < 425 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (14 modules, < 465 lines each)
+│   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
+│   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
+│   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
+│   │   ├── promotion_engine.py        ←     Multi-layer pattern comparison, diff-project & promote-from-project
+│   │   ├── surface_weaver.py          ←     Stack-agnostic surface selector inference & Lex Specialis scoring
+│   │   ├── capsule_engine.py          ←     Resonant rcap1 Matryoshka L0->L3 encryption & compression engine
+│   │   ├── node_base.py, resources.py ←     Base node path-containment, warnings & 9 MCP resource readers
+│   │   ├── tools_federation.py        ←     Overview, drift audit, doc reader & federated MCP discovery tools
+│   │   ├── tools_compaction.py        ←     Multi-resolution query_governance_rules & capsule minting
+│   │   ├── tools_unfold.py            ←     Hop-by-hop unfold_context_capsule & TOCTOU line-drift relocation
+│   │   └── tools_surface.py, server.py←     0..N resolve_surface_governance weaver & JSON-RPC 2.0 dispatcher
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
 │   ├── layer-config.sh                ←   Fork parameterization (init-fork), template scaffolding, project projection & promotion
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
@@ -399,22 +410,31 @@ Templates under `templates/<name>/` are polymorphic (discovered dynamically acro
 - **`project-overlay`**: Project- or vertical-specific rules and assets (`rules/`, `assets/`, `governance/`).
 
 ```bash
-# 1. Parameterize a new fork (Corporate, Domain-Policy, Department, or Team):
+# 1. Inspect available template packs across Root and mounted layers/*:
+./scripts/layer-config.sh list-templates
+
+# 2. Parameterize a new fork (Corporate, Domain-Policy, Department, or Team):
 ./scripts/layer-config.sh init-fork \
   --id acme-dept-design \
   --role department \
   --precedence 30 \
   --prune-default-templates
 
-# 2. Scaffold a new template pack in this fork (and optionally register its surface_binding):
+# 3. Scaffold a new template pack in this fork (and optionally register its surface_binding):
 ./scripts/layer-config.sh scaffold-template brand-design-system \
   --kind department-pack \
   --register-binding
 
-# 3. Project template + 0..N mounted layers into a target project (Without MCP static materialization):
+# 4. Project template + 0..N mounted layers into a target project (Without MCP static materialization):
 ./scripts/layer-config.sh apply-project <your-project> \
   --template fastapi-hexagonal \
   --layers all
+
+# 5. Diff & promote matured project rules, skills, or assets back into Root, layers/*, or templates/*:
+./scripts/layer-config.sh diff-project <your-project>
+./scripts/layer-config.sh promote-from-project <your-project> \
+  --asset .agents/rules/security-audit.md \
+  --to-layer dept-security
 ```
 
 ### Layer 3: Custom (Project-Specific)
