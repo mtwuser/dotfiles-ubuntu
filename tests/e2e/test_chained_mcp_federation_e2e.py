@@ -57,7 +57,7 @@ def _create_node_fixture(
     )
 
     manifest = {
-        "schema_version": "1.1",
+        "schema_version": "1.2",
         "layer_id": layer_id,
         "layer_role": layer_role,
         "description": f"E2E node {layer_id}",

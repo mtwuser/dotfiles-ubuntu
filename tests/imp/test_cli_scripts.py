@@ -323,6 +323,8 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "unfold_context_capsule",
         "resolve_surface_governance",
         "surface_bindings",
+        "SURFACE_PRECEDENCE_COLLISION",
+        "SURFACE_ASSET_MISSING",
         "rcap1",
         "CAPSULE_CAPABILITY_INSUFFICIENT",
         "CAPSULE_RESONANCE_DENIED",

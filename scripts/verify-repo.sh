@@ -322,6 +322,8 @@ for mcp_token in (
     "unfold_context_capsule",
     "resolve_surface_governance",
     "surface_bindings",
+    "SURFACE_PRECEDENCE_COLLISION",
+    "SURFACE_ASSET_MISSING",
     "rcap1",
     "CAPSULE_CAPABILITY_INSUFFICIENT",
     "CAPSULE_RESONANCE_DENIED",
@@ -415,7 +417,7 @@ fi
 # 7. Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest
 echo ""
 echo "[7/8] Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest"
-if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") in ("1.0", "1.1", "1.2") and "federated_mcps" in d and "environments" in d and "surface_bindings" in d'; then
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") == "1.2" and "federated_mcps" in d and "environments" in d and "surface_bindings" in d'; then
   pass "system/mcp-layer.json is valid JSON and matches schema v1.2 (with precedence, surface_bindings, environments & federated_mcps)"
 else
   fail "system/mcp-layer.json is missing or invalid"

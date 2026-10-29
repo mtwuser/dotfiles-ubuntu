@@ -1252,6 +1252,7 @@ def test_resolve_surface_governance_across_zero_to_n_arbitrary_layers(
     assert adaptive_res["resolved_bindings"][1]["resolution"] == "L1"
     assert adaptive_res["resolved_bindings"][2]["resolution"] == "L1"
     assert adaptive_res["canonical_templates"] == ["statutory-privacy:templates/legal/consent.html"]
+    assert any(w["code"] == "SURFACE_ASSET_MISSING" for w in adaptive_res["warnings"])
     assert "gdpr-art-25-by-design" in adaptive_res["effective_invariants"]
     assert "pre-read-only" in adaptive_res["effective_invariants"]
     assert l0_no_cap_res["surface_query"]["effective_plane"] == "all"
@@ -1259,3 +1260,142 @@ def test_resolve_surface_governance_across_zero_to_n_arbitrary_layers(
     assert l0_no_cap_res["resolved_bindings"][0]["sections"][0]["capsule_token"] is None
     assert "surface_preview" in l0_no_cap_res["resolved_bindings"][0]["sections"][0]
     assert l0_no_cap_res["token_compaction_metrics"]["capsule_overhead_tokens"] == 0
+
+
+def test_resolve_surface_governance_precedence_collision_lex_specialis_and_validation_gates(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    root_dir = tmp_path / "collision_repo"
+    (root_dir / "system").mkdir(parents=True)
+    (root_dir / "docs").mkdir(parents=True)
+    long_body = "A" * 1600
+    (root_dir / "docs/many_sections.md").write_text(
+        f"# Title\n## Sec 1\n{long_body}\n## Sec 2\nB\n## Sec 3\nC\n## Sec 4\nD\n",
+        encoding="utf-8",
+    )
+    (root_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.2",
+                "layer_id": "corp-root",
+                "layer_role": "corporate",
+                "precedence": 20,
+                "surface_bindings": [
+                    {
+                        "binding_id": "generic-checkout-owner",
+                        "target_globs": ["**"],
+                        "architectural_planes": ["*"],
+                        "scopes": ["*"],
+                        "traits": [],
+                        "mode": "authoritative",
+                        "rule_files": ["docs/many_sections.md"],
+                        "canonical_templates": ["templates/missing_tpl.html"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Second layer at identical precedence=20 and mode='authoritative', but higher specificity_score
+    fin_dir = root_dir / "layers/financial-ledger"
+    (fin_dir / "system").mkdir(parents=True)
+    (fin_dir / "docs").mkdir(parents=True)
+    (fin_dir / "docs/ledger.md").write_text(
+        "# Ledger\n## Double Entry\nEnforce double-entry ledger invariants.\n",
+        encoding="utf-8",
+    )
+    (fin_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.2",
+                "layer_id": "org-financial-ledger",
+                "layer_role": "domain-policy",
+                "precedence": 20,
+                "surface_bindings": [
+                    {
+                        "binding_id": "specific-checkout-ledger",
+                        "target_globs": ["src/checkout/**"],
+                        "architectural_planes": ["domain"],
+                        "scopes": ["checkout"],
+                        "traits": ["financial"],
+                        "mode": "authoritative",
+                        "rule_files": ["docs/ledger.md"],
+                        "canonical_templates": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    server = DotfilesMCPServer(repo_dir=root_dir, log_dir=tmp_path / "logs")
+
+    bad_schema_dir = tmp_path / "bad_schema"
+    (bad_schema_dir / "system").mkdir(parents=True)
+    (bad_schema_dir / "system/mcp-layer.json").write_text(
+        json.dumps({"schema_version": "1.0"}), encoding="utf-8"
+    )
+    bad_layer_prec_dir = tmp_path / "bad_layer_prec"
+    (bad_layer_prec_dir / "system").mkdir(parents=True)
+    (bad_layer_prec_dir / "system/mcp-layer.json").write_text(
+        json.dumps({"schema_version": "1.2", "precedence": 150}), encoding="utf-8"
+    )
+    bad_bind_prec_dir = tmp_path / "bad_bind_prec"
+    (bad_bind_prec_dir / "system").mkdir(parents=True)
+    (bad_bind_prec_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.2",
+                "surface_bindings": [{"binding_id": "b1", "precedence": -1}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    bad_mode_dir = tmp_path / "bad_mode"
+    (bad_mode_dir / "system").mkdir(parents=True)
+    (bad_mode_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "1.2",
+                "surface_bindings": [{"binding_id": "b1", "mode": "invalid-mode"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Act
+    res = json.loads(
+        server.call_tool(
+            "resolve_surface_governance",
+            {"target_path": "src/checkout/service.py", "traits": ["financial"]},
+        )["content"][0]["text"]
+    )
+    with pytest.raises(ValueError, match="Unsupported"):
+        DotfilesMCPServer(repo_dir=bad_schema_dir)._load_layer_manifest()
+    with pytest.raises(ValueError, match="Invalid layer precedence"):
+        DotfilesMCPServer(repo_dir=bad_layer_prec_dir).call_tool(
+            "resolve_surface_governance", {"target_path": "src/a.py"}
+        )
+    with pytest.raises(ValueError, match="Invalid binding precedence"):
+        DotfilesMCPServer(repo_dir=bad_bind_prec_dir).call_tool(
+            "resolve_surface_governance", {"target_path": "src/a.py"}
+        )
+    with pytest.raises(ValueError, match="Invalid surface_binding mode"):
+        DotfilesMCPServer(repo_dir=bad_mode_dir).call_tool(
+            "resolve_surface_governance", {"target_path": "src/a.py"}
+        )
+
+    # Assert
+    # Lex Specialis: specific-checkout-ledger (score=10) beats generic-checkout-owner (score=0)
+    assert [b["binding_id"] for b in res["resolved_bindings"]] == [
+        "specific-checkout-ledger",
+        "generic-checkout-owner",
+    ]
+    assert res["resolved_bindings"][0]["specificity_score"] == 10
+    assert res["resolved_bindings"][1]["specificity_score"] == 0
+    assert res["truncated"] is True
+    warning_codes = [w["code"] for w in res["warnings"]]
+    assert "SURFACE_PRECEDENCE_COLLISION" in warning_codes
+    assert "SURFACE_ASSET_MISSING" in warning_codes
+    assert "RESPONSE_TRUNCATED" in warning_codes

@@ -137,6 +137,7 @@ STRUCTURAL_PATH_SEGMENTS = frozenset(
     }
 )
 CAPSULE_PREFIX = "rcap1"
+VALID_BINDING_MODES = ("authoritative", "transversal")
 VALID_RESOLUTIONS = ("L0", "L1", "L2")
 VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
 VALID_AGENT_TIERS = ("flash", "inherit", "pro")
@@ -847,6 +848,20 @@ def _binding_matches_surface(
     return glob_ok and plane_ok and scope_ok and traits_ok
 
 
+def _compute_binding_specificity(binding: dict[str, Any]) -> int:
+    globs = [str(g).strip() for g in binding.get("target_globs", ["**"]) if str(g).strip()]
+    planes = [
+        str(p).strip().lower() for p in binding.get("architectural_planes", ["*"]) if str(p).strip()
+    ]
+    scopes = [str(s).strip().lower() for s in binding.get("scopes", ["*"]) if str(s).strip()]
+    traits = [str(t).strip().lower() for t in binding.get("traits", []) if str(t).strip()]
+    glob_pts = 1 if (globs and "**" not in globs) else 0
+    plane_pts = 2 if (planes and "*" not in planes) else 0
+    scope_pts = 3 if (scopes and "*" not in scopes) else 0
+    trait_pts = 4 * len(traits)
+    return glob_pts + plane_pts + scope_pts + trait_pts
+
+
 def _b64url_encode(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
 
@@ -1136,6 +1151,11 @@ class DotfilesMCPServer:
             loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 data.update(loaded)
+        if str(data.get("schema_version")) != "1.2":
+            raise ValueError(
+                f"Unsupported mcp-layer.json schema_version {data.get('schema_version')!r}: "
+                "expected '1.2'"
+            )
         if base_dir == self.repo_dir:
             if self.layer_id_override:
                 data["layer_id"] = self.layer_id_override
@@ -2344,6 +2364,34 @@ class DotfilesMCPServer:
             "isError": False,
         }
 
+    def _resolve_binding_asset(
+        self,
+        rel_path: str,
+        layer_dir: Path,
+        layer_name: str,
+        binding_id: str,
+        asset_type: str,
+        warnings_out: list[dict[str, Any]],
+    ) -> Path | None:
+        try:
+            return self._resolve_safe_path(rel_path, layer_dir)
+        except FileNotFoundError:
+            warnings_out.append(
+                self._emit_warning(
+                    "WARN",
+                    "SURFACE_ASSET_MISSING",
+                    f"Binding {binding_id!r} in layer {layer_name!r} references missing "
+                    f"{asset_type} {rel_path!r}.",
+                    {
+                        "layer": layer_name,
+                        "binding_id": binding_id,
+                        "asset_type": asset_type,
+                        "path": rel_path,
+                    },
+                )
+            )
+            return None
+
     def _tool_resolve_surface_governance(self, args: dict[str, Any]) -> dict[str, Any]:
         target_path = str(args.get("target_path", "")).strip()
         explicit_plane = str(args.get("architectural_plane", "")).strip().lower()
@@ -2387,8 +2435,9 @@ class DotfilesMCPServer:
         ]
         participating_layers: list[dict[str, Any]] = []
         pruned_layers: list[dict[str, Any]] = []
-        matched_records: list[tuple[int, int, str, Path, str, str, dict[str, Any]]] = []
+        matched_records: list[tuple[int, int, int, str, Path, str, str, dict[str, Any]]] = []
         layer_guardrails_in_order: list[tuple[int, list[str]]] = []
+        surface_warnings: list[dict[str, Any]] = []
 
         for ldir in layer_dirs:
             lname = "root" if ldir == self.repo_dir else ldir.name
@@ -2397,6 +2446,10 @@ class DotfilesMCPServer:
             layer_role = str(manifest.get("layer_role", "service-node"))
             default_prec = 10 if ldir == self.repo_dir else 50
             layer_prec = int(manifest.get("precedence", default_prec))
+            if not (0 <= layer_prec <= 100):
+                raise ValueError(
+                    f"Invalid layer precedence {layer_prec} in {lname!r}: must be 0..100"
+                )
             raw_bindings = manifest.get("surface_bindings") or [
                 {
                     "binding_id": f"{lname}-default-baseline",
@@ -2410,14 +2463,23 @@ class DotfilesMCPServer:
                     "invariants": list(manifest.get("baseline_guardrails", [])),
                 }
             ]
-            matched_in_layer = [
-                b
-                for b in raw_bindings
-                if isinstance(b, dict)
-                and _binding_matches_surface(
+            matched_in_layer: list[dict[str, Any]] = []
+            for b in raw_bindings:
+                b_prec = int(b.get("precedence", layer_prec))
+                b_mode = str(b.get("mode", "transversal")).strip().lower()
+                if not (0 <= b_prec <= 100):
+                    raise ValueError(
+                        f"Invalid binding precedence {b_prec} in {lname!r}: must be 0..100"
+                    )
+                if b_mode not in VALID_BINDING_MODES:
+                    raise ValueError(
+                        f"Invalid surface_binding mode {b_mode!r}: "
+                        f"must be one of {VALID_BINDING_MODES}"
+                    )
+                if _binding_matches_surface(
                     b, target_path, effective_plane, effective_scope, traits_set
-                )
-            ]
+                ):
+                    matched_in_layer.append(b)
             if not matched_in_layer:
                 pruned_layers.append(
                     {
@@ -2448,14 +2510,39 @@ class DotfilesMCPServer:
             )
             for b in matched_in_layer:
                 b_prec = int(b.get("precedence", layer_prec))
-                m_rank = 0 if str(b.get("mode", "")).lower() == "authoritative" else 1
-                matched_records.append((b_prec, m_rank, lname, ldir, layer_id, layer_role, b))
+                m_rank = (
+                    0 if str(b.get("mode", "transversal")).strip().lower() == "authoritative" else 1
+                )
+                spec_score = _compute_binding_specificity(b)
+                matched_records.append(
+                    (b_prec, m_rank, -spec_score, lname, ldir, layer_id, layer_role, b)
+                )
 
         participating_layers.sort(key=lambda item: (int(item["precedence"]), str(item["layer_id"])))
         matched_records.sort(
-            key=lambda rec: (rec[0], rec[1], rec[4], str(rec[6].get("binding_id", "")))
+            key=lambda rec: (rec[0], rec[1], rec[2], rec[5], str(rec[7].get("binding_id", "")))
         )
         layer_guardrails_in_order.sort(key=lambda item: item[0])
+
+        collision_groups: dict[tuple[int, str], list[str]] = {}
+        for b_prec, m_rank, _, lname, *_ in matched_records:
+            c_key = (b_prec, "authoritative" if m_rank == 0 else "transversal")
+            collision_groups[c_key] = _merge_unique_strings(
+                collision_groups.get(c_key, []), [lname]
+            )
+        for (c_prec, c_mode), c_layers in sorted(collision_groups.items()):
+            if len(c_layers) > 1:
+                surface_warnings.append(
+                    self._emit_warning(
+                        "WARN",
+                        "SURFACE_PRECEDENCE_COLLISION",
+                        f"Multiple layers {c_layers} matched surface at identical "
+                        f"precedence={c_prec} and mode={c_mode!r}; resolved via Lex Specialis "
+                        "(specificity_score) then layer_id. Assign distinct precedence (0..100) "
+                        "in system/mcp-layer.json to establish unambiguous hierarchy.",
+                        {"precedence": c_prec, "mode": c_mode, "layers": c_layers},
+                    )
+                )
 
         resolved_bindings: list[dict[str, Any]] = []
         invariant_groups: list[list[str]] = [g for _, g in layer_guardrails_in_order]
@@ -2463,30 +2550,44 @@ class DotfilesMCPServer:
         returned_tokens = 0
         capsule_overhead_tokens = 0
         baseline_l2_tokens = 0
+        surface_truncated = False
 
-        for b_prec, _, lname, ldir, layer_id, layer_role, b in matched_records:
-            mode = (
-                "authoritative"
-                if str(b.get("mode", "")).lower() == "authoritative"
-                else "transversal"
-            )
+        for b_prec, m_rank, neg_spec, lname, ldir, layer_id, layer_role, b in matched_records:
+            mode = "authoritative" if m_rank == 0 else "transversal"
             res = res_override or ("L2" if mode == "authoritative" else "L1")
+            binding_id = str(b.get("binding_id", f"{lname}-binding"))
             b_invariants = [str(inv) for inv in b.get("invariants", []) if str(inv).strip()]
-            b_templates = [str(tpl) for tpl in b.get("canonical_templates", []) if str(tpl).strip()]
+            raw_templates = [
+                str(tpl) for tpl in b.get("canonical_templates", []) if str(tpl).strip()
+            ]
+            verified_templates: list[str] = []
+            for tpl_rel in raw_templates:
+                if (
+                    self._resolve_binding_asset(
+                        tpl_rel, ldir, lname, binding_id, "canonical_template", surface_warnings
+                    )
+                    is not None
+                ):
+                    verified_templates.append(tpl_rel)
             invariant_groups.append(b_invariants)
-            template_groups.append([f"{lname}:{tpl}" for tpl in b_templates])
+            template_groups.append([f"{lname}:{tpl}" for tpl in verified_templates])
 
             sections_out: list[dict[str, Any]] = []
             for rf_rel in b.get("rule_files", []):
-                rf_path = (ldir / str(rf_rel).strip().lstrip("/")).resolve()
-                if not rf_path.is_file():
+                rf_path = self._resolve_binding_asset(
+                    str(rf_rel), ldir, lname, binding_id, "rule_file", surface_warnings
+                )
+                if rf_path is None:
                     continue
                 lines = rf_path.read_text(encoding="utf-8").splitlines()
                 rel_in_layer = str(rf_path.relative_to(ldir)).replace("\\", "/")
-                for heading, start_line, end_line, body in _iter_markdown_sections(
-                    lines, rf_path.name
-                )[:3]:
+                all_sections = _iter_markdown_sections(lines, rf_path.name)
+                if len(all_sections) > 3:
+                    surface_truncated = True
+                for heading, start_line, end_line, body in all_sections[:3]:
                     joined = "\n".join(body)
+                    if res == "L2" and len(joined) > 1500:
+                        surface_truncated = True
                     l2_excerpt = joined[:1500]
                     l2_full = joined[:8000]
                     l1_skeleton = _extract_axiom_skeleton(heading, body)
@@ -2534,17 +2635,30 @@ class DotfilesMCPServer:
 
             resolved_bindings.append(
                 {
-                    "binding_id": str(b.get("binding_id", f"{lname}-binding")),
+                    "binding_id": binding_id,
                     "layer": lname,
                     "layer_id": layer_id,
                     "layer_role": layer_role,
                     "precedence": b_prec,
+                    "specificity_score": -neg_spec,
                     "mode": mode,
                     "resolution": res,
                     "invariants": b_invariants,
-                    "canonical_templates": b_templates,
+                    "canonical_templates": verified_templates,
                     "sections": sections_out,
                 }
+            )
+
+        if surface_truncated:
+            surface_warnings.append(
+                self._emit_warning(
+                    "WARN",
+                    "RESPONSE_TRUNCATED",
+                    "Surface governance rule sections exceeded per-file cap (top 3 sections "
+                    "or 1,500-char L2 excerpt). Unfold rcap1 capsules or call "
+                    "'read_layer_document' for complete files.",
+                    {"target_path": target_path, "effective_plane": effective_plane or "all"},
+                )
             )
 
         tokens_saved = max(0, baseline_l2_tokens - returned_tokens)
@@ -2561,8 +2675,10 @@ class DotfilesMCPServer:
                 "resolution_mode": res_override or "adaptive",
             },
             "precedence_policy": (
-                "Numeric precedence (0..100, lower value = higher authority / Lex Superior); "
-                "authoritative bindings default to L2, transversal bindings default to L1."
+                "Numeric precedence (0..100, lower value = higher authority / Lex Superior), "
+                "mode ('authoritative' before 'transversal'), and selector specificity_score "
+                "(higher = more specific / Lex Specialis); authoritative defaults to L2, "
+                "transversal defaults to L1."
             ),
             "participating_layers_count": len(participating_layers),
             "participating_layers": participating_layers,
@@ -2580,7 +2696,8 @@ class DotfilesMCPServer:
                 "tokens_saved": tokens_saved,
                 "savings_pct": savings_pct,
             },
-            "warnings": [],
+            "truncated": surface_truncated,
+            "warnings": surface_warnings,
         }
         return {
             "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],

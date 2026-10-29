@@ -118,7 +118,7 @@ The server exposes eight read-only, deterministic tools for live node auditing, 
 
 ## 4. Declarative Layer & MCP Federation Schema (`system/mcp-layer.json`)
 
-To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.2"`, backward-compatible with `"1.0"` and `"1.1"`).
+To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.2"`).
 
 When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corporate layer, domain-policy module, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its numeric deontic `precedence` (`0..100`)**, **its stack-agnostic `surface_bindings`**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
 
@@ -283,7 +283,9 @@ Both `post_invocation_lint.py` (local `PostInvocation` hook) and `scripts/dotfil
 | `CAPSULE_CAPABILITY_INSUFFICIENT` | `WARN` | `unfold_context_capsule` called with insufficient `agent_tier` (e.g., `"flash"` requesting `L2`/`L3` or `"inherit"` requesting `L3` in `pro`) | Enforces `AGENTS.md §13` model delegation discipline at the cryptographic MCP boundary. |
 | `CAPSULE_RESONANCE_DENIED` | `WARN` | Missing `resonance_key` when `header.kr=true`, invalid `resonance_key`, tampered HMAC signature, or mismatched `environment` on `rcap1` capsule | Detects unauthorized, unauthenticated, or cross-environment capsule unfolding attempts. |
 | `CAPSULE_CHAIN_BROKEN` | `WARN` | Malformed `rcap1` envelope, corrupted `zlib` stream, or level-scoped `parent_hash`/section/`L3` SHA-256 content drift mismatch | Guarantees cryptographic chain integrity and level-scoped live drift detection across multi-hop Matryoshka unfolding (`L0->L1`, `L1->L2`, `L2->L3`). |
-| `SECURITY_OR_VALIDATION_ERROR` | `ERROR` | Path traversal attempt (`../`), invalid `layer`/`environment`, or missing file | Records security containment or parameter validation rejections in `logs/mcp_alerts.jsonl`. |
+| `SURFACE_PRECEDENCE_COLLISION` | `WARN` | Two or more distinct layers match a surface with identical `(precedence, mode)` during `resolve_surface_governance` | Alerts that equal-precedence layers collided on the same surface and were tie-broken via *Lex Specialis* (`specificity_score`), recommending distinct `precedence` (`0..100`) values in `system/mcp-layer.json`. |
+| `SURFACE_ASSET_MISSING` | `WARN` | A matched `surface_binding` references a `rule_file` or `canonical_template` that does not exist on disk in its layer | Detects governance metadata drift (`rule_files` or `canonical_templates` pointing to missing files) while preventing ghost templates from entering the response. |
+| `SECURITY_OR_VALIDATION_ERROR` | `ERROR` | Path traversal attempt (`../`), invalid `layer`/`environment`/`precedence`/`mode`, unsupported `schema_version`, or missing file | Records security containment or parameter validation rejections in `logs/mcp_alerts.jsonl`. |
 
 ### 6.3. Structured JSONL Audit & Alert Logs (`logs/mcp_events.jsonl` & `logs/mcp_alerts.jsonl`)
 
@@ -330,10 +332,13 @@ To remain **100% stack-agnostic** (applicable to FastAPI/Hexagonal, Next.js/Reac
    - **`architectural_planes`**: Universal software engineering planes (`"schema"`, `"domain"`, `"application"`, `"presentation"`, `"infrastructure"`, `"testing"`, or `"*"`). Automatically inferred from `target_path` when omitted.
    - **`scopes`**: Feature module, vertical slice, or domain context names (`["checkout", "legal", "catalog"]` or `["*"]`). Automatically inferred from `target_path` when omitted.
    - **`traits`**: Semantic cross-cutting tags (`["pii", "financial", "public-facing"]`).
-3. **Numeric Deontic Precedence (`0..100`, *Lex Superior*) & Adaptive `rcap1` Resolution**:
+3. **Numeric Deontic Precedence (`0..100`, *Lex Superior*), Selector Specificity (*Lex Specialis*) & Adaptive `rcap1` Resolution**:
    - Non-intersecting layers are pruned at `0` token cost (`pruned_layers`).
-   - Intersecting bindings are sorted deterministically by `(precedence ASC, mode=="transversal" ASC, layer_id ASC)` — lower numeric `precedence` holds higher deontic authority (e.g., `5` statutory/legal compliance > `10` root engineering baseline > `20` domain/financial > `30` design system > `60` growth/marketing).
-   - **Adaptive Resolution**: Bindings with `mode: "authoritative"` default to `resolution="L2"` (full section specification + `canonical_templates`), whereas `mode: "transversal"` bindings default to `resolution="L1"` (*Exon Axiom Skeleton*, ~85% token compaction) with sealed `rcap1` capsules ready to unfold on demand.
+   - Intersecting bindings are sorted deterministically by `(precedence ASC, mode=="transversal" ASC, -specificity_score ASC, layer_id ASC)`:
+     1. ***Lex Superior* (`precedence` `0..100` ascending)**: Lower numeric value holds higher deontic authority (`5` statutory/legal compliance > `10` root engineering baseline > `20` domain/financial > `30` design system > `60` growth/marketing).
+     2. **Binding Mode (`"authoritative"` before `"transversal"`)**: Authoritative domain owners precede cross-cutting advisors at the same priority level.
+     3. ***Lex Specialis* (`specificity_score` descending)**: Computed from explicit `traits` (`+4` each), non-wildcard `scopes` (`+3`), non-wildcard `architectural_planes` (`+2`), and non-wildcard `target_globs` (`+1`). When two distinct layers share the exact same `(precedence, mode)` on a surface, *Lex Specialis* resolves the tie semantically and the server emits a **`SURFACE_PRECEDENCE_COLLISION`** warning.
+   - **Verified Governance Assets (`SURFACE_ASSET_MISSING`) & Adaptive Resolution**: Every declared `rule_file` and `canonical_template` is verified via `_resolve_safe_path` (`SURFACE_ASSET_MISSING` if missing on disk). Bindings with `mode: "authoritative"` default to `resolution="L2"` (full section specification + `canonical_templates`), whereas `mode: "transversal"` bindings default to `resolution="L1"` (*Exon Axiom Skeleton*, ~85% token compaction) with sealed `rcap1` capsules ready to unfold on demand.
 
 ---
 
