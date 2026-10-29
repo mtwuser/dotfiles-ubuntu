@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-10-29
+
+### Added
+- **Resonant Chained Context Compaction & Unfolding (`rcap1`: `L0 → L1 → L2 → L3`) (`scripts/dotfiles_mcp_server.py`, `docs/architecture/03_contextual_mcp_and_federation.md`)**:
+  - Upgraded `query_governance_rules` (`resolution`: `"L0"` | `"L1"` | `"L2"`, default `"L2"`, `environment`, `resonance_key`) and added Tool #7 **`unfold_context_capsule`** (`capsule_token`, `target_level`, `agent_tier`, `environment`, `resonance_key`) using 100% Python Standard Library (`zlib`, `hashlib`, `hmac`, `base64`):
+    1. **4-Tier Progressive Context Resolution (`L0 → L1 → L2 → L3`)**:
+       - `L0` (*Promoter Codon*, ~15–25 tokens/match): Returns a DNA/RNA-inspired start/stop codon (`AUG:<scope>:<slug>:UAA`), 5 semantic tags, token cost estimates (`L0..L3`), and a sealed `rcap1` Matryoshka capsule (~90–93% token savings across multi-layer scans).
+       - `L1` (*Exon Axiom Skeleton*, ~40–65 tokens/match): Extracts section headings, mandate quotes (`> *"..."*`), and up to 4 bullet titles while folding Markdown tables and code blocks inside the capsule (`[+N detail/table/code lines folded in rcap1:L1]`, ~80–85% token savings).
+       - `L2` (*Full Section Specification*, default): Verbatim Markdown section plus `l3_links` metadata (including `sha256` content digests) and an `rcap1` capsule pointing to `L3`.
+       - `L3` (*Deep Procedural Source*): Unfolds referenced `SKILL.md` / architecture documents (`linked_l3_documents`), merged `effective_guardrails`, and `federated_mcps`.
+    2. **3-Layer Matryoshka/Onion Cryptographic Chaining ($C_0(K_0) \supset C_1(K_1) \supset C_2(K_2)$)**:
+       - Seals each level inside its parent (`capsule_l2` inside `capsule_l1` inside `capsule_l0`) using `zlib.compress(level=9)`, SHA-256 counter-mode keystream encryption (`_xor_keystream`), and HMAC-SHA256 signatures bound to `(secret, layer_name, level, parent_hash, env_scope)`.
+       - Unwinds capsules hop-by-hop (`L0->L1`, `L1->L2`, `L2->L3`) with level-scoped drift verification (`h0->h1` at `L1`, `h1->h2` over 8,000-char sections at `L2`, and `h2->h3` over linked `L3` file paths + SHA-256 content digests at `L3`).
+    3. **Capability, Environment, TOCTOU Relocation & Telemetry Gates (`AGENTS.md §13`)**:
+       - Enforces model-tier depth gating (`agent_tier="flash"` capped at `L1`; `"pro"` environment `L3` requires `agent_tier="pro"`), explicit `resonance_key` enforcement (`header.kr=true`), cross-node issuer verification (`header.iss`), opt-out `include_capsules=false` (`capsule_overhead_tokens`), automatic TOCTOU section relocation (`line_drift_relocated`), and non-silent truncation warnings (`RESPONSE_TRUNCATED`).
+       - Added `CAPSULE_CAPABILITY_INSUFFICIENT`, `CAPSULE_RESONANCE_DENIED`, and `CAPSULE_CHAIN_BROKEN` alerts (with actionable `[Recovery: ...]` hints and `CapsuleError` alert deduplication) plus `resonance_compaction_summary` in `dotfiles://mcp/diagnostics` (`95 passed`, **100.00% statement and branch coverage**).
+
+---
+
 ## [1.6.4] - 2026-10-29
 
 ### Changed

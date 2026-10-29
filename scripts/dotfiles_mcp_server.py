@@ -12,7 +12,10 @@ Configuration guide: docs/reference/contextual_mcp_and_multi_service_orchestrati
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
+import hashlib
+import hmac
 import json
 import os
 import platform
@@ -23,6 +26,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import zlib
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -39,6 +43,14 @@ VALID_LAYER_ROLES = (
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+CAPSULE_PREFIX = "rcap1"
+VALID_RESOLUTIONS = ("L0", "L1", "L2")
+VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
+VALID_AGENT_TIERS = ("flash", "inherit", "pro")
+AGENT_TIER_RANK: dict[str, int] = {"flash": 1, "inherit": 2, "pro": 3}
+LEVEL_INDEX: dict[str, int] = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
+NEXT_LEVEL_MAP: dict[str, str] = {"L0": "L1", "L1": "L2", "L2": "L3"}
+LEVEL_MIN_TIER: dict[str, str] = {"L0": "flash", "L1": "flash", "L2": "inherit", "L3": "inherit"}
 AGENTS_MD_WARN_BYTES = 16000
 AGENTS_MD_MAX_BYTES = 18000
 MCP_PAYLOAD_WARN_BYTES = 16000
@@ -54,6 +66,32 @@ ALLOWED_ROOT_FILES = {
     "VERSION",
 }
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
+MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.md)`")
+BOLD_TERM_RE = re.compile(r"\*\*([^*]{3,40})\*\*")
+WORD_TOKEN_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_-]{2,}")
+CODON_STOPWORDS = frozenset(
+    {
+        "the",
+        "and",
+        "for",
+        "with",
+        "that",
+        "this",
+        "from",
+        "are",
+        "must",
+        "never",
+        "when",
+        "all",
+        "any",
+        "not",
+        "use",
+        "only",
+        "into",
+        "over",
+    }
+)
 
 MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
     {
@@ -217,7 +255,9 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "description": (
             "Search across Layer A rules (AGENTS.md), Layer B stack templates "
             "(templates/), and architecture docs (docs/) across the root layer "
-            "and/or mounted git subtree layers (layers/*) by keyword or topic."
+            "and/or mounted git subtree layers (layers/*) by keyword or topic, "
+            "with optional multi-resolution compaction (L0 Promoter Codon, "
+            "L1 Axiom Skeleton, or L2 Full Section) and chained rcap1 capsules."
         ),
         "inputSchema": {
             "type": "object",
@@ -243,8 +283,95 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                         "'root' (only root layer), or a specific mounted subtree name."
                     ),
                 },
+                "resolution": {
+                    "type": "string",
+                    "enum": ["L0", "L1", "L2"],
+                    "default": "L2",
+                    "description": (
+                        "Compaction depth: 'L0' (Promoter Codon headers + rcap1:L0 capsules), "
+                        "'L1' (Axiom Skeletons + rcap1:L1 capsules), or 'L2' (full sections + "
+                        "rcap1:L2 capsules; default)."
+                    ),
+                },
+                "environment": {
+                    "type": "string",
+                    "enum": ["dev", "tst", "pre", "pro"],
+                    "description": (
+                        "Optional environment binding ('dev', 'tst', 'pre', or 'pro') "
+                        "for chained context capsules."
+                    ),
+                },
+                "resonance_key": {
+                    "type": "string",
+                    "description": (
+                        "Optional resonance secret key to cryptographically seal "
+                        "the returned rcap1 context capsules."
+                    ),
+                },
+                "include_capsules": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": (
+                        "Whether to mint and attach rcap1 capsule_token envelopes to each match "
+                        "(set to false when querying L2/L1 without needing subsequent unfolding)."
+                    ),
+                },
             },
             "required": ["query"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "unfold_context_capsule",
+        "description": (
+            "Inspect or progressively decrypt and decompress a Resonant Context Capsule "
+            "(rcap1:...) from L0 (Promoter Codon) -> L1 (Axiom Skeleton) -> L2 (Full Section) "
+            "-> L3 (Deep Linked Skill/Spec), enforcing sequential hash chaining and "
+            "agent capability/environment gates."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "capsule_token": {
+                    "type": "string",
+                    "description": (
+                        "Chained context capsule token ('rcap1.<header>.<payload>.<sig>') "
+                        "returned by query_governance_rules or unfold_context_capsule."
+                    ),
+                },
+                "target_level": {
+                    "type": "string",
+                    "enum": ["L0", "L1", "L2", "L3"],
+                    "description": (
+                        "Target unfolding depth: 'L0' (promoter header inspection only), "
+                        "'L1' (Axiom Skeleton), 'L2' (Full Section), or 'L3' (Deep Linked "
+                        "Skills/Specs). Defaults to the next sequential level."
+                    ),
+                },
+                "agent_tier": {
+                    "type": "string",
+                    "enum": ["flash", "inherit", "pro"],
+                    "default": "inherit",
+                    "description": (
+                        "Calling agent capability tier per AGENTS.md §13 ('flash' is capped "
+                        "at L1; 'inherit' and 'pro' can unfold L2 and L3)."
+                    ),
+                },
+                "environment": {
+                    "type": "string",
+                    "enum": ["dev", "tst", "pre", "pro"],
+                    "description": (
+                        "Optional target environment context ('dev', 'tst', 'pre', or 'pro')."
+                    ),
+                },
+                "resonance_key": {
+                    "type": "string",
+                    "description": (
+                        "Optional capability/resonance secret key to unlock key-gated capsules."
+                    ),
+                },
+            },
+            "required": ["capsule_token"],
             "additionalProperties": False,
         },
     },
@@ -486,6 +613,211 @@ def _count_result_warnings(result: dict[str, Any]) -> int:
         if isinstance(ch3, dict) and isinstance(ch3.get("warnings"), list):
             return len(ch3["warnings"])
     return 0
+
+
+def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dict[str, Any]:
+    content_list = result.get("content")
+    if not isinstance(content_list, list) or not content_list:
+        return {}
+    first_text = content_list[0].get("text", "")
+    if not isinstance(first_text, str) or not first_text.startswith("{"):
+        return {}
+    with contextlib.suppress(json.JSONDecodeError):
+        parsed: dict[str, Any] = json.loads(first_text)
+        if target == "query_governance_rules":
+            metrics = parsed.get("token_compaction_metrics", {})
+            return {
+                "resolution": parsed.get("resolution"),
+                "tokens_saved": int(metrics.get("tokens_saved", 0)),
+                "savings_pct": float(metrics.get("savings_pct", 0.0)),
+            }
+        if target == "unfold_context_capsule":
+            return {
+                "unfolded_level": parsed.get("unfolded_level"),
+                "agent_tier": str(parsed.get("agent_tier", "inherit")),
+                "decrypted_hops": int(parsed.get("decrypted_hops", 0)),
+            }
+    return {}
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).decode("ascii").rstrip("=")
+
+
+def _b64url_decode(token: str) -> bytes:
+    padding = "=" * ((4 - len(token) % 4) % 4)
+    return base64.urlsafe_b64decode((token + padding).encode("ascii"))
+
+
+def _slugify_codon(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:36]
+    return slug or "section"
+
+
+def _extract_codon_tags(heading: str, body_text: str) -> list[str]:
+    candidates = [heading, *BOLD_TERM_RE.findall(body_text)]
+    tags: list[str] = []
+    for chunk in candidates:
+        for word in WORD_TOKEN_RE.findall(chunk.lower()):
+            if word not in CODON_STOPWORDS and word not in tags:
+                tags.append(word)
+                if len(tags) == 5:
+                    return tags
+    return tags
+
+
+def _extract_axiom_skeleton(heading: str, body_lines: list[str]) -> str:
+    exons: list[str] = [f"## {heading}"]
+    bullets = 0
+    folded = 0
+    in_code = False
+    for raw in body_lines:
+        stripped = raw.strip()
+        if stripped.startswith("```"):
+            in_code = not in_code
+            folded += 1
+            continue
+        if in_code or not stripped or stripped.startswith(("#", "|", "---")):
+            if stripped and not stripped.startswith("#"):
+                folded += 1
+            continue
+        if stripped.startswith(">") or stripped.startswith(("**Mandate", "**Description")):
+            exons.append(stripped[:160])
+        elif stripped.startswith(("- ", "* ")) or re.match(r"^\d+\.\s", stripped):
+            if bullets < 4:
+                exons.append(stripped[:120])
+                bullets += 1
+            else:
+                folded += 1
+        elif len(exons) == 1:
+            exons.append(stripped[:160])
+        else:
+            folded += 1
+    if folded > 0:
+        exons.append(f"[+{folded} detail/table/code lines folded in rcap1:L1]")
+    return "\n".join(exons)
+
+
+class CapsuleError(ValueError):
+    """Raised when an rcap1 context capsule fails verification and has already emitted an alert."""
+
+
+def _iter_markdown_sections(
+    lines: list[str],
+    default_heading: str,
+) -> list[tuple[str, int, int, list[str]]]:
+    sections: list[tuple[str, int, int, list[str]]] = []
+    current_heading = default_heading
+    section_start = 1
+    section_lines: list[str] = []
+    for idx, line in enumerate(lines, start=1):
+        if line.startswith(("## ", "### ", "#### ")) and section_lines:
+            sections.append((current_heading, section_start, idx - 1, section_lines))
+            current_heading = line.lstrip("#").strip()
+            section_start = idx
+            section_lines = [line]
+        else:
+            if line.startswith("# ") and idx == 1:
+                current_heading = line.lstrip("#").strip()
+            section_lines.append(line)
+    if section_lines:
+        sections.append((current_heading, section_start, len(lines), section_lines))
+    return sections
+
+
+def _extract_l3_links(
+    source_file: Path,
+    section_text: str,
+    layer_root: Path,
+) -> list[dict[str, Any]]:
+    raw_refs = [m.group(2).split("#")[0].strip() for m in MD_LINK_RE.finditer(section_text)]
+    raw_refs.extend(m.group(1).strip() for m in BACKTICK_PATH_RE.finditer(section_text))
+    seen: set[str] = set()
+    links: list[dict[str, Any]] = []
+    root_resolved = layer_root.resolve()
+    for ref in raw_refs:
+        if not ref or ref.startswith(("http://", "https://", "mailto:")):
+            continue
+        for base in (source_file.parent, root_resolved):
+            cand = (base / ref).resolve()
+            if cand.is_file() and cand.is_relative_to(root_resolved):
+                rel_str = str(cand.relative_to(root_resolved)).replace("\\", "/")
+                if rel_str not in seen and (
+                    rel_str in ALLOWED_ROOT_FILES
+                    or any(rel_str.startswith(p) for p in ALLOWED_READ_PREFIXES)
+                ):
+                    seen.add(rel_str)
+                    raw_bytes = cand.read_bytes()
+                    size = len(raw_bytes)
+                    links.append(
+                        {
+                            "path": rel_str,
+                            "bytes": size,
+                            "estimated_tokens": max(1, size // 4),
+                            "sha256": hashlib.sha256(raw_bytes).hexdigest()[:16],
+                        }
+                    )
+                break
+    return links
+
+
+def _compute_digest16(*parts: str) -> str:
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
+def _derive_chain_key(
+    secret: bytes,
+    layer_name: str,
+    level: str,
+    parent_hash: str,
+    env_scope: str,
+) -> bytes:
+    ctx = f"rcap1-key:{layer_name}:{level}:{parent_hash}:{env_scope}".encode()
+    return hmac.new(secret, ctx, hashlib.sha256).digest()
+
+
+def _xor_keystream(data: bytes, key: bytes) -> bytes:
+    out = bytearray(len(data))
+    offset = 0
+    counter = 0
+    while offset < len(data):
+        block = hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
+        chunk_len = min(32, len(data) - offset)
+        for idx in range(chunk_len):
+            out[offset + idx] = data[offset + idx] ^ block[idx]
+        offset += chunk_len
+        counter += 1
+    return bytes(out)
+
+
+def _seal_single_capsule(
+    header: dict[str, Any],
+    inner_payload: dict[str, Any],
+    chain_key: bytes,
+) -> str:
+    header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+    raw_inner = json.dumps(inner_payload, separators=(",", ":")).encode("utf-8")
+    compressed = zlib.compress(raw_inner, level=9)
+    encrypted = _xor_keystream(compressed, chain_key)
+    cipher_b64 = _b64url_encode(encrypted)
+    signing_input = f"{CAPSULE_PREFIX}.{header_b64}.{cipher_b64}".encode("ascii")
+    sig_hex = hmac.new(chain_key, signing_input, hashlib.sha256).hexdigest()[:24]
+    return f"{CAPSULE_PREFIX}.{header_b64}.{cipher_b64}.{sig_hex}"
+
+
+def _parse_capsule_envelope(capsule_token: str) -> tuple[dict[str, Any], str, bytes, str]:
+    parts = capsule_token.strip().split(".")
+    if len(parts) != 4 or parts[0] != CAPSULE_PREFIX:
+        raise ValueError("Malformed rcap1 context capsule envelope")
+    _, header_b64, cipher_b64, sig_hex = parts
+    try:
+        header = json.loads(_b64url_decode(header_b64).decode("utf-8"))
+        cipher_bytes = _b64url_decode(cipher_b64)
+    except Exception as exc:
+        raise ValueError(f"Invalid base64 or JSON in rcap1 capsule header: {exc}") from exc
+    if not isinstance(header, dict) or header.get("lvl") not in NEXT_LEVEL_MAP:
+        raise ValueError("Invalid or unsupported rcap1 capsule header level")
+    return header, f"{CAPSULE_PREFIX}.{header_b64}.{cipher_b64}", cipher_bytes, sig_hex
 
 
 class DotfilesMCPServer:
@@ -824,6 +1156,25 @@ class DotfilesMCPServer:
             code = str(al.get("code", "UNKNOWN"))
             by_code[code] = by_code.get(code, 0) + 1
         max_bytes = max((int(ev.get("response_bytes", 0)) for ev in events), default=0)
+        queries_by_res: dict[str, int] = {}
+        unfolds_by_lvl: dict[str, int] = {}
+        unfolds_by_tier: dict[str, int] = {}
+        total_hops = 0
+        total_tokens_saved = 0
+        for ev in events:
+            res_lvl = ev.get("resolution")
+            if isinstance(res_lvl, str):
+                queries_by_res[res_lvl] = queries_by_res.get(res_lvl, 0) + 1
+                total_tokens_saved += int(ev.get("tokens_saved", 0))
+            unf_lvl = ev.get("unfolded_level")
+            if isinstance(unf_lvl, str):
+                unfolds_by_lvl[unf_lvl] = unfolds_by_lvl.get(unf_lvl, 0) + 1
+                tier = str(ev.get("agent_tier", "inherit"))
+                unfolds_by_tier[tier] = unfolds_by_tier.get(tier, 0) + 1
+                total_hops += int(ev.get("decrypted_hops", 0))
+        capsule_alerts = {
+            code: count for code, count in by_code.items() if code.startswith("CAPSULE_")
+        }
         diag_payload: dict[str, Any] = {
             "logging_enabled": self.log_dir is not None,
             "log_dir": str(self.log_dir) if self.log_dir else None,
@@ -837,6 +1188,14 @@ class DotfilesMCPServer:
                 "total_alerts": len(alerts),
                 "by_code": by_code,
                 "recent_alerts": alerts[-10:],
+            },
+            "resonance_compaction_summary": {
+                "queries_by_resolution": queries_by_res,
+                "unfolds_by_target_level": unfolds_by_lvl,
+                "unfolds_by_agent_tier": unfolds_by_tier,
+                "total_decrypted_hops": total_hops,
+                "cumulative_tokens_saved": total_tokens_saved,
+                "capsule_alerts_by_code": capsule_alerts,
             },
         }
         return {
@@ -861,6 +1220,8 @@ class DotfilesMCPServer:
             return self._tool_read_layer_document(args)
         if name == "query_governance_rules":
             return self._tool_query_governance_rules(args)
+        if name == "unfold_context_capsule":
+            return self._tool_unfold_context_capsule(args)
         if name == "discover_federated_mcps":
             return self._tool_discover_federated_mcps(args)
         if name == "compare_layer_patterns":
@@ -933,6 +1294,7 @@ class DotfilesMCPServer:
                     "Stop (stop_verify_tests.py)",
                 ],
                 "mcp_security_mode": "strictly-read-only-path-contained",
+                "context_compaction_protocol": "rcap1 (L0->L1->L2->L3 zlib+HMAC-SHA256)",
                 "log_dir": str(self.log_dir) if self.log_dir else None,
                 "warnings": warnings,
             },
@@ -1010,11 +1372,125 @@ class DotfilesMCPServer:
             "isError": False,
         }
 
+    def _resolve_resonance_secret(self, explicit_key: str | None = None) -> bytes:
+        raw_key = (
+            (explicit_key or "").strip()
+            or os.environ.get("DOTFILES_RESONANCE_KEY", "").strip()
+            or f"dotfiles-resonance-v1:{_read_version(self.repo_dir)}"
+        )
+        return raw_key.encode("utf-8")
+
+    def _build_section_capsule(
+        self,
+        *,
+        resolution: str,
+        layer_name: str,
+        rel_in_layer: str,
+        heading: str,
+        start_line: int,
+        end_line: int,
+        scope: str,
+        l1_skeleton: str,
+        l2_excerpt: str,
+        l2_full: str,
+        l3_links: list[dict[str, Any]],
+        env_scope: str,
+        secret: bytes,
+        key_required: bool = False,
+    ) -> tuple[dict[str, Any], str]:
+        l0_summary = f"[{layer_name}] {rel_in_layer} :: {heading}"
+        l3_tokens = sum(int(item["estimated_tokens"]) for item in l3_links) + 60
+        cost_map = {
+            "L0": max(1, len(l0_summary) // 4),
+            "L1": max(1, len(l1_skeleton) // 4),
+            "L2": max(1, len(l2_excerpt) // 4),
+            "L3": l3_tokens,
+        }
+        tags = _extract_codon_tags(heading, l2_excerpt)
+        promoter_codon = {
+            "codon": f"AUG:{scope}:{_slugify_codon(heading)}:UAA",
+            "layer": layer_name,
+            "tags": tags,
+            "l3_links_count": len(l3_links),
+            "token_estimates": cost_map,
+        }
+        l3_paths = [str(item["path"]) for item in l3_links]
+        h0 = _compute_digest16(layer_name, rel_in_layer, heading)
+        h1 = _compute_digest16(h0, l1_skeleton)
+        h2 = _compute_digest16(h1, l2_full)
+        h3 = _compute_digest16(
+            h2,
+            *(f"{item['path']}:{item['sha256']}" for item in l3_links),
+        )
+        digest_by_level = {"L0": h0, "L1": h1, "L2": h2, "L3": h3}
+        issuer_id = str(self._load_layer_manifest().get("layer_id", "root"))
+        base_meta = {
+            "lyr": layer_name,
+            "sc": scope,
+            "f": rel_in_layer,
+            "s": start_line,
+            "e": end_line,
+            "env": env_scope,
+            "h1": h1,
+        }
+        next_cap: str | None = None
+        capsules_by_level: dict[str, str] = {}
+        for lvl in ("L2", "L1", "L0"):
+            nxt = NEXT_LEVEL_MAP[lvl]
+            ph = digest_by_level[lvl]
+            min_tier = "pro" if (env_scope == "pro" and nxt == "L3") else LEVEL_MIN_TIER[nxt]
+            hdr = {
+                "v": 1,
+                "lvl": lvl,
+                "next": nxt,
+                "iss": issuer_id,
+                "lyr": layer_name,
+                "sec": heading[:80],
+                "codon": promoter_codon["codon"],
+                "tags": tags,
+                "cost": cost_map,
+                "cap": min_tier,
+                "env": env_scope,
+                "kr": key_required,
+                "ph": ph,
+            }
+            inner_lvl: dict[str, Any] = {
+                **base_meta,
+                "ph": ph,
+                "h_cur": ph,
+                "h_next": digest_by_level[nxt],
+            }
+            if lvl == "L2":
+                inner_lvl["l3"] = l3_paths
+            else:
+                inner_lvl["next_cap"] = next_cap
+            ck = _derive_chain_key(secret, layer_name, lvl, ph, env_scope)
+            next_cap = _seal_single_capsule(hdr, inner_lvl, ck)
+            capsules_by_level[lvl] = next_cap
+        return promoter_codon, capsules_by_level[resolution]
+
     def _tool_query_governance_rules(self, args: dict[str, Any]) -> dict[str, Any]:
         query = str(args.get("query", "")).strip()
         if not query:
             raise ValueError("'query' must be a non-empty string")
         scope = str(args.get("scope", "all"))
+        resolution = str(args.get("resolution", "L2")).strip().upper() or "L2"
+        if resolution not in VALID_RESOLUTIONS:
+            raise ValueError(
+                f"Invalid resolution {resolution!r}: must be one of {VALID_RESOLUTIONS}"
+            )
+        env_arg = str(args.get("environment", "")).strip().lower()
+        if env_arg and env_arg not in VALID_ENVIRONMENTS:
+            raise ValueError(
+                f"Invalid environment {env_arg!r}: must be one of {VALID_ENVIRONMENTS}"
+            )
+        env_scope = env_arg or "all"
+        include_capsules = bool(args.get("include_capsules", True))
+        explicit_key = (
+            str(args["resonance_key"]).strip() if args.get("resonance_key") is not None else ""
+        )
+        key_required = bool(explicit_key or os.environ.get("DOTFILES_RESONANCE_KEY", "").strip())
+        secret = self._resolve_resonance_secret(explicit_key or None)
         layer_arg = str(args.get("layer", "all")).strip() or "all"
         if layer_arg == "all":
             layer_dirs = [
@@ -1024,62 +1500,91 @@ class DotfilesMCPServer:
         else:
             layer_dirs = [self._resolve_layer_dir(layer_arg)]
 
-        candidate_files: list[Path] = []
+        candidate_files: list[tuple[str, Path, Path]] = []
         for ldir in layer_dirs:
+            lname = "root" if ldir == self.repo_dir else ldir.name
             if scope in ("all", "global"):
-                candidate_files.append(ldir / "antigravity/.gemini/config/AGENTS.md")
+                candidate_files.append((lname, ldir, ldir / "antigravity/.gemini/config/AGENTS.md"))
             if scope in ("all", "templates"):
-                candidate_files.extend(sorted((ldir / "templates").glob("*/rules/*.md")))
+                for tf in sorted((ldir / "templates").glob("*/rules/*.md")):
+                    candidate_files.append((lname, ldir, tf))
             if scope in ("all", "docs"):
-                candidate_files.extend(sorted((ldir / "docs").rglob("*.md")))
+                for df in sorted((ldir / "docs").rglob("*.md")):
+                    candidate_files.append((lname, ldir, df))
 
         matches: list[dict[str, Any]] = []
         excerpt_truncated = False
         q_lower = query.lower()
-        for file_path in candidate_files:
+        for lname, ldir, file_path in candidate_files:
             if not file_path.is_file():
                 continue
             lines = file_path.read_text(encoding="utf-8").splitlines()
-            current_heading = file_path.name
-            section_start = 1
-            section_lines: list[str] = []
-
-            def _flush_section(
-                heading: str,
-                start_line: int,
-                end_line: int,
-                body: list[str],
-                fp: Path = file_path,
-            ) -> None:
-                nonlocal excerpt_truncated
+            for heading, start_line, end_line, body in _iter_markdown_sections(
+                lines, file_path.name
+            ):
                 joined = "\n".join(body)
                 if q_lower in joined.lower() or q_lower in heading.lower():
-                    if len(joined) > 1500:
+                    if resolution == "L2" and len(joined) > 1500:
                         excerpt_truncated = True
-                    matches.append(
-                        {
-                            "file": str(fp.relative_to(self.repo_dir)),
-                            "section": heading,
-                            "start_line": start_line,
-                            "end_line": end_line,
-                            "excerpt": joined[:1500],
-                        }
+                    l2_excerpt = joined[:1500]
+                    l2_full = joined[:8000]
+                    l1_skeleton = _extract_axiom_skeleton(heading, body)
+                    l3_links = _extract_l3_links(file_path, joined, ldir)
+                    rel_in_layer = str(file_path.relative_to(ldir)).replace("\\", "/")
+                    promoter_codon, capsule_token = self._build_section_capsule(
+                        resolution=resolution,
+                        layer_name=lname,
+                        rel_in_layer=rel_in_layer,
+                        heading=heading,
+                        start_line=start_line,
+                        end_line=end_line,
+                        scope=scope,
+                        l1_skeleton=l1_skeleton,
+                        l2_excerpt=l2_excerpt,
+                        l2_full=l2_full,
+                        l3_links=l3_links,
+                        env_scope=env_scope,
+                        secret=secret,
+                        key_required=key_required,
                     )
-
-            for idx, line in enumerate(lines, start=1):
-                if line.startswith(("## ", "### ", "#### ")) and section_lines:
-                    _flush_section(current_heading, section_start, idx - 1, section_lines)
-                    current_heading = line.lstrip("#").strip()
-                    section_start = idx
-                    section_lines = [line]
-                else:
-                    if line.startswith("# ") and idx == 1:
-                        current_heading = line.lstrip("#").strip()
-                    section_lines.append(line)
-            if section_lines:
-                _flush_section(current_heading, section_start, len(lines), section_lines)
+                    entry: dict[str, Any] = {
+                        "file": str(file_path.relative_to(self.repo_dir)),
+                        "layer": lname,
+                        "section": heading,
+                        "start_line": start_line,
+                        "end_line": end_line,
+                        "promoter_codon": promoter_codon,
+                        "capsule_token": capsule_token if include_capsules else None,
+                    }
+                    if resolution == "L0":
+                        entry["surface_preview"] = (
+                            f"{promoter_codon['codon']} ({', '.join(promoter_codon['tags'])})"
+                        )
+                    elif resolution == "L1":
+                        entry["axiom_skeleton"] = l1_skeleton
+                        entry["excerpt"] = l1_skeleton
+                    else:
+                        entry["excerpt"] = l2_excerpt
+                    matches.append(entry)
 
         total_matches = len(matches)
+        returned_matches = matches[:15]
+        returned_tokens = sum(
+            int(m["promoter_codon"]["token_estimates"][resolution]) for m in returned_matches
+        )
+        capsule_overhead_tokens = (
+            sum(len(str(m["capsule_token"])) // 4 for m in returned_matches)
+            if include_capsules
+            else 0
+        )
+        baseline_l2_tokens = sum(
+            int(m["promoter_codon"]["token_estimates"]["L2"]) for m in returned_matches
+        )
+        tokens_saved = max(0, baseline_l2_tokens - returned_tokens)
+        savings_pct = (
+            round((tokens_saved / baseline_l2_tokens) * 100, 1) if baseline_l2_tokens > 0 else 0.0
+        )
+
         query_warnings: list[dict[str, Any]] = []
         if total_matches > 15 or excerpt_truncated:
             query_warnings.append(
@@ -1106,16 +1611,377 @@ class DotfilesMCPServer:
                             "query": query,
                             "scope": scope,
                             "layer": layer_arg,
+                            "resolution": resolution,
+                            "include_capsules": include_capsules,
+                            "token_compaction_metrics": {
+                                "resolution": resolution,
+                                "returned_estimated_tokens": returned_tokens,
+                                "capsule_overhead_tokens": capsule_overhead_tokens,
+                                "full_l2_baseline_tokens": baseline_l2_tokens,
+                                "tokens_saved": tokens_saved,
+                                "savings_pct": savings_pct,
+                            },
                             "total_matches_found": total_matches,
-                            "match_count": min(total_matches, 15),
+                            "match_count": len(returned_matches),
                             "truncated": bool(query_warnings),
                             "warnings": query_warnings,
-                            "matches": matches[:15],
+                            "matches": returned_matches,
                         },
                         indent=2,
                     ),
                 }
             ],
+            "isError": False,
+        }
+
+    def _tool_unfold_context_capsule(self, args: dict[str, Any]) -> dict[str, Any]:
+        raw_token = str(args.get("capsule_token", "")).strip()
+        try:
+            header, signing_prefix, cipher_bytes, sig_hex = _parse_capsule_envelope(raw_token)
+        except ValueError as exc:
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_CHAIN_BROKEN",
+                str(exc),
+                {"capsule_prefix": raw_token[:32]},
+            )
+            raise CapsuleError(
+                f"{exc} [Recovery: Re-run query_governance_rules to obtain a fresh capsule.]"
+            ) from exc
+
+        cur_lvl = str(header["lvl"])
+        default_next = str(header.get("next", NEXT_LEVEL_MAP[cur_lvl]))
+        target_level = str(args.get("target_level") or default_next).strip().upper()
+        if target_level not in VALID_CAPSULE_LEVELS:
+            raise ValueError(
+                f"Invalid target_level {target_level!r}: must be one of {VALID_CAPSULE_LEVELS}"
+            )
+
+        agent_tier = str(args.get("agent_tier", "inherit")).strip().lower() or "inherit"
+        if agent_tier not in VALID_AGENT_TIERS:
+            raise ValueError(
+                f"Invalid agent_tier {agent_tier!r}: must be one of {VALID_AGENT_TIERS}"
+            )
+
+        env_arg = str(args.get("environment", "")).strip().lower()
+        if env_arg and env_arg not in VALID_ENVIRONMENTS:
+            raise ValueError(
+                f"Invalid environment {env_arg!r}: must be one of {VALID_ENVIRONMENTS}"
+            )
+
+        expected_issuer = str(self._load_layer_manifest().get("layer_id", "root"))
+        cap_issuer = str(header.get("iss") or expected_issuer)
+        if cap_issuer != expected_issuer:
+            msg = (
+                f"Cross-node capsule mismatch: capsule was issued by MCP node {cap_issuer!r}, "
+                f"but this MCP server is {expected_issuer!r}. "
+                "[Recovery: Invoke unfold_context_capsule on the issuing MCP server node.]"
+            )
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_RESONANCE_DENIED",
+                msg,
+                {"reason": "issuer_node_mismatch", "capsule_issuer": cap_issuer},
+            )
+            raise CapsuleError(msg)
+
+        cap_env = str(header.get("env", "all"))
+        if cap_env != "all" and env_arg != cap_env:
+            msg = (
+                f"Capsule is bound to environment {cap_env!r}; "
+                f"cannot unfold with environment={env_arg or 'unspecified'!r}. "
+                f"[Recovery: Pass environment={cap_env!r}.]"
+            )
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_RESONANCE_DENIED",
+                msg,
+                {"reason": "environment_mismatch", "capsule_env": cap_env},
+            )
+            raise CapsuleError(msg)
+
+        explicit_key = (
+            str(args["resonance_key"]).strip() if args.get("resonance_key") is not None else ""
+        )
+        env_key = os.environ.get("DOTFILES_RESONANCE_KEY", "").strip()
+        if header.get("kr") is True and not (explicit_key or env_key):
+            msg = (
+                "Capsule requires an explicit resonance_key (header.kr=true), "
+                "but none was provided via arguments or DOTFILES_RESONANCE_KEY. "
+                "[Recovery: Provide resonance_key or re-query without key gating.]"
+            )
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_RESONANCE_DENIED",
+                msg,
+                {"reason": "missing_resonance_key", "level": cur_lvl},
+            )
+            raise CapsuleError(msg)
+
+        secret = self._resolve_resonance_secret(explicit_key or None)
+        hdr_layer = str(header.get("lyr", "root"))
+        step_key = _derive_chain_key(secret, hdr_layer, cur_lvl, str(header.get("ph", "")), cap_env)
+        expected_sig = hmac.new(
+            step_key, signing_prefix.encode("ascii"), hashlib.sha256
+        ).hexdigest()[:24]
+        if not hmac.compare_digest(sig_hex, expected_sig):
+            msg = (
+                "Capsule resonance signature verification failed "
+                "(invalid resonance_key or tampered capsule). "
+                "[Recovery: Verify resonance_key or re-run query_governance_rules.]"
+            )
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_RESONANCE_DENIED",
+                msg,
+                {"reason": "hmac_mismatch", "level": cur_lvl},
+            )
+            raise CapsuleError(msg)
+
+        if target_level == "L0":
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "unfolded_level": "L0",
+                                "unfold_chain": [],
+                                "decrypted_hops": 0,
+                                "chain_verified": True,
+                                "truncated": False,
+                                "warnings": [],
+                                "promoter_header": header,
+                                "next_capsule_token": raw_token,
+                            },
+                            indent=2,
+                        ),
+                    }
+                ],
+                "isError": False,
+            }
+
+        if LEVEL_INDEX[target_level] <= LEVEL_INDEX[cur_lvl]:
+            raise ValueError(
+                f"target_level {target_level!r} must be deeper than capsule level {cur_lvl!r} "
+                "(or 'L0' for promoter inspection)"
+            )
+
+        required_tier = (
+            "pro" if (cap_env == "pro" and target_level == "L3") else LEVEL_MIN_TIER[target_level]
+        )
+        if AGENT_TIER_RANK[agent_tier] < AGENT_TIER_RANK[required_tier]:
+            msg = (
+                f"Agent tier {agent_tier!r} is insufficient to unfold {target_level!r} "
+                f"(requires {required_tier!r} per AGENTS.md §13 Model Delegation Discipline). "
+                f"[Recovery: Request target_level='L1' or delegate to a {required_tier!r} agent.]"
+            )
+            self._emit_warning(
+                "WARN",
+                "CAPSULE_CAPABILITY_INSUFFICIENT",
+                msg,
+                {"agent_tier": agent_tier, "target_level": target_level},
+            )
+            raise CapsuleError(msg)
+
+        step_lvl = cur_lvl
+        step_header = header
+        step_cipher = cipher_bytes
+        unfold_chain: list[str] = []
+        inner: dict[str, Any] = {}
+        digest_map: dict[str, str] = {}
+        layer_name = hdr_layer
+        layer_dir = self._resolve_layer_dir(layer_name)
+        rel_file = ""
+        target_file = self.repo_dir
+        start_line = 1
+        end_line = 1
+        heading = str(header.get("sec", ""))
+        joined_section = ""
+        l1_skeleton = ""
+        l3_links: list[dict[str, Any]] = []
+        line_drift_relocated = False
+
+        while step_lvl != target_level:
+            nxt = NEXT_LEVEL_MAP[step_lvl]
+            try:
+                decrypted_bytes = _xor_keystream(step_cipher, step_key)
+                inner = json.loads(zlib.decompress(decrypted_bytes).decode("utf-8"))
+            except Exception as exc:
+                msg = (
+                    f"Failed to decompress chained capsule interior at {step_lvl}->{nxt}: {exc} "
+                    "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
+                )
+                self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
+                raise CapsuleError(msg) from exc
+
+            if not isinstance(inner, dict) or inner.get("ph") != step_header.get("ph"):
+                msg = (
+                    f"Capsule parent hash mismatch inside decrypted payload at {step_lvl}->{nxt} "
+                    "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
+                )
+                self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
+                raise CapsuleError(msg)
+
+            if not digest_map:
+                rel_file = str(inner.get("f", ""))
+                target_file = self._resolve_safe_path(rel_file, layer_dir)
+                all_lines = target_file.read_text(encoding="utf-8").splitlines()
+                start_line = max(1, int(inner.get("s", 1)))
+                end_line = min(len(all_lines), int(inner.get("e", len(all_lines))))
+                section_lines = all_lines[start_line - 1 : end_line]
+                l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
+                live_h0 = _compute_digest16(layer_name, rel_file, heading)
+                live_h1 = _compute_digest16(live_h0, l1_skeleton)
+                if live_h1 != inner.get("h1"):
+                    _, start_line, end_line, section_lines = next(
+                        (
+                            sec
+                            for sec in _iter_markdown_sections(all_lines, target_file.name)
+                            if sec[0] == heading
+                        ),
+                        (heading, start_line, end_line, section_lines),
+                    )
+                    l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
+                    live_h1 = _compute_digest16(live_h0, l1_skeleton)
+                    line_drift_relocated = live_h1 == inner.get("h1")
+                joined_section = "\n".join(section_lines)
+                l3_links = _extract_l3_links(target_file, joined_section, layer_dir)
+                live_h2 = _compute_digest16(live_h1, joined_section[:8000])
+                live_h3 = _compute_digest16(
+                    live_h2,
+                    *(f"{item['path']}:{item['sha256']}" for item in l3_links),
+                )
+                digest_map = {"L0": live_h0, "L1": live_h1, "L2": live_h2, "L3": live_h3}
+
+            if inner.get("h_cur") != digest_map[step_lvl] or inner.get("h_next") != digest_map[nxt]:
+                msg = (
+                    f"Capsule chain digest mismatch at {step_lvl}->{nxt}: "
+                    "underlying section drifted or payload tampered. "
+                    "[Recovery: Re-run query_governance_rules(resolution='L2') for fresh content.]"
+                )
+                self._emit_warning(
+                    "WARN",
+                    "CAPSULE_CHAIN_BROKEN",
+                    msg,
+                    {"file": rel_file, "hop": f"{step_lvl}->{nxt}"},
+                )
+                raise CapsuleError(msg)
+
+            unfold_chain.append(f"{step_lvl}->{nxt}")
+            step_lvl = nxt
+            if step_lvl != target_level:
+                step_header, _, step_cipher, _ = _parse_capsule_envelope(str(inner["next_cap"]))
+                step_key = _derive_chain_key(
+                    secret, layer_name, step_lvl, digest_map[step_lvl], cap_env
+                )
+
+        next_capsule_token = str(inner["next_cap"]) if "next_cap" in inner else None
+        l3_paths = [str(item["path"]) for item in l3_links]
+        unfold_truncated = (target_level in ("L2", "L3") and len(joined_section) > 8000) or (
+            target_level == "L3"
+            and (len(l3_paths) > 5 or any(int(item["bytes"]) > 4000 for item in l3_links[:5]))
+        )
+        unfold_warnings: list[dict[str, Any]] = []
+        if unfold_truncated:
+            unfold_warnings.append(
+                self._emit_warning(
+                    "WARN",
+                    "RESPONSE_TRUNCATED",
+                    f"Unfolded {target_level} context for section {heading!r} exceeded inline "
+                    "excerpt bounds (8,000-char section or 5x4,000-char L3 link cap). "
+                    "Use 'read_layer_document' to inspect complete files.",
+                    {
+                        "file": str(target_file.relative_to(self.repo_dir)),
+                        "target_level": target_level,
+                        "section_chars": len(joined_section),
+                        "l3_links_count": len(l3_paths),
+                    },
+                )
+            )
+
+        if target_level == "L1":
+            unfolded_body: dict[str, Any] = {
+                "file": str(target_file.relative_to(self.repo_dir)),
+                "layer": layer_name,
+                "section": heading,
+                "start_line": start_line,
+                "end_line": end_line,
+                "axiom_skeleton": l1_skeleton,
+                "l3_links_count": len(l3_links),
+            }
+        elif target_level == "L2":
+            unfolded_body = {
+                "file": str(target_file.relative_to(self.repo_dir)),
+                "layer": layer_name,
+                "section": heading,
+                "start_line": start_line,
+                "end_line": end_line,
+                "full_section": joined_section[:8000],
+                "l3_links": l3_links,
+            }
+        else:
+            linked_docs: list[dict[str, Any]] = []
+            for l3_path in l3_paths[:5]:
+                l3_file = self._resolve_safe_path(l3_path, layer_dir)
+                l3_text = l3_file.read_text(encoding="utf-8")
+                linked_docs.append(
+                    {
+                        "path": str(l3_file.relative_to(self.repo_dir)),
+                        "line_count": len(l3_text.splitlines()),
+                        "excerpt": l3_text[:4000],
+                    }
+                )
+            root_manifest = self._load_layer_manifest()
+            layer_manifest = self._load_layer_manifest(layer_dir)
+            effective_env = env_arg or (cap_env if cap_env != "all" else "")
+            root_env_g = (
+                root_manifest.get("environments", {})
+                .get(effective_env, {})
+                .get("default_guardrails", [])
+                if effective_env
+                else []
+            )
+            layer_env_g = (
+                layer_manifest.get("environments", {})
+                .get(effective_env, {})
+                .get("default_guardrails", [])
+                if effective_env
+                else []
+            )
+            unfolded_body = {
+                "file": str(target_file.relative_to(self.repo_dir)),
+                "layer": layer_name,
+                "section": heading,
+                "full_section": joined_section[:8000],
+                "linked_l3_documents": linked_docs,
+                "effective_guardrails": _merge_unique_strings(
+                    root_manifest.get("baseline_guardrails", []),
+                    layer_manifest.get("baseline_guardrails", []),
+                    root_env_g,
+                    layer_env_g,
+                ),
+                "federated_mcps": layer_manifest.get("federated_mcps", []),
+            }
+
+        payload = {
+            "unfolded_level": target_level,
+            "unfold_chain": unfold_chain,
+            "decrypted_hops": len(unfold_chain),
+            "chain_verified": True,
+            "line_drift_relocated": line_drift_relocated,
+            "agent_tier": agent_tier,
+            "environment": cap_env,
+            "parent_digest": header.get("ph"),
+            "level_digest": digest_map[target_level],
+            "truncated": bool(unfold_warnings),
+            "warnings": unfold_warnings,
+            "promoter_header": header,
+            "content": unfolded_body,
+            "next_capsule_token": next_capsule_token,
+        }
+        return {
+            "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
             "isError": False,
         }
 
@@ -1416,12 +2282,13 @@ class DotfilesMCPServer:
                     f"(~{resp_bytes // 4} tokens > {MCP_PAYLOAD_WARN_BYTES}-byte soft cap).",
                     {"method": method, "response_bytes": resp_bytes},
                 )
+            target_name = str(params.get("name") or params.get("uri") or method)
             self._write_jsonl(
                 "mcp_events.jsonl",
                 {
                     "ts": datetime.now(UTC).isoformat(),
                     "method": method,
-                    "target": str(params.get("name") or params.get("uri") or method),
+                    "target": target_name,
                     "layer": logged_layer,
                     "environment": logged_env,
                     "duration_ms": duration_ms,
@@ -1429,17 +2296,19 @@ class DotfilesMCPServer:
                     "response_bytes": resp_bytes,
                     "estimated_tokens": resp_bytes // 4,
                     "warning_count": warning_count,
+                    **_extract_compaction_event_fields(target_name, result),
                 },
             )
             return resp
         except (ValueError, FileNotFoundError, KeyError) as exc:
             duration_ms = round((time.perf_counter() - t0) * 1000, 2)
-            self._emit_warning(
-                "WARN",
-                "SECURITY_OR_VALIDATION_ERROR",
-                str(exc),
-                {"method": method},
-            )
+            if not isinstance(exc, CapsuleError):
+                self._emit_warning(
+                    "WARN",
+                    "SECURITY_OR_VALIDATION_ERROR",
+                    str(exc),
+                    {"method": method},
+                )
             self._write_jsonl(
                 "mcp_events.jsonl",
                 {
@@ -1567,8 +2436,8 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}}
     )
     _require(
-        bool(tools_list and len(tools_list["result"]["tools"]) == 6),
-        "Expected 6 tools",
+        bool(tools_list and len(tools_list["result"]["tools"]) == 7),
+        "Expected 7 tools",
     )
 
     overview = server.handle_request(
@@ -1607,13 +2476,54 @@ def run_self_test(server: DotfilesMCPServer) -> int:
             "method": "tools/call",
             "params": {
                 "name": "query_governance_rules",
-                "arguments": {"query": "AAA", "scope": "all"},
+                "arguments": {"query": "AAA", "scope": "global", "resolution": "L0"},
             },
         }
     )
     _require(
         bool(query_res and not query_res["result"]["isError"]),
         "query_governance_rules failed",
+    )
+    query_payload = json.loads(query_res["result"]["content"][0]["text"])  # type: ignore[index]
+    first_capsule = query_payload["matches"][0]["capsule_token"]
+    unfold_l1 = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 71,
+            "method": "tools/call",
+            "params": {
+                "name": "unfold_context_capsule",
+                "arguments": {
+                    "capsule_token": first_capsule,
+                    "target_level": "L1",
+                    "agent_tier": "flash",
+                },
+            },
+        }
+    )
+    _require(
+        bool(unfold_l1 and not unfold_l1["result"]["isError"]),
+        "unfold_context_capsule (L0->L1) failed",
+    )
+    l1_payload = json.loads(unfold_l1["result"]["content"][0]["text"])  # type: ignore[index]
+    unfold_l3 = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 72,
+            "method": "tools/call",
+            "params": {
+                "name": "unfold_context_capsule",
+                "arguments": {
+                    "capsule_token": l1_payload["next_capsule_token"],
+                    "target_level": "L3",
+                    "agent_tier": "inherit",
+                },
+            },
+        }
+    )
+    _require(
+        bool(unfold_l3 and not unfold_l3["result"]["isError"]),
+        "unfold_context_capsule (L1->L3) failed",
     )
 
     fed_res = server.handle_request(

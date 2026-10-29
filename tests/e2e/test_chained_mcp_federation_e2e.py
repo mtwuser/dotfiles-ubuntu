@@ -363,3 +363,150 @@ def test_e2e_git_subtree_add_and_pull_all_with_live_mcp_discovery(
     assert "service-to-service traffic must use mTLS" in rule_search["matches"][0]["excerpt"]
     assert mcp_discovery["federated_mcp_count"] == 1
     assert mcp_discovery["federated_mcps"][0]["mcp_id"] == "vault-mcp"
+
+
+def test_e2e_resonant_chained_compaction_across_subtrees_and_agent_tiers(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    hub_dir = tmp_path / "resonant_hub"
+    hub_logs = tmp_path / "resonant_logs"
+    _create_node_fixture(
+        hub_dir,
+        layer_id="acme-corp-hub",
+        layer_role="corporate",
+        packages=["curl", "git", "python3"],
+        manifest_extra={
+            "baseline_guardrails": ["corp-baseline-guard"],
+            "environments": {
+                "pre": {
+                    "access_mode": "strictly-read-only",
+                    "default_guardrails": ["pre-read-only-guard"],
+                }
+            },
+        },
+    )
+    dept_sub = hub_dir / "layers" / "dept-security"
+    _create_node_fixture(
+        dept_sub,
+        layer_id="acme-dept-security",
+        layer_role="department",
+        packages=["curl"],
+        manifest_extra={"baseline_guardrails": ["dept-zero-trust-guard"]},
+    )
+    (dept_sub / "docs" / "crypto_policy.md").write_text(
+        "# Crypto Policy\n"
+        "## Webhook HMAC Verification\n"
+        '> *"Verify every webhook signature before parsing payload"*\n'
+        "**Mandate:** Enforce **HMAC-SHA256** using "
+        "`antigravity/.gemini/config/skills/sopen/SKILL.md`.\n"
+        "- Step 1: Extract signature header\n"
+        "- Step 2: Compute digest\n"
+        "| Header | Algorithm |\n"
+        "|---|---|\n"
+        "| X-Sig | SHA256 |\n",
+        encoding="utf-8",
+    )
+
+    # Act
+    step1_resp = _run_mcp_stdio_batch(
+        hub_dir,
+        hub_logs,
+        [
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {
+                    "name": "query_governance_rules",
+                    "arguments": {
+                        "query": "Webhook",
+                        "layer": "all",
+                        "resolution": "L0",
+                        "environment": "pre",
+                        "resonance_key": "mesh-key-42",
+                    },
+                },
+            }
+        ],
+    )
+    q_l0_payload = json.loads(step1_resp[0]["result"]["content"][0]["text"])  # type: ignore[index]
+    l0_capsule = q_l0_payload["matches"][0]["capsule_token"]
+
+    step2_resp = _run_mcp_stdio_batch(
+        hub_dir,
+        hub_logs,
+        [
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "tools/call",
+                "params": {
+                    "name": "unfold_context_capsule",
+                    "arguments": {
+                        "capsule_token": l0_capsule,
+                        "target_level": "L1",
+                        "agent_tier": "flash",
+                        "environment": "pre",
+                        "resonance_key": "mesh-key-42",
+                    },
+                },
+            },
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {
+                    "name": "unfold_context_capsule",
+                    "arguments": {
+                        "capsule_token": l0_capsule,
+                        "target_level": "L2",
+                        "agent_tier": "flash",
+                        "environment": "pre",
+                        "resonance_key": "mesh-key-42",
+                    },
+                },
+            },
+        ],
+    )
+    l1_unfolded = json.loads(step2_resp[0]["result"]["content"][0]["text"])  # type: ignore[index]
+    flash_blocked = step2_resp[1]
+    l1_capsule = l1_unfolded["next_capsule_token"]
+
+    step3_resp = _run_mcp_stdio_batch(
+        hub_dir,
+        hub_logs,
+        [
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "unfold_context_capsule",
+                    "arguments": {
+                        "capsule_token": l1_capsule,
+                        "target_level": "L3",
+                        "agent_tier": "pro",
+                        "environment": "pre",
+                        "resonance_key": "mesh-key-42",
+                    },
+                },
+            }
+        ],
+    )
+    l3_unfolded = json.loads(step3_resp[0]["result"]["content"][0]["text"])  # type: ignore[index]
+
+    # Assert
+    assert q_l0_payload["resolution"] == "L0"
+    assert q_l0_payload["matches"][0]["layer"] == "dept-security"
+    assert l1_unfolded["unfolded_level"] == "L1"
+    assert "Verify every webhook signature" in l1_unfolded["content"]["axiom_skeleton"]
+    assert "error" in flash_blocked
+    assert l3_unfolded["unfolded_level"] == "L3"
+    assert l3_unfolded["unfold_chain"] == ["L1->L2", "L2->L3"]
+    assert len(l3_unfolded["content"]["linked_l3_documents"]) == 1
+    assert l3_unfolded["content"]["effective_guardrails"] == [
+        "corp-baseline-guard",
+        "dept-zero-trust-guard",
+        "pre-read-only-guard",
+    ]

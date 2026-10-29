@@ -319,3 +319,11 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     ):
         assert budget_token in arch_02
         assert budget_token in arch_03
+    for mcp_token in (
+        "unfold_context_capsule",
+        "rcap1",
+        "CAPSULE_CAPABILITY_INSUFFICIENT",
+        "CAPSULE_RESONANCE_DENIED",
+        "CAPSULE_CHAIN_BROKEN",
+    ):
+        assert mcp_token in arch_03

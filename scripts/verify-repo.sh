@@ -318,6 +318,17 @@ for budget_token in (
         print(f"Hook-to-doc drift: token budget contract '{budget_token}' missing from Architecture 02/03 docs", file=sys.stderr)
         sys.exit(1)
 
+for mcp_token in (
+    "unfold_context_capsule",
+    "rcap1",
+    "CAPSULE_CAPABILITY_INSUFFICIENT",
+    "CAPSULE_RESONANCE_DENIED",
+    "CAPSULE_CHAIN_BROKEN",
+):
+    if mcp_token not in arch_03:
+        print(f"MCP-to-doc drift: '{mcp_token}' missing from Architecture 03 specification", file=sys.stderr)
+        sys.exit(1)
+
 print(f"  Verified {len(commands)} lifecycle hook command(s) and full hook-to-doc contract parity")
 PYEOF
 then
@@ -415,7 +426,7 @@ else
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then
-  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 6 tools, 3 prompts, path-containment gate)"
+  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 7 tools, 3 prompts, rcap1 L0->L3 compaction, path-containment gate)"
 else
   fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi

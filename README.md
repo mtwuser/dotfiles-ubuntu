@@ -1,6 +1,6 @@
 # dotfiles-ubuntu
 
-[![Version](https://img.shields.io/badge/version-1.6.4-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.7.0-blue.svg)](VERSION)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
 [![Antigravity](https://img.shields.io/badge/Google%20Antigravity-2.0-8E44AD.svg)](https://antigravity.google/)
@@ -864,7 +864,7 @@ make docker-build && make docker-self-test
 
 ### Versioning & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.6.4`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.7.0`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
   1. Open-source metadata, SemVer sync, `Dockerfile` / `.dockerignore`, and all relative Markdown links across `.md` files.
   2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.
@@ -872,6 +872,6 @@ make docker-build && make docker-self-test
   4. `hooks.json` schema, script target resolution, and deterministic **hook-to-documentation contract parity** (`pre_tool_guard.py` & `post_invocation_lint.py` vs. `AGENTS.md`, `SECURITY.md`, and `docs/architecture/02..03`).
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
-  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 6 tools, 3 prompts; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1; Ubuntu 26.04 non-root `Dockerfile`).
+  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 7 tools, 3 prompts, and `rcap1` `L0 → L1 → L2 → L3` resonant compaction; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1; Ubuntu 26.04 non-root `Dockerfile`).
   8. Automated test suite (`tests/unit/` + `tests/imp/` + `tests/e2e/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.
