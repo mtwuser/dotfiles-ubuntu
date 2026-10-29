@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PostToolUse hook: auto-format edited Python files.
 
+Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {} to stdout.
 Only acts on Python files (.py) and only if ruff is available.
 """

@@ -134,9 +134,10 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
   - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all executable modules in `scripts/dotfiles_mcp/` (`capsule_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_federation`, `tools_surface`, `tools_unfold`).
-- **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0 & Bash CLI Contracts)**:
+- **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0, Bash CLI & Parity Gate Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
-  - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh` (`list`, `pull`, `push`, `pull-all`), and `bash -n` syntax across all 17 `.sh` scripts and external package recipes.
+  - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh`, `layer-config.sh`, and `bash -n` syntax across all `.sh` scripts and external package recipes.
+  - `test_repo_parity_gates.py`: Verifies `0-byte` `__init__.py` purity, `1:1:1` bidirectional `Source <-> Unit Test <-> Specification` traceability, `< 465`-line file size discipline across all `.py` and `docs/**/*.md` files, and hook/MCP-to-doc parity.
 - **`tests/e2e/` (End-to-End Chained Multi-Node MCP Federation, `git subtree` & Full Agent Turn Simulation)**:
   - `test_chained_mcp_federation_e2e.py`: Spawns chained `stdio` MCP server instances (`Corporate/Team Hub MCP` with mounted `layers/*` $\rightarrow$ `Downstream Service Node MCP` in `pre` environment) to validate end-to-end discovery, `effective_guardrails` inheritance, cross-node package manifest comparison, JSONL diagnostics (`dotfiles://mcp/diagnostics`), and real `git subtree add` + `pull-all` + live MCP rule discovery across local Git repositories.
   - `test_agent_turn_lifecycle_hooks_e2e.py`: Executes a full 4-hook agent turn (`PreToolUse` $\rightarrow$ `PostToolUse` $\rightarrow$ `PostInvocation` $\rightarrow$ `Stop`) against a real temporary Git workspace.

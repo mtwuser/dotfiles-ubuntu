@@ -1,4 +1,7 @@
-"""Base MCP node state, manifest loader, path containment, and prompt templates."""
+"""Base MCP node state, manifest loader, path containment, and prompt templates.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

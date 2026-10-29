@@ -227,25 +227,11 @@ For both **Pattern B** and **Pattern C**, your host IDE connects to each running
   "mcpServers": {
     "dotfiles-container-api": {
       "command": "docker",
-      "args": [
-        "exec",
-        "-i",
-        "checkout-api-container",
-        "python3",
-        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py",
-        "--no-log"
-      ]
+      "args": ["exec", "-i", "checkout-api-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]
     },
     "dotfiles-container-worker": {
       "command": "docker",
-      "args": [
-        "exec",
-        "-i",
-        "payment-worker-container",
-        "python3",
-        "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py",
-        "--no-log"
-      ]
+      "args": ["exec", "-i", "payment-worker-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]
     }
   }
 }
@@ -268,13 +254,7 @@ To give your local AI agent read-only visibility into the configuration, package
   "mcpServers": {
     "dotfiles-staging-node": {
       "command": "ssh",
-      "args": [
-        "-T",
-        "-o", "BatchMode=yes",
-        "deploy@staging-node-01.internal",
-        "python3",
-        "/home/deploy/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
-      ]
+      "args": ["-T", "-o", "BatchMode=yes", "deploy@staging-node-01.internal", "python3", "/home/deploy/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]
     }
   }
 }
@@ -296,19 +276,11 @@ In an enterprise setting where a tech lead or architect works across organizatio
   "mcpServers": {
     "dotfiles-layer-corporate": {
       "command": "python3",
-      "args": [
-        "/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py",
-        "--layer-role", "corporate",
-        "--layer-id", "acme-corp/dotfiles-enterprise"
-      ]
+      "args": ["/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py", "--layer-role", "corporate", "--layer-id", "acme-corp/dotfiles-enterprise"]
     },
     "dotfiles-layer-team-backend": {
       "command": "python3",
-      "args": [
-        "/home/<your-user>/dotfiles-team-backend/scripts/dotfiles_mcp_server.py",
-        "--layer-role", "team",
-        "--layer-id", "acme-corp/dotfiles-backend-hexagonal"
-      ]
+      "args": ["/home/<your-user>/dotfiles-team-backend/scripts/dotfiles_mcp_server.py", "--layer-role", "team", "--layer-id", "acme-corp/dotfiles-backend-hexagonal"]
     }
   }
 }
@@ -321,37 +293,8 @@ In an enterprise setting where a tech lead or architect works across organizatio
 ### 3.6. Configure in VS Code (GitHub Copilot), Cursor, and Claude Code
 
 Because `scripts/dotfiles_mcp_server.py` implements the standard Model Context Protocol over `stdio`, the exact same command works in every MCP-capable editor:
-
-#### VS Code & GitHub Copilot (`.vscode/mcp.json` in workspace or User `settings.json`)
-
-```json
-{
-  "servers": {
-    "dotfiles-ubuntu": {
-      "type": "stdio",
-      "command": "python3",
-      "args": [
-        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
-      ]
-    }
-  }
-}
-```
-
-#### Cursor (`~/.cursor/mcp.json`) & Claude Code (`~/.claude.json` or `.mcp.json`)
-
-```json
-{
-  "mcpServers": {
-    "dotfiles-ubuntu": {
-      "command": "python3",
-      "args": [
-        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
-      ]
-    }
-  }
-}
-```
+- **VS Code & GitHub Copilot (`.vscode/mcp.json` or User `settings.json`)**: `{"servers": {"dotfiles-ubuntu": {"type": "stdio", "command": "python3", "args": ["/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]}}}`
+- **Cursor (`~/.cursor/mcp.json`) & Claude Code (`~/.claude.json` or `.mcp.json`)**: `{"mcpServers": {"dotfiles-ubuntu": {"command": "python3", "args": ["/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]}}}`
 
 ---
 
@@ -371,12 +314,8 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
     "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git",
     "branch": "main"
   },
-  "default_stack_templates": [
-    "fastapi-hexagonal"
-  ],
-  "baseline_guardrails": [
-    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)"
-  ],
+  "default_stack_templates": ["fastapi-hexagonal"],
+  "baseline_guardrails": ["AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)"],
   "surface_bindings": [
     {
       "binding_id": "checkout-domain-invariants",
@@ -387,9 +326,7 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
       "mode": "authoritative",
       "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
       "canonical_templates": [],
-      "invariants": [
-        "All checkout monetary calculations must use integer minor units (cents) and idempotency keys"
-      ]
+      "invariants": ["All checkout monetary calculations must use integer minor units (cents) and idempotency keys"]
     }
   ],
   "environments": {
@@ -417,19 +354,6 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
       "required_guardrails": [
         "accidental-data-loss-prevention: NEVER execute DROP, TRUNCATE, or unguarded DELETE.",
         "fastapi-database: Schema changes must exclusively use Zero-Touch Alembic migrations, never manual DDL."
-      ]
-    },
-    {
-      "mcp_id": "checkout-observability-mcp",
-      "role": "telemetry",
-      "layer": "service-node",
-      "activation_policy": "on-demand",
-      "environments": ["tst", "pre", "pro"],
-      "description": "OpenTelemetry traces and container log inspection for checkout-service.",
-      "when_to_invoke": "Invoke when diagnosing runtime errors, latency spikes, or container trace anomalies.",
-      "avoid_when": "Avoid during offline code formatting or unit test execution.",
-      "required_guardrails": [
-        "AGENTS.md §15: Run pre-debug diagnostic sweep before deep-debugging runtime errors."
       ]
     }
   ]
@@ -510,4 +434,4 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
 | **Strictly read-only by default** | Zero tools for arbitrary shell commands, file editing, or package installation. Only deterministic read/audit operations (`verify-repo.sh`, `audit.sh`, doc/rule readers) are exposed. |
 | **Zero secret exposure** | Path containment locks all file reads strictly inside the repository root (`REPO_DIR`). Machine-local files (`~/.bashrc.local`, `~/.gitconfig.local`, `.env`, `~/.gemini/*.json`) cannot be read via MCP. |
 
-📖 **Normative Protocol & Schema Reference**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**.
+📖 **Normative Protocol, Schema & Engine References**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)** and **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**.

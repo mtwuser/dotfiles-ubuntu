@@ -1,4 +1,7 @@
-"""Declarative JSON-RPC catalogs for MCP resources, tools, and prompts."""
+"""Declarative JSON-RPC catalogs for MCP resources, tools, and prompts.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

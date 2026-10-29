@@ -1,4 +1,7 @@
-"""Progressive rcap1 context capsule decryption and decompression (L0->L1->L2->L3)."""
+"""Progressive rcap1 context capsule decryption and decompression (L0->L1->L2->L3).
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

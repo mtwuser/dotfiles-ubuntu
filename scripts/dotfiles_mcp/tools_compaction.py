@@ -1,4 +1,7 @@
-"""Multi-resolution governance rule search and rcap1 capsule minting."""
+"""Multi-resolution governance rule search and rcap1 capsule minting.
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

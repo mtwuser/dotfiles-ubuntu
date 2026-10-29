@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Stop hook: verify tests pass before the agent stops.
 
+Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {"decision": ...} to stdout.
 If tests fail, returns decision="continue" to block the stop.
 Only fires on normal turn completion ("NO_TOOL_CALL" / "model_stop").

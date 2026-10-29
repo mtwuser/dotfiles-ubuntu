@@ -60,6 +60,7 @@ for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CO
            docs/architecture/01_system_and_stow_engine.md \
            docs/architecture/02_antigravity_governance_and_hooks.md \
            docs/architecture/03_contextual_mcp_and_federation.md \
+           docs/architecture/04_compaction_surface_and_promotion_engines.md \
            docs/reference/enterprise_pair_programming_governance.md \
            docs/reference/contextual_mcp_and_multi_service_orchestration.md \
            docs/reference/developer_and_extension_guide.md \
@@ -289,10 +290,12 @@ for alembic_sub in pre_tool_guard._DOCUMENTED_ALEMBIC_SUBCOMMANDS:
         print(f"pre_tool_guard._ALEMBIC_MUTATE_RE does not match documented alembic subcommand: {alembic_sub}", file=sys.stderr)
         sys.exit(1)
 
-# Cross-check enforced hook contracts against AGENTS.md, Architecture 02, Architecture 03, SECURITY.md, and README.md
+# Cross-check enforced hook contracts against AGENTS.md, Architecture 02, Architecture 03/04, SECURITY.md, and README.md
 agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
 arch_02 = (repo / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(encoding="utf-8")
 arch_03 = (repo / "docs/architecture/03_contextual_mcp_and_federation.md").read_text(encoding="utf-8")
+arch_04 = (repo / "docs/architecture/04_compaction_surface_and_promotion_engines.md").read_text(encoding="utf-8")
+arch_mcp = arch_03 + "\n" + arch_04
 security_md = (repo / "SECURITY.md").read_text(encoding="utf-8")
 readme_md = (repo / "README.md").read_text(encoding="utf-8")
 
@@ -321,8 +324,8 @@ for budget_token in (
     "TOKEN_BUDGET_EXCEEDED",
     "WORKSPACE_RULES_BUDGET_EXCEEDED",
 ):
-    if budget_token not in arch_02 or budget_token not in arch_03:
-        print(f"Hook-to-doc drift: token budget contract '{budget_token}' missing from Architecture 02/03 docs", file=sys.stderr)
+    if budget_token not in arch_02 or budget_token not in arch_mcp:
+        print(f"Hook-to-doc drift: token budget contract '{budget_token}' missing from Architecture 02/03/04 docs", file=sys.stderr)
         sys.exit(1)
 
 for mcp_token in (
@@ -339,8 +342,8 @@ for mcp_token in (
     "CAPSULE_RESONANCE_DENIED",
     "CAPSULE_CHAIN_BROKEN",
 ):
-    if mcp_token not in arch_03:
-        print(f"MCP-to-doc drift: '{mcp_token}' missing from Architecture 03 specification", file=sys.stderr)
+    if mcp_token not in arch_mcp:
+        print(f"MCP-to-doc drift: '{mcp_token}' missing from Architecture 03/04 specifications", file=sys.stderr)
         sys.exit(1)
 
 import re as _re  # noqa: E402
@@ -348,8 +351,31 @@ import re as _re  # noqa: E402
 for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
     if mod_py.name == "__init__.py":
         continue
-    if mod_py.name not in arch_03 or mod_py.name not in readme_md:
-        print(f"Module-to-doc drift: '{mod_py.name}' missing from Architecture 03 or README.md", file=sys.stderr)
+    if mod_py.name not in arch_mcp or mod_py.name not in readme_md:
+        print(f"Module-to-doc drift: '{mod_py.name}' missing from Architecture 03/04 or README.md", file=sys.stderr)
+        sys.exit(1)
+
+spec_re = _re.compile(r"^Specification:\s*(docs/architecture/[a-zA-Z0-9_]+\.md)\s*$", _re.MULTILINE)
+traceable_sources = sorted(
+    [
+        *list((repo / "antigravity/.gemini/config/scripts").glob("*.py")),
+        repo / "scripts/dotfiles_mcp_server.py",
+        *[p for p in (repo / "scripts/dotfiles_mcp").glob("*.py") if p.name != "__init__.py"],
+    ]
+)
+for src_py in traceable_sources:
+    src_text = src_py.read_text(encoding="utf-8")
+    m_spec = spec_re.search(src_text)
+    if not m_spec:
+        print(f"Missing 'Specification: docs/architecture/<file>.md' header in {src_py.relative_to(repo)}", file=sys.stderr)
+        sys.exit(1)
+    spec_rel = m_spec.group(1)
+    spec_path = repo / spec_rel
+    if not spec_path.is_file():
+        print(f"Invalid Specification target '{spec_rel}' in {src_py.relative_to(repo)}", file=sys.stderr)
+        sys.exit(1)
+    if src_py.name not in spec_path.read_text(encoding="utf-8"):
+        print(f"1:1:1 Traceability drift: {src_py.name} points to {spec_rel}, but {spec_rel} does not reference {src_py.name}", file=sys.stderr)
         sys.exit(1)
 
 emitted_codes: set[str] = set()
@@ -357,8 +383,8 @@ warn_call_re = _re.compile(r'_emit_warning\(\s*"(?:WARN|ERROR|CRITICAL)"\s*,\s*"
 for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
     emitted_codes.update(warn_call_re.findall(mod_py.read_text(encoding="utf-8")))
 for code in sorted(emitted_codes):
-    if code not in arch_03:
-        print(f"Warning-to-doc drift: emitted warning code '{code}' missing from Architecture 03", file=sys.stderr)
+    if code not in arch_mcp:
+        print(f"Warning-to-doc drift: emitted warning code '{code}' missing from Architecture 03/04", file=sys.stderr)
         sys.exit(1)
 
 ext_guide = (repo / "docs/reference/developer_and_extension_guide.md").read_text(encoding="utf-8")
@@ -510,24 +536,25 @@ for mod in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
             print(f"Missing 1:1 unit test file for {mod}: {test_file}", file=sys.stderr)
             sys.exit(1)
 
-all_py = sorted(
+all_sized_files = sorted(
     [
         *list((repo / "antigravity/.gemini/config/scripts").glob("*.py")),
         *list((repo / "scripts").glob("*.py")),
         *list((repo / "scripts/dotfiles_mcp").glob("*.py")),
         *list((repo / "tests").rglob("*.py")),
+        *list((repo / "docs").rglob("*.md")),
     ]
 )
-for p in all_py:
+for p in all_sized_files:
     lines = len(p.read_text(encoding="utf-8").splitlines())
     if lines >= 465:
         print(f"{p.relative_to(repo)}: {lines} lines (exceeds 465-line cap)", file=sys.stderr)
         sys.exit(1)
 PYEOF
   then
-    pass "1:1 unit test mapping and < 465-line file size discipline verified across all Python files"
+    pass "1:1:1 unit test & spec mapping and < 465-line file size discipline verified across all Python and docs/ files"
   else
-    fail "1:1 unit test mapping or < 465-line file size gate failed"
+    fail "1:1:1 mapping or < 465-line file size gate failed"
   fi
 
   PYTEST_BIN="$(resolve_tool pytest)"

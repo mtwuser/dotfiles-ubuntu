@@ -1,4 +1,7 @@
-"""Fork parameterization, polymorphic template scaffolding, and static project projection."""
+"""Fork parameterization, polymorphic template scaffolding, and static project projection.
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

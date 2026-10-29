@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PostInvocation hook: lint & architecture check on modified Python files.
 
+Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {"injectSteps": [...], ...} to stdout.
 Runs ruff check, universal structural gates (< 465 lines, AAA test comments),
 and OSA check_project/check_tests (when available) on Python files with

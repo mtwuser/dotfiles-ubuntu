@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """PreToolUse hook: deterministic safety & architectural guard.
 
+Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {"decision": "allow"|"deny", ...} to stdout.
 Hard-blocks (zero prompt tokens, 100% deterministic):
 1. Non-empty writes/edits to consumer ``src/**/__init__.py`` or ``tests/**/__init__.py``.

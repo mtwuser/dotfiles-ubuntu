@@ -1,4 +1,7 @@
-"""DotfilesMCPServer JSON-RPC 2.0 dispatcher and stdio transport loop."""
+"""DotfilesMCPServer JSON-RPC 2.0 dispatcher and stdio transport loop.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

@@ -1,0 +1,89 @@
+# Architecture 04: Resonant Compaction (`rcap1`), Surface Projection (`0..N`) & Multi-Layer Promotion Engines
+
+> **Normative Specification — Subsystem 3B (`scripts/dotfiles_mcp/{capsule_engine,tools_compaction,tools_unfold,surface_weaver,tools_surface,fork_configurator,promotion_engine}.py` & [`scripts/layer-config.sh`](../../scripts/layer-config.sh))**
+>
+> This document specifies the three specialized algorithmic engines embedded inside `scripts/dotfiles_mcp/`:
+> 1. **Resonant Chained Context Compaction & Unfolding (`rcap1`: `L0 → L1 → L2 → L3`)**
+> 2. **Stack-Agnostic Multi-Layer Surface Projection & Governance Weaver (`0..N` Layers)**
+> 3. **Polymorphic Fork Configurator (`template.json`), Static Materialization & Upward Promotion Engine**
+>
+> For the core JSON-RPC 2.0 protocol contract, resources, prompts, `system/mcp-layer.json` (`v1.2`), and `layers/*` subtree orchestration, see **[`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md)**.
+
+---
+
+## 1. `1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability Matrix
+
+Every engine module in `scripts/dotfiles_mcp/` maintains a strict `1:1` unit test suite (`100%` branch coverage, `< 465` lines) and a bidirectional docstring pointer (`Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md`):
+
+| Engine Domain | Source Module (`scripts/dotfiles_mcp/`) | `1:1` Unit Test (`tests/unit/dotfiles_mcp/`) | Normative Section & Primary Symbols |
+|---|---|---|---|
+| **Resonant Capsule Crypto & Compression** | [`capsule_engine.py`](../../scripts/dotfiles_mcp/capsule_engine.py) | [`test_capsule_engine.py`](../../tests/unit/dotfiles_mcp/test_capsule_engine.py) (`TestCapsuleEngine`) | **§2**: `CapsuleError`, `_seal_single_capsule`, `_open_single_capsule`, `_extract_axiom_skeleton`, `_extract_l3_links` |
+| **Multi-Resolution Rule Search & Minting** | [`tools_compaction.py`](../../scripts/dotfiles_mcp/tools_compaction.py) | [`test_tools_compaction.py`](../../tests/unit/dotfiles_mcp/test_tools_compaction.py) (`TestCompactionToolsMixin`) | **§2**: `CompactionToolsMixin`, `_build_section_capsule`, `_tool_query_governance_rules` |
+| **Hop-by-Hop Capsule Unfolding (`L0->L3`)** | [`tools_unfold.py`](../../scripts/dotfiles_mcp/tools_unfold.py) | [`test_tools_unfold.py`](../../tests/unit/dotfiles_mcp/test_tools_unfold.py) (`TestUnfoldToolsMixin`) | **§2**: `UnfoldToolsMixin`, `_locate_section_with_drift_tolerance`, `_tool_unfold_context_capsule` |
+| **Surface Selector Inference & Scoring** | [`surface_weaver.py`](../../scripts/dotfiles_mcp/surface_weaver.py) | [`test_surface_weaver.py`](../../tests/unit/dotfiles_mcp/test_surface_weaver.py) (`TestSurfaceWeaver`) | **§3**: `_infer_plane_from_path`, `_infer_scope_from_path`, `_binding_matches_surface`, `_compute_binding_specificity` |
+| **`0..N` Layer Surface Governance Weaver** | [`tools_surface.py`](../../scripts/dotfiles_mcp/tools_surface.py) | [`test_tools_surface.py`](../../tests/unit/dotfiles_mcp/test_tools_surface.py) (`TestSurfaceToolsMixin`) | **§3**: `SurfaceToolsMixin`, `_resolve_binding_asset`, `_tool_resolve_surface_governance` |
+| **Fork Configurator & Template Scaffolding** | [`fork_configurator.py`](../../scripts/dotfiles_mcp/fork_configurator.py) | [`test_fork_configurator.py`](../../tests/unit/dotfiles_mcp/test_fork_configurator.py) (`TestForkConfigurator`) | **§4**: `configure_fork_manifest`, `scaffold_template_pack`, `discover_templates_catalog`, `apply_fork_to_project` |
+| **Multi-Layer Diff & Upward Promotion** | [`promotion_engine.py`](../../scripts/dotfiles_mcp/promotion_engine.py) | [`test_promotion_engine.py`](../../tests/unit/dotfiles_mcp/test_promotion_engine.py) (`TestPromotionEngine`) | **§4**: `collect_layer_effective_bindings`, `compare_project_patterns_multilayer`, `diff_project_against_layers`, `promote_project_asset_to_layer` |
+
+---
+
+## 2. Resonant Chained Context Compaction & Unfolding (`rcap1`: `L0 → L1 → L2 → L3`)
+
+When an AI agent searches across a multi-dimensional context graph (`Root` + mounted `layers/*` subtrees + `dev/tst/pre/pro` environments), returning full Markdown sections (`L2`) for every match wastes context tokens on non-resonating sections. At the same time, passing raw encrypted/Base64 blobs directly into an LLM prompt would *increase* BPE token usage due to high Shannon entropy.
+
+To solve both problems using **100% Python Standard Library (`zlib`, `hashlib`, `hmac`, `base64`)**, `scripts/dotfiles_mcp/` implements **Resonant Chained Context Compaction (`rcap1`)**, inspired by biological DNA/RNA chromatin transcription (`Promoter Codon → Exon Skeleton → Full Transcript → Epigenetic L3 Complex`):
+
+1. **Four Progressive Resolution Levels (`L0 → L1 → L2 → L3`)**:
+   - **`L0` — Promoter Codon (`resolution="L0"`, ~15–25 tokens/match)**: Exposes a readable start/stop codon (`AUG:<scope>:<slug>:UAA`), 5 semantic tags, token cost estimates (`L0`, `L1`, `L2`, `L3`), and a sealed `rcap1` Matryoshka capsule token. Allows an agent to scan 15 matches across layers for `< 300` tokens, reject non-resonating sections at `0` extra cost, or resonate and unfold `L1`.
+   - **`L1` — Exon Axiom Skeleton (`resolution="L1"`, ~40–65 tokens/match)**: Extracts the section heading, core mandate quote (`> *"..."*`), and up to 4 bullet titles while folding tables and fenced code blocks inside the `rcap1` capsule (`[+N detail/table/code lines folded in rcap1:L1]`). Sufficient for ~80% of coding turns (~85% token savings).
+   - **`L2` — Full Section Specification (`resolution="L2"`, default)**: Returns the verbatim Markdown section (tables, code blocks, invariants) plus `l3_links` metadata (including `sha256` content digests) and an `rcap1` capsule pointing to `L3`.
+   - **`L3` — Deep Linked Procedural Source (`target_level="L3"`)**: Unfolds the full content of referenced `SKILL.md` or architecture specs (`linked_l3_documents`), merged `effective_guardrails`, and `federated_mcps` for the target layer and environment.
+2. **Matryoshka Chained Cryptographic Envelope (`rcap1.<header_b64>.<cipher_b64>.<hmac_sig_hex24>`)**:
+   - **Shallow Prefix Inspection (`target_level="L0"`)**: The outer `<header_b64>` is decodable and HMAC-verified in $O(1)$ time (`decrypted_hops: 0`) without decompressing `<cipher_b64>`.
+   - **3-Layer Matryoshka/Onion Nesting ($C_0(K_0) \supset C_1(K_1) \supset C_2(K_2)$)**: Each level's key is derived via $K_k = \text{HMAC-SHA256}(M_{\text{secret}}, \texttt{"rcap1-key:"} \parallel \texttt{layer} \parallel \texttt{":"} \parallel L_k \parallel \texttt{":"} \parallel H_k \parallel \texttt{":"} \parallel \texttt{env})$, where the interior payload (including `next_cap` for deeper hops) is compressed with `zlib.compress(level=9)` and encrypted with a SHA-256 counter-mode keystream (`_xor_keystream`). Unfolding unwinds the onion hop-by-hop (`L0->L1`, `L1->L2`, `L2->L3`) and verifies level-scoped digests (`h0->h1` at `L1`, `h1->h2` over the 8,000-char section at `L2`, and `h2->h3` over linked `L3` file paths + SHA-256 content digests at `L3`). Thus, drift in a linked `L3` document is caught at `L2->L3` (`CAPSULE_CHAIN_BROKEN`) while preserving valid `L1`/`L2` unfolding.
+3. **Capability, Key Requirement & Environment Depth Gating (`AGENTS.md §13`)**:
+   - `agent_tier="flash"` is restricted to `L0` and `L1` Axiom Skeletons; attempting to unfold `L2` or `L3` is deterministically blocked (`CAPSULE_CAPABILITY_INSUFFICIENT`).
+   - `agent_tier="inherit"` can unfold `L1`, `L2`, and standard `L3`; unfolding `L3` in a `"pro"` environment requires `agent_tier="pro"`.
+   - Capsules sealed with an explicit `resonance_key` (or `DOTFILES_RESONANCE_KEY`) set `"kr": true` in the Promoter Header and reject unauthenticated, wrong-key, cross-node (`"iss"` mismatch), or cross-environment unfolding attempts (`CAPSULE_RESONANCE_DENIED`).
+4. **Cross-Architecture Safeguards (`include_capsules=false`, TOCTOU Line-Drift Relocation & Alert Deduplication)**:
+   - **Content-Negotiation Opt-Out (`include_capsules=false`)**: Callers querying `L2` or `L1` without needing subsequent capsule unfolding can pass `include_capsules=false` on `query_governance_rules` or `resolve_surface_governance` to omit `capsule_token` (`capsule_overhead_tokens: 0`).
+   - **TOCTOU Line-Drift Relocation (`line_drift_relocated`)**: If lines are inserted or deleted earlier in a Markdown file after a capsule is minted, `_locate_section_with_drift_tolerance` automatically relocates the section by its heading (`_iter_markdown_sections`) and verifies `live_h1..h3`, succeeding without false-positive failures when the section itself is intact.
+   - **Actionable Recovery Hints & Non-Duplicate Alerts (`CapsuleError`)**: Capsule failures append an explicit `[Recovery: ...]` hint for AI agents and suppress duplicate `SECURITY_OR_VALIDATION_ERROR` alerts in `logs/mcp_alerts.jsonl`.
+
+---
+
+## 3. Stack-Agnostic Multi-Layer Surface Projection & Governance Weaver (`0..N` Layers via `resolve_surface_governance`)
+
+When an organization scales from a single repository (`0` mounted subtrees) to `1` or `N` arbitrary governance layers (`layers/<any-slug>/` — such as statutory compliance, financial controls, design systems, or growth/SEO), `resolve_surface_governance` determines **which exact rules, invariants, and canonical templates from which layers govern the target file or module**, and **which layer wins when multiple layers intersect**:
+
+1. **Zero Hardcoded Departments (`0 → 1 → N` Arbitrary Layers)**:
+   - The **Root repository** (`self.repo_dir`, default `precedence: 10`) provides the universal engineering baseline (`AGENTS.md` + `templates/*`) via GNU Stow and MCP without requiring a separate `"dept-it"` subtree.
+   - Any `0`, `1`, or `N` additional governance layers can be mounted under `layers/<any-slug>/` with any `layer_id`, `layer_role` (`department`, `domain-policy`, `team`, `corporate`, `service-node`), and numeric `precedence` (`0..100`).
+2. **Four Universal Surface Selectors (`surface_bindings`)**:
+   - **`target_globs`**: Relative file glob patterns (`["templates/**", "static/css/**", "*.html"]`, `["*"]`, or `["**"]`).
+   - **`architectural_planes`**: Universal software engineering planes (`"schema"`, `"domain"`, `"application"`, `"presentation"`, `"infrastructure"`, `"testing"`, or `"*"`). Automatically inferred from `target_path` via `_infer_plane_from_path` when omitted.
+   - **`scopes`**: Feature module, vertical slice, or domain context names (`["checkout", "legal", "catalog"]` or `["*"]`). Automatically inferred from `target_path` via `_infer_scope_from_path` when omitted.
+   - **`traits`**: Semantic cross-cutting tags (`["pii", "financial", "public-facing"]` or wildcard `["*"]`).
+3. **Numeric Deontic Precedence (`0..100`, *Lex Superior*), Selector Specificity (*Lex Specialis*) & Adaptive `rcap1` Resolution**:
+   - Non-intersecting layers are pruned at `0` token cost (`pruned_layers`).
+   - Intersecting bindings are sorted deterministically by `(precedence ASC, mode=="transversal" ASC, -specificity_score ASC, layer_id ASC, binding_id ASC)`:
+     1. ***Lex Superior* (`precedence` `0..100` ascending)**: Lower numeric value holds higher deontic authority (`5` statutory/legal compliance > `10` root engineering baseline > `20` domain/financial > `30` design system > `60` growth/marketing).
+     2. **Binding Mode (`"authoritative"` before `"transversal"`)**: Authoritative domain owners precede cross-cutting advisors at the same priority level.
+     3. ***Lex Specialis* (`specificity_score` descending)**: Computed from explicit non-wildcard `traits` (`+4` each), non-wildcard `scopes` (`+3`), non-wildcard `architectural_planes` (`+2`), and non-wildcard `target_globs` (`+1`). Equal `(precedence, mode)` ties across distinct layers emit a **`SURFACE_PRECEDENCE_COLLISION`** warning.
+   - **Verified Governance Assets (`SURFACE_ASSET_MISSING`), Template Binding Sync (`collect_layer_effective_bindings`) & Adaptive Resolution**: Active template packs declared in `default_stack_templates` (`templates/<name>/template.json`) automatically contribute their `recommended_surface_bindings` (deduplicated by `binding_id`). Every declared `rule_file` and `canonical_template` is verified via `_resolve_safe_path`. Bindings with `mode: "authoritative"` default to `resolution="L2"`, whereas `mode: "transversal"` bindings default to `resolution="L1"` (*Exon Axiom Skeleton*, ~85% token compaction).
+
+---
+
+## 4. Polymorphic Fork Configurator (`template.json`), Static Materialization & Multi-Layer Promotion Engine
+
+To ensure every fork (`corporate`, `domain-policy`, `department`, `team`, `service-node`) is proactively configurable and supports bidirectional knowledge flow in both **MCP Mode** and **Static / Non-MCP Mode**, `fork_configurator.py` and `promotion_engine.py` (exposed via `./scripts/layer-config.sh`) implement:
+
+| Capability | CLI Subcommand (`layer-config.sh`) | Python Function | Key Invariants & Guarantees |
+|---|---|---|---|
+| **Fork Identity & Default Pruning** | `init-fork --id <id> --role <role> [--precedence N] [--prune-default-templates]` | `configure_fork_manifest` | Assigns role-based default `precedence` (`domain-policy: 5`, `corporate: 10`, `department: 30`, `team: 50`) and optionally prunes upstream `fastapi-hexagonal` bindings when a fork targets another stack or policy domain. |
+| **Polymorphic Template Discovery** | `list-templates [--json]` | `discover_templates_catalog` | Scans `templates/*/template.json` across `Root` and all mounted `layers/*` subtrees (`stack-starter`, `domain-policy-pack`, `department-pack`, `project-overlay`). |
+| **Template Pack Scaffolding** | `scaffold-template <name> --kind <kind> [--register-binding]` | `scaffold_template_pack` | Generates `templates/<name>/template.json` (`v1.0`), `rules/policy.md`, `skills/<name>-guide/SKILL.md`, `governance/WORKTASK.md` or `assets/canonical_snippet.md`, and registers `<name>` in `default_stack_templates`. |
+| **Downward Static Materialization** | `apply-project <dir> [--template <ref>] [--layers all]` | `apply_fork_to_project` | Copies template `rules/`, `skills/`, `governance/`, and `assets/` into `<dir>/.agents/`, materializes mounted `layers/*` `AGENTS.md` files as `.agents/rules/layer-<NN>-<name>.md` in `precedence` order, and writes `.agents/LAYER_LINEAGE.md` using `collect_layer_effective_bindings`. |
+| **Multi-Layer Pattern Routing (MCP)** | *(MCP Tool: `compare_layer_patterns(layer="all")`)* | `compare_project_patterns_multilayer` | Scans `1..N` layers, filters `layer-<NN>-<name>.md` into `materialized_layer_rules` (preventing false-positive novel candidates), and outputs `promotion_routing` (`target_layer`, `target_destination`, `subtree_push_command`, `root_agents_md_headroom_bytes`). |
+| **Upward SHA-256 Project Diff** | `diff-project <dir> [--json]` | `diff_project_against_layers` | Compares SHA-256 digests across `<dir>/.agents/{rules,skills,assets}/` against `Root`, `templates/*`, and `layers/*`, classifying every file into `in_sync`, `modified_in_project`, or `novel_in_project`. |
+| **Upward Asset Promotion** | `promote-from-project <dir> --asset <path> --to-layer <target>` | `promote_project_asset_to_layer` | Promotes rules, skills, or `.agents/assets/<tpl>/*` files into `Root`, `layers/<name>`, or `templates/<pack>`, enforcing path containment, `AGENTS.md` ($\le 18{,}000$ bytes), accidental `AGENTS.md` overwrite protection, and `SKILL.md` frontmatter gates. |

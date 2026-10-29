@@ -1,4 +1,7 @@
-"""Resonant Chained Context Compaction (rcap1) cryptographic and markdown engine."""
+"""Resonant Chained Context Compaction (rcap1) cryptographic and markdown engine.
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

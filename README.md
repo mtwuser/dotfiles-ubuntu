@@ -225,12 +225,13 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │       ├── antigravity-agents.desktop ←   → ~/.local/share/applications/
 │       └── antigravity-ide.desktop    ←   → ~/.local/share/applications/
 │
-├── docs/                              ← NOT stow — navigable architecture & reference hub
+├── docs/                              ← NOT stow — navigable architecture & reference hub (< 465 lines per file)
 │   ├── README.md                      ←   Documentation index, subsystem map & AI agent lookup
-│   ├── architecture/                  ←   Normative technical specifications
-│   │   ├── 01_system_and_stow_engine.md           ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
-│   │   ├── 02_antigravity_governance_and_hooks.md ← Token budget, 4 hook JSON contracts, 11 skills
-│   │   └── 03_contextual_mcp_and_federation.md    ← Zero-dependency MCP server contract & schema
+│   ├── architecture/                  ←   Normative technical specifications (1:1:1 with code & unit tests)
+│   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
+│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1 contracts, 11 skills
+│   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (v1.2)
+│   │   └── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver & promotion engines
 │   └── reference/                     ←   Enterprise use cases & maintainer extension guides
 │       ├── enterprise_pair_programming_governance.md         ← Enterprise Human-AI governance & Copilot mapping
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
@@ -305,9 +306,10 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   ├── test_post_invocation_lint.py
 │   │   ├── test_stop_verify_tests.py
 │   │   └── test_dotfiles_mcp_server.py
-│   ├── imp/                           ←   stdio JSON-RPC 2.0 & Bash CLI contract tests
+│   ├── imp/                           ←   stdio JSON-RPC 2.0, Bash CLI & repo parity gate tests
 │   │   ├── test_mcp_and_hooks_stdio.py
-│   │   └── test_cli_scripts.py
+│   │   ├── test_cli_scripts.py
+│   │   └── test_repo_parity_gates.py
 │   └── e2e/                           ←   chained multi-node MCP federation, surface weaving & agent-turn hook tests
 │       ├── test_chained_mcp_federation_e2e.py
 │       ├── test_surface_and_compaction_e2e.py
