@@ -211,3 +211,31 @@ def test_main_returns_continue_when_tests_fail(
     result = json.loads(stdout_buf.getvalue())
     assert result["decision"] == "continue"
     assert "Tests are FAILING" in result["reason"]
+
+
+def test_resolve_effective_workspaces_appends_dotfiles_repo_when_git_present(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    fake_dotfiles = tmp_path / "dotfiles-ubuntu"
+    (fake_dotfiles / ".git").mkdir(parents=True)
+    no_git_repo = tmp_path / "no-git"
+    no_git_repo.mkdir()
+
+    # Act
+    empty_res = stop_verify_tests.resolve_effective_workspaces([], dotfiles_repo=fake_dotfiles)
+    added_res = stop_verify_tests.resolve_effective_workspaces(
+        ["/workspace/app"], dotfiles_repo=fake_dotfiles
+    )
+    dedup_res = stop_verify_tests.resolve_effective_workspaces(
+        [str(fake_dotfiles)], dotfiles_repo=fake_dotfiles
+    )
+    no_git_res = stop_verify_tests.resolve_effective_workspaces(
+        ["/workspace/app"], dotfiles_repo=no_git_repo
+    )
+
+    # Assert
+    assert empty_res == []
+    assert added_res == ["/workspace/app", str(fake_dotfiles)]
+    assert dedup_res == [str(fake_dotfiles)]
+    assert no_git_res == ["/workspace/app"]

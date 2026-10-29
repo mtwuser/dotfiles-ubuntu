@@ -465,6 +465,39 @@ else
     pass "All package and test __init__.py files are 0 bytes (package marker purity)"
   fi
 
+  if python3 - <<'PYEOF'
+from pathlib import Path
+import sys
+
+repo = Path(".").resolve()
+declarative_only = {"__init__.py", "constants.py", "catalogs.py"}
+for mod in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
+    if mod.name not in declarative_only:
+        test_file = repo / "tests/unit/dotfiles_mcp" / f"test_{mod.stem}.py"
+        if not test_file.is_file():
+            print(f"Missing 1:1 unit test file for {mod}: {test_file}", file=sys.stderr)
+            sys.exit(1)
+
+all_py = sorted(
+    [
+        *list((repo / "antigravity/.gemini/config/scripts").glob("*.py")),
+        *list((repo / "scripts").glob("*.py")),
+        *list((repo / "scripts/dotfiles_mcp").glob("*.py")),
+        *list((repo / "tests").rglob("*.py")),
+    ]
+)
+for p in all_py:
+    lines = len(p.read_text(encoding="utf-8").splitlines())
+    if lines >= 465:
+        print(f"{p.relative_to(repo)}: {lines} lines (exceeds 465-line cap)", file=sys.stderr)
+        sys.exit(1)
+PYEOF
+  then
+    pass "1:1 unit test mapping and < 465-line file size discipline verified across all Python files"
+  else
+    fail "1:1 unit test mapping or < 465-line file size gate failed"
+  fi
+
   PYTEST_BIN="$(resolve_tool pytest)"
   if [ -n "$PYTEST_BIN" ]; then
     if PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-fail-under=100 >/dev/null; then

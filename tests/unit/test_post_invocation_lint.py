@@ -195,6 +195,7 @@ def test_main_injects_truncated_summary_and_force_continue(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    monkeypatch.setattr("post_invocation_lint._DOTFILES_REPO_DIR", tmp_path)
     monkeypatch.setattr("post_invocation_lint.find_ruff", lambda _ws: "/usr/bin/ruff")
     monkeypatch.setattr(
         "post_invocation_lint.get_changed_python_files", lambda ws: [f"{ws}/bad.py"]
@@ -282,3 +283,60 @@ def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
     assert len(warnings_exceeded) == 2
     assert "[TOKEN_BUDGET_EXCEEDED]" in warnings_exceeded[0]
     assert "[WORKSPACE_RULES_BUDGET_EXCEEDED]" in warnings_exceeded[1]
+
+
+def test_resolve_effective_workspaces_appends_dotfiles_repo_when_git_present(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    fake_dotfiles = tmp_path / "dotfiles-ubuntu"
+    (fake_dotfiles / ".git").mkdir(parents=True)
+    no_git_repo = tmp_path / "no-git"
+    no_git_repo.mkdir()
+
+    # Act
+    empty_res = post_invocation_lint.resolve_effective_workspaces([], dotfiles_repo=fake_dotfiles)
+    added_res = post_invocation_lint.resolve_effective_workspaces(
+        ["/workspace/app"], dotfiles_repo=fake_dotfiles
+    )
+    dedup_res = post_invocation_lint.resolve_effective_workspaces(
+        [str(fake_dotfiles)], dotfiles_repo=fake_dotfiles
+    )
+    no_git_res = post_invocation_lint.resolve_effective_workspaces(
+        ["/workspace/app"], dotfiles_repo=no_git_repo
+    )
+
+    # Assert
+    assert empty_res == []
+    assert added_res == ["/workspace/app", str(fake_dotfiles)]
+    assert dedup_res == [str(fake_dotfiles)]
+    assert no_git_res == ["/workspace/app"]
+
+
+def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    missing_file = tmp_path / "missing.py"
+    clean_test = tmp_path / "test_clean.py"
+    clean_test.write_text(
+        "def test_ok() -> None:\n"
+        "    # Arrange\n    x = 1\n"
+        "    # Act\n    y = x\n"
+        "    # Assert\n    assert y == 1\n",
+        encoding="utf-8",
+    )
+    bad_test = tmp_path / "test_missing_aaa.py"
+    bad_test.write_text("def test_bad() -> None:\n    assert 1 == 1\n", encoding="utf-8")
+    oversized_mod = tmp_path / "big_module.py"
+    oversized_mod.write_text("x = 1\n" * 465, encoding="utf-8")
+
+    # Act
+    violations = post_invocation_lint.check_universal_python_structure(
+        [str(missing_file), str(clean_test), str(bad_test), str(oversized_mod)]
+    )
+
+    # Assert
+    assert len(violations) == 2
+    assert "[missing-aaa]" in violations[0]
+    assert "[max-file-lines]" in violations[1]

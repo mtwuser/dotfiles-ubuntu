@@ -2,8 +2,9 @@
 """PostInvocation hook: lint & architecture check on modified Python files.
 
 Contract: reads JSON from stdin, writes {"injectSteps": [...], ...} to stdout.
-Runs ruff check (and OSA check_project/check_tests when available) on Python
-files with uncommitted or untracked changes.
+Runs ruff check, universal structural gates (< 465 lines, AAA test comments),
+and OSA check_project/check_tests (when available) on Python files with
+uncommitted or untracked changes across active workspaces and dotfiles-ubuntu.
 If issues are found, injects an ephemeral message and forces continuation so the
 agent resolves them in the same turn.
 """
@@ -19,6 +20,48 @@ _MAX_SUMMARY_LINES = 15
 _MAX_FORCE_CONTINUE_INVOCATIONS = 5
 _AGENTS_MD_MAX_BYTES = 18000
 _TOTAL_RULES_BUDGET_MAX_BYTES = 80000
+_MAX_PYTHON_FILE_LINES = 465
+_DOTFILES_REPO_DIR = Path(__file__).resolve().parents[4]
+
+
+def resolve_effective_workspaces(
+    workspace_paths: list[str],
+    dotfiles_repo: Path | None = None,
+) -> list[str]:
+    """Return workspace_paths plus the dotfiles-ubuntu repo if present and distinct."""
+    effective = list(workspace_paths)
+    if not effective:
+        return []
+    candidate = dotfiles_repo if dotfiles_repo is not None else _DOTFILES_REPO_DIR
+    candidate_str = str(candidate)
+    if (candidate / ".git").exists() and candidate_str not in effective:
+        effective.append(candidate_str)
+    return effective
+
+
+def check_universal_python_structure(py_files: list[str]) -> list[str]:
+    """Enforce universal < 465-line file cap and AAA test comments on modified .py files."""
+    violations: list[str] = []
+    for file_str in py_files:
+        p = Path(file_str)
+        if not p.is_file():
+            continue
+        text = p.read_text(encoding="utf-8", errors="ignore")
+        line_count = len(text.splitlines())
+        if line_count >= _MAX_PYTHON_FILE_LINES:
+            violations.append(
+                f"{file_str}:1 [max-file-lines] File has {line_count} lines "
+                f"(must be < {_MAX_PYTHON_FILE_LINES}; extract modules and 1:1 tests)"
+            )
+        if p.name.startswith("test_") and "def test_" in text:
+            missing_aaa = [
+                marker for marker in ("# Arrange", "# Act", "# Assert") if marker not in text
+            ]
+            if missing_aaa:
+                violations.append(
+                    f"{file_str}:1 [missing-aaa] Test file missing {', '.join(missing_aaa)}"
+                )
+    return violations
 
 
 def check_rules_token_budget(
@@ -132,11 +175,12 @@ def run_osa_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
 
 
 def main() -> None:
-    """Run ruff check and OSA AST checks on modified Python files."""
+    """Run ruff check, universal structural gates, and OSA AST checks on modified Python files."""
     payload = json.load(sys.stdin)
-    workspace_paths = payload.get("workspacePaths", [])
+    raw_workspaces = payload.get("workspacePaths", [])
     invocation_num = int(payload.get("invocationNum") or 0)
 
+    workspace_paths = resolve_effective_workspaces(raw_workspaces)
     if not workspace_paths:
         json.dump({}, sys.stdout)
         return
@@ -151,6 +195,7 @@ def main() -> None:
         ws_files = get_changed_python_files(ws)
         if not ws_files:
             continue
+        all_lines.extend(check_universal_python_structure(ws_files))
         ws_ruff = find_ruff([ws, *workspace_paths]) or ruff
         with contextlib.suppress(subprocess.TimeoutExpired):
             result = subprocess.run(  # noqa: S603

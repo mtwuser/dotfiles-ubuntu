@@ -23,6 +23,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 > *"Valorar bien el mejor enfoque de implementación posible, robusto, profesional"*
 
 **Mandate:** Reject the "easiest" fallback if a scalable, dynamic implementation is attainable. Code must be parameterized, strongly typed, and resilient to scale. Never sacrifice architectural integrity for a fast patch.
+- **File Size & Pre-Growth Modularity Gate (`< 465` lines)**: Keep every source and test file strictly `< 465` lines (target $\le 400$). If a new feature will push any file past `465` lines, proactively propose extracting cohesive modules and their `1:1` test files before or within the plan (mandatory structural hygiene, exempt from `§9.4` scope-creep restrictions).
 
 #### 3. Strict Linter & Typing Integrity
 > *"Sin errores de linters"*
@@ -48,7 +49,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 #### 7. The Zero-Backward Law (Clean Cutovers)
 > *"Nunca dejar en refactorizaciones backward o mantener incompatibilidades, siempre enfoque limpio"*
 
-**Mandate:** When refactoring or upgrading code, execute full surgical replacements. Never leave behind legacy polyfills, dummy aliases (`OldType = NewType`), re-export shims, `if legacy:` branches, or `@deprecated` markers. Hard-cut the implementation to its new path universally across all callers.
+**Mandate:** When refactoring or upgrading code, schemas, or declarative manifests (`schema_version`, JSON/YAML/TOML contracts), execute full surgical replacements. Never leave behind legacy polyfills, dummy aliases (`OldType = NewType`), re-export shims, `if legacy:` branches, multi-version schema fallbacks, or `@deprecated` markers. Hard-cut the implementation and all repository manifests/fixtures to the single canonical version universally across all callers.
 
 #### 8. Mandatory Pre-Commit Hygiene Scan (Zero-Residue Enforcement)
 > *"No dar por terminado un trabajo dejando basura de scripts o side-effects rotos por miopía de foco. Obligación de escanear el entorno."*
@@ -131,7 +132,7 @@ If generated output contains errors, fix the generator/template at the SOURCE, n
 - **Description**: Rules for moving, renaming, extracting, restructuring, and decommissioning code (step-by-step workflow → `skills/refactoring/SKILL.md`)
 - **Applies**: All source code files
 
-1. **Behavioral Invariant (Pure Refactoring)**: When modifying internal structure WITHOUT changing external behavior, all tests pass with identical results; test count must remain equal or increase (NEVER decrease); coverage remains 100% before, during, and after; API contracts remain unchanged.
+1. **Behavioral Invariant & Atomic 1:1 Test Alignment**: When modifying internal structure or splitting a monolithic module into submodules, all tests pass with identical results, test count must remain equal or increase (NEVER decrease), coverage remains 100%, and monolithic test files MUST be split/aligned `1:1` (`tests/unit/**/test_<module>.py`, `Test*` class per file, docstrings, and AAA comments) in the SAME iteration — never defer test alignment to a follow-up prompt.
 2. **Zero-Residue**: When `A` is replaced by `B`, `A` must be **fully removed** in the same changeset. Backward-compatibility aliases (`OldName = NewName`), `@deprecated` classes, and re-export shims (`from new import New as Old`) are strictly forbidden. Delete the old file and update all imports and `@patch` targets atomically.
 3. **Rename Urgency**: When moving `A` from module `X` to module `Y`, if `A`'s name no longer reflects `Y`'s context, rename it in the same changeset.
 4. **Code & Feature Decommissioning (Mandatory Test Pruning Audit)**: When deleting a module, class, method, endpoint, or feature (intentionally changing external surface area), **never leave obsolete or orphan tests behind**. Execute a 3-step pruning audit in the same changeset: (a) **1:1 File Purge** — delete or consolidate any `test_<module>.py` whose source module no longer exists; (b) **Symbol & Fixture Purge** — grep `tests/` for removed symbols, mock specs, and obsolete enum/contract assertions; (c) **Default-Parameter Sensitivity Verification** — when adding new fields/parameters with defaults (e.g., cryptographic hashes, filters, state transitions), write explicit tests proving non-default values alter the output, rather than relying on 100% line coverage achieved solely via default arguments.

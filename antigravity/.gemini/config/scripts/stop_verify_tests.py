@@ -4,7 +4,8 @@
 Contract: reads JSON from stdin, writes {"decision": ...} to stdout.
 If tests fail, returns decision="continue" to block the stop.
 Only fires on normal turn completion ("NO_TOOL_CALL" / "model_stop").
-Only fires if Python source files were edited or created (checks git diff + untracked).
+Only fires if Python source files were edited or created (checks git diff + untracked)
+across active workspaces or dotfiles-ubuntu itself.
 """
 
 import contextlib
@@ -15,6 +16,22 @@ import sys
 from pathlib import Path
 
 _SUMMARY_TAIL_LINES = 3
+_DOTFILES_REPO_DIR = Path(__file__).resolve().parents[4]
+
+
+def resolve_effective_workspaces(
+    workspace_paths: list[str],
+    dotfiles_repo: Path | None = None,
+) -> list[str]:
+    """Return workspace_paths plus the dotfiles-ubuntu repo if present and distinct."""
+    effective = list(workspace_paths)
+    if not effective:
+        return []
+    candidate = dotfiles_repo if dotfiles_repo is not None else _DOTFILES_REPO_DIR
+    candidate_str = str(candidate)
+    if (candidate / ".git").exists() and candidate_str not in effective:
+        effective.append(candidate_str)
+    return effective
 
 
 def find_venv(workspace_paths: list[str]) -> Path | None:
@@ -96,7 +113,7 @@ def main() -> None:
         json.dump({"decision": "stop"}, sys.stdout)
         return
 
-    workspace_paths = payload.get("workspacePaths", [])
+    workspace_paths = resolve_effective_workspaces(payload.get("workspacePaths", []))
 
     if not workspace_paths:
         json.dump({"decision": "stop"}, sys.stdout)
