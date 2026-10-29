@@ -872,6 +872,6 @@ make docker-build && make docker-self-test
   4. `hooks.json` schema, script target resolution, and deterministic **hook-to-documentation contract parity** (`pre_tool_guard.py` & `post_invocation_lint.py` vs. `AGENTS.md`, `SECURITY.md`, and `docs/architecture/02..03`).
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
-  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 7 tools, 3 prompts, and `rcap1` `L0 → L1 → L2 → L3` resonant compaction; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.1; Ubuntu 26.04 non-root `Dockerfile`).
+  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 8 tools, 3 prompts, `resolve_surface_governance` `0..N` layer surface projection, and `rcap1` `L0 → L1 → L2 → L3` resonant compaction; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.2; Ubuntu 26.04 non-root `Dockerfile`).
   8. Automated test suite (`tests/unit/` + `tests/imp/` + `tests/e2e/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.

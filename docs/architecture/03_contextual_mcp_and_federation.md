@@ -93,17 +93,18 @@ Each `dotfiles-ubuntu` instance exposes nine canonical URI resources representin
 
 ### 3.2. MCP Tools (`tools/list` & `tools/call`)
 
-The server exposes seven read-only, deterministic tools for live node auditing, multi-resolution resonant rule compaction/unfolding, targeted documentation retrieval, and multi-MCP orchestration:
+The server exposes eight read-only, deterministic tools for live node auditing, multi-resolution resonant rule compaction/unfolding, stack-agnostic multi-layer surface projection (`0..N` layers), targeted documentation retrieval, and multi-MCP orchestration:
 
 | Tool Name | Input Arguments (`inputSchema`) | Execution Logic & Security Gate | Output Summary |
 |-----------|---------------------------------|---------------------------------|----------------|
 | **`get_layer_overview`** | `layer`: optional string (`"root"` or a mounted subtree name/`layer_id` in `layers/*`) | Returns a compact **4-Channel Executive Digest** of the target layer: (1) Node & System State, (2) Governance & Stack Contracts, (3) Active Invariants, Token-Budget Utilization, Context Compaction Protocol (`rcap1`), & Warnings, and (4) Navigable Docs, Mounted `layers/*` Subtrees, Supported Environments (`dev`, `tst`, `pre`, `pro`), & Federated MCPs. | JSON digest (`< 2 KB`) giving an agent immediate situational awareness. |
 | **`audit_node_drift`** | `mode`: `"verify-repo"` \| `"system-audit"` \| `"both"` (default `"verify-repo"`) | Executes `./scripts/verify-repo.sh` and/or `./audit.sh` in read-only mode via `subprocess.run(..., shell=False, timeout=30)` with `NO_COLOR=1`. Never runs `--clean`. | JSON report with `healthy` (boolean), `exit_code`, and clean text output showing any symlink, package, or metadata drift on that container/server. |
 | **`read_layer_document`** | `relative_path`: string, `layer`: optional string (`"root"` or a mounted subtree in `layers/*`) | Resolves `(target_layer_dir / relative_path).resolve()`, verifies `target.is_relative_to(target_layer_dir)`, and enforces an allowlist of readable directories (`docs/`, `templates/`, `antigravity/`, `system/`, root `.md` files). | Full Markdown or text content of the requested specification. |
-| **`query_governance_rules`** | `query`: string, `scope`: `"all"` \| `"global"` \| `"templates"` \| `"docs"`, `layer`: `"all"` \| `"root"` \| `<subtree>` (default `"all"`), `resolution`: `"L0"` \| `"L1"` \| `"L2"` (default `"L2"`), `environment`: optional `"dev"` \| `"tst"` \| `"pre"` \| `"pro"`, `resonance_key`: optional string | Case-insensitive section-aware search across `AGENTS.md`, `templates/*/rules/*.md`, and `docs/**/*.md` across the root layer and/or all mounted `git subtree` layers (`layers/*/`). Supports multi-resolution compaction (`L0` Promoter Codons, `L1` Axiom Skeletons, `L2` Full Sections) and seals chained `rcap1` context capsules. | Matching rule sections with `promoter_codon`, `capsule_token` (`rcap1...`), and `token_compaction_metrics`. |
+| **`query_governance_rules`** | `query`: string, `scope`: `"all"` \| `"global"` \| `"templates"` \| `"docs"`, `layer`: `"all"` \| `"root"` \| `<subtree>` (default `"all"`), `resolution`: `"L0"` \| `"L1"` \| `"L2"` (default `"L2"`), `environment`: optional `"dev"` \| `"tst"` \| `"pre"` \| `"pro"`, `resonance_key`: optional string, `include_capsules`: optional boolean | Case-insensitive section-aware search across `AGENTS.md`, `templates/*/rules/*.md`, and `docs/**/*.md` across the root layer and/or all mounted `git subtree` layers (`layers/*/`). Supports multi-resolution compaction (`L0` Promoter Codons, `L1` Axiom Skeletons, `L2` Full Sections) and seals chained `rcap1` context capsules. | Matching rule sections with `promoter_codon`, `capsule_token` (`rcap1...`), and `token_compaction_metrics`. |
 | **`unfold_context_capsule`** | `capsule_token`: string (`"rcap1.<header>.<payload>.<sig>"`), `target_level`: optional `"L0"` \| `"L1"` \| `"L2"` \| `"L3"`, `agent_tier`: `"flash"` \| `"inherit"` \| `"pro"` (default `"inherit"`), `environment`: optional `"dev"` \| `"tst"` \| `"pre"` \| `"pro"`, `resonance_key`: optional string | Verifies the surface Promoter Codon header & HMAC-SHA256 chain link, enforces agent capability (`flash` capped at `L1`) and environment clearance, and progressively decrypts (`SHA-256 CTR`) and decompresses (`zlib`) the capsule interior (`L0 → L1 → L2 → L3`). | Unfolded level content (`L1` skeleton, `L2` full section, or `L3` linked skills/specs + guardrails) and `next_capsule_token`. |
 | **`discover_federated_mcps`** | `filter_role`: optional string, `environment`: optional `"dev"` \| `"tst"` \| `"pre"` \| `"pro"`, `layer`: `"all"` \| `"root"` \| `<subtree>` (default `"all"`) | Aggregates registered downstream/sibling MCP servers from `system/mcp-layer.json` across the root layer and mounted `layers/*/` subtrees, filtered by `role`, `layer`, and target `environment`, attaching the active environment's `access_mode`, `requirements_file`, and `default_guardrails`. | JSON list of federated MCP descriptors, mounted subtrees, and environment safety rules. |
 | **`compare_layer_patterns`** | `project_rules`: array of strings, `project_skills`: array of strings, `layer`: optional string (`"root"` or `<subtree>`) | Compares a consumer project's rule/skill inventory against the target layer's `antigravity/.gemini/config/skills/` and `templates/*/` to identify candidates for upward `/enrich` promotion (either to Corporate root or to a specific Departmental/Team subtree via `git subtree push`). | JSON classification (`compared_against_layer`, `already_in_layer_a`, `already_in_layer_b`, `candidates_for_upward_promotion`). |
+| **`resolve_surface_governance`** | `target_path`: optional string, `architectural_plane`: optional `"schema"` \| `"domain"` \| `"application"` \| `"presentation"` \| `"infrastructure"` \| `"testing"`, `scope`: optional string, `traits`: optional array of strings, `environment`: optional `"dev"` \| `"tst"` \| `"pre"` \| `"pro"`, `resolution_override`: optional `"L0"` \| `"L1"` \| `"L2"`, `resonance_key`: optional string, `include_capsules`: optional boolean | Projects and weaves governance bindings across `0..N` layers (`Root` + arbitrary mounted `layers/*` subtrees) for a target application surface. Automatically infers `effective_plane` and `effective_scope` from `target_path`, prunes non-intersecting layers (`0` token cost), orders matching bindings by numeric `precedence` (`0..100`, *Lex Superior*), and applies adaptive `rcap1` compaction (`L2` for `authoritative` bindings, `L1` for `transversal` bindings). | Ordered `participating_layers`, `pruned_layers`, `resolved_bindings` (with `rcap1` capsules), merged `effective_invariants`, `canonical_templates`, and `token_compaction_metrics`. |
 
 ### 3.3. MCP Prompts (`prompts/list` & `prompts/get`)
 
@@ -117,15 +118,16 @@ The server exposes seven read-only, deterministic tools for live node auditing, 
 
 ## 4. Declarative Layer & MCP Federation Schema (`system/mcp-layer.json`)
 
-To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.1"`).
+To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.2"`, backward-compatible with `"1.0"` and `"1.1"`).
 
-When a team or engineer forks `dotfiles-ubuntu` for a specific corporate layer, department, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
+When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corporate layer, domain-policy module, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its numeric deontic `precedence` (`0..100`)**, **its stack-agnostic `surface_bindings`**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "layer_id": "dotfiles-ubuntu-default",
   "layer_role": "workstation",
+  "precedence": 10,
   "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Reference Layer (Corporate / Workstation Baseline)",
   "upstream_layer": {
     "layer_id": "mtwuser/dotfiles-ubuntu",
@@ -141,6 +143,23 @@ When a team or engineer forks `dotfiles-ubuntu` for a specific corporate layer, 
     "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
     "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
     "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
+  ],
+  "surface_bindings": [
+    {
+      "binding_id": "universal-engineering-baseline",
+      "target_globs": ["**"],
+      "architectural_planes": ["*"],
+      "scopes": ["*"],
+      "traits": [],
+      "mode": "transversal",
+      "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+      "canonical_templates": [],
+      "invariants": [
+        "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+        "AGENTS.md §2 (Professional Robustness — strongly typed, scalable implementations)",
+        "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or @deprecated branches)"
+      ]
+    }
   ],
   "environments": {
     "dev": {
@@ -186,7 +205,8 @@ When a team or engineer forks `dotfiles-ubuntu` for a specific corporate layer, 
 | `layer_role` | Typical Deployment Target | Primary Purpose in the Context Mesh |
 |--------------|---------------------------|-------------------------------------|
 | **`corporate`** | Organization-wide fork (`acme-corp/dotfiles-ubuntu`) | Exposes transverse `Layer A` security, typing, and testing mandates (`AGENTS.md`) plus enterprise-approved MCP catalog. |
-| **`department`** | Cross-cutting departmental fork (`acme-dept-security`, `acme-dept-data`, `acme-dept-sre`) | Exposes department-specific compliance rules, data/cloud governance docs, and departmental MCP servers; mounted into team/project repos via `git subtree` (`layers/dept-*`). |
+| **`department`** | Cross-cutting departmental fork (`acme-dept-security`, `acme-dept-data`, `acme-dept-legal`) | Exposes department-specific compliance rules, data/cloud governance docs, `surface_bindings`, and departmental MCP servers; mounted into team/project repos via `git subtree` (`layers/<slug>`). |
+| **`domain-policy`** | Arbitrary regulatory, brand, or business-domain policy module (`layers/eu-gdpr`, `layers/brand-system`) | Exposes stack-agnostic `surface_bindings`, canonical templates, and domain invariants projected onto matching application surfaces via `resolve_surface_governance`. |
 | **`team`** | Team or domain fork (`acme-team-payments`) | Exposes `Layer B` stack starter templates (`templates/<stack>/`), domain conventions, and shared team MCP servers. |
 | **`service-node`** | Application container, Devcontainer, or sibling service fork (`layers/svc-*` or `/opt/dotfiles-ubuntu`) | Exposes the service's package manifest (`system/*`), drift status (`audit_node_drift`), service `docs/`, and service-local MCPs (database, cache, queue) across `dev`, `tst`, `pre`, `pro`. |
 | **`environment-cluster`** | Shared environment topology fork (`layers/env-pre-cluster`) | Exposes cluster-wide observability and deployment guardrails for a specific environment tier (`tst`, `pre`, `pro`). |
@@ -296,14 +316,33 @@ To solve both problems using **100% Python Standard Library (`zlib`, `hashlib`, 
    - **TOCTOU Line-Drift Relocation (`line_drift_relocated`)**: If lines are inserted or deleted earlier in a Markdown file after a capsule is minted, `_tool_unfold_context_capsule` automatically relocates the section by its heading (`_iter_markdown_sections`) and verifies `live_h1..h3`, succeeding without false-positive failures when the section itself is intact.
    - **Actionable Recovery Hints & Non-Duplicate Alerts (`CapsuleError`)**: Capsule failures append an explicit `[Recovery: ...]` hint for AI agents and suppress duplicate `SECURITY_OR_VALIDATION_ERROR` alerts in `logs/mcp_alerts.jsonl`.
 
+### 6.5. Stack-Agnostic Multi-Layer Surface Projection & Governance Weaver (`0..N` Layers via `resolve_surface_governance`)
+
+When an organization scales from a single repository (`0` mounted subtrees) to `1` or `N` arbitrary governance layers (`layers/<any-slug>/` — such as statutory compliance, financial controls, design systems, or growth/SEO), the AI agent needs to know **which exact rules, invariants, and canonical templates from which layers govern the specific application file or module being built**, and **which layer wins when two layers intersect on the same surface**.
+
+To remain **100% stack-agnostic** (applicable to FastAPI/Hexagonal, Next.js/React, Go, Rust, Django, or Spring Boot) while never hardcoding fixed department names:
+
+1. **Zero Hardcoded Departments (`0 → 1 → N` Arbitrary Layers)**:
+   - The **Root repository** (`self.repo_dir`, default `precedence: 10`) already provides the universal IT/Software Engineering baseline (`AGENTS.md` + `templates/*`) via GNU Stow and MCP without requiring a separate `"dept-it"` subtree.
+   - Any `0`, `1`, or `N` additional governance layers can be mounted under `layers/<any-slug>/` with any `layer_id`, `layer_role` (`department`, `domain-policy`, `team`, `corporate`, `service-node`), and numeric `precedence` (`0..100`).
+2. **Four Universal Surface Selectors (`surface_bindings`)**:
+   - **`target_globs`**: Relative file glob patterns (`["templates/**", "static/css/**", "*.html"]` or `["**"]`).
+   - **`architectural_planes`**: Universal software engineering planes (`"schema"`, `"domain"`, `"application"`, `"presentation"`, `"infrastructure"`, `"testing"`, or `"*"`). Automatically inferred from `target_path` when omitted.
+   - **`scopes`**: Feature module, vertical slice, or domain context names (`["checkout", "legal", "catalog"]` or `["*"]`). Automatically inferred from `target_path` when omitted.
+   - **`traits`**: Semantic cross-cutting tags (`["pii", "financial", "public-facing"]`).
+3. **Numeric Deontic Precedence (`0..100`, *Lex Superior*) & Adaptive `rcap1` Resolution**:
+   - Non-intersecting layers are pruned at `0` token cost (`pruned_layers`).
+   - Intersecting bindings are sorted deterministically by `(precedence ASC, mode=="transversal" ASC, layer_id ASC)` — lower numeric `precedence` holds higher deontic authority (e.g., `5` statutory/legal compliance > `10` root engineering baseline > `20` domain/financial > `30` design system > `60` growth/marketing).
+   - **Adaptive Resolution**: Bindings with `mode: "authoritative"` default to `resolution="L2"` (full section specification + `canonical_templates`), whereas `mode: "transversal"` bindings default to `resolution="L1"` (*Exon Axiom Skeleton*, ~85% token compaction) with sealed `rcap1` capsules ready to unfold on demand.
+
 ---
 
 ## 7. Verification & Self-Test Contract
 
 To guarantee that `scripts/dotfiles_mcp_server.py` and `scripts/layer-subtree.sh` remain deterministic and pass CI on every commit:
 1. **CLI Flags (`--help`, `--version`, `--self-test`, `--log-dir`, `--no-log`, `list`)**:
-   - Running `./scripts/dotfiles_mcp_server.py --self-test` executes an in-process JSON-RPC 2.0 round-trip test verifying `initialize`, `resources/list`, `resources/read`, `tools/list`, `tools/call` (`get_layer_overview`, `discover_federated_mcps`, `query_governance_rules`), `prompts/list`, and JSONL event/alert log generation without requiring an external MCP client.
+   - Running `./scripts/dotfiles_mcp_server.py --self-test` executes an in-process JSON-RPC 2.0 round-trip test verifying `initialize`, `resources/list`, `resources/read`, `tools/list`, `tools/call` (`get_layer_overview`, `discover_federated_mcps`, `query_governance_rules`, `unfold_context_capsule`, `resolve_surface_governance`), `prompts/list`, and JSONL event/alert log generation without requiring an external MCP client.
    - Running `./scripts/layer-subtree.sh list` inspects `layers/*/` and reports all mounted context subtrees.
 2. **CI & Container Gate Integration (`scripts/verify-repo.sh` & `Dockerfile`)**:
-   - `scripts/verify-repo.sh` compiles `scripts/dotfiles_mcp_server.py` (`py_compile`), lints it with `ruff check` and `mypy --strict`, validates `system/mcp-layer.json` schema (`v1.1`) and `Dockerfile` contract (`FROM ubuntu:26.04`, non-root `USER ubuntu`, `/opt/dotfiles-ubuntu`), runs `./scripts/layer-subtree.sh list` and `./scripts/dotfiles_mcp_server.py --self-test`, and enforces **100.00% statement and branch coverage** via `pytest`.
+   - `scripts/verify-repo.sh` compiles `scripts/dotfiles_mcp_server.py` (`py_compile`), lints it with `ruff check` and `mypy --strict`, validates `system/mcp-layer.json` schema (`v1.2`) and `Dockerfile` contract (`FROM ubuntu:26.04`, non-root `USER ubuntu`, `/opt/dotfiles-ubuntu`), runs `./scripts/layer-subtree.sh list` and `./scripts/dotfiles_mcp_server.py --self-test`, and enforces **100.00% statement and branch coverage** via `pytest`.
    - `Dockerfile` executes `python3 /opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py --self-test --no-log` and `/opt/dotfiles-ubuntu/scripts/layer-subtree.sh list` during `docker build` (`make docker-build` / `make docker-self-test`), guaranteeing that every built image is self-verified and ready for both standalone `docker run -i --rm` execution and multi-stage `COPY --from` sidecar injection.

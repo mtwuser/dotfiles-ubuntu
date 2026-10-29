@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import base64
 import contextlib
+import fnmatch
 import hashlib
 import hmac
 import json
@@ -37,12 +38,104 @@ PROTOCOL_VERSION = "2024-11-05"
 VALID_LAYER_ROLES = (
     "corporate",
     "department",
+    "domain-policy",
     "team",
     "service-node",
     "environment-cluster",
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+VALID_ARCHITECTURAL_PLANES = (
+    "schema",
+    "domain",
+    "application",
+    "presentation",
+    "infrastructure",
+    "testing",
+)
+PLANE_PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("testing", ("tests/", "e2e/", "__tests__/", "test_", "_test.", ".spec.")),
+    (
+        "presentation",
+        (
+            "templates/",
+            "static/",
+            "ui/",
+            "views/",
+            "components/",
+            "pages/",
+            ".html",
+            ".css",
+            ".scss",
+            ".tsx",
+            ".jsx",
+            ".vue",
+        ),
+    ),
+    (
+        "schema",
+        (
+            "models.py",
+            "schema.py",
+            "schemas/",
+            "migrations/",
+            "alembic/",
+            "entities/",
+            ".sql",
+            ".prisma",
+        ),
+    ),
+    ("domain", ("service.py", "domain.py", "ports.py", "domain/", "services/", "policies/")),
+    (
+        "application",
+        (
+            "router.py",
+            "controller.py",
+            "use_cases.py",
+            "tasks.py",
+            "dependencies.py",
+            "application/",
+            "use_cases/",
+            "routers/",
+            "api/",
+            "handlers/",
+        ),
+    ),
+    (
+        "infrastructure",
+        (
+            "repository.py",
+            "dockerfile",
+            "repositories/",
+            "adapters/",
+            "infrastructure/",
+            "infra/",
+            "db/",
+        ),
+    ),
+)
+STRUCTURAL_PATH_SEGMENTS = frozenset(
+    {
+        "src",
+        "app",
+        "internal",
+        "pkg",
+        "lib",
+        "templates",
+        "static",
+        "partials",
+        "components",
+        "css",
+        "js",
+        "tests",
+        "unit",
+        "imp",
+        "e2e",
+        "docs",
+        "architecture",
+        "reference",
+    }
+)
 CAPSULE_PREFIX = "rcap1"
 VALID_RESOLUTIONS = ("L0", "L1", "L2")
 VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
@@ -67,7 +160,7 @@ ALLOWED_ROOT_FILES = {
 }
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.md)`")
+BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.(?:md|html|j2|css))`")
 BOLD_TERM_RE = re.compile(r"\*\*([^*]{3,40})\*\*")
 WORD_TOKEN_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_-]{2,}")
 CODON_STOPWORDS = frozenset(
@@ -449,6 +542,73 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
             "additionalProperties": False,
         },
     },
+    {
+        "name": "resolve_surface_governance",
+        "description": (
+            "Project and weave governance rules, invariants, canonical templates, "
+            "and rcap1 context capsules across 0..N mounted layers (Root + layers/*) "
+            "for a target application surface (target_path, architectural_plane, "
+            "scope, traits), ordered by numeric deontic precedence (0..100)."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "target_path": {
+                    "type": "string",
+                    "description": (
+                        "Optional relative file path in the target project "
+                        "(e.g. 'templates/checkout/summary.html', 'src/legal/router.py')."
+                    ),
+                },
+                "architectural_plane": {
+                    "type": "string",
+                    "enum": list(VALID_ARCHITECTURAL_PLANES),
+                    "description": (
+                        "Optional stack-agnostic architectural plane ('schema', 'domain', "
+                        "'application', 'presentation', 'infrastructure', or 'testing')."
+                    ),
+                },
+                "scope": {
+                    "type": "string",
+                    "description": (
+                        "Optional feature module, domain slice, or bounded context name "
+                        "(e.g. 'checkout', 'legal', 'catalog')."
+                    ),
+                },
+                "traits": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional semantic cross-cutting tags "
+                        "(e.g. ['pii', 'financial', 'public-facing'])."
+                    ),
+                },
+                "environment": {
+                    "type": "string",
+                    "enum": ["dev", "tst", "pre", "pro"],
+                    "description": "Optional target environment ('dev', 'tst', 'pre', 'pro').",
+                },
+                "resolution_override": {
+                    "type": "string",
+                    "enum": ["L0", "L1", "L2"],
+                    "description": (
+                        "Optional resolution override ('L0', 'L1', or 'L2'). Defaults to "
+                        "adaptive ('L2' for authoritative bindings, 'L1' for transversal)."
+                    ),
+                },
+                "resonance_key": {
+                    "type": "string",
+                    "description": "Optional resonance secret key to seal rcap1 capsules.",
+                },
+                "include_capsules": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Whether to attach rcap1 capsule_token envelopes.",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
 )
 
 MCP_PROMPTS_CATALOG: tuple[dict[str, Any], ...] = (
@@ -624,10 +784,12 @@ def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dic
         return {}
     with contextlib.suppress(json.JSONDecodeError):
         parsed: dict[str, Any] = json.loads(first_text)
-        if target == "query_governance_rules":
+        if target in ("query_governance_rules", "resolve_surface_governance"):
             metrics = parsed.get("token_compaction_metrics", {})
             return {
-                "resolution": parsed.get("resolution"),
+                "resolution": str(
+                    parsed.get("resolution") or metrics.get("resolution", "adaptive")
+                ),
                 "tokens_saved": int(metrics.get("tokens_saved", 0)),
                 "savings_pct": float(metrics.get("savings_pct", 0.0)),
             }
@@ -638,6 +800,51 @@ def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dic
                 "decrypted_hops": int(parsed.get("decrypted_hops", 0)),
             }
     return {}
+
+
+def _infer_plane_from_path(rel_path: str) -> str:
+    norm = rel_path.strip().replace("\\", "/").lstrip("/").lower()
+    return next(
+        (plane for plane, tokens in PLANE_PATH_RULES if any(tok in norm for tok in tokens)),
+        "",
+    )
+
+
+def _infer_scope_from_path(rel_path: str) -> str:
+    parts = [
+        p
+        for p in rel_path.strip().replace("\\", "/").strip("/").split("/")
+        if p and "." not in p and p.lower() not in STRUCTURAL_PATH_SEGMENTS
+    ]
+    return parts[0].lower() if parts else ""
+
+
+def _glob_matches(rel_path: str, pattern: str) -> bool:
+    norm_path = rel_path.strip().replace("\\", "/").lstrip("/")
+    norm_pat = pattern.strip().replace("\\", "/").lstrip("/")
+    return bool(
+        norm_pat == "**"
+        or fnmatch.fnmatchcase(norm_path, norm_pat)
+        or (norm_pat.endswith("/**") and norm_path.startswith(norm_pat[:-2]))
+    )
+
+
+def _binding_matches_surface(
+    binding: dict[str, Any],
+    target_path: str,
+    plane: str,
+    scope: str,
+    traits: set[str],
+) -> bool:
+    globs = [str(g) for g in binding.get("target_globs", ["**"])]
+    planes = [str(p).lower() for p in binding.get("architectural_planes", ["*"])]
+    scopes = [str(s).lower() for s in binding.get("scopes", ["*"])]
+    req_traits = {str(t).lower() for t in binding.get("traits", [])}
+    glob_ok = not target_path or any(_glob_matches(target_path, g) for g in globs)
+    plane_ok = not plane or "*" in planes or plane in planes
+    scope_ok = not scope or "*" in scopes or scope in scopes
+    traits_ok = not req_traits or bool(req_traits & traits)
+    return glob_ok and plane_ok and scope_ok and traits_ok
 
 
 def _b64url_encode(data: bytes) -> str:
@@ -907,9 +1114,10 @@ class DotfilesMCPServer:
         base_dir = (target_dir or self.repo_dir).resolve()
         manifest_path = base_dir / "system" / "mcp-layer.json"
         data: dict[str, Any] = {
-            "schema_version": "1.1",
+            "schema_version": "1.2",
             "layer_id": base_dir.name if base_dir != self.repo_dir else "dotfiles-ubuntu-default",
             "layer_role": "workstation",
+            "precedence": 10 if base_dir == self.repo_dir else 50,
             "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Layer",
             "upstream_layer": {
                 "layer_id": "mtwuser/dotfiles-ubuntu",
@@ -920,6 +1128,7 @@ class DotfilesMCPServer:
             "mounted_layers": [],
             "default_stack_templates": ["fastapi-hexagonal"],
             "baseline_guardrails": [],
+            "surface_bindings": [],
             "environments": {},
             "federated_mcps": [],
         }
@@ -956,6 +1165,8 @@ class DotfilesMCPServer:
                     "relative_path": f"layers/{sub.name}",
                     "layer_id": sub_manifest.get("layer_id", sub.name),
                     "layer_role": sub_manifest.get("layer_role", "service-node"),
+                    "precedence": int(sub_manifest.get("precedence", 50)),
+                    "surface_binding_count": len(sub_manifest.get("surface_bindings", [])),
                     "version": _read_version(sub),
                     "has_docs": (sub / "docs").is_dir(),
                     "has_rules": (sub / "antigravity/.gemini/config/AGENTS.md").is_file(),
@@ -1226,6 +1437,8 @@ class DotfilesMCPServer:
             return self._tool_discover_federated_mcps(args)
         if name == "compare_layer_patterns":
             return self._tool_compare_layer_patterns(args)
+        if name == "resolve_surface_governance":
+            return self._tool_resolve_surface_governance(args)
         raise ValueError(f"Unknown tool name: {name!r}")
 
     def _tool_get_layer_overview(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -2131,6 +2344,249 @@ class DotfilesMCPServer:
             "isError": False,
         }
 
+    def _tool_resolve_surface_governance(self, args: dict[str, Any]) -> dict[str, Any]:
+        target_path = str(args.get("target_path", "")).strip()
+        explicit_plane = str(args.get("architectural_plane", "")).strip().lower()
+        if explicit_plane and explicit_plane not in VALID_ARCHITECTURAL_PLANES:
+            raise ValueError(
+                f"Invalid architectural_plane {explicit_plane!r}: "
+                f"must be one of {VALID_ARCHITECTURAL_PLANES}"
+            )
+        explicit_scope = str(args.get("scope", "")).strip().lower()
+        raw_traits = args.get("traits") or []
+        traits_list = sorted({str(t).strip().lower() for t in raw_traits if str(t).strip()})
+        traits_set = set(traits_list)
+        if not (target_path or explicit_plane or explicit_scope or traits_set):
+            raise ValueError(
+                "At least one surface selector ('target_path', 'architectural_plane', "
+                "'scope', or 'traits') must be provided"
+            )
+        env_arg = str(args.get("environment", "")).strip().lower()
+        if env_arg and env_arg not in VALID_ENVIRONMENTS:
+            raise ValueError(
+                f"Invalid environment {env_arg!r}: must be one of {VALID_ENVIRONMENTS}"
+            )
+        res_override = str(args.get("resolution_override", "")).strip().upper()
+        if res_override and res_override not in VALID_RESOLUTIONS:
+            raise ValueError(
+                f"Invalid resolution_override {res_override!r}: must be one of {VALID_RESOLUTIONS}"
+            )
+        include_capsules = bool(args.get("include_capsules", True))
+        explicit_key = (
+            str(args["resonance_key"]).strip() if args.get("resonance_key") is not None else ""
+        )
+        key_required = bool(explicit_key or os.environ.get("DOTFILES_RESONANCE_KEY", "").strip())
+        secret = self._resolve_resonance_secret(explicit_key or None)
+        env_scope = env_arg or "all"
+        effective_plane = explicit_plane or _infer_plane_from_path(target_path)
+        effective_scope = explicit_scope or _infer_scope_from_path(target_path)
+
+        layer_dirs = [
+            self.repo_dir,
+            *(self.repo_dir / str(m["relative_path"]) for m in self._discover_mounted_layers()),
+        ]
+        participating_layers: list[dict[str, Any]] = []
+        pruned_layers: list[dict[str, Any]] = []
+        matched_records: list[tuple[int, int, str, Path, str, str, dict[str, Any]]] = []
+        layer_guardrails_in_order: list[tuple[int, list[str]]] = []
+
+        for ldir in layer_dirs:
+            lname = "root" if ldir == self.repo_dir else ldir.name
+            manifest = self._load_layer_manifest(ldir)
+            layer_id = str(manifest.get("layer_id", lname))
+            layer_role = str(manifest.get("layer_role", "service-node"))
+            default_prec = 10 if ldir == self.repo_dir else 50
+            layer_prec = int(manifest.get("precedence", default_prec))
+            raw_bindings = manifest.get("surface_bindings") or [
+                {
+                    "binding_id": f"{lname}-default-baseline",
+                    "target_globs": ["**"],
+                    "architectural_planes": ["*"],
+                    "scopes": ["*"],
+                    "traits": [],
+                    "mode": "transversal",
+                    "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+                    "canonical_templates": [],
+                    "invariants": list(manifest.get("baseline_guardrails", [])),
+                }
+            ]
+            matched_in_layer = [
+                b
+                for b in raw_bindings
+                if isinstance(b, dict)
+                and _binding_matches_surface(
+                    b, target_path, effective_plane, effective_scope, traits_set
+                )
+            ]
+            if not matched_in_layer:
+                pruned_layers.append(
+                    {
+                        "layer": lname,
+                        "layer_id": layer_id,
+                        "layer_role": layer_role,
+                        "precedence": layer_prec,
+                    }
+                )
+                continue
+
+            participating_layers.append(
+                {
+                    "layer": lname,
+                    "layer_id": layer_id,
+                    "layer_role": layer_role,
+                    "precedence": layer_prec,
+                    "matched_bindings_count": len(matched_in_layer),
+                }
+            )
+            env_g = (
+                manifest.get("environments", {}).get(env_arg, {}).get("default_guardrails", [])
+                if env_arg
+                else []
+            )
+            layer_guardrails_in_order.append(
+                (layer_prec, [*manifest.get("baseline_guardrails", []), *env_g])
+            )
+            for b in matched_in_layer:
+                b_prec = int(b.get("precedence", layer_prec))
+                m_rank = 0 if str(b.get("mode", "")).lower() == "authoritative" else 1
+                matched_records.append((b_prec, m_rank, lname, ldir, layer_id, layer_role, b))
+
+        participating_layers.sort(key=lambda item: (int(item["precedence"]), str(item["layer_id"])))
+        matched_records.sort(
+            key=lambda rec: (rec[0], rec[1], rec[4], str(rec[6].get("binding_id", "")))
+        )
+        layer_guardrails_in_order.sort(key=lambda item: item[0])
+
+        resolved_bindings: list[dict[str, Any]] = []
+        invariant_groups: list[list[str]] = [g for _, g in layer_guardrails_in_order]
+        template_groups: list[list[str]] = []
+        returned_tokens = 0
+        capsule_overhead_tokens = 0
+        baseline_l2_tokens = 0
+
+        for b_prec, _, lname, ldir, layer_id, layer_role, b in matched_records:
+            mode = (
+                "authoritative"
+                if str(b.get("mode", "")).lower() == "authoritative"
+                else "transversal"
+            )
+            res = res_override or ("L2" if mode == "authoritative" else "L1")
+            b_invariants = [str(inv) for inv in b.get("invariants", []) if str(inv).strip()]
+            b_templates = [str(tpl) for tpl in b.get("canonical_templates", []) if str(tpl).strip()]
+            invariant_groups.append(b_invariants)
+            template_groups.append([f"{lname}:{tpl}" for tpl in b_templates])
+
+            sections_out: list[dict[str, Any]] = []
+            for rf_rel in b.get("rule_files", []):
+                rf_path = (ldir / str(rf_rel).strip().lstrip("/")).resolve()
+                if not rf_path.is_file():
+                    continue
+                lines = rf_path.read_text(encoding="utf-8").splitlines()
+                rel_in_layer = str(rf_path.relative_to(ldir)).replace("\\", "/")
+                for heading, start_line, end_line, body in _iter_markdown_sections(
+                    lines, rf_path.name
+                )[:3]:
+                    joined = "\n".join(body)
+                    l2_excerpt = joined[:1500]
+                    l2_full = joined[:8000]
+                    l1_skeleton = _extract_axiom_skeleton(heading, body)
+                    l3_links = _extract_l3_links(rf_path, joined, ldir)
+                    promoter_codon, capsule_token = self._build_section_capsule(
+                        resolution=res,
+                        layer_name=lname,
+                        rel_in_layer=rel_in_layer,
+                        heading=heading,
+                        start_line=start_line,
+                        end_line=end_line,
+                        scope=effective_scope or "all",
+                        l1_skeleton=l1_skeleton,
+                        l2_excerpt=l2_excerpt,
+                        l2_full=l2_full,
+                        l3_links=l3_links,
+                        env_scope=env_scope,
+                        secret=secret,
+                        key_required=key_required,
+                    )
+                    sec_entry: dict[str, Any] = {
+                        "file": str(rf_path.relative_to(self.repo_dir)),
+                        "layer": lname,
+                        "section": heading,
+                        "start_line": start_line,
+                        "end_line": end_line,
+                        "resolution": res,
+                        "promoter_codon": promoter_codon,
+                        "capsule_token": capsule_token if include_capsules else None,
+                    }
+                    if res == "L0":
+                        sec_entry["surface_preview"] = (
+                            f"{promoter_codon['codon']} ({', '.join(promoter_codon['tags'])})"
+                        )
+                    elif res == "L1":
+                        sec_entry["axiom_skeleton"] = l1_skeleton
+                        sec_entry["excerpt"] = l1_skeleton
+                    else:
+                        sec_entry["excerpt"] = l2_excerpt
+                    sections_out.append(sec_entry)
+                    returned_tokens += int(promoter_codon["token_estimates"][res])
+                    baseline_l2_tokens += int(promoter_codon["token_estimates"]["L2"])
+                    if include_capsules:
+                        capsule_overhead_tokens += len(capsule_token) // 4
+
+            resolved_bindings.append(
+                {
+                    "binding_id": str(b.get("binding_id", f"{lname}-binding")),
+                    "layer": lname,
+                    "layer_id": layer_id,
+                    "layer_role": layer_role,
+                    "precedence": b_prec,
+                    "mode": mode,
+                    "resolution": res,
+                    "invariants": b_invariants,
+                    "canonical_templates": b_templates,
+                    "sections": sections_out,
+                }
+            )
+
+        tokens_saved = max(0, baseline_l2_tokens - returned_tokens)
+        savings_pct = (
+            round((tokens_saved / baseline_l2_tokens) * 100, 1) if baseline_l2_tokens > 0 else 0.0
+        )
+        payload = {
+            "surface_query": {
+                "target_path": target_path,
+                "effective_plane": effective_plane or "all",
+                "effective_scope": effective_scope or "all",
+                "traits": traits_list,
+                "environment": env_scope,
+                "resolution_mode": res_override or "adaptive",
+            },
+            "precedence_policy": (
+                "Numeric precedence (0..100, lower value = higher authority / Lex Superior); "
+                "authoritative bindings default to L2, transversal bindings default to L1."
+            ),
+            "participating_layers_count": len(participating_layers),
+            "participating_layers": participating_layers,
+            "pruned_layers_count": len(pruned_layers),
+            "pruned_layers": pruned_layers,
+            "resolved_bindings_count": len(resolved_bindings),
+            "resolved_bindings": resolved_bindings,
+            "effective_invariants": _merge_unique_strings(*invariant_groups),
+            "canonical_templates": _merge_unique_strings(*template_groups),
+            "token_compaction_metrics": {
+                "resolution": res_override or "adaptive",
+                "returned_estimated_tokens": returned_tokens,
+                "capsule_overhead_tokens": capsule_overhead_tokens,
+                "full_l2_baseline_tokens": baseline_l2_tokens,
+                "tokens_saved": tokens_saved,
+                "savings_pct": savings_pct,
+            },
+            "warnings": [],
+        }
+        return {
+            "content": [{"type": "text", "text": json.dumps(payload, indent=2)}],
+            "isError": False,
+        }
+
     # ------------------------------------------------------------------
     # Prompts
     # ------------------------------------------------------------------
@@ -2436,8 +2892,8 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}}
     )
     _require(
-        bool(tools_list and len(tools_list["result"]["tools"]) == 7),
-        "Expected 7 tools",
+        bool(tools_list and len(tools_list["result"]["tools"]) == 8),
+        "Expected 8 tools",
     )
 
     overview = server.handle_request(
@@ -2556,6 +3012,22 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     _require(
         bool(cmp_res and not cmp_res["result"]["isError"]),
         "compare_layer_patterns failed",
+    )
+
+    surf_res = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 91,
+            "method": "tools/call",
+            "params": {
+                "name": "resolve_surface_governance",
+                "arguments": {"target_path": "src/checkout/service.py"},
+            },
+        }
+    )
+    _require(
+        bool(surf_res and not surf_res["result"]["isError"]),
+        "resolve_surface_governance failed",
     )
 
     # 4. Path-containment security gate verification

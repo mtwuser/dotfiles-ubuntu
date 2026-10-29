@@ -320,6 +320,8 @@ for budget_token in (
 
 for mcp_token in (
     "unfold_context_capsule",
+    "resolve_surface_governance",
+    "surface_bindings",
     "rcap1",
     "CAPSULE_CAPABILITY_INSUFFICIENT",
     "CAPSULE_RESONANCE_DENIED",
@@ -413,8 +415,8 @@ fi
 # 7. Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest
 echo ""
 echo "[7/8] Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest"
-if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") in ("1.0", "1.1") and "federated_mcps" in d and "environments" in d'; then
-  pass "system/mcp-layer.json is valid JSON and matches schema v1.1 (with environments & federated_mcps)"
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") in ("1.0", "1.1", "1.2") and "federated_mcps" in d and "environments" in d and "surface_bindings" in d'; then
+  pass "system/mcp-layer.json is valid JSON and matches schema v1.2 (with precedence, surface_bindings, environments & federated_mcps)"
 else
   fail "system/mcp-layer.json is missing or invalid"
 fi
@@ -426,7 +428,7 @@ else
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then
-  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 7 tools, 3 prompts, rcap1 L0->L3 compaction, path-containment gate)"
+  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 8 tools, 3 prompts, surface projection, rcap1 L0->L3 compaction, path-containment gate)"
 else
   fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi

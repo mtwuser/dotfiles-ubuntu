@@ -1055,3 +1055,207 @@ def test_unfold_context_capsule_capability_environment_and_tamper_gates(
     assert "CAPSULE_CHAIN_BROKEN" in alerts_text
     assert "CAPSULE_RESONANCE_DENIED" in alerts_text
     assert "CAPSULE_CAPABILITY_INSUFFICIENT" in alerts_text
+
+
+def test_resolve_surface_governance_across_zero_to_n_arbitrary_layers(
+    tmp_path: Path,
+) -> None:
+    # Arrange
+    agents_dir = tmp_path / "antigravity/.gemini/config"
+    agents_dir.mkdir(parents=True)
+    (agents_dir / "AGENTS.md").write_text(
+        "# Global Engineering Rules\n"
+        "## Reusability First\n"
+        '> *"Scan workspace before creating duplicates"*\n'
+        "- Reuse shared helpers\n"
+        "- Keep functions small\n"
+        "```python\n"
+        "x = 1\n"
+        "```\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "system").mkdir()
+    (tmp_path / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "corp-it-baseline",
+                "layer_role": "corporate",
+                "precedence": 10,
+                "baseline_guardrails": ["corp-type-safety"],
+                "environments": {"pre": {"default_guardrails": ["pre-read-only"]}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    # Mount 3 arbitrary layers: statutory-privacy (5), design-tokens (30), internal-hr (50, pruned)
+    priv_dir = tmp_path / "layers/statutory-privacy"
+    (priv_dir / "system").mkdir(parents=True)
+    (priv_dir / "docs").mkdir()
+    (priv_dir / "templates/legal").mkdir(parents=True)
+    (priv_dir / "templates/legal/consent.html").write_text(
+        "<div class='consent'>GDPR Consent</div>\n", encoding="utf-8"
+    )
+    (priv_dir / "docs/privacy_rules.md").write_text(
+        "# Statutory Privacy Rules\n"
+        "## Explicit Consent Gate\n"
+        "Every PII form must render `templates/legal/consent.html`.\n",
+        encoding="utf-8",
+    )
+    (priv_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "org-statutory-privacy",
+                "layer_role": "domain-policy",
+                "precedence": 5,
+                "baseline_guardrails": ["gdpr-art-25-by-design"],
+                "surface_bindings": [
+                    {
+                        "binding_id": "pii-consent-mandate",
+                        "target_globs": ["templates/**"],
+                        "architectural_planes": ["presentation"],
+                        "scopes": ["checkout", "legal"],
+                        "traits": ["pii"],
+                        "mode": "authoritative",
+                        "rule_files": ["docs/privacy_rules.md", "docs/missing_rule.md"],
+                        "canonical_templates": ["templates/legal/consent.html"],
+                        "invariants": ["Explicit opt-in checkbox required before submit"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    design_dir = tmp_path / "layers/design-tokens"
+    (design_dir / "system").mkdir(parents=True)
+    (design_dir / "docs").mkdir()
+    (design_dir / "docs/ui_tokens.md").write_text(
+        "# Design System Tokens\n"
+        "## Semantic CSS Tokens\n"
+        '> *"Never hardcode hex colors"*\n'
+        "- Use semantic CSS variables\n",
+        encoding="utf-8",
+    )
+    (design_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "org-design-tokens",
+                "layer_role": "department",
+                "precedence": 30,
+                "surface_bindings": [
+                    {
+                        "binding_id": "ui-token-consistency",
+                        "target_globs": ["templates/**", "*.html"],
+                        "architectural_planes": ["presentation"],
+                        "scopes": ["*"],
+                        "traits": [],
+                        "mode": "transversal",
+                        "rule_files": ["docs/ui_tokens.md"],
+                        "canonical_templates": [],
+                        "invariants": ["WCAG 2.1 AA contrast >= 4.5:1"],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    hr_dir = tmp_path / "layers/internal-hr"
+    (hr_dir / "system").mkdir(parents=True)
+    (hr_dir / "system/mcp-layer.json").write_text(
+        json.dumps(
+            {
+                "layer_id": "org-internal-hr",
+                "layer_role": "department",
+                "precedence": 50,
+                "surface_bindings": [
+                    {
+                        "binding_id": "hr-payroll-only",
+                        "target_globs": ["src/payroll/**"],
+                        "architectural_planes": ["domain"],
+                        "scopes": ["payroll"],
+                        "traits": ["internal"],
+                        "mode": "authoritative",
+                        "rule_files": [],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=tmp_path / "logs")
+
+    # Act
+    with pytest.raises(ValueError, match="At least one surface selector"):
+        server.call_tool("resolve_surface_governance", {})
+    with pytest.raises(ValueError, match="Invalid architectural_plane"):
+        server.call_tool("resolve_surface_governance", {"architectural_plane": "unknown-plane"})
+    with pytest.raises(ValueError, match="Invalid environment"):
+        server.call_tool(
+            "resolve_surface_governance", {"target_path": "README.md", "environment": "bad-env"}
+        )
+    with pytest.raises(ValueError, match="Invalid resolution_override"):
+        server.call_tool(
+            "resolve_surface_governance",
+            {"target_path": "README.md", "resolution_override": "L9"},
+        )
+
+    adaptive_rpc = (
+        server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 50,
+                "method": "tools/call",
+                "params": {
+                    "name": "resolve_surface_governance",
+                    "arguments": {
+                        "target_path": "templates/checkout/summary.html",
+                        "traits": ["pii"],
+                        "environment": "pre",
+                    },
+                },
+            }
+        )
+        or {}
+    )
+    adaptive_res = json.loads(adaptive_rpc["result"]["content"][0]["text"])
+    l0_no_cap_res = json.loads(
+        server.call_tool(
+            "resolve_surface_governance",
+            {
+                "target_path": "README.md",
+                "resolution_override": "L0",
+                "include_capsules": False,
+            },
+        )["content"][0]["text"]
+    )
+
+    # Assert
+    assert adaptive_res["surface_query"]["effective_plane"] == "presentation"
+    assert adaptive_res["surface_query"]["effective_scope"] == "checkout"
+    assert adaptive_res["participating_layers_count"] == 3
+    assert [p["layer"] for p in adaptive_res["participating_layers"]] == [
+        "statutory-privacy",
+        "root",
+        "design-tokens",
+    ]
+    assert adaptive_res["pruned_layers_count"] == 1
+    assert adaptive_res["pruned_layers"][0]["layer"] == "internal-hr"
+    assert [b["binding_id"] for b in adaptive_res["resolved_bindings"]] == [
+        "pii-consent-mandate",
+        "root-default-baseline",
+        "ui-token-consistency",
+    ]
+    assert adaptive_res["resolved_bindings"][0]["resolution"] == "L2"
+    assert adaptive_res["resolved_bindings"][1]["resolution"] == "L1"
+    assert adaptive_res["resolved_bindings"][2]["resolution"] == "L1"
+    assert adaptive_res["canonical_templates"] == ["statutory-privacy:templates/legal/consent.html"]
+    assert "gdpr-art-25-by-design" in adaptive_res["effective_invariants"]
+    assert "pre-read-only" in adaptive_res["effective_invariants"]
+    assert l0_no_cap_res["surface_query"]["effective_plane"] == "all"
+    assert l0_no_cap_res["surface_query"]["effective_scope"] == "all"
+    assert l0_no_cap_res["resolved_bindings"][0]["sections"][0]["capsule_token"] is None
+    assert "surface_preview" in l0_no_cap_res["resolved_bindings"][0]["sections"][0]
+    assert l0_no_cap_res["token_compaction_metrics"]["capsule_overhead_tokens"] == 0

@@ -361,9 +361,10 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
 
 ```json
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "layer_id": "acme-checkout-service-node",
   "layer_role": "service-node",
+  "precedence": 20,
   "description": "Checkout Service Ubuntu 26.04 Container Node (FastAPI Hexagonal + PostgreSQL)",
   "upstream_layer": {
     "layer_id": "acme-corp/dotfiles-backend-hexagonal",
@@ -375,6 +376,21 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
   ],
   "baseline_guardrails": [
     "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)"
+  ],
+  "surface_bindings": [
+    {
+      "binding_id": "checkout-domain-invariants",
+      "target_globs": ["src/checkout/**", "templates/checkout/**"],
+      "architectural_planes": ["domain", "application", "presentation"],
+      "scopes": ["checkout"],
+      "traits": ["financial"],
+      "mode": "authoritative",
+      "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+      "canonical_templates": [],
+      "invariants": [
+        "All checkout monetary calculations must use integer minor units (cents) and idempotency keys"
+      ]
+    }
   ],
   "environments": {
     "dev": {
@@ -470,6 +486,9 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
 - **Cross-Layer Rule & Doc Search (`layer="all"` or `layer="dept-security"`)**:
   - Calling `query_governance_rules(query="webhook", layer="all")` searches the root layer **plus every mounted subtree in `layers/*/`** in a single call.
   - Calling `read_layer_document(relative_path="docs/README.md", layer="svc-fraud")` reads the architecture index of a sibling service directly.
+- **Stack-Agnostic Multi-Layer Surface Projection (`resolve_surface_governance` across `0..N` Layers)**:
+  - Calling `resolve_surface_governance(target_path="templates/checkout/summary.html", traits=["financial", "pii"])` automatically infers `effective_plane="presentation"` and `effective_scope="checkout"`, prunes non-intersecting layers (`0` token cost), and weaves matching `surface_bindings` from the Root layer (`precedence: 10`) and any `0..N` arbitrary mounted subtrees (`layers/<any-slug>/`) ordered by numeric deontic `precedence` (`0..100`, *Lex Superior*).
+  - Authoritative bindings (`mode="authoritative"`) resolve at `L2` with `canonical_templates`, while cross-cutting bindings (`mode="transversal"`) automatically compact to `L1` Axiom Skeletons with sealed `rcap1` capsules.
 - **Resonant Chained Context Compaction & Unfolding (`L0 → L1 → L2 → L3` via `rcap1` Capsules)**:
   - To prevent context window saturation when scanning across multiple layers, agents can pass `resolution="L0"` to `query_governance_rules(query="webhook", layer="all", resolution="L0")`. This returns compact **Promoter Codons (`AUG:<scope>:<slug>:UAA`, ~18 tokens/match)** plus sealed **`rcap1` context capsules** (~85–90% token savings).
   - When a Promoter Codon resonates with the task, the agent calls **`unfold_context_capsule(capsule_token="rcap1...", target_level="L1", agent_tier="flash")`** to decrypt and `zlib`-decompress the **Level 1 Axiom Skeleton** (~45 tokens), or continues unfolding sequentially to **`L2`** (Full Section) and **`L3`** (linked `SKILL.md` / architecture specs + environment guardrails) with `agent_tier="inherit"` or `"pro"`.

@@ -1,7 +1,8 @@
 {
-  "schema_version": "1.1",
+  "schema_version": "1.2",
   "layer_id": "dotfiles-ubuntu-default",
   "layer_role": "workstation",
+  "precedence": 10,
   "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Reference Layer (Corporate / Workstation Baseline)",
   "upstream_layer": {
     "layer_id": "mtwuser/dotfiles-ubuntu",
@@ -17,6 +18,57 @@
     "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
     "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
     "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
+  ],
+  "surface_bindings": [
+    {
+      "binding_id": "universal-engineering-baseline",
+      "description": "Universal software quality, typing, and clean-cutover rules across all planes and scopes",
+      "mode": "transversal",
+      "target_globs": ["*"],
+      "architectural_planes": ["*"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+        "AGENTS.md §3 (Strict Linter & Typing Integrity — zero compiler or linter warnings)",
+        "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or deprecated branches)"
+      ],
+      "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+      "canonical_templates": []
+    },
+    {
+      "binding_id": "hexagonal-and-presentation-architecture",
+      "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
+      "mode": "transversal",
+      "target_globs": ["src/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
+      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Domain never imports from Infrastructure or Application",
+        "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes"
+      ],
+      "rule_files": ["templates/fastapi-hexagonal/rules/coding.md"],
+      "canonical_templates": ["templates/fastapi-hexagonal/rules/coding.md"]
+    },
+    {
+      "binding_id": "automated-testing-and-aaa-gate",
+      "description": "100% statement and branch coverage with explicit AAA test structure",
+      "mode": "transversal",
+      "target_globs": ["tests/**", "*test*"],
+      "architectural_planes": ["testing"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Every test method must contain explicit # Arrange, # Act, and # Assert comments",
+        "Maintain 100% statement and branch coverage with < 1s per unit test"
+      ],
+      "rule_files": ["templates/fastapi-hexagonal/rules/testing.md"],
+      "canonical_templates": ["templates/fastapi-hexagonal/skills/testing/SKILL.md"]
+    }
   ],
   "environments": {
     "dev": {

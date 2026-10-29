@@ -321,6 +321,8 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         assert budget_token in arch_03
     for mcp_token in (
         "unfold_context_capsule",
+        "resolve_surface_governance",
+        "surface_bindings",
         "rcap1",
         "CAPSULE_CAPABILITY_INSUFFICIENT",
         "CAPSULE_RESONANCE_DENIED",
