@@ -6,7 +6,7 @@
   "description": "FastAPI + Hexagonal DDD + HTMX starter rules, skills, and governance templates",
   "recommended_surface_bindings": [
     {
-      "binding_id": "fastapi-hexagonal-architecture",
+      "binding_id": "hexagonal-and-presentation-architecture",
       "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
       "mode": "transversal",
       "target_globs": ["src/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],

@@ -304,7 +304,8 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 },
                 "layer": {
                     "type": "string",
-                    "description": "Optional target layer ('root' or a mounted subtree).",
+                    "default": "all",
+                    "description": "Target layer ('all', 'root', or a mounted subtree).",
                 },
             },
             "additionalProperties": False,

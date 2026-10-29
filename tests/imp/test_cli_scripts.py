@@ -139,7 +139,7 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
     ]
 
     # Assert
-    assert len(pkg_modules) == 11
+    assert len(pkg_modules) == 12
     assert missing_unit_tests == []
     assert oversized_files == []
 

@@ -23,6 +23,7 @@ from dotfiles_mcp.manifest_helpers import (
     _read_version,
 )
 from dotfiles_mcp.node_base import MCPNodeBase
+from dotfiles_mcp.promotion_engine import compare_project_patterns_multilayer
 
 
 class FederationToolsMixin(MCPNodeBase):
@@ -274,45 +275,34 @@ class FederationToolsMixin(MCPNodeBase):
         }
 
     def _tool_compare_layer_patterns(self, args: dict[str, Any]) -> dict[str, Any]:
-        target_dir = self._resolve_layer_dir(args.get("layer"))
-        target_manifest = self._load_layer_manifest(target_dir)
+        layer_arg = str(args.get("layer", "all")).strip() or "all"
+        mounted = self._discover_mounted_layers()
+        if layer_arg == "all":
+            target_dirs = [
+                ("root", self.repo_dir, self._load_layer_manifest()),
+                *(
+                    (
+                        str(m["name"]),
+                        self.repo_dir / str(m["relative_path"]),
+                        self._load_layer_manifest(self.repo_dir / str(m["relative_path"])),
+                    )
+                    for m in mounted
+                ),
+            ]
+        else:
+            tdir = self._resolve_layer_dir(layer_arg)
+            lname = "root" if tdir == self.repo_dir else tdir.name
+            target_dirs = [(lname, tdir, self._load_layer_manifest(tdir))]
+
         proj_rules = [str(r).strip() for r in args.get("project_rules", [])]
         proj_skills = [str(s).strip() for s in args.get("project_skills", [])]
-
-        global_skills_root = target_dir / "antigravity/.gemini/config/skills"
-        layer_a_skills = {
-            _parse_skill_frontmatter(sf, target_dir)["name"]
-            for sf in global_skills_root.glob("*/SKILL.md")
-        } | {sf.parent.name for sf in global_skills_root.glob("*/SKILL.md")}
-
-        layer_b_rules: set[str] = set()
-        layer_b_skills: set[str] = set()
-        templates_root = target_dir / "templates"
-        if templates_root.is_dir():
-            for rf in templates_root.glob("*/rules/*.md"):
-                layer_b_rules.add(rf.name)
-            for sf in templates_root.glob("*/skills/*/SKILL.md"):
-                layer_b_skills.add(_parse_skill_frontmatter(sf, target_dir)["name"])
-                layer_b_skills.add(sf.parent.name)
-
-        comparison = {
-            "compared_against_layer": target_manifest.get("layer_id"),
-            "already_in_layer_a_skills": sorted(s for s in proj_skills if s in layer_a_skills),
-            "already_in_layer_b_templates": {
-                "rules": sorted(r for r in proj_rules if r in layer_b_rules),
-                "skills": sorted(s for s in proj_skills if s in layer_b_skills),
-            },
-            "candidates_for_upward_promotion": {
-                "novel_rules": sorted(r for r in proj_rules if r not in layer_b_rules),
-                "novel_skills": sorted(
-                    s for s in proj_skills if s not in layer_a_skills and s not in layer_b_skills
-                ),
-            },
-            "available_in_layer_b_but_missing_in_project": {
-                "rules": sorted(r for r in layer_b_rules if r not in proj_rules),
-                "skills": sorted(s for s in layer_b_skills if s not in proj_skills),
-            },
-        }
+        comparison = compare_project_patterns_multilayer(
+            self.repo_dir,
+            mounted,
+            project_rules=proj_rules,
+            project_skills=proj_skills,
+            target_dirs=target_dirs,
+        )
         return {
             "content": [{"type": "text", "text": json.dumps(comparison, indent=2)}],
             "isError": False,

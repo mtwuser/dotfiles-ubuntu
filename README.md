@@ -247,9 +247,9 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork Configurator package (13 modules, < 425 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (14 modules, < 425 lines each)
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
-│   ├── layer-config.sh                ←   Fork parameterization (init-fork), template scaffolding & project projection (apply-project)
+│   ├── layer-config.sh                ←   Fork parameterization (init-fork), template scaffolding, project projection & promotion
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
 │   └── verify-repo.sh                 ←   Deterministic CI & pre-commit verification suite
 │
@@ -276,9 +276,10 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
 │   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
-│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 11 executable MCP package modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 12 executable MCP package modules
 │   │   │   ├── test_manifest_helpers.py
 │   │   │   ├── test_fork_configurator.py
+│   │   │   ├── test_promotion_engine.py
 │   │   │   ├── test_surface_weaver.py
 │   │   │   ├── test_capsule_engine.py
 │   │   │   ├── test_node_base.py

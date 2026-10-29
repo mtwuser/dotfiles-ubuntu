@@ -100,16 +100,17 @@ Detect patterns that have **matured** in a project and should move up:
 | Shared rule was updated but project still has old copy | Project needs update |
 | New shared skill was added but project doesn't reference it | Inform — may need integration |
 
-### §2.3 Layer Classification
+### §2.3 Multi-Dimensional Layer & Template Classification
 
-For each candidate, determine the correct target layer:
+For each candidate, determine the exact target layer and template pack (using `.agents/LAYER_LINEAGE.md`, `./scripts/layer-config.sh diff-project <project>`, or the MCP tool `compare_layer_patterns` with `layer="all"`):
 
-| If the pattern... | Target Layer |
+| If the pattern... | Target Layer & Command |
 |---|---|
-| Applies to ANY project regardless of stack | **A (dotfiles-ubuntu root)** |
-| Applies to a cross-cutting department, team, or mounted service layer | **D (`~/dotfiles-ubuntu/layers/<layer-name>/` via `layer-subtree.sh push`)** |
-| Applies to any project using THIS framework | **B (framework repo or `templates/<stack>/`)** |
-| Only applies to this specific product/domain | **C (stays in project)** |
+| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap) | **A (Universal Root)**: `~/dotfiles-ubuntu/antigravity/.gemini/config/` (`./scripts/layer-config.sh promote-from-project <proj> --source <path> --to-layer root`) |
+| Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/UX) | **D (Mounted Subtree Layer)**: `~/dotfiles-ubuntu/layers/<layer-name>/` (`./scripts/layer-config.sh promote-from-project <proj> --source <path> --to-layer <layer-name> [--to-template <pack>]` followed by `./scripts/layer-subtree.sh push <layer-name> <branch>`) |
+| Applies to any project using a specific stack or template pack (`stack-starter`, `department-pack`, `domain-policy-pack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<framework>/.agents/` or `~/dotfiles-ubuntu/templates/<pack>/` (`--to-layer root --to-template <pack>`) |
+| Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer D (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `diff-project`) |
+| Only applies to this specific product/application | **C (Stays in Project)**: `<product>/.agents/` |
 
 > [!IMPORTANT]
 > **Never promote stack-specific rules to Layer A.** FastAPI patterns stay in Layer B (framework repo).

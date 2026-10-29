@@ -19,6 +19,7 @@ from dotfiles_mcp.constants import (
     VALID_RESOLUTIONS,
 )
 from dotfiles_mcp.manifest_helpers import _merge_unique_strings
+from dotfiles_mcp.promotion_engine import collect_layer_effective_bindings
 from dotfiles_mcp.surface_weaver import (
     _binding_matches_surface,
     _compute_binding_specificity,
@@ -117,7 +118,7 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                 raise ValueError(
                     f"Invalid layer precedence {layer_prec} in {lname!r}: must be 0..100"
                 )
-            raw_bindings = manifest.get("surface_bindings") or [
+            raw_bindings = collect_layer_effective_bindings(ldir, manifest) or [
                 {
                     "binding_id": f"{lname}-default-baseline",
                     "target_globs": ["**"],

@@ -90,6 +90,18 @@ class MCPNodeBase:
                     {"agents_md_bytes": agents_bytes, "cap_bytes": AGENTS_MD_MAX_BYTES},
                 )
             )
+        manifest = self._load_layer_manifest(target_dir)
+        for tpl_name in manifest.get("default_stack_templates", []):
+            if not (target_dir / "templates" / str(tpl_name)).is_dir():
+                warnings.append(
+                    self._emit_warning(
+                        "WARN",
+                        "TEMPLATE_PACK_MISSING",
+                        f"Configured default_stack_templates entry {tpl_name!r} was not found "
+                        f"under templates/{tpl_name}.",
+                        {"template": str(tpl_name)},
+                    )
+                )
         if target_dir == self.repo_dir:
             for entry in self._discover_mounted_layers():
                 if not entry["has_upstream"]:

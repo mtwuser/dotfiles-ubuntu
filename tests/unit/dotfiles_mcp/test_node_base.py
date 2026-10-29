@@ -108,3 +108,29 @@ class TestMCPNodeBase:
         assert "4-Channel Executive Digest" in orient["messages"][0]["content"]["text"]
         assert "audit_node_drift" in audit["messages"][0]["content"]["text"]
         assert "discover_federated_mcps" in orch["messages"][0]["content"]["text"]
+
+    def test_evaluate_layer_warnings_emits_template_pack_missing(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Emit TEMPLATE_PACK_MISSING when default_stack_templates lists a missing directory."""
+        # Arrange
+        (tmp_path / "system").mkdir(parents=True)
+        (tmp_path / "system/mcp-layer.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "1.2",
+                    "layer_id": "acme-team",
+                    "default_stack_templates": ["missing-pack"],
+                }
+            ),
+            encoding="utf-8",
+        )
+        server = DotfilesMCPServer(repo_dir=tmp_path)
+
+        # Act
+        warnings = server._evaluate_layer_warnings(tmp_path, 1000)
+
+        # Assert
+        assert len(warnings) == 1
+        assert warnings[0]["code"] == "TEMPLATE_PACK_MISSING"

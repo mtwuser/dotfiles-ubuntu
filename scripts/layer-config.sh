@@ -47,6 +47,15 @@ Commands:
       Materialize the selected template pack plus 0..N participating layers ordered by
       precedence (0..100) into <target-project-dir>/.agents/ and generate LAYER_LINEAGE.md.
 
+  diff-project <target-project-dir>
+      Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates
+      to detect in_sync, modified_in_project, and novel_in_project files.
+
+  promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
+                       [--to-template <template-name>]
+      Promote a matured rule, skill, or asset from <target-project-dir> into the target
+      fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates).
+
 Options:
   -n, --dry-run   Preview changes in JSON output without modifying files on disk
   -h, --help      Show this help message and exit
@@ -106,6 +115,10 @@ from dotfiles_mcp.fork_configurator import (  # noqa: E402
     scaffold_template_pack,
 )
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
+from dotfiles_mcp.promotion_engine import (  # noqa: E402
+    diff_project_against_layers,
+    promote_project_asset_to_layer,
+)
 
 if subcmd == "list-templates":
     node = MCPNodeBase(repo_dir=repo_dir)
@@ -228,6 +241,52 @@ if subcmd == "apply-project":
         target_dir,
         template_ref=template_ref,
         layers_filter=layers_filter,
+        dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "diff-project":
+    if not rest or rest[0].startswith("-"):
+        print("❌ Usage: ./scripts/layer-config.sh diff-project <target-project-dir>", file=sys.stderr)
+        sys.exit(1)
+    target_dir = Path(rest[0]).resolve()
+    res = diff_project_against_layers(repo_dir, target_dir)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "promote-from-project":
+    if not rest or rest[0].startswith("-"):
+        print("❌ Usage: ./scripts/layer-config.sh promote-from-project <target-project-dir> --source <rel-path> [options]", file=sys.stderr)
+        sys.exit(1)
+    target_dir = Path(rest[0]).resolve()
+    source_rel = ""
+    target_layer = "root"
+    target_template = None
+    i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--source" and i + 1 < len(rest):
+            source_rel = rest[i + 1]
+            i += 2
+        elif arg == "--to-layer" and i + 1 < len(rest):
+            target_layer = rest[i + 1]
+            i += 2
+        elif arg == "--to-template" and i + 1 < len(rest):
+            target_template = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete promote-from-project argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    if not source_rel:
+        print("❌ Missing required --source <rel-path> for promote-from-project.", file=sys.stderr)
+        sys.exit(1)
+    res = promote_project_asset_to_layer(
+        repo_dir,
+        target_dir,
+        source_rel_path=source_rel,
+        target_layer=target_layer,
+        target_template=target_template,
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
