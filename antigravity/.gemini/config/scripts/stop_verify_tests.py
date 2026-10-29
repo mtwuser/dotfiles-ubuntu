@@ -18,11 +18,12 @@ _SUMMARY_TAIL_LINES = 3
 
 
 def find_venv(workspace_paths: list[str]) -> Path | None:
-    """Find the first venv with pytest available."""
+    """Find the first venv/.venv with pytest available."""
     for ws in workspace_paths:
-        venv_python = Path(ws) / "venv" / "bin" / "python"
-        if venv_python.exists():
-            return venv_python
+        for venv_dir in ("venv", ".venv"):
+            venv_python = Path(ws) / venv_dir / "bin" / "python"
+            if venv_python.exists():
+                return venv_python
     return None
 
 

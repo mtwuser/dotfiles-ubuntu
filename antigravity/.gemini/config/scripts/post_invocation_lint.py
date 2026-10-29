@@ -53,20 +53,22 @@ def check_rules_token_budget(
 
 
 def find_ruff(workspace_paths: list[str]) -> str | None:
-    """Find ruff: check venv in each workspace, then fall back to PATH."""
+    """Find ruff: check venv/.venv in each workspace, then fall back to PATH."""
     for ws in workspace_paths:
-        venv_ruff = Path(ws) / "venv" / "bin" / "ruff"
-        if venv_ruff.exists():
-            return str(venv_ruff)
+        for venv_dir in ("venv", ".venv"):
+            venv_ruff = Path(ws) / venv_dir / "bin" / "ruff"
+            if venv_ruff.exists():
+                return str(venv_ruff)
     return shutil.which("ruff")
 
 
 def find_venv_python(workspace_paths: list[str]) -> str | None:
-    """Find the first venv Python interpreter across workspaces."""
+    """Find the first venv/.venv Python interpreter across workspaces."""
     for ws in workspace_paths:
-        venv_py = Path(ws) / "venv" / "bin" / "python"
-        if venv_py.exists():
-            return str(venv_py)
+        for venv_dir in ("venv", ".venv"):
+            venv_py = Path(ws) / venv_dir / "bin" / "python"
+            if venv_py.exists():
+                return str(venv_py)
     return None
 
 

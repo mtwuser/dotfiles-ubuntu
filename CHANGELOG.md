@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.4] - 2026-10-29
+
+### Changed
+- **POSIX `shlex` Command-Segment Tokenizer, Subshell Unwrapping & `.venv` Discovery Parity (`antigravity/.gemini/config/scripts/*.py`, `tests/unit/test_pre_tool_guard.py`)**:
+  - Upgraded `_check_command` in [`pre_tool_guard.py`](antigravity/.gemini/config/scripts/pre_tool_guard.py) from regex-only matching to a hybrid **POSIX `shlex` command-segment tokenizer** (`shlex.shlex(..., posix=True, punctuation_chars=";&|()\\n")`) with regex fallback for command substitutions (`$(...)` / backticks) and unbalanced quotes:
+    1. Splits compound shell pipelines (`;`, `&&`, `||`, `|`, subshells, newlines) into discrete segments while respecting quoted strings (eliminating false positives on commands like `echo "git add && git commit"` or `python3 -c 'print("git push")'`).
+    2. Strips leading `KEY=VALUE` environment assignments and command wrappers (`env`, `sudo`, `command`, `nohup`, `nice`, `time`, `python -m`, `uv run`, `poetry run`) and recursively unwraps nested `sh -c` / `bash -lc` invocations.
+    3. Advances past arbitrary global `git` (`-C <dir>`, `-c <k=v>`, `--no-pager`, `--git-dir`, `--work-tree`, `--bare`) and `alembic` (`-c <cfg>`, `-n <name>`, `-x <arg>`) flags to inspect the true subcommand, and inspects `ReplacementChunks` `ReplacementContent` values in `_check_file_write` so emptying an `__init__.py` to `0 bytes` is permitted (`92 passed`, **100.00% statement and branch coverage**).
+  - Updated [`post_edit_format.py`](antigravity/.gemini/config/scripts/post_edit_format.py), [`post_invocation_lint.py`](antigravity/.gemini/config/scripts/post_invocation_lint.py), and [`stop_verify_tests.py`](antigravity/.gemini/config/scripts/stop_verify_tests.py) to discover both `venv/bin/` and `.venv/bin/` across workspaces, matching `scripts/verify-repo.sh`.
+
+---
+
 ## [1.6.3] - 2026-10-29
 
 ### Added
