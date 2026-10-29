@@ -274,7 +274,18 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │           └── antigravity-agents.sh
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
-│   ├── unit/                          ←   1:1 unit tests for all 5 Python hooks & MCP server
+│   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 10 executable MCP package modules
+│   │   │   ├── test_manifest_helpers.py
+│   │   │   ├── test_surface_weaver.py
+│   │   │   ├── test_capsule_engine.py
+│   │   │   ├── test_node_base.py
+│   │   │   ├── test_resources.py
+│   │   │   ├── test_tools_federation.py
+│   │   │   ├── test_tools_compaction.py
+│   │   │   ├── test_tools_unfold.py
+│   │   │   ├── test_tools_surface.py
+│   │   │   └── test_server.py
 │   │   ├── test_pre_tool_guard.py
 │   │   ├── test_post_edit_format.py
 │   │   ├── test_post_invocation_lint.py
@@ -283,8 +294,9 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   ├── imp/                           ←   stdio JSON-RPC 2.0 & Bash CLI contract tests
 │   │   ├── test_mcp_and_hooks_stdio.py
 │   │   └── test_cli_scripts.py
-│   └── e2e/                           ←   chained multi-node MCP federation, git subtree & full agent-turn hook tests
+│   └── e2e/                           ←   chained multi-node MCP federation, surface weaving & agent-turn hook tests
 │       ├── test_chained_mcp_federation_e2e.py
+│       ├── test_surface_and_compaction_e2e.py
 │       └── test_agent_turn_lifecycle_hooks_e2e.py
 │
 ├── bootstrap.sh                       ← restore system from manifests

@@ -104,8 +104,43 @@ def test_all_test_init_files_are_strictly_zero_bytes() -> None:
     non_empty = [str(p.relative_to(REPO_DIR)) for p in init_files if p.stat().st_size != 0]
 
     # Assert
-    assert len(init_files) == 5
+    assert len(init_files) == 6
     assert non_empty == []
+
+
+def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
+    # Arrange
+    declarative_only = {"__init__.py", "constants.py", "catalogs.py"}
+    pkg_modules = sorted(
+        p.stem
+        for p in (REPO_DIR / "scripts" / "dotfiles_mcp").glob("*.py")
+        if p.name not in declarative_only
+    )
+    all_py_files = sorted(
+        [
+            *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
+            *list((REPO_DIR / "tests").rglob("*.py")),
+        ]
+    )
+
+    # Act
+    missing_unit_tests = [
+        mod
+        for mod in pkg_modules
+        if not (REPO_DIR / "tests" / "unit" / "dotfiles_mcp" / f"test_{mod}.py").is_file()
+    ]
+    oversized_files = [
+        f"{p.relative_to(REPO_DIR)} ({len(p.read_text(encoding='utf-8').splitlines())} lines)"
+        for p in all_py_files
+        if len(p.read_text(encoding="utf-8").splitlines()) >= 465
+    ]
+
+    # Assert
+    assert len(pkg_modules) == 10
+    assert missing_unit_tests == []
+    assert oversized_files == []
 
 
 def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:

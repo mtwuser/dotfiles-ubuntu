@@ -1,0 +1,165 @@
+"""Unit tests for dotfiles_mcp/manifest_helpers.py."""
+
+from __future__ import annotations
+
+import subprocess
+from typing import TYPE_CHECKING
+
+from dotfiles_mcp import manifest_helpers
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import pytest
+
+
+class TestManifestHelpers:
+    """Verify system, manifest, frontmatter, and telemetry helper functions."""
+
+    def test_read_version_returns_default_when_missing(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Return '0.0.0' when VERSION file does not exist in target repository."""
+        # Arrange
+        monkeypatch.setattr(manifest_helpers, "REPO_DIR", tmp_path)
+
+        # Act
+        version = manifest_helpers._read_version()
+
+        # Assert
+        assert version == "0.0.0"
+
+    def test_read_os_pretty_name_parses_os_release_or_falls_back(self, tmp_path: Path) -> None:
+        """Extract PRETTY_NAME from os-release or fall back to platform system/release."""
+        # Arrange
+        fake_os_release = tmp_path / "os-release"
+        fake_os_release.write_text(
+            'NAME="Ubuntu"\nPRETTY_NAME="Ubuntu 26.04 LTS"\n', encoding="utf-8"
+        )
+
+        # Act
+        pretty = manifest_helpers._read_os_pretty_name(fake_os_release)
+        default_pretty = manifest_helpers._read_os_pretty_name()
+
+        # Assert
+        assert pretty == "Ubuntu 26.04 LTS"
+        assert len(default_pretty) > 0
+
+    def test_read_os_pretty_name_fallback_when_file_missing_or_without_key(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Fall back to platform name when os-release lacks PRETTY_NAME or is missing."""
+        # Arrange
+        fake_os_release = tmp_path / "os-release-no-pretty"
+        fake_os_release.write_text("ID=ubuntu\n", encoding="utf-8")
+        missing_os_release = tmp_path / "does-not-exist"
+
+        # Act
+        pretty_no_key = manifest_helpers._read_os_pretty_name(fake_os_release)
+        pretty_missing = manifest_helpers._read_os_pretty_name(missing_os_release)
+
+        # Assert
+        assert len(pretty_no_key) > 0
+        assert len(pretty_missing) > 0
+
+    def test_read_git_commit_handles_missing_git_and_container_marker(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Use DOTFILES_GIT_COMMIT fallback when git binary is absent and detect /.dockerenv."""
+        # Arrange
+        monkeypatch.setattr("shutil.which", lambda _name: None)
+        monkeypatch.delenv("DOTFILES_GIT_COMMIT", raising=False)
+        fake_marker = tmp_path / ".dockerenv"
+        fake_marker.write_text("", encoding="utf-8")
+
+        # Act
+        no_git_result = manifest_helpers._read_git_commit()
+        monkeypatch.setenv("DOTFILES_GIT_COMMIT", "abc1234")
+        env_fallback_result = manifest_helpers._read_git_commit()
+        in_container_true = manifest_helpers._is_running_in_container(fake_marker)
+        in_container_false = manifest_helpers._is_running_in_container(tmp_path / "missing")
+
+        # Assert
+        assert no_git_result == "unknown"
+        assert env_fallback_result == "abc1234"
+        assert in_container_true is True
+        assert in_container_false is False
+
+    def test_read_git_commit_handles_nonzero_and_oserror_with_git_present(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Return 'unknown' when git rev-parse returns non-zero or raises OSError."""
+        # Arrange
+        monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/git")
+        fail_proc = subprocess.CompletedProcess(
+            args=["git"], returncode=1, stdout="", stderr="fatal"
+        )
+        monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
+
+        # Act
+        nonzero_result = manifest_helpers._read_git_commit()
+
+        def _raise_oserror(*_args: object, **_kwargs: object) -> None:
+            raise OSError("failed to spawn")
+
+        monkeypatch.setattr("subprocess.run", _raise_oserror)
+        oserror_result = manifest_helpers._read_git_commit()
+
+        # Assert
+        assert nonzero_result == "unknown"
+        assert oserror_result == "unknown"
+
+    def test_parse_skill_frontmatter_handles_missing_frontmatter_and_fields(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Fallback to parent folder name when SKILL.md lacks frontmatter or fields."""
+        # Arrange
+        monkeypatch.setattr(manifest_helpers, "REPO_DIR", tmp_path)
+        skill_dir = tmp_path / "custom-skill"
+        skill_dir.mkdir()
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text("# No frontmatter here\n", encoding="utf-8")
+        partial_dir = tmp_path / "partial-skill"
+        partial_dir.mkdir()
+        partial_md = partial_dir / "SKILL.md"
+        partial_md.write_text("---\nother: value\n---\n# Body\n", encoding="utf-8")
+        unclosed_dir = tmp_path / "unclosed-skill"
+        unclosed_dir.mkdir()
+        unclosed_md = unclosed_dir / "SKILL.md"
+        unclosed_md.write_text("---\nname: unclosed\n", encoding="utf-8")
+
+        # Act
+        meta_none = manifest_helpers._parse_skill_frontmatter(skill_md)
+        meta_partial = manifest_helpers._parse_skill_frontmatter(partial_md)
+        meta_unclosed = manifest_helpers._parse_skill_frontmatter(unclosed_md)
+
+        # Assert
+        assert meta_none["name"] == "custom-skill"
+        assert meta_none["description"] == ""
+        assert meta_partial["name"] == "partial-skill"
+        assert meta_partial["description"] == ""
+        assert meta_unclosed["name"] == "unclosed-skill"
+
+    def test_read_non_empty_lines_and_merge_unique_strings(self, tmp_path: Path) -> None:
+        """Strip comments/blank lines and deduplicate string groups preserving order."""
+        # Arrange
+        sample = tmp_path / "packages.txt"
+        sample.write_text("# comment\n\ncurl\ngit\n", encoding="utf-8")
+
+        # Act
+        missing_lines = manifest_helpers._read_non_empty_lines(tmp_path / "missing.txt")
+        valid_lines = manifest_helpers._read_non_empty_lines(sample)
+        merged = manifest_helpers._merge_unique_strings(["a", " ", "b"], ["b", "c"])
+
+        # Assert
+        assert missing_lines == []
+        assert valid_lines == ["curl", "git"]
+        assert merged == ["a", "b", "c"]

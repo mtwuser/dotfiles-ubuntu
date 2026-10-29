@@ -197,7 +197,7 @@ fi
 MYPY_BIN="$(resolve_tool mypy)"
 if [ -n "$MYPY_BIN" ]; then
   if "$MYPY_BIN" antigravity/.gemini/config/scripts/ scripts/ tests/ >/dev/null; then
-    pass "mypy --strict passed (0 errors across 18 source & test files)"
+    pass "mypy --strict passed (0 errors across all source & test files)"
   else
     fail "mypy --strict reported type errors"
   fi
@@ -455,7 +455,7 @@ if [ "$RUNTIME_CONTAINER_MODE" = true ]; then
   pass "Runtime container mode (/.dockerenv without tests/): test suite excluded from production image via .dockerignore"
 else
   INIT_ERRORS=0
-  for init_file in scripts/dotfiles_mcp/__init__.py tests/__init__.py tests/unit/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
+  for init_file in scripts/dotfiles_mcp/__init__.py tests/__init__.py tests/unit/__init__.py tests/unit/dotfiles_mcp/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
     if [ ! -f "$init_file" ] || [ -s "$init_file" ]; then
       fail "$init_file must exist and be 0 bytes (package marker purity)"
       INIT_ERRORS=$((INIT_ERRORS + 1))

@@ -28,9 +28,11 @@ def _infer_scope_from_path(rel_path: str) -> str:
 def _glob_matches(rel_path: str, pattern: str) -> bool:
     norm_path = rel_path.strip().replace("\\", "/").lstrip("/")
     norm_pat = pattern.strip().replace("\\", "/").lstrip("/")
+    collapsed = norm_pat.replace("/**/", "/").removeprefix("**/")
     return bool(
         norm_pat == "**"
         or fnmatch.fnmatchcase(norm_path, norm_pat)
+        or fnmatch.fnmatchcase(norm_path, collapsed)
         or (norm_pat.endswith("/**") and norm_path.startswith(norm_pat[:-2]))
     )
 
