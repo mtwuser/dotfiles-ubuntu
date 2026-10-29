@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "template_id": "fastapi-hexagonal",
+  "kind": "stack-starter",
+  "target_role": "team",
+  "description": "FastAPI + Hexagonal DDD + HTMX starter rules, skills, and governance templates",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "fastapi-hexagonal-architecture",
+      "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
+      "mode": "transversal",
+      "target_globs": ["src/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
+      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Domain never imports from Infrastructure or Application",
+        "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes"
+      ],
+      "rule_files": ["templates/fastapi-hexagonal/rules/coding.md"],
+      "canonical_templates": ["templates/fastapi-hexagonal/rules/coding.md"]
+    }
+  ]
+}

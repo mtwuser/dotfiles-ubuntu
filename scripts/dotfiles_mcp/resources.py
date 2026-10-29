@@ -8,6 +8,7 @@ import socket
 from typing import Any
 
 from dotfiles_mcp.catalogs import MCP_RESOURCES_CATALOG
+from dotfiles_mcp.fork_configurator import discover_templates_catalog
 from dotfiles_mcp.manifest_helpers import (
     _is_running_in_container,
     _parse_skill_frontmatter,
@@ -105,32 +106,7 @@ class ResourcesMixin(MCPNodeBase):
             }
 
         if uri == "dotfiles://governance/templates":
-            templates_root = self.repo_dir / "templates"
-            catalog: list[dict[str, Any]] = []
-            if templates_root.is_dir():
-                for tpl_dir in sorted(templates_root.iterdir()):
-                    if not tpl_dir.is_dir():
-                        continue
-                    rules = [
-                        str(p.relative_to(self.repo_dir))
-                        for p in sorted((tpl_dir / "rules").glob("*.md"))
-                    ]
-                    skills = [
-                        _parse_skill_frontmatter(p, self.repo_dir)
-                        for p in sorted((tpl_dir / "skills").glob("*/SKILL.md"))
-                    ]
-                    gov = [
-                        str(p.relative_to(self.repo_dir))
-                        for p in sorted((tpl_dir / "governance").glob("*.md"))
-                    ]
-                    catalog.append(
-                        {
-                            "template_name": tpl_dir.name,
-                            "rules": rules,
-                            "skills": skills,
-                            "governance_files": gov,
-                        }
-                    )
+            catalog = discover_templates_catalog(self.repo_dir, self._discover_mounted_layers())
             return {
                 "uri": uri,
                 "mimeType": "application/json",

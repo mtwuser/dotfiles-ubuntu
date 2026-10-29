@@ -17,6 +17,7 @@ from dotfiles_mcp.constants import (
     MAX_LOG_FILE_BYTES,
     REPO_DIR,
 )
+from dotfiles_mcp.fork_configurator import discover_layer_template_names
 from dotfiles_mcp.manifest_helpers import _read_version
 
 
@@ -119,7 +120,7 @@ class MCPNodeBase:
             },
             "mounted_layers_dir": "layers",
             "mounted_layers": [],
-            "default_stack_templates": ["fastapi-hexagonal"],
+            "default_stack_templates": discover_layer_template_names(base_dir),
             "baseline_guardrails": [],
             "surface_bindings": [],
             "environments": {},

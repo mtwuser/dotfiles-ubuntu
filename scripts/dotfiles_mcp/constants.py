@@ -18,6 +18,21 @@ VALID_LAYER_ROLES = (
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+VALID_TEMPLATE_KINDS = (
+    "stack-starter",
+    "domain-policy-pack",
+    "department-pack",
+    "project-overlay",
+)
+ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
+    "domain-policy": 5,
+    "corporate": 10,
+    "workstation": 10,
+    "department": 30,
+    "team": 50,
+    "service-node": 60,
+    "environment-cluster": 70,
+}
 VALID_ARCHITECTURAL_PLANES = (
     "schema",
     "domain",

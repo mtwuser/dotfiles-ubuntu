@@ -24,31 +24,35 @@ Because `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over `*/` at 
 
 ---
 
-## 2. Adding a New Layer 2 Stack Starter Template (`templates/<stack>/`)
+## 2. Parameterizing a Fork & Adding Polymorphic Template Packs (`scripts/layer-config.sh` & `templates/<name>/`)
 
-To support a new technology stack or team archetype (for example, `templates/gcp-data-platform/`, `templates/nextjs-typescript/`, or `templates/rust-axum/`):
+Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/Legal Domain Policy (`domain-policy`)**, a **Department (`department`)**, or a **Tech-Stack Team (`team`)**, use `./scripts/layer-config.sh` rather than editing manifests manually:
 
-1. Create the directory structure under `templates/<stack-name>/`:
+1. **Parameterize Fork Identity (`init-fork`)**:
+   ```bash
+   ./scripts/layer-config.sh init-fork \
+     --id acme-dept-legal \
+     --role domain-policy \
+     --precedence 5 \
+     --upstream-url https://github.com/acme/dotfiles-corp.git \
+     --prune-default-templates
    ```
-   templates/<stack-name>/
-   ├── rules/
-   │   ├── coding.md           # trigger: always_on (stack architecture & coding rules)
-   │   ├── environment.md      # trigger: always_on (runtime, commands, safety)
-   │   ├── governance.md       # trigger: model_decision (work lifecycle)
-   │   └── testing.md          # trigger: model_decision (test tiers & coverage gates)
-   ├── skills/
-   │   ├── start/SKILL.md      # name: start (session startup checklist)
-   │   └── <domain>/SKILL.md   # name: <kebab-case> (< 500 lines)
-   └── governance/
-       ├── WORKTASK.md
-       ├── WORKROAD.md
-       ├── WORKVALI.md
-       ├── BACKLOG.md
-       ├── CHANGELOG.md
-       └── SESSION.md
+   - `--prune-default-templates` removes the upstream `fastapi-hexagonal` template reference and its `surface_bindings` when a fork does not target Python/FastAPI.
+2. **Scaffold a Polymorphic Template Pack (`scaffold-template`)**:
+   ```bash
+   ./scripts/layer-config.sh scaffold-template gdpr-eu \
+     --kind domain-policy-pack \
+     --register-binding
    ```
-2. **Verify `SKILL.md` Frontmatter**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
-3. **Keep `always_on` Rules Compact**: Remember that a project's `always_on` rules share the 20,000-token `defaultRulesBudget` with `~/.gemini/config/AGENTS.md`. Use `trigger: model_decision` for testing, governance, and documentation rules.
+   This generates `templates/<name>/template.json` (`kind`: `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
+3. **Materialize a Fork into a Target Application Repository (`apply-project` — Without MCP / Static Mode)**:
+   ```bash
+   ./scripts/layer-config.sh apply-project /path/to/project \
+     --template fastapi-hexagonal \
+     --layers all
+   ```
+   Copies the chosen template pack plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and writes `.agents/LAYER_LINEAGE.md`.
+4. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 
 ---
 

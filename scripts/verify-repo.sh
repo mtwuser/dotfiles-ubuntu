@@ -430,10 +430,10 @@ else
   fail "system/mcp-layer.json is missing or invalid"
 fi
 
-if ./scripts/layer-subtree.sh list >/dev/null && ./scripts/layer-subtree.sh pull-all >/dev/null; then
-  pass "scripts/layer-subtree.sh list & pull-all executed cleanly"
+if ./scripts/layer-subtree.sh list >/dev/null && ./scripts/layer-subtree.sh pull-all >/dev/null && ./scripts/layer-config.sh list-templates >/dev/null; then
+  pass "scripts/layer-subtree.sh (list, pull-all) & scripts/layer-config.sh (list-templates) executed cleanly"
 else
-  fail "scripts/layer-subtree.sh list or pull-all failed"
+  fail "scripts/layer-subtree.sh or scripts/layer-config.sh failed"
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then

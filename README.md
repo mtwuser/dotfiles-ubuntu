@@ -241,14 +241,15 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   ├── PULL_REQUEST_TEMPLATE.md       ← Pull Request verification checklist
 │   └── workflows/ci.yml               ← GitHub Actions CI verification workflow
 │
-├── templates/                         ← NOT stow — project starter templates
-│   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (rules, skills, governance)
+├── templates/                         ← NOT stow — polymorphic template packs (stack-starter, domain-policy-pack, department-pack)
+│   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (template.json, rules, skills, governance)
 │
-├── scripts/                           ← NOT stow — utility, MCP, subtree & CI verification scripts
+├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server package (12 modules, < 425 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork Configurator package (13 modules, < 425 lines each)
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
+│   ├── layer-config.sh                ←   Fork parameterization (init-fork), template scaffolding & project projection (apply-project)
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
 │   └── verify-repo.sh                 ←   Deterministic CI & pre-commit verification suite
 │
@@ -275,8 +276,9 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
 │   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
-│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 10 executable MCP package modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 11 executable MCP package modules
 │   │   │   ├── test_manifest_helpers.py
+│   │   │   ├── test_fork_configurator.py
 │   │   │   ├── test_surface_weaver.py
 │   │   │   ├── test_capsule_engine.py
 │   │   │   ├── test_node_base.py
@@ -387,19 +389,31 @@ Activated automatically by the agent when matching tasks arise (or explicitly on
 | `testing` | Writing, fixing, or auditing test suites | Enforces AAA (`Arrange-Act-Assert`) structure, hexagonal mock boundaries, naming conventions, and branch coverage audits |
 | `validation` | Manual UI / web QA sessions | Drives structured human-agent manual verification checklists tracked in `WORKVALI.md` |
 
-### Layer 2: Templates (Reusable)
+### Layer 2: Polymorphic Templates & Fork Parameterization (`templates/<name>/` & `scripts/layer-config.sh`)
 
-Stack-specific configurations that can be copied into new projects. NOT symlinked — copied once, then customized.
+Templates under `templates/<name>/` are polymorphic (discovered dynamically across both `Root` and mounted `layers/*/templates/*`, with zero hardcoded coupling to `fastapi-hexagonal`) and support 4 archetypes via `template.json`:
+- **`stack-starter`**: Full tech-stack starter (`rules/`, `skills/`, `governance/`, e.g., `fastapi-hexagonal`, `nextjs-web`, `rust-axum`).
+- **`domain-policy-pack`**: Authoritative legal, security, or financial domain rules and canonical assets (`rules/`, `skills/`, `assets/`, `mode: "authoritative"`).
+- **`department-pack`**: Transversal departmental guidelines, design tokens, or UX/SEO checklists (`rules/`, `skills/`, `assets/`, `mode: "transversal"`).
+- **`project-overlay`**: Project- or vertical-specific rules and assets (`rules/`, `assets/`, `governance/`).
 
 ```bash
-# Copy template rules & skills to your new project
-mkdir -p <your-project>/.agents
-cp -r ~/dotfiles-ubuntu/templates/fastapi-hexagonal/{rules,skills} <your-project>/.agents/
+# 1. Parameterize a new fork (Corporate, Domain-Policy, Department, or Team):
+./scripts/layer-config.sh init-fork \
+  --id acme-dept-design \
+  --role department \
+  --precedence 30 \
+  --prune-default-templates
 
-# Then customize:
-# 1. Update rules/environment.md with your project paths
-# 2. Adjust rules/coding.md for your stack conventions
-# 3. Modify rules/testing.md for your test framework
+# 2. Scaffold a new template pack in this fork (and optionally register its surface_binding):
+./scripts/layer-config.sh scaffold-template brand-design-system \
+  --kind department-pack \
+  --register-binding
+
+# 3. Project template + 0..N mounted layers into a target project (Without MCP static materialization):
+./scripts/layer-config.sh apply-project <your-project> \
+  --template fastapi-hexagonal \
+  --layers all
 ```
 
 ### Layer 3: Custom (Project-Specific)

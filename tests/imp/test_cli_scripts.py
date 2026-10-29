@@ -14,6 +14,7 @@ CLI_SCRIPTS = [
     REPO_DIR / "audit.sh",
     REPO_DIR / "scripts" / "verify-repo.sh",
     REPO_DIR / "scripts" / "layer-subtree.sh",
+    REPO_DIR / "scripts" / "layer-config.sh",
 ]
 
 
@@ -138,9 +139,71 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
     ]
 
     # Assert
-    assert len(pkg_modules) == 10
+    assert len(pkg_modules) == 11
     assert missing_unit_tests == []
     assert oversized_files == []
+
+
+def test_layer_config_script_supports_list_init_scaffold_and_apply(tmp_path: Path) -> None:
+    # Arrange
+    script = str(REPO_DIR / "scripts" / "layer-config.sh")
+
+    # Act
+    list_proc = subprocess.run(
+        [script, "list-templates"], cwd=REPO_DIR, capture_output=True, text=True
+    )
+    init_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "init-fork",
+            "--id",
+            "acme-dept-design",
+            "--role",
+            "department",
+            "--prune-default-templates",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    scaffold_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "scaffold-template",
+            "brand-tokens",
+            "--kind",
+            "department-pack",
+            "--register-binding",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    apply_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "apply-project",
+            str(tmp_path / "target_proj"),
+            "--template",
+            "fastapi-hexagonal",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+
+    # Assert
+    assert list_proc.returncode == 0
+    assert "fastapi-hexagonal" in list_proc.stdout
+    assert init_proc.returncode == 0
+    assert '"precedence": 30' in init_proc.stdout
+    assert scaffold_proc.returncode == 0
+    assert '"template_id": "brand-tokens"' in scaffold_proc.stdout
+    assert apply_proc.returncode == 0
+    assert '"applied_template": "fastapi-hexagonal"' in apply_proc.stdout
 
 
 def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:
