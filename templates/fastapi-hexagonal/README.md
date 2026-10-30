@@ -5,6 +5,12 @@ Project starter template for **FastAPI + Hexagonal Architecture (DDD) + HTMX/Isl
 ## Usage
 
 ```bash
+# Recommended (Scaffolding CLI — projects template + 0..N mounted layers + LAYER_LINEAGE.md):
+~/dotfiles-ubuntu/scripts/layer-config.sh apply-project <your-project> \
+  --template fastapi-hexagonal \
+  --layers all
+
+# Manual alternative:
 # 1. Copy template rules, skills & session template to your project's .agents/ directory
 mkdir -p <your-project>/.agents
 cp -r ~/dotfiles-ubuntu/templates/fastapi-hexagonal/{rules,skills} <your-project>/.agents/

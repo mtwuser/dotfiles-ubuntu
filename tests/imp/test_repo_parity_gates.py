@@ -164,3 +164,45 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     ):
         assert sub in readme_md
         assert sub in ext_guide
+
+
+def test_single_language_english_purity_across_repository_files() -> None:
+    # Arrange
+    spanish_char_re = re.compile(
+        r"[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc\u00c1\u00c9\u00cd\u00d3\u00da\u00d1\u00dc\u00bf\u00a1]"
+    )
+    spanish_phrase_re = re.compile(
+        r"\b(\x66ichero|\x66icheros|\x79a que estamos|\x73iempre enfoque limpio)\b",
+        re.IGNORECASE,
+    )
+    targets = sorted(
+        [
+            REPO_DIR / "README.md",
+            REPO_DIR / "CONTRIBUTING.md",
+            REPO_DIR / "SECURITY.md",
+            REPO_DIR / "ACCESSIBILITY.md",
+            REPO_DIR / "CODE_OF_CONDUCT.md",
+            REPO_DIR / "CHANGELOG.md",
+            *list((REPO_DIR / "antigravity").rglob("*.md")),
+            *list((REPO_DIR / "antigravity").rglob("*.py")),
+            *list((REPO_DIR / "docs").rglob("*.md")),
+            *list((REPO_DIR / "templates").rglob("*.md")),
+            *list((REPO_DIR / "scripts").rglob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.sh")),
+            *list((REPO_DIR / "system" / "external").rglob("*.sh")),
+            *list((REPO_DIR / "tests").rglob("*.py")),
+        ]
+    )
+
+    # Act
+    violations = [
+        f"{p.relative_to(REPO_DIR)}:{idx}"
+        for p in targets
+        if p.is_file()
+        for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+        if spanish_char_re.search(line) or spanish_phrase_re.search(line)
+    ]
+
+    # Assert
+    assert len(targets) >= 80
+    assert violations == []

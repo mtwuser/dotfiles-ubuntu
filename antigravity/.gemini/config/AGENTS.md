@@ -14,46 +14,46 @@
 This file governs the fundamental mindset and operating rigor of the AI Agent. These are absolute meta-cognitive mandates that must be verified mentally before writing any code or proposing solutions.
 
 #### 1. Reusability First (Consistency)
-> *"Respetar o ser consistente en el código, reutilizar al máximo"*
+> *"Preserve codebase consistency and maximize reuse before introducing new abstractions."*
 
 **Mandate:** Before proposing a new implementation, function, UI component, or style, explicitly scan the workspace (`grep` or semantic search) for existing patterns. Do not build custom wrappers or components if a generic existing asset already fits.
 - **Utility function gate:** Before writing ANY helper function (parsing, detection, formatting), search the project for functions with similar names or signatures. If found → import and reuse. If the existing version lives in the wrong module → move it to a shared location first, then import.
 
 #### 2. Professional Robustness (No Shortcuts)
-> *"Valorar bien el mejor enfoque de implementación posible, robusto, profesional"*
+> *"Always choose the most robust, scalable, and professional implementation approach."*
 
 **Mandate:** Reject the "easiest" fallback if a scalable, dynamic implementation is attainable. Code must be parameterized, strongly typed, and resilient to scale. Never sacrifice architectural integrity for a fast patch.
 - **File Size & Pre-Growth Modularity Gate (`< 465` lines)**: Keep every source, test, and navigable `docs/**/*.md` file strictly `< 465` lines (target $\le 400$). If a new feature will push any file past `465` lines, proactively propose extracting cohesive modules, `1:1` test files, and modular `docs/architecture/` specs before or within the plan (mandatory structural hygiene, exempt from `§9.4` scope-creep restrictions).
 
 #### 3. Strict Linter & Typing Integrity
-> *"Sin errores de linters"*
+> *"Zero compiler, type-checker, or linter errors."*
 
 **Mandate:** No task is complete if compilations fail or linters complain. Respect strict typing (`unknown`/`Protocol` over `Any`). Never leave untraced typing issues, and resolve linter warnings during modifications.
 
 #### 4. Absolute Test Inclusion
-> *"Que contenga sus tests asociados y respetando las estrategias de testing"*
+> *"Ship every code change with its associated tests while strictly honoring the testing strategy."*
 
 **Mandate:** Code logic and tests are a single atomic entity. Never propose a code change without simultaneously addressing its test files. Unconditionally enforce the 100% coverage gate and native AAA pattern.
 
 #### 5. Documentation Hierarchy & Discrepancy Scans
-> *"Repasar la documentación técnica... detectar discrepancias"*
+> *"Review technical specifications first and proactively detect discrepancies."*
 
 **Mandate:** Approach `docs/` and architectural feature files as supreme law. When planning any component change, parse the relevant specs first. If the codebase has drifted or contradicts documentation, flag it as a P0 discrepancy and unify them immediately.
 - **1:1:1 Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability**: Executable modules must declare a `Specification: docs/architecture/<spec>.md` pointer in their module docstring, and navigable architecture specs (`< 465` lines) must maintain a `1:1:1` traceability table linking source modules, unit tests, and specifications.
 - **Generation Rule:** When generating ANY template, scaffold, boilerplate, or canonical example, derive the output strictly from the corresponding specification in `docs/` or `ARCHITECTURE.md` — never from context memory: (1) Locate spec → (2) Extract layout/imports/conventions → (3) Instantiate spec → (4) Cross-verify diff.
 
 #### 6. Continuous Consolidation
-> *"Consolidar y completar documentación a lo largo del tiempo"*
+> *"Consolidate and complete documentation continuously over time."*
 
 **Mandate:** Treat documentation as code. When finishing a roadmap phase, prune or archive completed roadmap files and enrich affected architecture/feature guides immediately.
 
 #### 7. The Zero-Backward Law (Clean Cutovers)
-> *"Nunca dejar en refactorizaciones backward o mantener incompatibilidades, siempre enfoque limpio"*
+> *"Never leave backward-compatibility shims or legacy fallbacks during refactors — always execute a clean cutover."*
 
 **Mandate:** When refactoring or upgrading code, schemas, or declarative manifests (`schema_version`, JSON/YAML/TOML contracts), execute full surgical replacements. Never leave behind legacy polyfills, dummy aliases (`OldType = NewType`), re-export shims, `if legacy:` branches, multi-version schema fallbacks, or `@deprecated` markers. Hard-cut the implementation and all repository manifests/fixtures to the single canonical version universally across all callers.
 
 #### 8. Mandatory Pre-Commit Hygiene Scan (Zero-Residue Enforcement)
-> *"No dar por terminado un trabajo dejando basura de scripts o side-effects rotos por miopía de foco. Obligación de escanear el entorno."*
+> *"Never finish a task leaving behind script residue or broken side effects from tunnel vision. Always scan the environment."*
 
 **Mandate:** BEFORE deciding an implementation is finished or delivering `git commit` blocks, pause and execute a holistic environment scan:
 1. **Pesticide Scan**: Check for and delete any temporary scratchpad files generated during planning/execution.
@@ -63,16 +63,16 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 5. **Multi-Repo Governance Parity**: When a task modifies multiple repositories (e.g., framework + validation verticals), verify `CHANGELOG.md`, `README.md` tree sync (§10), and the full test/lint battery in **every** modified repository individually.
 
 #### 9. Exhaustive Implementation Planning (Anti-Myopia)
-> *"Correr menos pero mejor. Pasos cortos, planes expansivos y transversales."*
+> *"Move deliberately rather than rushing: short verified steps backed by comprehensive cross-cutting plans."*
 
 **Mandate:** Never sacrifice structural sanity for speed:
 1. **Additive Plans**: `implementation_plan.md` must map transversal side-effects, dependencies, and legacy orphans across all affected files.
 2. **No Phase Compression**: Never skip or compress a phase of an approved plan to "go faster".
 3. **Execution Block**: Never execute modifying tools during Research and Propose; wait for explicit user approval.
-4. **Zero Scope Creep ("Ya que estamos" is forbidden)**: Implement ONLY what the approved plan specifies. Capture adjacent observations in `BACKLOG.md` — never implement them in the current iteration.
+4. **Zero Scope Creep ("While we're at it" edits are forbidden)**: Implement ONLY what the approved plan specifies. Capture adjacent observations in `BACKLOG.md` — never implement them in the current iteration.
 
 #### 10. Documentation Coherence After Structural Changes
-> *"Si mueves, renombras o eliminas un fichero, la documentación debe reflejar la realidad — no tu recuerdo de ella."*
+> *"When you move, rename, or delete a file, documentation must reflect current reality — not your memory of it."*
 
 **Mandate:** When ANY file or directory is moved, renamed, created, or deleted, verify documentation coherence BEFORE completion:
 1. **README Tree Sync**: Compare any README directory tree against `find` / `ls`.
@@ -81,12 +81,12 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 4. **No Orphaned Ghosts**: Zero references to deleted or moved locations may remain.
 
 #### 11. Scaffolding-First Mandate (CLI over Manual)
-> *"El framework tiene herramientas para eso — úsalas."*
+> *"The project provides dedicated CLI scaffolding tools — use them."*
 
-**Mandate:** Before manually creating project files, configuration, or boilerplate, check if the project provides CLI scaffolding tools (`osa init`, `osa context`, `osa scaffold`, `osa db`, etc.). Use the CLI tool exclusively unless no CLI covers the need, the CLI is broken (document in `BACKLOG.md`), or the user explicitly requests manual creation.
+**Mandate:** Before manually creating project files, configuration, or boilerplate, check if the project provides CLI scaffolding tools (`osa init`, `osa context`, `osa scaffold`, `osa db`, `layer-config.sh`, etc.). Use the CLI tool exclusively unless no CLI covers the need, the CLI is broken (document in `BACKLOG.md`), or the user explicitly requests manual creation.
 
 #### 12. Generated Output Verification (Anti-Ghost Dependencies)
-> *"Si generas código, verifica que lo generado funciona con lo instalado."*
+> *"Whenever you generate code, verify that the generated output works with what is installed."*
 
 **Mandate:** After using ANY code generation or scaffolding tool, verify the generated output:
 1. **Import verification**: All `import` statements reference packages present in project dependencies.
@@ -98,7 +98,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 If generated output contains errors, fix the generator/template at the SOURCE, not just the generated file.
 
 #### 13. Model Delegation Discipline (Flash vs Inherit & 4-Channel Digest)
-> *"No gastes un modelo pesado en una tarea mecánica."*
+> *"Never spend a heavy model on a mechanical task."*
 
 **Mandate:** When spawning subagents via `invoke_subagent`, select the model tier deliberately:
 - `flash`: Mechanical, deterministic, pattern-matching tasks (file scanning, grep sweeps, coverage runs, inventory extraction, 1:1 file mapping checks). Respect `// delegate: flash` skill hints.
@@ -112,7 +112,7 @@ If generated output contains errors, fix the generator/template at the SOURCE, n
 4. **Actionable Delta**: Exact files and line ranges to create or modify.
 
 #### 14. Language Purity & Pre-Edit Scope Gate (Universal Consistency)
-> *"Que la interacción sea consistente siempre y no solo para abordar un roadmap: sin mezclar idiomas en ficheros técnicos y sin cambios colaterales no anunciados."*
+> *"Keep every interaction consistent, not only roadmap tasks: zero language mixing in technical files and zero unannounced collateral edits."*
 
 **Mandate:** Maintain strict interaction and language consistency across ALL tasks:
 1. **Single-Language Purity per File (Zero Language Mixing)**: While user communication is in Spanish, all English-first artifacts (source code, docstrings, CLI messages, tests, `Makefile`, `.agents/rules/`, templates, governance files, and English documentation) MUST be written in 100% pure technical English. Never mix conversational Spanish nicknames or idioms inside English technical files.
@@ -120,7 +120,7 @@ If generated output contains errors, fix the generator/template at the SOURCE, n
 3. **Collateral Freeze**: If a test runner, linter, or diagnostic tool reveals pre-existing issues in untouched files outside the agreed task scope, NEVER modify those collateral files automatically in the same turn. Report them to the user first or capture them in `BACKLOG.md`.
 
 #### 15. Pre-Debug Diagnostic Sweep & Zero-Shot Habit Crystallization
-> *"Antes de depurar a ciegas un fallo de runtime, imports o tests, ejecuta el barrido determinista del proyecto."*
+> *"Before blind-debugging a runtime, import, or test failure, run the project's deterministic diagnostic sweep."*
 
 **Mandate:** Before deep-debugging runtime errors (e.g., 422s, DI resolution failures), import anomalies, or test discrepancies:
 1. **Run the project's diagnostic command first** (e.g., `make doctor` / `osa doctor --clean-cache` or equivalent architecture/lint checker) to deterministically sweep architectural boundaries, runtime import traps, test structure, and stale bytecode caches.

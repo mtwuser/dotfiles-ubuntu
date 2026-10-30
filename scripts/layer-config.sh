@@ -7,6 +7,11 @@
 #   init-fork --id <id> [--role <role>] [...]     Parameterize system/mcp-layer.json (v1.2) for a fork
 #   scaffold-template <name> [--kind <kind>]      Create a polymorphic template pack in templates/<name>/
 #   apply-project <target-dir> [--template <ref>] Materialize template + 0..N layer rules into <target-dir>/.agents/
+#   diff-project <target-dir>                     Compare SHA-256 digests between project and fork layers/templates
+#   promote-from-project <target-dir> --source .. Promote matured project rule/skill/asset into fork layer/template
+#   spawn-ephemeral --role <bot-role> [...]       Materialize a zero-copy TTL-bounded ephemeral Department Bot fork
+#   inspect-ephemeral [--id <fork-id>]            Inspect active ephemeral forks (after automatic TTL reaping)
+#   reap-ephemeral --id <fork-id|all>             Destroy a specific ephemeral fork or all active ephemeral forks
 #
 # Flags:
 #   -n, --dry-run   Preview operations without writing files
@@ -100,7 +105,7 @@ done
 
 SUBCOMMAND="${1:-}"
 if [ -z "$SUBCOMMAND" ]; then
-  echo "❌ Missing subcommand (expected: list-templates, init-fork, scaffold-template, or apply-project)." >&2
+  echo "❌ Missing subcommand (expected: list-templates, init-fork, scaffold-template, apply-project, diff-project, promote-from-project, spawn-ephemeral, inspect-ephemeral, or reap-ephemeral)." >&2
   usage >&2
   exit 1
 fi

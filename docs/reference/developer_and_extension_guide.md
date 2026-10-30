@@ -47,7 +47,7 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
    This generates `templates/<name>/template.json` (`kind`: `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
 3. **Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)**:
    ```bash
-   ./scripts/layer-config.sh list-templates [--json]
+   ./scripts/layer-config.sh list-templates
    ./scripts/layer-config.sh apply-project /path/to/project \
      --template fastapi-hexagonal \
      --layers all
@@ -55,9 +55,9 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
    Copies the chosen template pack (`rules/`, `skills/`, `governance/`, `assets/`) plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and writes `.agents/LAYER_LINEAGE.md` (with merged effective `surface_bindings` counts).
 4. **Diff & Promote Matured Project Patterns Upstream (`diff-project` & `promote-from-project`)**:
    ```bash
-   ./scripts/layer-config.sh diff-project /path/to/project [--json]
+   ./scripts/layer-config.sh diff-project /path/to/project
    ./scripts/layer-config.sh promote-from-project /path/to/project \
-     --asset .agents/rules/security-audit.md \
+     --source .agents/rules/security-audit.md \
      --to-layer dept-security
    ```
    Compares SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promotes rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates.
@@ -110,7 +110,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
    - Use **only** the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`). Never import third-party packages that would require `pip install`.
    - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
 2. **Customizing Layer Identity, Mounted Subtrees & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
-   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.2"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `team`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings`, `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
+   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.2"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `ephemeral-bot`, `team`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings` (including `ephemeral_fork_policy`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
    - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
 3. **Run the Deterministic MCP, Subtree & Container Self-Tests**:
    ```bash
@@ -139,13 +139,15 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_post_invocation_lint.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_invocation_lint.py`
   - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
-  - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all executable modules in `scripts/dotfiles_mcp/` (`capsule_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_federation`, `tools_surface`, `tools_unfold`).
+  - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all 14 executable modules in `scripts/dotfiles_mcp/` (`capsule_engine`, `ephemeral_fork_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_ephemeral`, `tools_federation`, `tools_surface`, `tools_unfold`).
 - **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0, Bash CLI & Parity Gate Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh`, `layer-config.sh`, and `bash -n` syntax across all `.sh` scripts and external package recipes.
-  - `test_repo_parity_gates.py`: Verifies `0-byte` `__init__.py` purity, `1:1:1` bidirectional `Source <-> Unit Test <-> Specification` traceability, `< 465`-line file size discipline across all `.py` and `docs/**/*.md` files, and hook/MCP-to-doc parity.
-- **`tests/e2e/` (End-to-End Chained Multi-Node MCP Federation, `git subtree` & Full Agent Turn Simulation)**:
+  - `test_repo_parity_gates.py`: Verifies `0-byte` `__init__.py` purity, `1:1:1` bidirectional `Source <-> Unit Test <-> Specification` traceability, `< 465`-line file size discipline across all `.py` and `docs/**/*.md` files, single-language English purity, and hook/MCP-to-doc parity.
+- **`tests/e2e/` (End-to-End Chained Multi-Node MCP Federation, Surface Weaving, Ephemeral Bots & Full Agent Turn Simulation)**:
   - `test_chained_mcp_federation_e2e.py`: Spawns chained `stdio` MCP server instances (`Corporate/Team Hub MCP` with mounted `layers/*` $\rightarrow$ `Downstream Service Node MCP` in `pre` environment) to validate end-to-end discovery, `effective_guardrails` inheritance, cross-node package manifest comparison, JSONL diagnostics (`dotfiles://mcp/diagnostics`), and real `git subtree add` + `pull-all` + live MCP rule discovery across local Git repositories.
+  - `test_surface_and_compaction_e2e.py`: Validates `0..N` multi-layer `resolve_surface_governance` projection (*Lex Superior* + *Lex Specialis*) and hop-by-hop `rcap1` (`L0 → L1 → L2 → L3`) capsule unfolding.
+  - `test_ephemeral_forks_e2e.py`: Validates rule-triggered `ephemeral_delegation_advisories`, `orchestrate_ephemeral_fork` (`one_shot` evaluation, cross-project `.agents/rules/*.md` bridging, `rcap1` `L3` capsule unfolding with `session_resonance_key`, and TTL reaping), and `layer-config.sh` ephemeral CLI subcommands.
   - `test_agent_turn_lifecycle_hooks_e2e.py`: Executes a full 4-hook agent turn (`PreToolUse` $\rightarrow$ `PostToolUse` $\rightarrow$ `PostInvocation` $\rightarrow$ `Stop`) against a real temporary Git workspace.
 - **Mandatory Quality Gates**:
   - Every test function must contain explicit `# Arrange`, `# Act`, and `# Assert` comments.

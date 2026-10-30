@@ -1,5 +1,7 @@
 .PHONY: help venv install install-dev install-runtime test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
+export PYTHONDONTWRITEBYTECODE := 1
+
 PYTHON ?= python3
 VENV_DIR ?= venv
 VENV_BIN := $(VENV_DIR)/bin
@@ -25,7 +27,7 @@ help:
 	@echo "  make docker-build     Build the hermetic Ubuntu 26.04 MCP container image ($(DOCKER_IMAGE):$(DOCKER_TAG))"
 	@echo "  make docker-self-test Run in-container MCP self-test (--read-only --network=none)"
 	@echo "  make docker-mcp       Start interactive stdio MCP server inside hardened container"
-	@echo "  make clean            Remove caches, coverage artifacts, and ./venv"
+	@echo "  make clean            Remove caches, coverage artifacts, and runtime logs"
 
 $(VENV_BIN)/pytest:
 	$(PYTHON) -m venv $(VENV_DIR)
@@ -88,4 +90,4 @@ docker-mcp:
 
 clean:
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov logs
-	find . -type d -name "__pycache__" -exec rm -rf {} +
+	find . -path "./$(VENV_DIR)" -prune -o -type d -name "__pycache__" -prune -exec rm -rf {} +

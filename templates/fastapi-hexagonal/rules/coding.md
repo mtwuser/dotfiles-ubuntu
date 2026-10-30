@@ -186,11 +186,11 @@ from src.orders.domain.ports import OrderRepository
 ### Technical Standards
 - **Strong typing**: Use `mypy --strict`. Prefer `Protocol` over ABC. No `Any`.
 - **Pydantic models**: Domain entities are Pydantic `BaseModel`. Infrastructure ORM is SQLAlchemy.
-- **Max file size**: ~400 lines per file. Split when exceeded.
+- **Max file size**: Strictly `< 465` lines per source, test, and `docs/**/*.md` file (target `<= 400` lines). Split when exceeded.
 - **Naming**: Descriptive names. No single-letter variables in business logic. Classes as nouns, methods as verbs.
 - **Constants**: Centralized in `constants.py` per context. Search before creating.
 - **StrEnum**: All enumerations use `StrEnum` for serialization safety.
-- **Tests**: 1:1 logic file mapping. 100% branch coverage gate. AAA pattern. Unit tests have zero DB access.
+- **Tests & Specs (`1:1:1`)**: `1:1:1` mapping (`Source <-> Unit Test <-> Specification: docs/architecture/<spec>.md`). 100% branch coverage gate. AAA pattern. Unit tests have zero DB access.
 
 ### CRITICAL: FastAPI + `from __future__ import annotations` Pitfall
 

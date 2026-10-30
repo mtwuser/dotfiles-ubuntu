@@ -15,6 +15,7 @@
 
 set -euo pipefail
 export LC_ALL=C
+export PYTHONDONTWRITEBYTECODE=1
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -422,9 +423,9 @@ else
   fail "hooks.json or hook-to-doc parity validation failed"
 fi
 
-# 5. AGENTS.md Token Budget Gate
+# 5. AGENTS.md Token Budget & Single-Language Purity Gate
 echo ""
-echo "[5/8] Antigravity 2.0 Rules Token Budget Gate"
+echo "[5/8] Antigravity 2.0 Rules Token Budget & Language Purity Gate"
 AGENTS_FILE="antigravity/.gemini/config/AGENTS.md"
 AGENTS_BYTES=$(wc -c < "$AGENTS_FILE")
 MAX_AGENTS_BYTES=18000
@@ -432,6 +433,54 @@ if [ "$AGENTS_BYTES" -le "$MAX_AGENTS_BYTES" ]; then
   pass "$AGENTS_FILE size is ${AGENTS_BYTES} bytes (<= ${MAX_AGENTS_BYTES} bytes budget cap)"
 else
   fail "$AGENTS_FILE size is ${AGENTS_BYTES} bytes (exceeds ${MAX_AGENTS_BYTES} bytes budget cap)"
+fi
+
+if python3 -B - <<'PYEOF'
+from pathlib import Path
+import re
+import sys
+
+repo = Path(".").resolve()
+spanish_char_re = re.compile(r"[\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00fc\u00c1\u00c9\u00cd\u00d3\u00da\u00d1\u00dc\u00bf\u00a1]")
+spanish_phrase_re = re.compile(r"\b(\x66ichero|\x66icheros|\x79a que estamos|\x73iempre enfoque limpio)\b", re.IGNORECASE)
+
+targets = sorted(
+    [
+        repo / "README.md",
+        repo / "CONTRIBUTING.md",
+        repo / "SECURITY.md",
+        repo / "ACCESSIBILITY.md",
+        repo / "CODE_OF_CONDUCT.md",
+        repo / "CHANGELOG.md",
+        *list((repo / "antigravity").rglob("*.md")),
+        *list((repo / "antigravity").rglob("*.py")),
+        *list((repo / "docs").rglob("*.md")),
+        *list((repo / "templates").rglob("*.md")),
+        *list((repo / "scripts").rglob("*.py")),
+        *list((repo / "scripts").glob("*.sh")),
+        *list((repo / "system/external").rglob("*.sh")),
+        *list((repo / "tests").rglob("*.py")),
+    ]
+)
+
+violations: list[str] = []
+for p in targets:
+    if not p.is_file():
+        continue
+    for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+        if spanish_char_re.search(line) or spanish_phrase_re.search(line):
+            violations.append(f"{p.relative_to(repo)}:{idx}: {line.strip()[:100]}")
+
+if violations:
+    for v in violations:
+        print(f"  Language purity violation: {v}", file=sys.stderr)
+    sys.exit(1)
+print(f"  Verified 100% pure technical English across {len(targets)} repository files")
+PYEOF
+then
+  pass "Single-language English purity verified across AGENTS.md, skills, templates, docs, scripts, and tests"
+else
+  fail "Spanish characters or phrases detected in English technical files (violates AGENTS.md §14.1)"
 fi
 
 # 6. SKILL.md Frontmatter & Progressive Disclosure Gate
@@ -511,7 +560,7 @@ else
 fi
 
 if ./scripts/dotfiles_mcp_server.py --self-test >/dev/null; then
-  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 8 tools, 3 prompts, surface projection, rcap1 L0->L3 compaction, path-containment gate)"
+  pass "scripts/dotfiles_mcp_server.py --self-test passed (9 resources, 9 tools, 3 prompts, surface projection, ephemeral forks, rcap1 L0->L3 compaction, path-containment gate)"
 else
   fail "scripts/dotfiles_mcp_server.py --self-test failed"
 fi

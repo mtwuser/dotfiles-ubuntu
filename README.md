@@ -405,7 +405,7 @@ Activated automatically by the agent when matching tasks arise (or explicitly on
 |-------|----------------|---------|
 | `architecture-review` | Designing architecture or reviewing specifications | Performs intersection audits, unifies orthogonal classifications, and enforces cross-document naming coherence |
 | `governance` | Promoting work between lifecycle tiers | Enforces one-way work flow (`roadmaps/ → WORKROAD.md → WORKTASK.md → CHANGELOG.md`), cross-task analysis, and clean-room knowledge extraction |
-| `refactoring` | Splitting large files (>400 lines) or "God Components" | Guides safe, incremental extraction of cohesive modules while preserving public contracts and test coverage |
+| `refactoring` | Splitting large files (`< 465` lines cap, `<= 400` target) or "God Components" | Guides safe, incremental extraction of cohesive modules while preserving public contracts and `1:1:1` test/spec parity |
 | `testing` | Writing, fixing, or auditing test suites | Enforces AAA (`Arrange-Act-Assert`) structure, hexagonal mock boundaries, naming conventions, and branch coverage audits |
 | `validation` | Manual UI / web QA sessions | Drives structured human-agent manual verification checklists tracked in `WORKVALI.md` |
 
@@ -933,6 +933,6 @@ make docker-build && make docker-self-test
   4. `hooks.json` schema, script target resolution, and deterministic **hook-to-documentation contract parity** (`pre_tool_guard.py` & `post_invocation_lint.py` vs. `AGENTS.md`, `SECURITY.md`, and `docs/architecture/02..03`).
   5. `AGENTS.md` token budget (`< 18 KB`).
   6. `SKILL.md` YAML frontmatter (`kebab-case`) and line budget (`< 500` lines).
-  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 8 tools, 3 prompts, `resolve_surface_governance` `0..N` layer surface projection, and `rcap1` `L0 → L1 → L2 → L3` resonant compaction; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.2; Ubuntu 26.04 non-root `Dockerfile`).
+  7. Contextual MCP Server, Subtree Orchestrator & Docker Contract (`./scripts/dotfiles_mcp_server.py --self-test` across 9 resources, 9 tools, 3 prompts, `resolve_surface_governance` `0..N` layer surface projection, `orchestrate_ephemeral_fork` Department Bot orchestration, and `rcap1` `L0 → L1 → L2 → L3` resonant compaction; `./scripts/layer-subtree.sh list` & `pull-all`; `system/mcp-layer.json` v1.2; Ubuntu 26.04 non-root `Dockerfile`).
   8. Automated test suite (`tests/unit/` + `tests/imp/` + `tests/e2e/`), `0-byte` `tests/**/__init__.py` purity, and **100.00% statement and branch coverage**.
 - **Contributing**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md) for guidelines on adding external package recipes, skills, lifecycle hooks, or tests.
