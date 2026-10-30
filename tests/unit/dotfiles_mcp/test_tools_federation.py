@@ -24,10 +24,16 @@ class TestFederationToolsMixin:
         """Emit NODE_DRIFT_DETECTED warning and strip ANSI codes when drift scripts fail."""
         # Arrange
         server = DotfilesMCPServer()
+        recorded_cmds: list[list[str]] = []
         fail_proc = subprocess.CompletedProcess(
             args=["verify"], returncode=1, stdout="\x1b[31mFAIL\x1b[0m\n", stderr=""
         )
-        monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
+
+        def _fake_fail(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            recorded_cmds.append(list(cmd))
+            return fail_proc
+
+        monkeypatch.setattr("subprocess.run", _fake_fail)
 
         # Act
         with pytest.raises(ValueError, match="Invalid mode"):
@@ -39,6 +45,9 @@ class TestFederationToolsMixin:
         assert parsed["healthy"] is False
         assert parsed["checks"]["verify_repo"]["output"] == "FAIL"
         assert parsed["checks"]["system_audit"]["passed"] is False
+        assert len(recorded_cmds) == 2
+        assert recorded_cmds[0][0].endswith("scripts/verify-repo.sh")
+        assert recorded_cmds[1][0].endswith("audit.sh")
 
     def test_call_tool_audit_node_drift_supports_individual_modes_and_passing_checks(
         self,
@@ -47,10 +56,16 @@ class TestFederationToolsMixin:
         """Execute verify-repo and system-audit modes individually when checks pass."""
         # Arrange
         server = DotfilesMCPServer()
+        recorded_cmds: list[list[str]] = []
         ok_proc = subprocess.CompletedProcess(
             args=["verify"], returncode=0, stdout="OK\n", stderr=""
         )
-        monkeypatch.setattr("subprocess.run", lambda *_a, **_k: ok_proc)
+
+        def _fake_ok(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            recorded_cmds.append(list(cmd))
+            return ok_proc
+
+        monkeypatch.setattr("subprocess.run", _fake_ok)
 
         # Act
         verify_only = server.call_tool("audit_node_drift", {"mode": "verify-repo"})
@@ -63,6 +78,7 @@ class TestFederationToolsMixin:
         assert list(v_parsed["checks"].keys()) == ["verify_repo"]
         assert a_parsed["healthy"] is True
         assert list(a_parsed["checks"].keys()) == ["system_audit"]
+        assert [c[0].rsplit("/", 1)[-1] for c in recorded_cmds] == ["verify-repo.sh", "audit.sh"]
 
     def test_call_tool_discover_federated_mcps_with_filter(self) -> None:
         """Filter federated MCPs by role and environment and reject invalid environments."""

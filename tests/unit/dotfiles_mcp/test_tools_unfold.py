@@ -317,3 +317,71 @@ class TestUnfoldToolsMixin:
         assert "CAPSULE_CHAIN_BROKEN" in alerts_text
         assert "CAPSULE_RESONANCE_DENIED" in alerts_text
         assert "CAPSULE_CAPABILITY_INSUFFICIENT" in alerts_text
+
+    def test_resolve_ephemeral_issuer_meta_and_bridge_l1_to_l2_unfold(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Resolve in-memory/disk ephemeral issuer metadata and unfold ephemeral-project-bridge."""
+        # Arrange
+        eph_root = tmp_path / "eph_root"
+        monkeypatch.setenv("DOTFILES_EPHEMERAL_ROOT", str(eph_root))
+        (eph_root / "eph-other/system").mkdir(parents=True)
+        (eph_root / "eph-other/system/mcp-layer.json").write_text(
+            json.dumps({"ephemeral_metadata": {"parent_layer_id": "different-parent"}}),
+            encoding="utf-8",
+        )
+        proj = tmp_path / "consumer_proj"
+        (proj / ".agents/rules").mkdir(parents=True)
+        (proj / ".agents/rules/dom.md").write_text(
+            '# Domain\n\n## Rule One\n\n> *"Mandate"*\n\n- Detail line.\n',
+            encoding="utf-8",
+        )
+        server = DotfilesMCPServer(log_dir=None)
+        server._ephemeral_memory_store["eph-mem"] = {
+            "parent_layer_id": "dotfiles-ubuntu-workstation",
+            "expires_at_epoch": 9999999999.0,
+            "manifest": {"ephemeral_metadata": {"session_resonance_key": "k-mem"}},
+        }
+
+        # Act
+        mem_meta = server._resolve_ephemeral_issuer_meta("eph-mem", "dotfiles-ubuntu-workstation")
+        mismatch_meta = server._resolve_ephemeral_issuer_meta(
+            "eph-other", "dotfiles-ubuntu-workstation"
+        )
+        eval_res = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {
+                    "action": "evaluate",
+                    "bot_role": "dept-bot",
+                    "target_path": "src/a.py",
+                    "mount_project_rules_from": str(proj),
+                    "resolution": "L0",
+                    "one_shot": True,
+                },
+            )["content"][0]["text"]
+        )
+        bridge_cap_l0 = next(
+            c["capsule_token"]
+            for c in eval_res["ephemeral_capsules"]
+            if c["layer"] == "ephemeral-project-bridge" and "Rule One" in c["section"]
+        )
+        unfolded_l2 = json.loads(
+            server.call_tool(
+                "unfold_context_capsule",
+                {
+                    "capsule_token": bridge_cap_l0,
+                    "target_level": "L2",
+                    "agent_tier": "inherit",
+                    "resonance_key": eval_res["session_resonance_key"],
+                },
+            )["content"][0]["text"]
+        )
+
+        # Assert
+        assert mem_meta == {"session_resonance_key": "k-mem"}
+        assert mismatch_meta is None
+        assert unfolded_l2["unfolded_level"] == "L2"
+        assert "Detail line." in unfolded_l2["content"]["full_section"]

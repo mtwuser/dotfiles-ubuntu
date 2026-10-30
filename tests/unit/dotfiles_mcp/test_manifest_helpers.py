@@ -94,16 +94,30 @@ class TestManifestHelpers:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Return 'unknown' when git rev-parse returns non-zero or raises OSError."""
+        """Return short SHA on zero exit and 'unknown' on non-zero exit or OSError."""
         # Arrange
         monkeypatch.setattr("shutil.which", lambda _name: "/usr/bin/git")
+        recorded_cmds: list[list[str]] = []
+        ok_proc = subprocess.CompletedProcess(
+            args=["git"], returncode=0, stdout="deadbeef\n", stderr=""
+        )
         fail_proc = subprocess.CompletedProcess(
             args=["git"], returncode=1, stdout="", stderr="fatal"
         )
-        monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
+        procs = iter([ok_proc, fail_proc])
+
+        def _fake_run(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+            recorded_cmds.append(list(cmd))
+            return next(procs)
+
+        monkeypatch.setattr("subprocess.run", _fake_run)
 
         # Act
+        ok_result = manifest_helpers._read_git_commit()
         nonzero_result = manifest_helpers._read_git_commit()
+        no_warn_count = manifest_helpers._count_result_warnings(
+            {"content": [{"text": '{"status": "ok"}'}]}
+        )
 
         def _raise_oserror(*_args: object, **_kwargs: object) -> None:
             raise OSError("failed to spawn")
@@ -112,7 +126,10 @@ class TestManifestHelpers:
         oserror_result = manifest_helpers._read_git_commit()
 
         # Assert
+        assert ok_result == "deadbeef"
+        assert recorded_cmds[0] == ["/usr/bin/git", "rev-parse", "--short", "HEAD"]
         assert nonzero_result == "unknown"
+        assert no_warn_count == 0
         assert oserror_result == "unknown"
 
     def test_parse_skill_frontmatter_handles_missing_frontmatter_and_fields(

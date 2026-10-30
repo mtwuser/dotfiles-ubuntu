@@ -624,6 +624,12 @@ PYEOF
 
   PYTEST_BIN="$(resolve_tool pytest)"
   if [ -n "$PYTEST_BIN" ]; then
+    if UNIT_COV_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/dotfiles_mcp/ -q --tb=short --cov=scripts/dotfiles_mcp --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
+      pass "Isolated 1:1 unit test coverage verified (100.00% on scripts/dotfiles_mcp without E2E/self-test masking)"
+    else
+      echo "$UNIT_COV_OUT" >&2
+      fail "Isolated unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
+    fi
     if PYTEST_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
       pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"
     else

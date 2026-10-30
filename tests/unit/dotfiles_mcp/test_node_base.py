@@ -116,12 +116,13 @@ class TestMCPNodeBase:
         """Emit TEMPLATE_PACK_MISSING when default_stack_templates lists a missing directory."""
         # Arrange
         (tmp_path / "system").mkdir(parents=True)
+        (tmp_path / "templates" / "existing-pack").mkdir(parents=True)
         (tmp_path / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
                     "schema_version": "1.2",
                     "layer_id": "acme-team",
-                    "default_stack_templates": ["missing-pack"],
+                    "default_stack_templates": ["existing-pack", "missing-pack"],
                 }
             ),
             encoding="utf-8",
@@ -129,8 +130,10 @@ class TestMCPNodeBase:
         server = DotfilesMCPServer(repo_dir=tmp_path)
 
         # Act
-        warnings = server._evaluate_layer_warnings(tmp_path, 1000)
+        warnings = server._evaluate_layer_warnings(tmp_path, 16500)
 
         # Assert
-        assert len(warnings) == 1
-        assert warnings[0]["code"] == "TEMPLATE_PACK_MISSING"
+        assert [w["code"] for w in warnings] == [
+            "TOKEN_BUDGET_NEAR_LIMIT",
+            "TEMPLATE_PACK_MISSING",
+        ]

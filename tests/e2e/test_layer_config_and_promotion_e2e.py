@@ -328,8 +328,20 @@ def test_e2e_ro_template_apply_idempotency_and_promotion_symlink_containment(
     proj_dir.mkdir(parents=True, exist_ok=True)
     outside_secret = tmp_path / "outside_secret.md"
     outside_secret.write_text("# Secret\n", encoding="utf-8")
+    (fork_dir / "scripts").mkdir(parents=True, exist_ok=True)
+    verify_sh = fork_dir / "scripts" / "verify-repo.sh"
+    verify_sh.write_text("#!/bin/sh\necho 'VERIFY_OK'\nexit 0\n", encoding="utf-8")
+    verify_sh.chmod(0o755)
+    audit_sh = fork_dir / "audit.sh"
+    audit_sh.write_text("#!/bin/sh\necho 'DRIFT_FOUND'\nexit 1\n", encoding="utf-8")
+    audit_sh.chmod(0o755)
 
     # Act
+    drift_res = json.loads(
+        DotfilesMCPServer(repo_dir=fork_dir, log_dir=None).call_tool(
+            "audit_node_drift", {"mode": "both"}
+        )["content"][0]["text"]
+    )
     apply_first = _run_layer_config(
         fork_dir, "apply-project", str(proj_dir), "--template", "pci-pack"
     )
@@ -367,6 +379,9 @@ def test_e2e_ro_template_apply_idempotency_and_promotion_symlink_containment(
         )
 
     # Assert
+    assert drift_res["healthy"] is False
+    assert drift_res["checks"]["verify_repo"]["passed"] is True
+    assert drift_res["checks"]["system_audit"]["output"] == "DRIFT_FOUND"
     assert apply_first["applied_template"] == "pci-pack"
     assert apply_second["applied_template"] == "pci-pack"
     assert (proj_dir / "SECURITY_POLICY.md").is_file()

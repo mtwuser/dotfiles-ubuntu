@@ -284,6 +284,7 @@ class TestSurfaceToolsMixin:
                             "mode": "authoritative",
                             "rule_files": ["docs/ledger.md"],
                             "canonical_templates": [],
+                            "ephemeral_fork_policy": {"bot_role": "dept-ledger-bot"},
                         }
                     ],
                 }
@@ -346,6 +347,9 @@ class TestSurfaceToolsMixin:
             "generic-checkout-owner",
         ]
         assert res["resolved_bindings"][0]["specificity_score"] == 10
+        assert res["resolved_bindings"][0]["ephemeral_fork_policy"] == {
+            "bot_role": "dept-ledger-bot"
+        }
         assert res["resolved_bindings"][1]["specificity_score"] == 0
         assert res["truncated"] is True
         warning_codes = [w["code"] for w in res["warnings"]]

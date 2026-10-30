@@ -74,13 +74,16 @@ def test_get_changed_python_files_filters_docs_and_missing(
         stdout="src/app.py\ndocs/example.py\nREADME.md\nsrc/deleted.py\n",
         stderr="",
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+    mock_run = MagicMock(return_value=fake_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
 
     # Act
     changed = post_invocation_lint.get_changed_python_files(str(tmp_path))
 
     # Assert
     assert changed == [str(existing_py)]
+    assert mock_run.call_args_list[0].args[0][0].endswith("git")
+    assert mock_run.call_args_list[0].args[0][1] == "diff"
 
 
 def test_get_changed_doc_files_and_check_universal_doc_structure(
@@ -98,7 +101,8 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
         stdout="docs/architecture/01_spec.md\ndocs/architecture/02_big.md\ndocs/missing.md\nREADME.md\n",
         stderr="",
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+    mock_run = MagicMock(return_value=fake_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
 
     # Act
     changed_docs = post_invocation_lint.get_changed_doc_files(str(tmp_path))
@@ -110,6 +114,8 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     assert changed_docs == [str(small_doc), str(big_doc)]
     assert len(violations) == 1
     assert "[max-doc-lines]" in violations[0]
+    assert mock_run.call_args_list[0].args[0][0].endswith("git")
+    assert mock_run.call_args_list[0].args[0][1] == "diff"
 
 
 def test_run_project_ast_checks_skips_non_manifest_workspace(tmp_path: Path) -> None:
@@ -136,13 +142,15 @@ def test_run_project_ast_checks_returns_violations_when_nonzero(
         stdout="src/models.py:10 [missing-aaa] Missing AAA comments\n",
         stderr="",
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+    mock_run = MagicMock(return_value=fake_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
 
     # Act
     violations = post_invocation_lint.run_project_ast_checks("/usr/bin/python3", str(tmp_path))
 
     # Assert
     assert violations == ["src/models.py:10 [missing-aaa] Missing AAA comments"]
+    assert mock_run.call_args.args[0][0] == "/usr/bin/python3"
 
 
 def test_run_project_ast_checks_returns_empty_when_zero_exit(
@@ -151,13 +159,15 @@ def test_run_project_ast_checks_returns_empty_when_zero_exit(
     # Arrange
     (tmp_path / "src" / "core_framework").mkdir(parents=True)
     fake_proc = subprocess.CompletedProcess(args=["python"], returncode=0, stdout="", stderr="")
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+    mock_run = MagicMock(return_value=fake_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
 
     # Act
     violations = post_invocation_lint.run_project_ast_checks("/usr/bin/python3", str(tmp_path))
 
     # Assert
     assert violations == []
+    assert "check_project" in mock_run.call_args.args[0][2]
 
 
 def test_main_returns_empty_when_no_workspaces(
@@ -207,7 +217,8 @@ def test_main_returns_empty_when_no_changed_files_or_clean_lint(
     )
     monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: None)
     clean_proc = subprocess.CompletedProcess(args=["ruff"], returncode=0, stdout="", stderr="")
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: clean_proc)
+    mock_run = MagicMock(return_value=clean_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
     payload = {"workspacePaths": [str(ws_empty), str(ws_clean)]}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
@@ -218,6 +229,7 @@ def test_main_returns_empty_when_no_changed_files_or_clean_lint(
 
     # Assert
     assert json.loads(stdout_buf.getvalue()) == {}
+    assert "--no-fix" in mock_run.call_args.args[0]
 
 
 def test_main_injects_truncated_summary_and_force_continue(
@@ -238,7 +250,8 @@ def test_main_injects_truncated_summary_and_force_continue(
     fail_proc = subprocess.CompletedProcess(
         args=["ruff"], returncode=1, stdout=lint_lines, stderr=""
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
+    mock_run = MagicMock(return_value=fail_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
     payload = {"workspacePaths": [str(tmp_path)], "invocationNum": 4}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
@@ -252,6 +265,7 @@ def test_main_injects_truncated_summary_and_force_continue(
     assert result["terminationBehavior"] == "force_continue"
     msg = result["injectSteps"][0]["ephemeralMessage"]
     assert "... (1 more)" in msg
+    assert "--no-fix" in mock_run.call_args.args[0]
 
 
 def test_main_omits_force_continue_when_invocation_limit_reached(
@@ -266,7 +280,8 @@ def test_main_omits_force_continue_when_invocation_limit_reached(
     monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: None)
     exact_15_lines = "\n".join(f"bad.py:{i}:1: F401 unused import" for i in range(1, 16))
     fail_proc = MagicMock(returncode=1, stdout=exact_15_lines)
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
+    mock_run = MagicMock(return_value=fail_proc)
+    monkeypatch.setattr("subprocess.run", mock_run)
     payload = {"workspacePaths": [str(tmp_path)], "invocationNum": 5}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
@@ -281,6 +296,7 @@ def test_main_omits_force_continue_when_invocation_limit_reached(
     msg = result["injectSteps"][0]["ephemeralMessage"]
     assert "F401 unused import" in msg
     assert "... (" not in msg
+    assert "--no-fix" in mock_run.call_args.args[0]
 
 
 def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(

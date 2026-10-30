@@ -36,16 +36,24 @@ def test_has_python_changes_detects_modified_py_files(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    recorded_cmds: list[list[str]] = []
     fake_proc = subprocess.CompletedProcess(
         args=["git"], returncode=0, stdout="README.md\nsrc/service.py\n", stderr=""
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+
+    def _fake_git(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded_cmds.append(list(cmd))
+        return fake_proc
+
+    monkeypatch.setattr("subprocess.run", _fake_git)
 
     # Act
     changed = stop_verify_tests.has_python_changes(str(tmp_path))
 
     # Assert
     assert changed is True
+    assert recorded_cmds[0][0].endswith("git")
+    assert recorded_cmds[0][1] == "diff"
 
 
 def test_has_python_changes_returns_true_on_git_error(
@@ -68,13 +76,19 @@ def test_run_tests_returns_true_on_passing_pytest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    recorded_cmds: list[list[str]] = []
     fake_proc = subprocess.CompletedProcess(
         args=["pytest"],
         returncode=0,
         stdout="line1\nline2\nline3\n5 passed in 0.12s\n",
         stderr="",
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+
+    def _fake_pytest(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded_cmds.append(list(cmd))
+        return fake_proc
+
+    monkeypatch.setattr("subprocess.run", _fake_pytest)
 
     # Act
     passed, summary = stop_verify_tests.run_tests(tmp_path / "python", str(tmp_path))
@@ -82,19 +96,26 @@ def test_run_tests_returns_true_on_passing_pytest(
     # Assert
     assert passed is True
     assert "5 passed in 0.12s" in summary
+    assert recorded_cmds[0][:3] == [str(tmp_path / "python"), "-m", "pytest"]
 
 
 def test_run_tests_returns_false_with_stderr_on_failure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    recorded_cmds: list[list[str]] = []
     fake_proc = subprocess.CompletedProcess(
         args=["pytest"],
         returncode=1,
         stdout="1 failed in 0.20s\n",
         stderr="AssertionError: expected 1 == 2",
     )
-    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+
+    def _fake_pytest_fail(cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        recorded_cmds.append(list(cmd))
+        return fake_proc
+
+    monkeypatch.setattr("subprocess.run", _fake_pytest_fail)
 
     # Act
     passed, summary = stop_verify_tests.run_tests(tmp_path / "python", str(tmp_path))
@@ -103,6 +124,7 @@ def test_run_tests_returns_false_with_stderr_on_failure(
     assert passed is False
     assert "1 failed in 0.20s" in summary
     assert "AssertionError" in summary
+    assert "-x" in recorded_cmds[0]
 
 
 def test_run_tests_handles_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

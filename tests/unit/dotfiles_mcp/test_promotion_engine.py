@@ -225,6 +225,11 @@ class TestPromotionEngine:
         # Act
         diff = diff_project_against_layers(repo_dir, proj_dir)
         empty_diff = diff_project_against_layers(tmp_path / "empty_fork", tmp_path / "empty_proj")
+        outside_secret = tmp_path / "outside_secret.md"
+        outside_secret.write_text("# Secret\n", encoding="utf-8")
+        (proj_dir / ".agents/rules/escape.md").symlink_to(outside_secret)
+        with pytest.raises(ValueError, match="Outbound symlink escape denied"):
+            diff_project_against_layers(repo_dir, proj_dir)
 
         # Assert
         in_sync_files = [x["file"] for x in diff["in_sync"]]
@@ -381,4 +386,11 @@ class TestPromotionEngine:
                 repo_dir,
                 proj_dir,
                 source_rel_path=".agents/skills/bad-skill/SKILL.md",
+            )
+        with pytest.raises(ValueError, match="Invalid target_template"):
+            promote_project_asset_to_layer(
+                repo_dir,
+                proj_dir,
+                source_rel_path=".agents/rules/legal.md",
+                target_template="BAD_TEMPLATE",
             )

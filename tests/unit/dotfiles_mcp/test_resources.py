@@ -46,6 +46,39 @@ class TestResourcesMixin:
         # Assert
         assert templates_res == {"count": 0, "templates": []}
 
+    def test_read_all_nine_resources_verifies_contract_schemas(self) -> None:
+        """Verify all 9 MCP resources return valid schema payloads with expected keys."""
+        # Arrange
+        server = DotfilesMCPServer()
+
+        # Act
+        identity = json.loads(server.read_resource("dotfiles://layer/identity")["text"])
+        manifests = json.loads(server.read_resource("dotfiles://system/manifests")["text"])
+        rules_md = server.read_resource("dotfiles://governance/rules")
+        hooks = json.loads(server.read_resource("dotfiles://governance/hooks")["text"])
+        skills = json.loads(server.read_resource("dotfiles://governance/skills")["text"])
+        templates = json.loads(server.read_resource("dotfiles://governance/templates")["text"])
+        docs_idx = server.read_resource("dotfiles://docs/index")
+        topology = json.loads(server.read_resource("dotfiles://mcp/topology")["text"])
+        diag = json.loads(server.read_resource("dotfiles://mcp/diagnostics")["text"])
+
+        # Assert
+        assert identity["layer_id"] == "dotfiles-ubuntu-default"
+        assert "git_commit" in identity and "os_pretty_name" in identity
+        assert manifests["counts"]["apt_manual_packages"] > 0
+        assert rules_md["mimeType"] == "text/markdown"
+        assert "Antigravity Universal Rules" in rules_md["text"]
+        assert "pre-tool-guard" in hooks
+        assert skills["count"] >= 10
+        assert any(s["name"] == "testing" for s in skills["skills"])
+        assert templates["count"] >= 1
+        assert templates["templates"][0]["template_name"] == "fastapi-hexagonal"
+        assert docs_idx["mimeType"] == "text/markdown"
+        assert "Documentation Index" in docs_idx["text"]
+        assert topology["schema_version"] == "1.2"
+        assert "discovered_mounted_layers" in topology
+        assert "resonance_compaction_summary" in diag
+
     def test_read_resource_raises_on_unknown_uri(self) -> None:
         """Raise ValueError when reading an unknown resource URI."""
         # Arrange

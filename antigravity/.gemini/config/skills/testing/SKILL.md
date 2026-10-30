@@ -34,9 +34,10 @@ factory = FactoryService(external_service=mock())
 
 **Self-check**: Does the constructor create other objects? If yes → mock or inject them.
 
-### Patch Targets
+### Patch Targets & Boundary Mock Verification
 - Patch where the object is **looked up at runtime**. When a module uses `from source import func`, patch at `consumer.func` (the consumer holds its own reference). When it uses `import source` and calls `source.func`, patch at `source.func`.
 - When code moves between modules, ALL patch targets in tests must be updated.
+- **No Blind Boundary/Subprocess Mocks (`lambda *_a, **_k`)**: Never stub `subprocess.run`, HTTP clients, or external I/O boundaries with argument-ignoring lambdas (`lambda *_a, **_k: fake_proc`). Always capture and assert the invoked command/arguments (`mock_run.call_args`, `assert_called_once_with`) so corrupted CLI flags or missing `--no-fix` / `-x` arguments fail the unit test immediately.
 
 ### Test Naming Convention
 
@@ -85,7 +86,7 @@ Find and fix misclassifications:
 
 **Phase 5 — Diagnosing False-Positive Coverage & Drops**
 11. **The 100% Coverage Illusion**: If the suite shows 100% coverage but contains failing tests, it usually means a unit test is correctly covering the logic, while an outdated integration test executes the same path and fails. **Solution**: Purge the redundant integration test.
-12. **Transitive Coverage Drops**: If deleting an integration test drops coverage in an unrelated file, it means the integration test was organically covering that file while its native unit tests were incomplete. **Solution**: Restore the coverage organically by writing the missing native unit tests.
+12. **Transitive Coverage Drops & Isolated Unit Gate**: If deleting an integration/E2E test or CLI `--self-test` drops coverage in a module, it means the higher-tier test was masking incomplete `1:1` unit tests (often via shallow `len(text) > 0` smoke loops without schema verification). **Solution**: Enforce 100% coverage on `tests/unit/` in strict isolation (`pytest tests/unit/ --cov=<pkg> --cov-fail-under=100`) before running `imp`/`e2e`, and assert full response contracts for every cataloged resource/endpoint.
 
 ### Refactoring Tests (File Migrations)
 

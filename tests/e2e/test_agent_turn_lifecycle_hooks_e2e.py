@@ -13,10 +13,12 @@ REPO_DIR = Path(__file__).resolve().parents[2]
 HOOKS_DIR = REPO_DIR / "antigravity" / ".gemini" / "config" / "scripts"
 
 
-def _invoke_hook(script_name: str, payload: dict[str, object]) -> dict[str, object]:
+def _invoke_hook(
+    script_name: str, payload: dict[str, object], hooks_dir: Path = HOOKS_DIR
+) -> dict[str, object]:
     """Execute a lifecycle hook script over stdio with the given JSON payload."""
     proc = subprocess.run(
-        [sys.executable, str(HOOKS_DIR / script_name)],
+        [sys.executable, str(hooks_dir / script_name)],
         input=json.dumps(payload),
         capture_output=True,
         text=True,
@@ -28,9 +30,16 @@ def _invoke_hook(script_name: str, payload: dict[str, object]) -> dict[str, obje
 
 def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) -> None:
     # Arrange
+    hook_scripts = tmp_path / "isolated_dotfiles/antigravity/.gemini/config/scripts"
+    hook_scripts.mkdir(parents=True)
+    for hs in HOOKS_DIR.glob("*.py"):
+        shutil.copy2(hs, hook_scripts / hs.name)
     ws = tmp_path / "sample_project"
     (ws / "src" / "pkg").mkdir(parents=True)
     (ws / "tests" / "unit").mkdir(parents=True)
+    (ws / "pyproject.toml").write_text(
+        '[tool.pytest.ini_options]\npythonpath = ["."]\n', encoding="utf-8"
+    )
     (ws / "src" / "pkg" / "__init__.py").write_text("", encoding="utf-8")
     (ws / "tests" / "__init__.py").write_text("", encoding="utf-8")
     (ws / "tests" / "unit" / "__init__.py").write_text("", encoding="utf-8")
@@ -101,6 +110,22 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
         "    # Act\n"
         "    res = add_ints(a, b)\n\n"
         "    # Assert\n"
+        "    assert res == 999\n",
+        encoding="utf-8",
+    )
+    stop_fail = _invoke_hook(
+        "stop_verify_tests.py",
+        {"workspacePaths": [str(ws)], "terminationReason": "NO_TOOL_CALL"},
+        hooks_dir=hook_scripts,
+    )
+    test_file.write_text(
+        "from src.pkg.calc import add_ints\n\n\n"
+        "def test_add_ints() -> None:\n"
+        "    # Arrange\n"
+        "    a, b = 2, 3\n\n"
+        "    # Act\n"
+        "    res = add_ints(a, b)\n\n"
+        "    # Assert\n"
         "    assert res == 5\n",
         encoding="utf-8",
     )
@@ -110,14 +135,17 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
             "workspacePaths": [str(ws)],
             "toolCall": {"name": "write_file", "args": {"Path": str(calc_file)}},
         },
+        hooks_dir=hook_scripts,
     )
     post_inv = _invoke_hook(
         "post_invocation_lint.py",
         {"workspacePaths": [str(ws)], "invocationNum": 1},
+        hooks_dir=hook_scripts,
     )
     stop_res = _invoke_hook(
         "stop_verify_tests.py",
-        {"workspacePaths": [str(ws)], "stopReason": "NO_TOOL_CALL"},
+        {"workspacePaths": [str(ws)], "terminationReason": "NO_TOOL_CALL"},
+        hooks_dir=hook_scripts,
     )
 
     # Assert
@@ -125,6 +153,8 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
     assert allow_calc["decision"] == "allow"
     assert "def add_ints(a: int, b: int) -> int:" in calc_file.read_text(encoding="utf-8")
     assert post_inv == {}
+    assert stop_fail["decision"] == "continue"
+    assert "1 failed" in str(stop_fail["reason"])
     assert stop_res == {"decision": "stop"}
 
 

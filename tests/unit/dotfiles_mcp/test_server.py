@@ -42,6 +42,30 @@ class TestDotfilesMCPServer:
         server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=tmp_path / "logs")
 
         # Act
+        init_resp = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize"})
+        res_list_resp = server.handle_request(
+            {"jsonrpc": "2.0", "id": 2, "method": "resources/list"}
+        )
+        res_read_resp = server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "resources/read",
+                "params": {"uri": "dotfiles://system/manifests"},
+            }
+        )
+        tools_list_resp = server.handle_request({"jsonrpc": "2.0", "id": 4, "method": "tools/list"})
+        prompts_list_resp = server.handle_request(
+            {"jsonrpc": "2.0", "id": 5, "method": "prompts/list"}
+        )
+        prompt_get_resp = server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "prompts/get",
+                "params": {"name": "orient-on-layer", "arguments": {"task_description": "x"}},
+            }
+        )
         notif_resp = server.handle_request(
             {"jsonrpc": "2.0", "method": "notifications/initialized"}
         )
@@ -81,6 +105,12 @@ class TestDotfilesMCPServer:
         )
 
         # Assert
+        assert init_resp is not None and "protocolVersion" in init_resp["result"]
+        assert res_list_resp is not None and len(res_list_resp["result"]["resources"]) == 9
+        assert res_read_resp is not None and len(res_read_resp["result"]["contents"]) == 1
+        assert tools_list_resp is not None and len(tools_list_resp["result"]["tools"]) == 9
+        assert prompts_list_resp is not None and len(prompts_list_resp["result"]["prompts"]) == 3
+        assert prompt_get_resp is not None and "messages" in prompt_get_resp["result"]
         assert notif_resp is None
         assert ping_resp == {"jsonrpc": "2.0", "id": 10, "result": {}}
         assert tpl_resp == {"jsonrpc": "2.0", "id": 11, "result": {"resourceTemplates": []}}
