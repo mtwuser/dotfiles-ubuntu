@@ -89,7 +89,7 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     # Arrange
     small_doc = tmp_path / "docs" / "architecture" / "01_spec.md"
     small_doc.parent.mkdir(parents=True)
-    small_doc.write_text("# Spec\n", encoding="utf-8")
+    small_doc.write_text("# Line\n" * 464, encoding="utf-8")
     big_doc = tmp_path / "docs" / "architecture" / "02_big.md"
     big_doc.write_text("# Line\n" * 465, encoding="utf-8")
     fake_proc = subprocess.CompletedProcess(
@@ -232,14 +232,14 @@ def test_main_injects_truncated_summary_and_force_continue(
     monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: "/usr/bin/python3")
     monkeypatch.setattr(
         "post_invocation_lint.run_project_ast_checks",
-        lambda _py, _ws: [f"ast_err_{i}" for i in range(10)],
+        lambda _py, _ws: [f"ast_err_{i}" for i in range(6)],
     )
     lint_lines = "\n".join(f"lint_err_{i}" for i in range(10))
     fail_proc = subprocess.CompletedProcess(
         args=["ruff"], returncode=1, stdout=lint_lines, stderr=""
     )
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
-    payload = {"workspacePaths": [str(tmp_path)], "invocationNum": 2}
+    payload = {"workspacePaths": [str(tmp_path)], "invocationNum": 4}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
     monkeypatch.setattr("sys.stdout", stdout_buf)
@@ -251,19 +251,21 @@ def test_main_injects_truncated_summary_and_force_continue(
     result = json.loads(stdout_buf.getvalue())
     assert result["terminationBehavior"] == "force_continue"
     msg = result["injectSteps"][0]["ephemeralMessage"]
-    assert "... (5 more)" in msg
+    assert "... (1 more)" in msg
 
 
 def test_main_omits_force_continue_when_invocation_limit_reached(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    monkeypatch.setattr("post_invocation_lint._DOTFILES_REPO_DIR", tmp_path)
     monkeypatch.setattr("post_invocation_lint.find_ruff", lambda _ws: "/usr/bin/ruff")
     monkeypatch.setattr(
         "post_invocation_lint.get_changed_python_files", lambda ws: [f"{ws}/bad.py"]
     )
     monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: None)
-    fail_proc = MagicMock(returncode=1, stdout="bad.py:1:1: F401 unused import\n")
+    exact_15_lines = "\n".join(f"bad.py:{i}:1: F401 unused import" for i in range(1, 16))
+    fail_proc = MagicMock(returncode=1, stdout=exact_15_lines)
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fail_proc)
     payload = {"workspacePaths": [str(tmp_path)], "invocationNum": 5}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
@@ -276,7 +278,9 @@ def test_main_omits_force_continue_when_invocation_limit_reached(
     # Assert
     result = json.loads(stdout_buf.getvalue())
     assert "terminationBehavior" not in result
-    assert "F401 unused import" in result["injectSteps"][0]["ephemeralMessage"]
+    msg = result["injectSteps"][0]["ephemeralMessage"]
+    assert "F401 unused import" in msg
+    assert "... (" not in msg
 
 
 def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
@@ -284,14 +288,17 @@ def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
 ) -> None:
     # Arrange
     missing_agents = tmp_path / "missing_AGENTS.md"
+    exact_agents = tmp_path / "exact_AGENTS.md"
+    exact_agents.write_text("A" * 18000, encoding="utf-8")
     oversized_agents = tmp_path / "oversized_AGENTS.md"
-    oversized_agents.write_text("A" * 18500, encoding="utf-8")
+    oversized_agents.write_text("A" * 18001, encoding="utf-8")
 
     ws_dir = tmp_path / "ws"
     rules_dir = ws_dir / ".agents" / "rules"
     rules_dir.mkdir(parents=True)
+    always_prefix = "---\ntrigger: always_on\n---\n"
     (rules_dir / "always_rule.md").write_text(
-        "---\ntrigger: always_on\n---\n" + ("B" * 65000),
+        always_prefix + ("B" * (62000 - len(always_prefix))),
         encoding="utf-8",
     )
     (rules_dir / "conditional_rule.md").write_text(
@@ -303,12 +310,16 @@ def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
     warnings_missing = post_invocation_lint.check_rules_token_budget(
         [str(tmp_path / "no_rules_ws")], agents_md_path=missing_agents
     )
+    warnings_exact = post_invocation_lint.check_rules_token_budget(
+        [str(ws_dir)], agents_md_path=exact_agents
+    )
     warnings_exceeded = post_invocation_lint.check_rules_token_budget(
         [str(ws_dir)], agents_md_path=oversized_agents
     )
 
     # Assert
     assert warnings_missing == []
+    assert warnings_exact == []
     assert len(warnings_exceeded) == 2
     assert "[TOKEN_BUDGET_EXCEEDED]" in warnings_exceeded[0]
     assert "[WORKSPACE_RULES_BUDGET_EXCEEDED]" in warnings_exceeded[1]
@@ -351,7 +362,7 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
     init_file.write_text("", encoding="utf-8")
     sibling_with_spec = tmp_path / "sibling.py"
     sibling_with_spec.write_text(
-        '"""Mod.\n\nSpecification: docs/architecture/01_spec.md\n"""\nx = 1\n',
+        '"""Mod.\n\nSpecification: docs/architecture/01_spec.md\n"""\n' + "x = 1\n" * 460,
         encoding="utf-8",
     )
     missing_spec_mod = tmp_path / "untraced.py"
@@ -372,7 +383,7 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
     bad_test.write_text("def test_bad() -> None:\n    assert 1 == 1\n", encoding="utf-8")
     oversized_mod = tmp_path / "big_module.py"
     oversized_mod.write_text(
-        '"""Big.\n\nSpecification: docs/architecture/01_spec.md\n"""\n' + "x = 1\n" * 465,
+        '"""Big.\n\nSpecification: docs/architecture/01_spec.md\n"""\n' + "x = 1\n" * 461,
         encoding="utf-8",
     )
 

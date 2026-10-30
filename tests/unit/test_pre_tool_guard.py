@@ -182,7 +182,7 @@ def test_check_command_blocks_alembic_mutation_commands() -> None:
 
 def test_check_command_allows_read_only_git_status_and_pytest() -> None:
     # Arrange
-    args: dict[str, object] = {"CommandLine": "git status -s && pytest -q"}
+    args: dict[str, object] = {"CommandLine": "git status -s && pytest -q && uv && python3"}
 
     # Act
     allowed, reason = pre_tool_guard._check_command(args)

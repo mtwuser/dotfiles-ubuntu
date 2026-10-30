@@ -92,10 +92,10 @@ def _strip_leading_env_and_wrappers(tokens: list[str]) -> list[str]:
             while idx < n and tokens[idx].startswith("-"):
                 flag = tokens[idx]
                 idx += 1
-                if flag in {"-u", "-g", "-C"} and idx < n:
+                if flag in {"-u", "-g", "-C"}:
                     idx += 1
             continue
-        if prog.startswith("python") and idx + 2 < n and tokens[idx + 1] == "-m":
+        if prog.startswith("python") and idx + 1 < n and tokens[idx + 1] == "-m":
             idx += 2
             continue
         if prog in {"uv", "poetry"} and idx + 1 < n and tokens[idx + 1] == "run":
@@ -128,7 +128,7 @@ def _is_mutating_git_segment(tokens: list[str]) -> bool:
     while idx < n and tokens[idx].startswith("-"):
         flag = tokens[idx]
         idx += 1
-        if flag in _GIT_FLAGS_WITH_ARG and idx < n:
+        if flag in _GIT_FLAGS_WITH_ARG:
             idx += 1
     if idx >= n:
         return False
@@ -157,7 +157,7 @@ def _is_mutating_alembic_segment(tokens: list[str]) -> bool:
     while idx < n and tokens[idx].startswith("-"):
         flag = tokens[idx]
         idx += 1
-        if flag in _ALEMBIC_FLAGS_WITH_ARG and idx < n:
+        if flag in _ALEMBIC_FLAGS_WITH_ARG:
             idx += 1
     return idx < n and tokens[idx] in {"revision", "upgrade", "downgrade"}
 

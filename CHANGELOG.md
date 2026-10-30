@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.1] - 2026-10-30
+
+### Fixed
+- **Full-Heading `rcap1` Capsule Preservation, Symmetric Ephemeral Bridge `L3` Links & Two-Step `bridged_project_files` Persistence (`scripts/dotfiles_mcp/`, `tests/e2e/`)**:
+  - Removed the `[:80]` truncation on `"sec": heading` inside [`_build_section_capsule`](scripts/dotfiles_mcp/tools_compaction.py) so `unfold_context_capsule` (`live_h0`, `l1_skeleton`, and TOCTOU section relocation) succeeds without false `CAPSULE_CHAIN_BROKEN` rejections on Markdown sections whose headings exceed 80 characters.
+  - Enforced symmetric `l3_links = []` for synthetic `ephemeral-project-bridge` capsules in both [`tools_surface.py`](scripts/dotfiles_mcp/tools_surface.py) and [`tools_unfold.py`](scripts/dotfiles_mcp/tools_unfold.py), preventing `L2->L3` digest mismatches when bridged consumer project rules reference backtick paths (such as `README.md` or `AGENTS.md`) that exist in the parent `dotfiles-ubuntu` repository.
+  - Persisted `bridged_project_files` inside the ephemeral fork manifest (`system/mcp-layer.json`) during [`spawn_ephemeral_fork`](scripts/dotfiles_mcp/ephemeral_fork_engine.py) and restored it in [`tools_ephemeral.py`](scripts/dotfiles_mcp/tools_ephemeral.py) when evaluating an already-spawned `fork_id` (`spawn` $\rightarrow$ `evaluate(fork_id=...)`).
+
+### Changed
+- **Zero-Dependency Mutation Hardening & Boundary Cut-Point Invariant (`N` vs `N ± 1`) (`antigravity/.gemini/config/`, `tests/unit/`)**:
+  - Codified the **Boundary Cut-Point Invariant (`N` vs `N ± 1`)** in [`AGENTS.md`](antigravity/.gemini/config/AGENTS.md) (`Testing §4`) and [`skills/testing/SKILL.md`](antigravity/.gemini/config/skills/testing/SKILL.md) (`Post-Refactor Verification §3`) alongside *Default-Parameter Sensitivity*, requiring unit tests to assert exact threshold cut-point pairs (`threshold` and `threshold ± 1`) on numeric comparisons (`<`, `<=`, `>`, `>=`).
+  - Eliminated redundant dead-code lookahead bounds in [`pre_tool_guard.py`](antigravity/.gemini/config/scripts/pre_tool_guard.py) and hardened boundary cut-point assertions in [`test_post_invocation_lint.py`](tests/unit/test_post_invocation_lint.py) (`464` vs `465` lines, `18,000` vs `18,001` bytes, `80,000` vs `80,001` bytes, `15` vs `16` summary lines, `4` vs `5` `invocationNum`) and [`test_pre_tool_guard.py`](tests/unit/test_pre_tool_guard.py) (`147 passed`, **100.00% statement and branch coverage**, **100% relational boundary mutant kill rate**).
+
+---
+
 ## [1.8.0] - 2026-10-30
 
 ### Added

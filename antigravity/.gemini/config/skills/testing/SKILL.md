@@ -104,6 +104,8 @@ When moving source files between modules, **tests MUST be migrated in the same c
 #### Post-Refactor Verification
 1. **Pure Refactor**: Test count must equal or exceed the pre-refactor count.
 2. **Feature Decommissioning**: When production modules, classes, or endpoints are intentionally deleted, purge their corresponding unit test files (`orphan-test-file` gate) and obsolete test methods in the same changeset (`skills/refactoring/SKILL.md` §Code Decommissioning).
-3. **Default-Parameter Sensitivity**: Never rely on default parameter values alone to satisfy 100% line/branch coverage. When a function computes a hash, query filter, or state transition over fields with defaults, include explicit tests proving that mutating each field changes the output.
+3. **Boundary Cut-Point & Default-Parameter Sensitivity (Zero-Dependency Mutation Hardening)**:
+   - **Boundary Cut-Point Invariant (`N` vs `N ± 1`)**: Branch coverage alone only checks one `True` and one `False` sample (allowing off-by-one `<` vs `<=` and `>` vs `>=` mutants to survive). Whenever production logic compares against a numeric threshold (line caps, byte/token budgets, TTLs, capacity limits, hop counts, pagination bounds), unit tests MUST assert the exact cut-point pair (`threshold` and `threshold ± 1`).
+   - **Default-Parameter Sensitivity**: Never rely on default parameter values alone to satisfy 100% line/branch coverage. When a function computes a hash, query filter, or state transition over fields with defaults, include explicit tests proving that mutating each field changes the output.
 4. Compare coverage before and after. Any new uncovered lines correlate to a missed test migration.
 5. Verify no orphaned test files exist. Every unit test file must map to an actual current source file.
