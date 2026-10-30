@@ -89,6 +89,28 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
             }
         },
     )
+    deny_shell_heredoc = _invoke_hook(
+        "pre_tool_guard.py",
+        {
+            "toolCall": {
+                "name": "run_command",
+                "args": {
+                    "CommandLine": (
+                        "cat << 'EOF' > alembic/versions/001_init.py\ndef upgrade(): pass\nEOF"
+                    )
+                },
+            }
+        },
+    )
+    deny_shell_tee = _invoke_hook(
+        "pre_tool_guard.py",
+        {
+            "toolCall": {
+                "name": "run_command",
+                "args": {"CommandLine": f"echo 'x=1' | tee {ws / 'src/pkg/__init__.py'}"},
+            }
+        },
+    )
     allow_calc = _invoke_hook(
         "pre_tool_guard.py",
         {
@@ -150,6 +172,10 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
 
     # Assert
     assert deny_init["decision"] == "deny"
+    assert deny_shell_heredoc["decision"] == "deny"
+    assert "Zero-Touch Migration Policy" in str(deny_shell_heredoc["reason"])
+    assert deny_shell_tee["decision"] == "deny"
+    assert "__init__.py Purity" in str(deny_shell_tee["reason"])
     assert allow_calc["decision"] == "allow"
     assert "def add_ints(a: int, b: int) -> int:" in calc_file.read_text(encoding="utf-8")
     assert post_inv == {}

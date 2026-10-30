@@ -119,10 +119,32 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
     assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
     assert post_invocation_lint._AGENTS_MD_MAX_BYTES == mcp_constants.AGENTS_MD_MAX_BYTES
-    for token in (*pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS, "alembic/versions/", "__init__.py"):
+    for token in (
+        *pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS,
+        "alembic/versions/",
+        "__init__.py",
+        "heredoc",
+        "tee",
+    ):
         assert token in arch_02
         assert token in security_md
         assert token in readme_md
+    for protected_target in (
+        "alembic/versions/001_init.py",
+        "src/orders/__init__.py",
+        "tests/unit/__init__.py",
+    ):
+        fw_ok, fw_reason = pre_tool_guard._check_file_write(
+            {"Path": f"/workspace/app/{protected_target}", "Content": "x = 1"}
+        )
+        sh_redir_ok, sh_redir_reason = pre_tool_guard._check_command(
+            {"CommandLine": f"echo 'x = 1' > {protected_target}"}
+        )
+        sh_tee_ok, sh_tee_reason = pre_tool_guard._check_command(
+            {"CommandLine": f"echo 'x = 1' | tee {protected_target}"}
+        )
+        assert (fw_ok, sh_redir_ok, sh_tee_ok) == (False, False, False)
+        assert fw_reason == sh_redir_reason == sh_tee_reason
     for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"):
         assert agents_token in agents_md
     for budget_token in (

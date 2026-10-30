@@ -267,20 +267,94 @@ def test_check_command_regex_fallback_catches_cmd_substitution_and_unclosed_quot
     # Arrange
     cmd_subst_git = 'echo "$(git push origin master)"'
     cmd_subst_alembic = 'echo "`alembic upgrade head`"'
+    cmd_subst_write = 'echo "$(echo x > src/orders/__init__.py)"'
+    cmd_subst_safe_write = 'echo "$(echo x > /tmp/safe.txt)"'
     cmd_subst_benign = 'echo "$(git status -s)"'
     cmd_unclosed_git = 'git commit -m "unclosed quote'
 
     # Act
     ok_subst_git, _ = pre_tool_guard._check_command({"CommandLine": cmd_subst_git})
     ok_subst_alembic, _ = pre_tool_guard._check_command({"CommandLine": cmd_subst_alembic})
+    ok_subst_write, reason_write = pre_tool_guard._check_command({"CommandLine": cmd_subst_write})
+    ok_subst_safe, _ = pre_tool_guard._check_command({"CommandLine": cmd_subst_safe_write})
     ok_subst_benign, _ = pre_tool_guard._check_command({"CommandLine": cmd_subst_benign})
     ok_unclosed, _ = pre_tool_guard._check_command({"CommandLine": cmd_unclosed_git})
 
     # Assert
     assert ok_subst_git is False
     assert ok_subst_alembic is False
+    assert ok_subst_write is False
+    assert "__init__.py Purity" in reason_write
+    assert ok_subst_safe is True
     assert ok_subst_benign is True
     assert ok_unclosed is False
+
+
+def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
+    # Arrange
+    cmd_redir = "echo 'x = 1' > src/orders/__init__.py"
+    cmd_append = "echo 'x = 1' >> ./tests/unit/__init__.py"
+    cmd_clobber = "echo 'pass' >| alembic/versions/001_init.py"
+    cmd_amp_redir = "echo 'pass' &> ./alembic/versions/002_init.py"
+    cmd_fd_redir = "echo 'pass' 1> /workspace/app/alembic/versions/003.py"
+    cmd_heredoc = "cat << 'EOF' > alembic/versions/001.py\ndef upgrade():\n    pass\nEOF"
+    cmd_tee = "echo 'x=1' | tee -a src/orders/__init__.py"
+    cmd_cp = "cp /tmp/draft.py alembic/versions/001.py"
+    cmd_mv = "mv /tmp/draft.py src/orders/__init__.py"
+    cmd_install = "install -m 644 /tmp/draft.py tests/unit/__init__.py"
+    cmd_dd = "dd if=/dev/zero of=alembic/versions/001.py count=1"
+    cmd_py_write = (
+        "python3 -c \"from pathlib import Path; Path('src/orders/__init__.py').write_text('x=1')\""
+    )
+    cmd_py_open = "python -c \"open('alembic/versions/001.py', 'w').write('pass')\""
+    cmd_subshell = 'bash -lc "echo x > tests/unit/__init__.py"'
+
+    # Act
+    ok_redir, r_redir = pre_tool_guard._check_command({"CommandLine": cmd_redir})
+    ok_append, _ = pre_tool_guard._check_command({"CommandLine": cmd_append})
+    ok_clobber, r_clobber = pre_tool_guard._check_command({"CommandLine": cmd_clobber})
+    ok_amp, _ = pre_tool_guard._check_command({"CommandLine": cmd_amp_redir})
+    ok_fd, _ = pre_tool_guard._check_command({"CommandLine": cmd_fd_redir})
+    ok_heredoc, r_heredoc = pre_tool_guard._check_command({"CommandLine": cmd_heredoc})
+    ok_tee, r_tee = pre_tool_guard._check_command({"CommandLine": cmd_tee})
+    ok_cp, _ = pre_tool_guard._check_command({"CommandLine": cmd_cp})
+    ok_mv, _ = pre_tool_guard._check_command({"CommandLine": cmd_mv})
+    ok_install, _ = pre_tool_guard._check_command({"CommandLine": cmd_install})
+    ok_dd, _ = pre_tool_guard._check_command({"CommandLine": cmd_dd})
+    ok_py_w, _ = pre_tool_guard._check_command({"CommandLine": cmd_py_write})
+    ok_py_o, _ = pre_tool_guard._check_command({"CommandLine": cmd_py_open})
+    ok_sub, _ = pre_tool_guard._check_command({"CommandLine": cmd_subshell})
+
+    # Assert
+    assert (ok_redir, ok_append, ok_tee, ok_mv, ok_install, ok_py_w, ok_sub) == (False,) * 7
+    assert (ok_clobber, ok_amp, ok_fd, ok_heredoc, ok_cp, ok_dd, ok_py_o) == (False,) * 7
+    assert "__init__.py Purity" in r_redir
+    assert "__init__.py Purity" in r_tee
+    assert "Zero-Touch Migration Policy" in r_clobber
+    assert "Zero-Touch Migration Policy" in r_heredoc
+
+
+def test_check_command_allows_benign_shell_reads_quotes_and_unprotected_writes() -> None:
+    # Arrange
+    cmd_quoted = 'echo "Do not run: cat > alembic/versions/001.py or tee src/orders/__init__.py"'
+    cmd_input_redir = "wc -c < src/orders/__init__.py && cat src/orders/__init__.py"
+    cmd_devnull = "echo 'ok' > /tmp/test.txt 2>&1 >/dev/null"
+    cmd_fw_init = "echo '__all__ = []' > src/core_framework/__init__.py"
+    cmd_safe_ops = (
+        "tee -a /tmp/out.txt < /dev/null && cp /tmp/a.txt /tmp/b.txt && "
+        "dd if=/dev/zero of=/tmp/ok.bin count=1 && "
+        "python3 -c \"from pathlib import Path; Path('/tmp/safe.py').write_text('x')\""
+    )
+
+    # Act
+    ok_quoted, _ = pre_tool_guard._check_command({"CommandLine": cmd_quoted})
+    ok_read, _ = pre_tool_guard._check_command({"CommandLine": cmd_input_redir})
+    ok_devnull, _ = pre_tool_guard._check_command({"CommandLine": cmd_devnull})
+    ok_fw, _ = pre_tool_guard._check_command({"CommandLine": cmd_fw_init})
+    ok_safe_ops, _ = pre_tool_guard._check_command({"CommandLine": cmd_safe_ops})
+
+    # Assert
+    assert (ok_quoted, ok_read, ok_devnull, ok_fw, ok_safe_ops) == (True,) * 5
 
 
 def test_main_outputs_allow_for_safe_write_file(

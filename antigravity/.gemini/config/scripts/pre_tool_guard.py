@@ -4,8 +4,11 @@
 Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {"decision": "allow"|"deny", ...} to stdout.
 Hard-blocks (zero prompt tokens, 100% deterministic):
-1. Non-empty writes/edits to consumer ``src/**/__init__.py`` or ``tests/**/__init__.py``.
-2. Manual creation/editing of migration files under ``alembic/versions/*.py``.
+1. Non-empty writes/edits to consumer ``src/**/__init__.py`` or ``tests/**/__init__.py``
+   (via file tools or ``run_command`` shell redirections, heredocs, ``tee``, ``cp``/``mv``,
+   ``dd``, or inline ``python -c``).
+2. Manual creation/editing of migration files under ``alembic/versions/*.py``
+   (via file tools or ``run_command`` shell writes).
 3. Automatic execution of mutating git commands (``git add``, ``git commit``,
    ``git push``, ``git reset --hard``, ``git clean -f``,
    ``git subtree add|pull|push|merge``) or manual ``alembic revision/upgrade/downgrade``.
@@ -43,6 +46,7 @@ _DOCUMENTED_ALEMBIC_SUBCOMMANDS: tuple[str, ...] = (
 )
 
 _SEPARATOR_CHARS = frozenset(";&|()\n")
+_OUTPUT_REDIRECT_OPS = frozenset({">", ">>", ">|", "&>", "&>>", ">&"})
 _COMMAND_WRAPPERS = frozenset({"env", "command", "sudo", "nohup", "nice", "time"})
 _SHELL_BINARIES = frozenset({"sh", "bash", "zsh", "dash"})
 _GIT_FLAGS_WITH_ARG = frozenset(
@@ -50,17 +54,56 @@ _GIT_FLAGS_WITH_ARG = frozenset(
 )
 _ALEMBIC_FLAGS_WITH_ARG = frozenset({"-c", "--config", "-n", "--name", "-x"})
 
+_ZERO_TOUCH_MIGRATION_MSG = (
+    "Blocked by pre_tool_guard (Zero-Touch Migration Policy): "
+    "Never create or modify files in alembic/versions/*.py manually. "
+    "Ask the user to run the project migration CLI "
+    "('alembic revision' / 'alembic upgrade')."
+)
+_INIT_PURITY_MSG = (
+    "Blocked by pre_tool_guard (__init__.py Purity): "
+    "Consumer src/**/__init__.py and tests/**/__init__.py files "
+    "MUST remain 100% empty (0 bytes). Declare bounded-context "
+    "metadata and exclude_contexts in declarative project manifests "
+    "(e.g., app-manifest.yaml or pyproject.toml)."
+)
+
 _MUTATING_GIT_RE = re.compile(
     r"(?:^|[;&|(`]\s*|\$\(\s*|\n\s*)git\s+(?:(?:-[Cc]|--git-dir|--work-tree)\s+\S+\s+|-\S+\s+)*(?:add|commit|push|reset\s+--hard|clean\s+-[a-zA-Z]*f|subtree\s+(?:add|pull|push|merge))\b"
 )
 _ALEMBIC_MUTATE_RE = re.compile(
     r"(?:^|[;&|(`]\s*|\$\(\s*|\n\s*)(?:python[0-9.]*\s+-m\s+)?alembic\s+(?:-[cnxh]\s+\S+\s+|-\S+\s+)*(?:revision|upgrade|downgrade)\b"
 )
+_PYTHON_WRITE_CALL_RE = re.compile(
+    r"\b(?:write_text|write_bytes|open|write|copy\w*|move|replace|rename)\s*\("
+)
+_INLINE_PATH_TOKEN_RE = re.compile(r"['\"]([^'\"]+)['\"]")
+_SHELL_WRITE_FALLBACK_RE = re.compile(
+    r"(?:[0-9]*>>?|[0-9]*>\|?|&>>?|\btee\s+(?:-\S+\s+)*"
+    r"|\b(?:cp|mv|install)\s+(?:-\S+\s+)*\S+\s+|\bdd\s+[^;&|`\n]*?\bof=)"
+    r"\s*['\"]?([^\s'\";&|()`<>]+)"
+)
+
+
+def _classify_protected_path(raw_path: str) -> str | None:
+    """Return 'alembic_file' or 'init_purity' if raw_path targets a protected file."""
+    cleaned = raw_path.replace("\\", "/").strip().strip("'\"")
+    while cleaned.startswith("./"):
+        cleaned = cleaned[2:]
+    norm = cleaned if cleaned.startswith("/") else f"/{cleaned}"
+    if "/alembic/versions/" in norm and norm.endswith(".py"):
+        return "alembic_file"
+    if norm.endswith("/__init__.py"):
+        is_tests_init = "/tests/" in norm
+        is_consumer_src_init = "/src/" in norm and "_framework/" not in norm
+        if is_tests_init or is_consumer_src_init:
+            return "init_purity"
+    return None
 
 
 def _split_shell_segments(cmd: str) -> list[list[str]]:
     """Tokenize a shell command into individual command segments respecting quotes."""
-    lexer = shlex.shlex(cmd, posix=True, punctuation_chars=";&|()\n")
+    lexer = shlex.shlex(cmd, posix=True, punctuation_chars=";&|()<>\n")
     lexer.whitespace = " \t\r"
     lexer.whitespace_split = True
     segments: list[list[str]] = []
@@ -162,6 +205,45 @@ def _is_mutating_alembic_segment(tokens: list[str]) -> bool:
     return idx < n and tokens[idx] in {"revision", "upgrade", "downgrade"}
 
 
+def _detect_protected_write_in_segment(
+    raw_tokens: list[str],
+    stripped_tokens: list[str],
+) -> str | None:
+    """Return 'alembic_file' or 'init_purity' if segment writes to a protected path."""
+    for idx, tok in enumerate(raw_tokens[:-1]):
+        if tok in _OUTPUT_REDIRECT_OPS:
+            hit = _classify_protected_path(raw_tokens[idx + 1])
+            if hit is not None:
+                return hit
+
+    if not stripped_tokens:
+        return None
+
+    prog = stripped_tokens[0].rsplit("/", 1)[-1]
+    args = stripped_tokens[1:]
+
+    if prog in {"tee", "cp", "mv", "install"}:
+        targets = [a for a in args if not a.startswith("-")]
+        for arg in targets if prog == "tee" else targets[-1:]:
+            hit = _classify_protected_path(arg)
+            if hit is not None:
+                return hit
+    elif prog == "dd":
+        for arg in args:
+            if arg.startswith("of="):
+                hit = _classify_protected_path(arg[3:])
+                if hit is not None:
+                    return hit
+    elif prog.startswith("python") and "-c" in args:
+        code = " ".join(args[args.index("-c") + 1 :])
+        if _PYTHON_WRITE_CALL_RE.search(code):
+            for candidate in _INLINE_PATH_TOKEN_RE.findall(code):
+                hit = _classify_protected_path(candidate)
+                if hit is not None:
+                    return hit
+    return None
+
+
 def _inspect_command_string(cmd: str) -> str | None:
     """Inspect a shell command string via shlex tokenization and regex fallback."""
     has_cmd_subst = "$(" in cmd or "`" in cmd
@@ -182,12 +264,19 @@ def _inspect_command_string(cmd: str) -> str | None:
             return "git"
         if _is_mutating_alembic_segment(seg):
             return "alembic"
+        write_hit = _detect_protected_write_in_segment(raw_seg, seg)
+        if write_hit is not None:
+            return write_hit
 
     if has_cmd_subst:
         if _MUTATING_GIT_RE.search(cmd):
             return "git"
         if _ALEMBIC_MUTATE_RE.search(cmd):
             return "alembic"
+        for match in _SHELL_WRITE_FALLBACK_RE.finditer(cmd):
+            hit = _classify_protected_path(match.group(1))
+            if hit is not None:
+                return hit
 
     return None
 
@@ -198,43 +287,29 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
     if not target:
         return True, ""
 
+    kind = _classify_protected_path(target)
+
     # 1. Zero-Touch Migration Policy: never write/edit alembic/versions/*.py manually
-    if "/alembic/versions/" in target and target.endswith(".py"):
-        msg = (
-            "Blocked by pre_tool_guard (Zero-Touch Migration Policy): "
-            "Never create or modify files in alembic/versions/*.py manually. "
-            "Ask the user to run the project migration CLI "
-            "('alembic revision' / 'alembic upgrade')."
-        )
-        return False, msg
+    if kind == "alembic_file":
+        return False, _ZERO_TOUCH_MIGRATION_MSG
 
     # 2. 0-byte __init__.py purity in consumer src/** and all tests/**
-    if target.endswith("/__init__.py"):
-        is_tests_init = "/tests/" in target
-        is_consumer_src_init = "/src/" in target and "_framework/" not in target
-        if is_tests_init or is_consumer_src_init:
-            content = str(
-                args.get("Content") or args.get("Replacement") or args.get("CodeContent") or ""
-            )
-            chunks = args.get("ReplacementChunks")
-            has_non_empty_chunks = isinstance(chunks, list) and any(
-                isinstance(c, dict) and str(c.get("ReplacementContent") or "") for c in chunks
-            )
-            if content or has_non_empty_chunks:
-                msg = (
-                    "Blocked by pre_tool_guard (__init__.py Purity): "
-                    "Consumer src/**/__init__.py and tests/**/__init__.py files "
-                    "MUST remain 100% empty (0 bytes). Declare bounded-context "
-                    "metadata and exclude_contexts in declarative project manifests "
-                    "(e.g., app-manifest.yaml or pyproject.toml)."
-                )
-                return False, msg
+    if kind == "init_purity":
+        content = str(
+            args.get("Content") or args.get("Replacement") or args.get("CodeContent") or ""
+        )
+        chunks = args.get("ReplacementChunks")
+        has_non_empty_chunks = isinstance(chunks, list) and any(
+            isinstance(c, dict) and str(c.get("ReplacementContent") or "") for c in chunks
+        )
+        if content or has_non_empty_chunks:
+            return False, _INIT_PURITY_MSG
 
     return True, ""
 
 
 def _check_command(args: dict[str, object]) -> tuple[bool, str]:
-    """Validate shell commands against commit and migration discipline."""
+    """Validate shell commands against commit, migration, and protected file write rules."""
     cmd = str(args.get("CommandLine") or "")
     if not cmd:
         return True, ""
@@ -256,6 +331,12 @@ def _check_command(args: dict[str, object]) -> tuple[bool, str]:
             "The user handles database migrations interactively."
         )
         return False, msg
+
+    if hit == "alembic_file":
+        return False, _ZERO_TOUCH_MIGRATION_MSG
+
+    if hit == "init_purity":
+        return False, _INIT_PURITY_MSG
 
     return True, ""
 

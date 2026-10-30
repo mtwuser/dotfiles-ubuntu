@@ -307,10 +307,31 @@ for doc_name, doc_text in [
     ("SECURITY.md", security_md),
     ("README.md", readme_md),
 ]:
-    for token in (*pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS, "alembic/versions/", "__init__.py"):
+    for token in (
+        *pre_tool_guard._DOCUMENTED_GIT_SUBCOMMANDS,
+        "alembic/versions/",
+        "__init__.py",
+        "heredoc",
+        "tee",
+    ):
         if token not in doc_text:
             print(f"Hook-to-doc drift: '{token}' enforced by pre_tool_guard.py is missing from {doc_name}", file=sys.stderr)
             sys.exit(1)
+
+for protected_target in (
+    "alembic/versions/001_init.py",
+    "src/orders/__init__.py",
+    "tests/unit/__init__.py",
+):
+    fw_ok, fw_reason = pre_tool_guard._check_file_write(
+        {"Path": f"/workspace/app/{protected_target}", "Content": "x = 1"}
+    )
+    sh_ok, sh_reason = pre_tool_guard._check_command(
+        {"CommandLine": f"cat << 'EOF' > {protected_target}\nx = 1\nEOF"}
+    )
+    if fw_ok or sh_ok or fw_reason != sh_reason:
+        print(f"Cross-channel guard parity failure on {protected_target}", file=sys.stderr)
+        sys.exit(1)
 
 for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands", "git add", "git commit", "git push"):
     if agents_token not in agents_md:

@@ -53,6 +53,7 @@ When adding tests to close coverage gaps or testing security/lifecycle guards:
 3. **Bipolar Guard Verification (Negative-First, Positive-Second)**: Any test for a security gate, lifecycle hook (`PreToolUse`, `PostToolUse`, `Stop`), schema validator, or drift auditor that only asserts the passing ("allow"/"stop") state is vulnerable to silent early-return/short-circuit bugs (e.g., mismatched JSON keys returning a default pass). Every guard test MUST execute **both poles**:
    - **Negative Pole First**: Feed a deliberate violation (failing test, syntax error, forbidden command, expired token) and assert the guard blocks or flags it (`"deny"`, `"continue"`, or specific error code).
    - **Positive Pole Second**: Fix the violation and assert the guard transitions cleanly to the passing state.
+4. **Cross-Channel Guard Equivalence (Structured Tools vs. Shell/Interpreter Channels)**: Whenever a security or governance guard protects a **resource** (e.g., protected file paths like `alembic/versions/*.py` or `0-byte` `__init__.py`), never scope the guard or its test matrix solely to structured file-editing tools (`write_file`, `edit_file`). Verify the orthogonal matrix `(Protected Resource Invariant) × (Execution Channel)` across structured tools, shell redirections/heredocs (`>`, `>>`, `<<EOF`), stream/file utilities (`tee`, `cp`, `mv`, `dd`), unwrapped subshells (`sh/bash -c`), and inline interpreters (`python -c`).
 
 ---
 
