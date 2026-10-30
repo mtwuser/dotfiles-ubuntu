@@ -177,3 +177,41 @@ class TestMCPToolsEphemeral:
             server.call_tool(
                 "orchestrate_ephemeral_fork", {"action": "spawn", "bot_role": "INVALID_BOT"}
             )
+
+    def test_orchestrate_ephemeral_fork_read_only_filesystem_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fall back to dry_run in-memory evaluation on read-only container filesystems."""
+        # Arrange
+        import dotfiles_mcp.tools_ephemeral as te_mod
+        from dotfiles_mcp.ephemeral_fork_engine import spawn_ephemeral_fork as orig_spawn
+
+        repo = tmp_path / "repo"
+        (repo / "system").mkdir(parents=True)
+        (repo / "system" / "mcp-layer.json").write_text(
+            json.dumps({"schema_version": "1.2", "layer_id": "ro-root"}), encoding="utf-8"
+        )
+
+        def _spawn_ro(*args: object, **kwargs: object) -> dict[str, object]:
+            if not kwargs.get("dry_run"):
+                raise OSError(30, "Read-only file system")
+            return orig_spawn(*args, **kwargs)  # type: ignore[arg-type]
+
+        monkeypatch.setattr(te_mod, "spawn_ephemeral_fork", _spawn_ro)
+        server = DotfilesMCPServer(repo_dir=repo, log_dir=None)
+
+        # Act
+        eval_resp = server.call_tool(
+            "orchestrate_ephemeral_fork",
+            {"action": "evaluate", "bot_role": "dept-ro-bot", "target_path": "src/a.py"},
+        )
+        eval_data = json.loads(eval_resp["content"][0]["text"])
+
+        # Assert
+        assert eval_data["auto_reaped"] is True
+        assert eval_data["bot_role"] == "dept-ro-bot"
+        with pytest.raises(OSError, match="Read-only file system"):
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {"action": "spawn", "bot_role": "dept-ro-bot"},
+            )

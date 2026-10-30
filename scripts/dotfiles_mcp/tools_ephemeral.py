@@ -83,20 +83,39 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
 
         try:
             if action == "spawn" or not fork_id:
-                spawned = spawn_ephemeral_fork(
-                    self.repo_dir,
-                    self._load_layer_manifest(),
-                    bot_role=bot_role,
-                    target_globs=target_globs,
-                    architectural_planes=planes,
-                    mount_templates=mount_templates,
-                    mount_layers=mount_layers,
-                    mount_project_rules_from=project_bridge_path,
-                    model_tier=model_tier,
-                    access_mode=access_mode,
-                    resolution=resolution,
-                    ttl_seconds=ttl_seconds,
-                )
+                try:
+                    spawned = spawn_ephemeral_fork(
+                        self.repo_dir,
+                        self._load_layer_manifest(),
+                        bot_role=bot_role,
+                        target_globs=target_globs,
+                        architectural_planes=planes,
+                        mount_templates=mount_templates,
+                        mount_layers=mount_layers,
+                        mount_project_rules_from=project_bridge_path,
+                        model_tier=model_tier,
+                        access_mode=access_mode,
+                        resolution=resolution,
+                        ttl_seconds=ttl_seconds,
+                    )
+                except OSError:
+                    if action != "evaluate" or not one_shot:
+                        raise
+                    spawned = spawn_ephemeral_fork(
+                        self.repo_dir,
+                        self._load_layer_manifest(),
+                        bot_role=bot_role,
+                        target_globs=target_globs,
+                        architectural_planes=planes,
+                        mount_templates=mount_templates,
+                        mount_layers=mount_layers,
+                        mount_project_rules_from=project_bridge_path,
+                        model_tier=model_tier,
+                        access_mode=access_mode,
+                        resolution=resolution,
+                        ttl_seconds=ttl_seconds,
+                        dry_run=True,
+                    )
             else:
                 inspect_ephemeral_forks(self.repo_dir, fork_id=fork_id)
                 fork_dir_existing = default_ephemeral_root(self.repo_dir) / fork_id
@@ -136,7 +155,19 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
             }
 
         ephemeral_dir = Path(str(spawned["fork_dir"]))
-        ephemeral_node = SurfaceToolsMixin(repo_dir=ephemeral_dir, log_dir=None)
+        is_materialized = ephemeral_dir.is_dir()
+        ephemeral_node = SurfaceToolsMixin(
+            repo_dir=ephemeral_dir if is_materialized else self.repo_dir,
+            log_dir=None,
+        )
+        if not is_materialized:
+            ephemeral_node._load_layer_manifest = (  # type: ignore[method-assign]
+                lambda target_dir=None: (
+                    spawned["manifest"]
+                    if (target_dir is None or Path(target_dir).resolve() == self.repo_dir)
+                    else SurfaceToolsMixin._load_layer_manifest(ephemeral_node, target_dir)
+                )
+            )
         proj_resp = ephemeral_node._tool_resolve_surface_governance(
             {
                 "target_path": target_path,
@@ -161,7 +192,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
         )
         auto_reaped = False
         if one_shot and fork_id is None:
-            reap_ephemeral_fork(self.repo_dir, fork_id=str(spawned["fork_id"]))
+            if is_materialized:
+                reap_ephemeral_fork(self.repo_dir, fork_id=str(spawned["fork_id"]))
             auto_reaped = True
 
         eval_payload = {
