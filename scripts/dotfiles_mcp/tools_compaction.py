@@ -177,7 +177,7 @@ class CompactionToolsMixin(MCPNodeBase):
         excerpt_truncated = False
         q_lower = query.lower()
         for lname, ldir, file_path in candidate_files:
-            if not file_path.is_file():
+            if not file_path.is_file() or not file_path.resolve().is_relative_to(ldir.resolve()):
                 continue
             lines = file_path.read_text(encoding="utf-8").splitlines()
             for heading, start_line, end_line, body in _iter_markdown_sections(

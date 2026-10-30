@@ -259,7 +259,10 @@ def diff_project_against_layers(
                 rel_a = str(af.relative_to(agents_dir)).replace("\\", "/")
                 proj_files.append((rel_a, af))
 
+    proj_resolved = project_dir.resolve()
     for rel_key, pfile in proj_files:
+        if not pfile.resolve().is_relative_to(proj_resolved):
+            raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
         m = MATERIALIZED_RULE_RE.match(pfile.name)
         if m:
             sub_name = m.group(2)
@@ -313,18 +316,24 @@ def promote_project_asset_to_layer(
     if not src_file.is_relative_to(project_dir.resolve()) or not src_file.is_file():
         raise ValueError(f"Invalid or missing project source file: {source_rel_path!r}")
 
+    repo_resolved = repo_dir.resolve()
     layer_base = (
-        repo_dir if target_layer in ("", "root") else (repo_dir / "layers" / target_layer).resolve()
+        repo_resolved
+        if target_layer in ("", "root")
+        else (repo_resolved / "layers" / target_layer).resolve()
     )
-    if not layer_base.is_relative_to(repo_dir.resolve()) or not layer_base.is_dir():
+    if not layer_base.is_relative_to(repo_resolved) or not layer_base.is_dir():
         raise ValueError(f"Target layer directory not found: {target_layer!r}")
 
     content = src_file.read_text(encoding="utf-8")
     rel_parts = src_file.relative_to(project_dir.resolve()).parts
-    eff_template = target_template
+    eff_template = target_template or (
+        rel_parts[2] if len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets") else None
+    )
+    if eff_template and not KEBAB_ID_RE.match(eff_template):
+        raise ValueError(f"Invalid target_template {eff_template!r}: must be kebab-case")
     if len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets"):
-        eff_template = target_template or rel_parts[2]
-        dest_file = layer_base / "templates" / eff_template / "assets" / Path(*rel_parts[3:])
+        dest_file = layer_base / "templates" / str(eff_template) / "assets" / Path(*rel_parts[3:])
     elif src_file.name == "SKILL.md":
         lines = content.splitlines()
         if len(lines) > 500 or not lines or lines[0].strip() != "---":
@@ -361,9 +370,11 @@ def promote_project_asset_to_layer(
 
     if not dry_run:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
+        dest_file.unlink(missing_ok=True)
         shutil.copy2(src_file, dest_file)
+        dest_file.chmod(0o644)
 
-    eff_layer = "root" if layer_base == repo_dir else target_layer
+    eff_layer = "root" if layer_base == repo_resolved else target_layer
     return {
         "source": str(src_file.relative_to(project_dir.resolve())),
         "target_layer": eff_layer,

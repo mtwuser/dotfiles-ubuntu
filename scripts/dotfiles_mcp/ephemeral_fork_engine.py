@@ -108,15 +108,24 @@ def reap_expired_ephemeral_forks(
             except OSError, ValueError, TypeError, json.JSONDecodeError:
                 expired = True
         if expired:
+            _ensure_dirs_writable(child)
             shutil.rmtree(child, ignore_errors=True)
             reaped.append(child.name)
     return reaped
 
 
+def _ensure_dirs_writable(root: Path) -> None:
+    for d in (root, *(p for p in root.rglob("*") if p.is_dir(follow_symlinks=False))):
+        d.chmod(0o755)
+
+
 def _copy_zero_copy(src: Path, dst: Path) -> None:
     """Materialize file or directory tree using hardlinks (0 extra blocks) or copy fallback."""
     if src.is_dir():
-        shutil.copytree(src, dst, dirs_exist_ok=True, copy_function=_link_or_copy_file)
+        shutil.copytree(
+            src, dst, symlinks=True, dirs_exist_ok=True, copy_function=_link_or_copy_file
+        )
+        _ensure_dirs_writable(dst)
     else:
         _link_or_copy_file(str(src), str(dst))
 
@@ -125,8 +134,7 @@ def _link_or_copy_file(src_str: str, dst_str: str) -> str:
     with contextlib.suppress(OSError):
         os.link(src_str, dst_str)
         return dst_str
-    shutil.copy2(src_str, dst_str)
-    return dst_str
+    return shutil.copy2(src_str, dst_str)
 
 
 def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str, Any]]:
@@ -137,22 +145,22 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
     rules_dir = proj / ".agents" / "rules"
     bridged_files: list[str] = []
     sections = [f"# Ephemeral Project Bridge ({proj.name})\n"]
-    if rules_dir.is_dir():
-        for rf in sorted(rules_dir.glob("*.md")):
-            if not rf.resolve().is_relative_to(proj):
-                raise ValueError(
-                    f"Outbound symlink escape denied in mount_project_rules_from: {rf.name}"
-                )
-            sections.append(f"## Rule: {rf.name}\n\n{rf.read_text(encoding='utf-8').strip()}\n")
-            bridged_files.append(f".agents/rules/{rf.name}")
+    for rf in sorted(rules_dir.glob("*.md")) if rules_dir.is_dir() else []:
+        if not rf.resolve().is_relative_to(proj):
+            raise ValueError(
+                f"Outbound symlink escape denied in mount_project_rules_from: {rf.name}"
+            )
+        sections.append(f"## Rule: {rf.name}\n\n{rf.read_text(encoding='utf-8').strip()}\n")
+        bridged_files.append(f".agents/rules/{rf.name}")
+    wildcard = ["*"]
     binding = dict(
         binding_id="ephemeral-project-bridge-rules",
         description=f"Bridged workspace rules from {proj.name}",
         mode="authoritative",
-        target_globs=["*"],
-        architectural_planes=["*"],
-        scopes=["*"],
-        traits=["*"],
+        target_globs=wildcard,
+        architectural_planes=wildcard,
+        scopes=wildcard,
+        traits=wildcard,
         default_resolution="L2",
         invariants=[f"Enforce bridged workspace contracts from {proj.name}"],
         rule_files=["antigravity/.gemini/config/AGENTS.md"],
@@ -192,8 +200,11 @@ def spawn_ephemeral_fork(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Materialize a zero-copy, TTL-bounded ephemeral fork for a Department Bot."""
-    role_clean = bot_role.strip()
-    planes = list(architectural_planes or ["*"])
+    role_clean, planes, globs = (
+        bot_role.strip(),
+        list(architectural_planes or ["*"]),
+        list(target_globs or ["*"]),
+    )
     if not KEBAB_ID_RE.match(role_clean):
         raise ValueError(f"Invalid bot_role {role_clean!r}: must be kebab-case")
     if model_tier not in VALID_AGENT_TIERS:
@@ -225,15 +236,10 @@ def spawn_ephemeral_fork(
     expires_at = round(created_at + ttl_seconds, 3)
     seed = f"{role_clean}:{created_at}:{target_globs}:{mount_templates}:{mount_project_rules_from}"
     fork_id = f"eph-{role_clean}-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:8]}"
-    session_secret = hashlib.sha256(f"rcap1-ephemeral:{fork_id}:{created_at}".encode()).hexdigest()[
-        :24
-    ]
-    effective_templates = (
-        list(mount_templates)
-        if mount_templates is not None
-        else list(base_manifest.get("default_stack_templates", []))
-    )
-    globs = list(target_globs or ["*"])
+    s_raw = f"rcap1-ephemeral:{fork_id}:{created_at}".encode()
+    session_secret = hashlib.sha256(s_raw).hexdigest()[:24]
+    default_tpls = list(base_manifest.get("default_stack_templates", []))
+    effective_templates = list(mount_templates) if mount_templates is not None else default_tpls
     canonical_tpls = [
         f"templates/{t}/rules/coding.md"
         for t in effective_templates
@@ -249,13 +255,12 @@ def spawn_ephemeral_fork(
         and not c.name.startswith(".")
         and (mount_layers is None or c.name in mount_layers)
     ]
-    bridged_files: list[str] = []
-    bridge_md = ""
-    bridge_manifest: dict[str, Any] = {}
+    bridged_files, bridge_md, bridge_manifest = (
+        _prepare_project_bridge(mount_project_rules_from)
+        if mount_project_rules_from is not None
+        else ([], "", {})
+    )
     if mount_project_rules_from is not None:
-        bridged_files, bridge_md, bridge_manifest = _prepare_project_bridge(
-            mount_project_rules_from
-        )
         selected_layers.append("ephemeral-project-bridge")
 
     parent_id = str(base_manifest.get("layer_id", "dotfiles-ubuntu-default"))
@@ -276,9 +281,11 @@ def spawn_ephemeral_fork(
         handback_contract="4-channel-digest+rcap1",
     )
     if bridge_manifest:
-        eph_meta["bridge_layer_id"] = str(bridge_manifest.get("layer_id", ""))
-        eph_meta["bridge_agents_md"] = bridge_md
-        eph_meta["bridge_manifest"] = bridge_manifest
+        eph_meta.update(
+            bridge_layer_id=str(bridge_manifest.get("layer_id", "")),
+            bridge_agents_md=bridge_md,
+            bridge_manifest=bridge_manifest,
+        )
 
     binding = dict(
         binding_id=f"{role_clean}-ephemeral-authority",
@@ -399,6 +406,7 @@ def reap_ephemeral_fork(
             if child.is_dir():
                 reaped.append(child.name)
                 if not dry_run:
+                    _ensure_dirs_writable(child)
                     shutil.rmtree(child, ignore_errors=True)
         return {"dry_run": dry_run, "reaped_forks": reaped}
     if not KEBAB_ID_RE.match(fork_id):
@@ -408,6 +416,7 @@ def reap_ephemeral_fork(
         raise FileNotFoundError(f"Ephemeral fork {fork_id!r} not found under {root}")
     reaped.append(fork_id)
     if not dry_run:
+        _ensure_dirs_writable(target)
         shutil.rmtree(target, ignore_errors=True)
     return {"dry_run": dry_run, "reaped_forks": reaped}
 
@@ -421,8 +430,10 @@ def build_subagent_invocation_brief(
     """Build a deterministic Antigravity invoke_subagent brief with 4-Channel digest contract."""
     meta = manifest.get("ephemeral_metadata", {})
     bot_role = str(meta.get("bot_role", manifest.get("layer_id", "ephemeral-bot")))
-    model_tier = str(meta.get("model_tier", "flash"))
-    access_mode = str(meta.get("access_mode", "strictly-read-only"))
+    model_tier, access_mode = (
+        str(meta.get("model_tier", "flash")),
+        str(meta.get("access_mode", "strictly-read-only")),
+    )
     invariants = list(surface_projection.get("effective_invariants", []))
     channels = [
         "1. Domain State",
@@ -433,23 +444,21 @@ def build_subagent_invocation_brief(
     prompt_lines = [
         f"You are operating as Ephemeral Department Bot '{bot_role}' "
         f"(access_mode={access_mode}, model_tier={model_tier}).",
-        f"Target Surface: {target_path or '*'}",
-        "Enforced Invariants:",
+        f"Target Surface: {target_path or '*'}\nEnforced Invariants:",
         *[f"- {inv}" for inv in invariants[:8]],
         "Return ONLY a compact 4-Channel Executive Digest (AGENTS.md §13):",
         *[f"  {ch}" for ch in channels],
+        *([f"Sealed Context Capsule (rcap1): {capsule_token[:48]}..."] if capsule_token else []),
     ]
-    if capsule_token:
-        prompt_lines.append(f"Sealed Context Capsule (rcap1): {capsule_token[:48]}...")
-    return {
-        "subagent_type": "research" if access_mode == "strictly-read-only" else "self",
-        "model_tier": model_tier,
-        "role": f"Department Bot ({bot_role})",
-        "access_mode": access_mode,
-        "target_path": target_path or "*",
-        "effective_invariants": invariants,
-        "canonical_templates": list(surface_projection.get("canonical_templates", [])),
-        "handback_channels": channels,
-        "capsule_token": capsule_token,
-        "prompt": "\n".join(prompt_lines),
-    }
+    return dict(
+        subagent_type="research" if access_mode == "strictly-read-only" else "self",
+        model_tier=model_tier,
+        role=f"Department Bot ({bot_role})",
+        access_mode=access_mode,
+        target_path=target_path or "*",
+        effective_invariants=invariants,
+        canonical_templates=list(surface_projection.get("canonical_templates", [])),
+        handback_channels=channels,
+        capsule_token=capsule_token,
+        prompt="\n".join(prompt_lines),
+    )

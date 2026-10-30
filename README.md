@@ -317,6 +317,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   └── test_repo_parity_gates.py
 │   └── e2e/                           ←   chained multi-node MCP federation, surface weaving, ephemeral bots & hook tests
 │       ├── test_chained_mcp_federation_e2e.py
+│       ├── test_layer_config_and_promotion_e2e.py
 │       ├── test_surface_and_compaction_e2e.py
 │       ├── test_ephemeral_forks_e2e.py
 │       └── test_agent_turn_lifecycle_hooks_e2e.py

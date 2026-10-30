@@ -374,7 +374,9 @@ def apply_fork_to_project(
                     copied_files.append(str(dest.relative_to(target_project_dir)))
                     if not dry_run:
                         dest.parent.mkdir(parents=True, exist_ok=True)
+                        dest.unlink(missing_ok=True)
                         shutil.copy2(src_file, dest)
+                        dest.chmod(0o644)
         gov_src = resolved_tpl_dir / "governance"
         if gov_src.is_dir():
             for gfile in sorted(gov_src.glob("*.md")):
@@ -384,6 +386,7 @@ def apply_fork_to_project(
                     if not dry_run:
                         target_project_dir.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(gfile, dest_g)
+                        dest_g.chmod(0o644)
         assets_src = resolved_tpl_dir / "assets"
         if assets_src.is_dir():
             for afile in sorted(assets_src.rglob("*")):
@@ -393,7 +396,9 @@ def apply_fork_to_project(
                 copied_files.append(str(dest_a.relative_to(target_project_dir)))
                 if not dry_run:
                     dest_a.parent.mkdir(parents=True, exist_ok=True)
+                    dest_a.unlink(missing_ok=True)
                     shutil.copy2(afile, dest_a)
+                    dest_a.chmod(0o644)
 
     lineage_lines = [
         "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)",
