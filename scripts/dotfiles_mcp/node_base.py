@@ -38,6 +38,16 @@ class MCPNodeBase:
         self.layer_id_override = layer_id_override
         self.layer_role_override = layer_role_override
         self.log_dir = log_dir.resolve() if log_dir is not None else None
+        self._ephemeral_memory_store: dict[str, dict[str, Any]] = {}
+
+    def _reap_expired_memory_forks(self, now_epoch: float | None = None) -> list[str]:
+        now = now_epoch if now_epoch is not None else datetime.now(UTC).timestamp()
+        reaped: list[str] = []
+        for fid in list(self._ephemeral_memory_store):
+            if now >= float(self._ephemeral_memory_store[fid].get("expires_at_epoch", 0.0)):
+                self._ephemeral_memory_store.pop(fid, None)
+                reaped.append(fid)
+        return reaped
 
     def _write_jsonl(self, filename: str, record: dict[str, Any]) -> None:
         if self.log_dir is None:

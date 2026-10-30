@@ -213,7 +213,7 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         len(surf_payload.get("resolved_bindings", [])) >= 2,
         "resolve_surface_governance did not match expected baseline bindings",
     )
-    eph_res = server.handle_request(
+    eph_spawn = server.handle_request(
         {
             "jsonrpc": "2.0",
             "id": 92,
@@ -221,16 +221,96 @@ def run_self_test(server: DotfilesMCPServer) -> int:
             "params": {
                 "name": "orchestrate_ephemeral_fork",
                 "arguments": {
-                    "action": "evaluate",
+                    "action": "spawn",
                     "bot_role": "dept-hexagonal-architect",
+                    "target_globs": ["src/**"],
+                },
+            },
+        }
+    )
+    _require(bool(eph_spawn and not eph_spawn["result"]["isError"]), "ephemeral spawn failed")
+    eph_fid = json.loads(eph_spawn["result"]["content"][0]["text"])["fork_id"]  # type: ignore[index]
+    eph_insp = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 93,
+            "method": "tools/call",
+            "params": {
+                "name": "orchestrate_ephemeral_fork",
+                "arguments": {"action": "inspect", "fork_id": eph_fid},
+            },
+        }
+    )
+    _require(bool(eph_insp and not eph_insp["result"]["isError"]), "ephemeral inspect failed")
+    eph_eval = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 94,
+            "method": "tools/call",
+            "params": {
+                "name": "orchestrate_ephemeral_fork",
+                "arguments": {
+                    "action": "evaluate",
+                    "fork_id": eph_fid,
                     "target_path": "src/checkout/service.py",
+                    "one_shot": False,
+                },
+            },
+        }
+    )
+    _require(bool(eph_eval and not eph_eval["result"]["isError"]), "ephemeral evaluate failed")
+    eph_payload = json.loads(eph_eval["result"]["content"][0]["text"])  # type: ignore[index]
+    eph_unfold = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 95,
+            "method": "tools/call",
+            "params": {
+                "name": "unfold_context_capsule",
+                "arguments": {
+                    "capsule_token": eph_payload["ephemeral_capsule"],
+                    "target_level": "L3",
+                    "agent_tier": "inherit",
+                    "resonance_key": eph_payload["session_resonance_key"],
                 },
             },
         }
     )
     _require(
-        bool(eph_res and not eph_res["result"]["isError"]),
-        "orchestrate_ephemeral_fork failed",
+        bool(eph_unfold and not eph_unfold["result"]["isError"]),
+        "parent unfold of ephemeral capsule failed",
+    )
+    eph_reap = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 96,
+            "method": "tools/call",
+            "params": {
+                "name": "orchestrate_ephemeral_fork",
+                "arguments": {"action": "reap", "fork_id": eph_fid},
+            },
+        }
+    )
+    _require(bool(eph_reap and not eph_reap["result"]["isError"]), "ephemeral reap failed")
+    eph_revoked = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 97,
+            "method": "tools/call",
+            "params": {
+                "name": "unfold_context_capsule",
+                "arguments": {
+                    "capsule_token": eph_payload["ephemeral_capsule"],
+                    "target_level": "L2",
+                    "agent_tier": "inherit",
+                    "resonance_key": eph_payload["session_resonance_key"],
+                },
+            },
+        }
+    )
+    _require(
+        bool(eph_revoked and "error" in eph_revoked),
+        "Reaped ephemeral fork capsule must be rejected",
     )
 
     # 4. Path-containment security gate verification

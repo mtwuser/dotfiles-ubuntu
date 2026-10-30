@@ -83,13 +83,39 @@ class TestMCPToolsEphemeral:
                 "one_shot": False,
             },
         )
+        eval_data = json.loads(eval_existing_resp["content"][0]["text"])
+        fresh_server = DotfilesMCPServer(repo_dir=repo, log_dir=None)
+        unfold_from_disk = fresh_server.call_tool(
+            "unfold_context_capsule",
+            {
+                "capsule_token": eval_data["ephemeral_capsule"],
+                "target_level": "L3",
+                "agent_tier": "inherit",
+                "resonance_key": eval_data["session_resonance_key"],
+            },
+        )
+        other_server = DotfilesMCPServer(
+            repo_dir=repo, layer_id_override="unrelated-node", log_dir=None
+        )
+        from dotfiles_mcp.capsule_engine import CapsuleError
+
+        with pytest.raises(CapsuleError, match="Cross-node capsule mismatch"):
+            other_server.call_tool(
+                "unfold_context_capsule",
+                {
+                    "capsule_token": eval_data["ephemeral_capsule"],
+                    "target_level": "L3",
+                    "agent_tier": "inherit",
+                    "resonance_key": eval_data["session_resonance_key"],
+                },
+            )
         reap_resp = server.call_tool(
             "orchestrate_ephemeral_fork", {"action": "reap", "fork_id": fid}
         )
 
         # Assert
         assert json.loads(inspect_resp["content"][0]["text"])["active_count"] == 1
-        eval_data = json.loads(eval_existing_resp["content"][0]["text"])
+        assert not unfold_from_disk["isError"]
         assert eval_data["auto_reaped"] is False
         assert eval_data["ephemeral_capsule"].startswith("rcap1.")
         assert eval_data["subagent_invocation_brief"]["subagent_type"] == "research"
@@ -181,12 +207,22 @@ class TestMCPToolsEphemeral:
     def test_orchestrate_ephemeral_fork_read_only_filesystem_fallback(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Fall back to dry_run in-memory evaluation on read-only container filesystems."""
+        """Support full spawn, inspect, evaluate, unfold, and reap in read-only containers."""
         # Arrange
         import dotfiles_mcp.tools_ephemeral as te_mod
         from dotfiles_mcp.ephemeral_fork_engine import spawn_ephemeral_fork as orig_spawn
 
         repo = tmp_path / "repo"
+        cfg = repo / "antigravity" / ".gemini" / "config"
+        cfg.mkdir(parents=True)
+        (cfg / "AGENTS.md").write_text(
+            '# Global Rules\n\n## 1. Security\n\n> *"Stay secure"*\n\n- Zero leaks.\n',
+            encoding="utf-8",
+        )
+        (repo / "layers" / "dept-sec" / "system").mkdir(parents=True)
+        (repo / "layers" / "dept-sec" / "system" / "mcp-layer.json").write_text(
+            json.dumps({"schema_version": "1.2", "layer_id": "dept-sec"}), encoding="utf-8"
+        )
         (repo / "system").mkdir(parents=True)
         (repo / "system" / "mcp-layer.json").write_text(
             json.dumps({"schema_version": "1.2", "layer_id": "ro-root"}), encoding="utf-8"
@@ -206,12 +242,90 @@ class TestMCPToolsEphemeral:
             {"action": "evaluate", "bot_role": "dept-ro-bot", "target_path": "src/a.py"},
         )
         eval_data = json.loads(eval_resp["content"][0]["text"])
+        spawn_resp = server.call_tool(
+            "orchestrate_ephemeral_fork",
+            {
+                "action": "spawn",
+                "bot_role": "dept-ro-spawn",
+                "mount_layers": ["dept-sec"],
+            },
+        )
+        ro_fid = json.loads(spawn_resp["content"][0]["text"])["fork_id"]
+        server.call_tool(
+            "orchestrate_ephemeral_fork",
+            {"action": "spawn", "bot_role": "dept-ro-second"},
+        )
+        insp_single = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork", {"action": "inspect", "fork_id": ro_fid}
+            )["content"][0]["text"]
+        )
+        insp_all = json.loads(
+            server.call_tool("orchestrate_ephemeral_fork", {"action": "inspect"})["content"][0][
+                "text"
+            ]
+        )
+        eval_ro_existing = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {
+                    "action": "evaluate",
+                    "fork_id": ro_fid,
+                    "target_path": "src/a.py",
+                    "one_shot": False,
+                },
+            )["content"][0]["text"]
+        )
+        reap_single = json.loads(
+            server.call_tool("orchestrate_ephemeral_fork", {"action": "reap", "fork_id": ro_fid})[
+                "content"
+            ][0]["text"]
+        )
 
         # Assert
         assert eval_data["auto_reaped"] is True
         assert eval_data["bot_role"] == "dept-ro-bot"
-        with pytest.raises(OSError, match="Read-only file system"):
+        assert insp_single["active_count"] == 1
+        assert insp_all["active_count"] == 2
+        assert eval_ro_existing["fork_id"] == ro_fid
+        assert reap_single["reaped_forks"] == [ro_fid]
+        with pytest.raises(FileNotFoundError, match="not found"):
+            server.call_tool("orchestrate_ephemeral_fork", {"action": "reap", "fork_id": ro_fid})
+
+        server._ephemeral_memory_store["eph-exp-mem"] = {
+            "fork_id": "eph-exp-mem",
+            "expires_at_epoch": 1.0,
+            "active": True,
+            "in_memory_only": True,
+        }
+        with pytest.raises(ValueError, match="EPHEMERAL_FORK_EXPIRED"):
             server.call_tool(
-                "orchestrate_ephemeral_fork",
-                {"action": "spawn", "bot_role": "dept-ro-bot"},
+                "orchestrate_ephemeral_fork", {"action": "inspect", "fork_id": "eph-exp-mem"}
             )
+        server._ephemeral_memory_store["eph-exp-mem2"] = {
+            "fork_id": "eph-exp-mem2",
+            "expires_at_epoch": 1.0,
+            "active": True,
+            "in_memory_only": True,
+        }
+        with pytest.raises(ValueError, match="EPHEMERAL_FORK_EXPIRED"):
+            server.call_tool(
+                "orchestrate_ephemeral_fork", {"action": "evaluate", "fork_id": "eph-exp-mem2"}
+            )
+        for idx in range(16):
+            server._ephemeral_memory_store[f"eph-mem-{idx}"] = {
+                "fork_id": f"eph-mem-{idx}",
+                "expires_at_epoch": 9999999999.0,
+                "active": True,
+                "in_memory_only": True,
+            }
+        with pytest.raises(ValueError, match="EPHEMERAL_FORK_LIMIT_REACHED"):
+            server.call_tool(
+                "orchestrate_ephemeral_fork", {"action": "spawn", "bot_role": "dept-ro-over"}
+            )
+        reap_all = json.loads(
+            server.call_tool("orchestrate_ephemeral_fork", {"action": "reap", "fork_id": "all"})[
+                "content"
+            ][0]["text"]
+        )
+        assert len(reap_all["reaped_forks"]) == 17

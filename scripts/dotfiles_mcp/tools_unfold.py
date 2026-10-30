@@ -31,12 +31,34 @@ from dotfiles_mcp.constants import (
     VALID_CAPSULE_LEVELS,
     VALID_ENVIRONMENTS,
 )
+from dotfiles_mcp.ephemeral_fork_engine import (
+    default_ephemeral_root,
+    reap_expired_ephemeral_forks,
+)
 from dotfiles_mcp.manifest_helpers import _merge_unique_strings
 from dotfiles_mcp.tools_compaction import CompactionToolsMixin
 
 
 class UnfoldToolsMixin(CompactionToolsMixin):
     """Implements unfold_context_capsule tool with capability and hash-chain verification."""
+
+    def _resolve_ephemeral_issuer_meta(
+        self, cap_issuer: str, expected_issuer: str
+    ) -> dict[str, Any] | None:
+        if not cap_issuer.startswith("eph-"):
+            return None
+        self._reap_expired_memory_forks()
+        reap_expired_ephemeral_forks(self.repo_dir)
+        mem_entry = self._ephemeral_memory_store.get(cap_issuer)
+        if mem_entry and str(mem_entry.get("parent_layer_id", "")) == expected_issuer:
+            return dict(mem_entry.get("manifest", {}).get("ephemeral_metadata", mem_entry))
+        m_path = default_ephemeral_root(self.repo_dir) / cap_issuer / "system" / "mcp-layer.json"
+        if m_path.is_file():
+            data = json.loads(m_path.read_text(encoding="utf-8"))
+            meta = dict(data.get("ephemeral_metadata", {}))
+            if str(meta.get("parent_layer_id", "")) == expected_issuer:
+                return meta
+        return None
 
     def _tool_unfold_context_capsule(self, args: dict[str, Any]) -> dict[str, Any]:
         raw_token = str(args.get("capsule_token", "")).strip()
@@ -75,10 +97,15 @@ class UnfoldToolsMixin(CompactionToolsMixin):
 
         expected_issuer = str(self._load_layer_manifest().get("layer_id", "root"))
         cap_issuer = str(header.get("iss") or expected_issuer)
-        if cap_issuer != expected_issuer:
+        eph_meta = (
+            self._resolve_ephemeral_issuer_meta(cap_issuer, expected_issuer)
+            if cap_issuer != expected_issuer
+            else None
+        )
+        if cap_issuer != expected_issuer and eph_meta is None:
             msg = (
                 f"Cross-node capsule mismatch: capsule was issued by MCP node {cap_issuer!r}, "
-                f"but this MCP server is {expected_issuer!r}. "
+                f"but this MCP server is {expected_issuer!r} (or ephemeral fork was reaped). "
                 "[Recovery: Invoke unfold_context_capsule on the issuing MCP server node.]"
             )
             self._emit_warning(
@@ -195,7 +222,12 @@ class UnfoldToolsMixin(CompactionToolsMixin):
         inner: dict[str, Any] = {}
         digest_map: dict[str, str] = {}
         layer_name = hdr_layer
-        layer_dir = self._resolve_layer_dir(layer_name)
+        is_eph_bridge = bool(
+            eph_meta
+            and layer_name in ("ephemeral-project-bridge", str(eph_meta.get("bridge_layer_id", "")))
+            and eph_meta.get("bridge_agents_md")
+        )
+        layer_dir = self.repo_dir if is_eph_bridge else self._resolve_layer_dir(layer_name)
         rel_file = ""
         target_file = self.repo_dir
         start_line = 1
@@ -229,8 +261,12 @@ class UnfoldToolsMixin(CompactionToolsMixin):
 
             if not digest_map:
                 rel_file = str(inner.get("f", ""))
-                target_file = self._resolve_safe_path(rel_file, layer_dir)
-                all_lines = target_file.read_text(encoding="utf-8").splitlines()
+                if is_eph_bridge and eph_meta is not None:
+                    target_file = self.repo_dir / "antigravity" / ".gemini" / "config" / "AGENTS.md"
+                    all_lines = str(eph_meta["bridge_agents_md"]).splitlines()
+                else:
+                    target_file = self._resolve_safe_path(rel_file, layer_dir)
+                    all_lines = target_file.read_text(encoding="utf-8").splitlines()
                 start_line = max(1, int(inner.get("s", 1)))
                 end_line = min(len(all_lines), int(inner.get("e", len(all_lines))))
                 section_lines = all_lines[start_line - 1 : end_line]
@@ -337,7 +373,11 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                     }
                 )
             root_manifest = self._load_layer_manifest()
-            layer_manifest = self._load_layer_manifest(layer_dir)
+            layer_manifest = (
+                dict(eph_meta["bridge_manifest"])
+                if (is_eph_bridge and eph_meta is not None and "bridge_manifest" in eph_meta)
+                else self._load_layer_manifest(layer_dir)
+            )
             effective_env = env_arg or (cap_env if cap_env != "all" else "")
             root_env_g = (
                 root_manifest.get("environments", {})

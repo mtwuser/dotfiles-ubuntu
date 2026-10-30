@@ -37,6 +37,9 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
     # Act — Step 2: Run one-shot Department Bot evaluation with cross-project bridge
     import os
 
+    import pytest
+    from dotfiles_mcp.capsule_engine import CapsuleError
+
     old_env = os.environ.get("DOTFILES_EPHEMERAL_ROOT")
     os.environ["DOTFILES_EPHEMERAL_ROOT"] = str(eph_root)
     try:
@@ -51,17 +54,30 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
                 "model_tier": advisories[0]["model_tier"],
                 "access_mode": advisories[0]["access_mode"],
                 "resolution": "L2",
-                "one_shot": False,
+                "one_shot": True,
             },
         )
         eval_data = json.loads(eval_resp["content"][0]["text"])
         fid = eval_data["fork_id"]
         fork_dir = eph_root / fid
-        bot_mcp = DotfilesMCPServer(repo_dir=fork_dir, log_dir=None)
-        unfold_resp = bot_mcp.call_tool(
+        bridge_cap = next(
+            c["capsule_token"]
+            for c in eval_data["ephemeral_capsules"]
+            if c["layer"] == "ephemeral-project-bridge" and "Cart Invariants" in c["section"]
+        )
+        unfold_root_resp = server.call_tool(
             "unfold_context_capsule",
             {
                 "capsule_token": eval_data["ephemeral_capsule"],
+                "target_level": "L3",
+                "agent_tier": "inherit",
+                "resonance_key": eval_data["session_resonance_key"],
+            },
+        )
+        unfold_bridge_resp = server.call_tool(
+            "unfold_context_capsule",
+            {
+                "capsule_token": bridge_cap,
                 "target_level": "L3",
                 "agent_tier": "inherit",
                 "resonance_key": eval_data["session_resonance_key"],
@@ -71,6 +87,16 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
             "orchestrate_ephemeral_fork",
             {"action": "reap", "fork_id": fid},
         )
+        with pytest.raises(CapsuleError, match="Cross-node capsule mismatch"):
+            server.call_tool(
+                "unfold_context_capsule",
+                {
+                    "capsule_token": bridge_cap,
+                    "target_level": "L2",
+                    "agent_tier": "inherit",
+                    "resonance_key": eval_data["session_resonance_key"],
+                },
+            )
     finally:
         if old_env is None:
             os.environ.pop("DOTFILES_EPHEMERAL_ROOT", None)
@@ -80,11 +106,15 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
     # Assert
     assert len(advisories) >= 1
     assert advisories[0]["bot_role"] == "dept-hexagonal-architect"
+    assert eval_data["auto_reaped"] is True
+    assert not fork_dir.exists()
     assert eval_data["bridged_project_files"] == [".agents/rules/shop-domain.md"]
     assert len(eval_data["subagent_invocation_brief"]["handback_channels"]) == 4
-    assert not unfold_resp["isError"]
+    assert not unfold_root_resp["isError"]
+    assert not unfold_bridge_resp["isError"]
+    bridge_unfolded = json.loads(unfold_bridge_resp["content"][0]["text"])
+    assert "Cart totals must use Decimal." in bridge_unfolded["content"]["full_section"]
     assert json.loads(reap_resp["content"][0]["text"])["reaped_forks"] == [fid]
-    assert not fork_dir.exists()
 
 
 def test_e2e_cli_layer_config_ephemeral_subcommands(tmp_path: Path) -> None:

@@ -36,11 +36,23 @@ class TestEphemeralForkEngine:
         res_env = default_ephemeral_root(tmp_path)
         monkeypatch.delenv("DOTFILES_EPHEMERAL_ROOT", raising=False)
         res_default = default_ephemeral_root(tmp_path)
+        ro_repo = tmp_path / "ro_repo"
+        ro_repo.mkdir()
+        monkeypatch.setattr(
+            os,
+            "access",
+            lambda p, _m: not str(p).startswith(str(ro_repo)),
+        )
+        res_tmp_fallback = default_ephemeral_root(ro_repo)
+        monkeypatch.setattr(os, "access", lambda _p, _m: False)
+        res_both_ro = default_ephemeral_root(ro_repo)
 
         # Assert
         assert res_explicit == explicit.resolve()
         assert res_env == env_dir.resolve()
         assert res_default == (tmp_path / "logs" / "ephemeral_forks").resolve()
+        assert res_tmp_fallback.name == "dotfiles_ephemeral_forks"
+        assert res_both_ro == (ro_repo / "logs" / "ephemeral_forks").resolve()
 
     def test_extract_ephemeral_advisories_deduplicates_and_skips_missing(self) -> None:
         """Extract unique Department Bot advisories from resolved surface bindings."""
@@ -170,6 +182,10 @@ class TestEphemeralForkEngine:
             spawn_ephemeral_fork(
                 repo, {}, bot_role="ok-bot", architectural_planes=["invalid-plane"]
             )
+        with pytest.raises(ValueError, match="Invalid mount_template"):
+            spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", mount_templates=["../escape"])
+        with pytest.raises(ValueError, match="Invalid mount_layer"):
+            spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", mount_layers=["../escape"])
         with pytest.raises(ValueError, match="EPHEMERAL_FORK_LIMIT_REACHED"):
             spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", now_epoch=100.0)
 
@@ -181,6 +197,18 @@ class TestEphemeralForkEngine:
                 {},
                 bot_role="ok-bot",
                 mount_project_rules_from=tmp_path / "nonexistent_proj",
+            )
+        outside_secret = tmp_path / "outside_secret.md"
+        outside_secret.write_text("# Secret\n", encoding="utf-8")
+        hostile_proj = tmp_path / "hostile_proj"
+        (hostile_proj / ".agents" / "rules").mkdir(parents=True)
+        (hostile_proj / ".agents" / "rules" / "escape.md").symlink_to(outside_secret)
+        with pytest.raises(ValueError, match="Outbound symlink escape denied"):
+            spawn_ephemeral_fork(
+                repo,
+                {},
+                bot_role="ok-bot",
+                mount_project_rules_from=hostile_proj,
             )
 
     def test_reap_expired_and_inspect_edge_cases(self, tmp_path: Path) -> None:
