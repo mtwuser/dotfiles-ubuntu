@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import pytest
 from dotfiles_mcp.ephemeral_fork_engine import (
+    _copy_zero_copy,
     build_subagent_invocation_brief,
     default_ephemeral_root,
     extract_ephemeral_advisories,
@@ -267,3 +269,23 @@ class TestEphemeralForkEngine:
         assert live_res["bridged_project_files"] == []
         assert brief_no_cap["capsule_token"] is None
         assert "Sealed Context Capsule" in brief_with_cap["prompt"]
+
+    def test_copy_zero_copy_falls_back_to_copy2_on_cross_device_oserror(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Fall back to shutil.copy2 when os.link raises OSError (e.g. EXDEV cross-device)."""
+        # Arrange
+        src_file = tmp_path / "source.txt"
+        dst_file = tmp_path / "dest.txt"
+        src_file.write_text("cross-device-payload\n", encoding="utf-8")
+
+        def _raise_exdev(_src: str, _dst: str) -> None:
+            raise OSError(18, "Invalid cross-device link")
+
+        monkeypatch.setattr(os, "link", _raise_exdev)
+
+        # Act
+        _copy_zero_copy(src_file, dst_file)
+
+        # Assert
+        assert dst_file.read_text(encoding="utf-8") == "cross-device-payload\n"

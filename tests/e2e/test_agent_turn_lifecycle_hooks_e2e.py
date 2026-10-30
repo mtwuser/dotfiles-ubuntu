@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -37,10 +38,18 @@ def test_e2e_full_agent_turn_pre_post_invocation_and_stop_hooks(tmp_path: Path) 
     venv_bin = ws / "venv" / "bin"
     venv_bin.mkdir(parents=True)
     repo_venv_bin = REPO_DIR / "venv" / "bin"
+    py_bin_dir = Path(sys.executable).parent
     for tool in ("python", "pytest", "ruff"):
-        target_bin = repo_venv_bin / tool
-        if target_bin.exists():
-            (venv_bin / tool).symlink_to(target_bin)
+        candidates = [repo_venv_bin / tool, py_bin_dir / tool]
+        which_tool = shutil.which(tool)
+        if which_tool:
+            candidates.append(Path(which_tool))
+        if tool == "python":
+            candidates.append(Path(sys.executable))
+        for target_bin in candidates:
+            if target_bin.exists():
+                (venv_bin / tool).symlink_to(target_bin)
+                break
 
     git_env = {
         **os.environ,

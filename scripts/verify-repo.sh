@@ -624,9 +624,10 @@ PYEOF
 
   PYTEST_BIN="$(resolve_tool pytest)"
   if [ -n "$PYTEST_BIN" ]; then
-    if PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-fail-under=100 >/dev/null; then
+    if PYTEST_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
       pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"
     else
+      echo "$PYTEST_OUT" >&2
       fail "pytest suite or 100% branch coverage gate failed"
     fi
   else
