@@ -61,7 +61,13 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --to-layer dept-security
    ```
    Compares SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promotes rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates.
-5. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
+5. **Materialize, Inspect & Reap Ephemeral Department Bot Forks (`spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`)**:
+   ```bash
+   ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
+   ./scripts/layer-config.sh inspect-ephemeral
+   ./scripts/layer-config.sh reap-ephemeral --id all
+   ```
+6. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 
 ---
 

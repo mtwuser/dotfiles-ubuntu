@@ -21,6 +21,7 @@ from dotfiles_mcp.constants import (
     VALID_ENVIRONMENTS,
     VALID_RESOLUTIONS,
 )
+from dotfiles_mcp.ephemeral_fork_engine import extract_ephemeral_advisories
 from dotfiles_mcp.manifest_helpers import _merge_unique_strings
 from dotfiles_mcp.promotion_engine import collect_layer_effective_bindings
 from dotfiles_mcp.surface_weaver import (
@@ -304,21 +305,22 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                     if include_capsules:
                         capsule_overhead_tokens += len(capsule_token) // 4
 
-            resolved_bindings.append(
-                {
-                    "binding_id": binding_id,
-                    "layer": lname,
-                    "layer_id": layer_id,
-                    "layer_role": layer_role,
-                    "precedence": b_prec,
-                    "specificity_score": -neg_spec,
-                    "mode": mode,
-                    "resolution": res,
-                    "invariants": b_invariants,
-                    "canonical_templates": verified_templates,
-                    "sections": sections_out,
-                }
-            )
+            binding_entry: dict[str, Any] = {
+                "binding_id": binding_id,
+                "layer": lname,
+                "layer_id": layer_id,
+                "layer_role": layer_role,
+                "precedence": b_prec,
+                "specificity_score": -neg_spec,
+                "mode": mode,
+                "resolution": res,
+                "invariants": b_invariants,
+                "canonical_templates": verified_templates,
+                "sections": sections_out,
+            }
+            if isinstance(b.get("ephemeral_fork_policy"), dict):
+                binding_entry["ephemeral_fork_policy"] = dict(b["ephemeral_fork_policy"])
+            resolved_bindings.append(binding_entry)
 
         if surface_truncated:
             surface_warnings.append(
@@ -359,6 +361,9 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
             "resolved_bindings": resolved_bindings,
             "effective_invariants": _merge_unique_strings(*invariant_groups),
             "canonical_templates": _merge_unique_strings(*template_groups),
+            "ephemeral_delegation_advisories": extract_ephemeral_advisories(
+                resolved_bindings, target_path
+            ),
             "token_compaction_metrics": {
                 "resolution": res_override or "adaptive",
                 "returned_estimated_tokens": returned_tokens,

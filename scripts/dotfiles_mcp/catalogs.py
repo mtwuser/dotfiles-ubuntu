@@ -7,87 +7,66 @@ from __future__ import annotations
 
 from typing import Any
 
-from dotfiles_mcp.constants import VALID_ARCHITECTURAL_PLANES
+from dotfiles_mcp.constants import (
+    VALID_AGENT_TIERS,
+    VALID_ARCHITECTURAL_PLANES,
+    VALID_EPHEMERAL_ACCESS_MODES,
+    VALID_EPHEMERAL_ACTIONS,
+)
 
 MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
     {
         "uri": "dotfiles://layer/identity",
         "name": "Layer & System Node Identity",
-        "description": (
-            "Repository SemVer version, layer_id, layer_role, OS release, "
-            "hostname, Git commit, and upstream lineage."
-        ),
+        "description": "Repository SemVer version, layer_id, layer_role, OS release, and lineage.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://system/manifests",
         "name": "Declarative Ubuntu System Manifests",
-        "description": (
-            "Tracked APT manual packages, application Snaps, NPM globals, "
-            "NVM default version, enabled external recipes, and GNOME extensions."
-        ),
+        "description": "Tracked APT packages, Snaps, NPM globals, NVM default, and GNOME state.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://governance/rules",
         "name": "Layer A Global Engineering Rules (AGENTS.md)",
-        "description": (
-            "Universal behavioral mandates, strict typing, AAA testing, "
-            "refactoring, and commit governance rules."
-        ),
+        "description": "Universal behavioral mandates, strict typing, AAA testing, and governance.",
         "mimeType": "text/markdown",
     },
     {
         "uri": "dotfiles://governance/hooks",
         "name": "Antigravity Lifecycle Hooks Configuration (hooks.json)",
-        "description": (
-            "Deterministic PreToolUse, PostToolUse, PostInvocation, and Stop hook definitions."
-        ),
+        "description": "Deterministic PreToolUse, PostToolUse, PostInvocation, and Stop hooks.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://governance/skills",
         "name": "Global Skills Catalog",
-        "description": (
-            "Structured list of all global interactive slash-command skills "
-            "and procedural engineering skills in this layer."
-        ),
+        "description": "Structured list of global slash-command and procedural engineering skills.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://governance/templates",
         "name": "Layer B Stack Starter Templates",
-        "description": (
-            "Inventory of reusable project starter templates (rules, skills, "
-            "and governance files) available in templates/."
-        ),
+        "description": "Inventory of reusable project starter templates available in templates/.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://docs/index",
         "name": "Navigable Documentation Index (docs/README.md)",
-        "description": (
-            "Structured index of architecture specifications and reference "
-            "guides for this repository layer."
-        ),
+        "description": "Structured index of architecture specs and reference guides.",
         "mimeType": "text/markdown",
     },
     {
         "uri": "dotfiles://mcp/topology",
         "name": "Federated MCP Topology & Guardrails (system/mcp-layer.json)",
-        "description": (
-            "Downstream and sibling MCP servers associated with this layer "
-            "or service node and their mandatory pre-call safety guardrails."
-        ),
+        "description": "Downstream and sibling MCP servers associated with this layer.",
         "mimeType": "application/json",
     },
     {
         "uri": "dotfiles://mcp/diagnostics",
         "name": "Runtime MCP Event & Alert Diagnostics (logs/mcp_*.jsonl)",
-        "description": (
-            "Live telemetry summary of recent MCP calls, response sizes, "
-            "and token-budget/truncation/security alerts from logs/."
-        ),
+        "description": "Live telemetry summary of recent MCP calls, sizes, and alerts from logs/.",
         "mimeType": "application/json",
     },
 )
@@ -95,29 +74,18 @@ MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
 MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     {
         "name": "get_layer_overview",
-        "description": (
-            "Return a compact 4-Channel Executive Digest of this dotfiles-ubuntu "
-            "node/layer or any mounted git subtree layer in layers/* "
-            "(1. Node & System State, 2. Governance & Stack Contracts, "
-            "3. Active Invariants & Hooks, 4. Docs, Mounted Subtrees & Federated MCPs)."
-        ),
+        "description": "Return a 4-Channel Executive Digest of this node or a layers/* subtree.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "layer": {
-                    "type": "string",
-                    "description": "Target layer ('root' or a mounted subtree in layers/*).",
-                }
+                "layer": {"type": "string", "description": "Target layer ('root' or subtree)."}
             },
             "additionalProperties": False,
         },
     },
     {
         "name": "audit_node_drift",
-        "description": (
-            "Run deterministic read-only verification and/or system drift audit "
-            "on this node or container (verify-repo.sh and/or audit.sh)."
-        ),
+        "description": "Run deterministic read-only verification and/or system drift audit.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -125,11 +93,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "type": "string",
                     "enum": ["verify-repo", "system-audit", "both"],
                     "default": "verify-repo",
-                    "description": (
-                        "'verify-repo' runs static repository & hook checks; "
-                        "'system-audit' runs live Ubuntu package/symlink drift "
-                        "checks; 'both' runs both."
-                    ),
+                    "description": "Audit mode ('verify-repo', 'system-audit', or 'both').",
                 }
             },
             "additionalProperties": False,
@@ -137,25 +101,12 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "read_layer_document",
-        "description": (
-            "Read a Markdown specification, template rule, skill, or manifest "
-            "file inside the root repository or a mounted git subtree layer in layers/* "
-            "(confined to docs/, templates/, antigravity/, system/, and root docs)."
-        ),
+        "description": "Read a Markdown spec, template rule, skill, or manifest file in a layer.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "relative_path": {
-                    "type": "string",
-                    "description": (
-                        "Path relative to the target layer root, e.g. "
-                        "'docs/architecture/01_system_and_stow_engine.md'."
-                    ),
-                },
-                "layer": {
-                    "type": "string",
-                    "description": "Optional layer ('root' or a mounted subtree in layers/*).",
-                },
+                "relative_path": {"type": "string", "description": "Path relative to layer root."},
+                "layer": {"type": "string", "description": "Optional layer ('root' or subtree)."},
             },
             "required": ["relative_path"],
             "additionalProperties": False,
@@ -163,20 +114,11 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "query_governance_rules",
-        "description": (
-            "Search across Layer A rules (AGENTS.md), Layer B stack templates "
-            "(templates/), and architecture docs (docs/) across the root layer "
-            "and/or mounted git subtree layers (layers/*) by keyword or topic, "
-            "with optional multi-resolution compaction (L0 Promoter Codon, "
-            "L1 Axiom Skeleton, or L2 Full Section) and chained rcap1 capsules."
-        ),
+        "description": "Search Layer A rules, templates, and docs with L0/L1/L2 rcap1 compaction.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Keyword or phrase to search (e.g., 'testing', 'migrations').",
-                },
+                "query": {"type": "string", "description": "Keyword or phrase to search."},
                 "scope": {
                     "type": "string",
                     "enum": ["all", "global", "templates", "docs"],
@@ -186,7 +128,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 "layer": {
                     "type": "string",
                     "default": "all",
-                    "description": "'all', 'root', or a specific mounted subtree name.",
+                    "description": "Target layer filter.",
                 },
                 "resolution": {
                     "type": "string",
@@ -199,10 +141,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "enum": ["dev", "tst", "pre", "pro"],
                     "description": "Optional environment binding ('dev', 'tst', 'pre', or 'pro').",
                 },
-                "resonance_key": {
-                    "type": "string",
-                    "description": "Optional secret key to seal rcap1 context capsules.",
-                },
+                "resonance_key": {"type": "string", "description": "Optional rcap1 secret key."},
                 "include_capsules": {
                     "type": "boolean",
                     "default": True,
@@ -215,21 +154,11 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "unfold_context_capsule",
-        "description": (
-            "Inspect or progressively decrypt and decompress a Resonant Context Capsule "
-            "(rcap1:...) from L0 (Promoter Codon) -> L1 (Axiom Skeleton) -> L2 (Full Section) "
-            "-> L3 (Deep Linked Skill/Spec), enforcing sequential hash chaining and "
-            "agent capability/environment gates."
-        ),
+        "description": "Decrypt and decompress an rcap1 capsule across L0->L1->L2->L3 levels.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "capsule_token": {
-                    "type": "string",
-                    "description": (
-                        "Chained context capsule token ('rcap1.<header>.<payload>.<sig>')."
-                    ),
-                },
+                "capsule_token": {"type": "string", "description": "Chained rcap1 capsule token."},
                 "target_level": {
                     "type": "string",
                     "enum": ["L0", "L1", "L2", "L3"],
@@ -237,21 +166,16 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 },
                 "agent_tier": {
                     "type": "string",
-                    "enum": ["flash", "inherit", "pro"],
+                    "enum": list(VALID_AGENT_TIERS),
                     "default": "inherit",
-                    "description": (
-                        "Calling agent tier per AGENTS.md §13 ('flash', 'inherit', 'pro')."
-                    ),
+                    "description": "Calling agent tier per AGENTS.md §13 (flash, inherit, pro).",
                 },
                 "environment": {
                     "type": "string",
                     "enum": ["dev", "tst", "pre", "pro"],
                     "description": "Optional target environment ('dev', 'tst', 'pre', or 'pro').",
                 },
-                "resonance_key": {
-                    "type": "string",
-                    "description": "Optional secret key to unlock key-gated capsules.",
-                },
+                "resonance_key": {"type": "string", "description": "Optional secret key."},
             },
             "required": ["capsule_token"],
             "additionalProperties": False,
@@ -259,18 +183,11 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "discover_federated_mcps",
-        "description": (
-            "Discover downstream or sibling MCP servers registered in the root "
-            "layer and/or mounted git subtree layers (layers/*), optionally "
-            "filtered by role, layer, and target environment (dev, tst, pre, pro)."
-        ),
+        "description": "Discover downstream or sibling MCP servers and inherited guardrails.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "filter_role": {
-                    "type": "string",
-                    "description": "Optional role substring filter (e.g. 'database').",
-                },
+                "filter_role": {"type": "string", "description": "Optional role substring filter."},
                 "environment": {
                     "type": "string",
                     "enum": ["dev", "tst", "pre", "pro"],
@@ -279,7 +196,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 "layer": {
                     "type": "string",
                     "default": "all",
-                    "description": "'all', 'root', or a specific mounted subtree name/layer_id.",
+                    "description": "Target layer filter.",
                 },
             },
             "additionalProperties": False,
@@ -287,11 +204,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "compare_layer_patterns",
-        "description": (
-            "Compare a consumer project's .agents/rules/ and .agents/skills/ "
-            "names against the root layer or a mounted departmental/team subtree "
-            "layer (layers/*) to assist with /enrich upward promotion or downward sync."
-        ),
+        "description": "Compare project rules/skills against layers for upward promotion or sync.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -308,7 +221,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 "layer": {
                     "type": "string",
                     "default": "all",
-                    "description": "Target layer ('all', 'root', or a mounted subtree).",
+                    "description": "Target layer filter.",
                 },
             },
             "additionalProperties": False,
@@ -316,28 +229,17 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "resolve_surface_governance",
-        "description": (
-            "Project and weave governance rules, invariants, canonical templates, "
-            "and rcap1 context capsules across 0..N mounted layers (Root + layers/*) "
-            "for a target application surface (target_path, architectural_plane, "
-            "scope, traits), ordered by numeric deontic precedence (0..100)."
-        ),
+        "description": "Project and weave governance rules across 0..N layers for a surface.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "target_path": {
-                    "type": "string",
-                    "description": "Optional relative file path in the target project.",
-                },
+                "target_path": {"type": "string", "description": "Optional relative file path."},
                 "architectural_plane": {
                     "type": "string",
                     "enum": list(VALID_ARCHITECTURAL_PLANES),
                     "description": "Optional stack-agnostic architectural plane.",
                 },
-                "scope": {
-                    "type": "string",
-                    "description": "Optional feature module, domain slice, or bounded context.",
-                },
+                "scope": {"type": "string", "description": "Optional feature or bounded context."},
                 "traits": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -353,14 +255,92 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "enum": ["L0", "L1", "L2"],
                     "description": "Optional resolution override ('L0', 'L1', or 'L2').",
                 },
-                "resonance_key": {
-                    "type": "string",
-                    "description": "Optional resonance secret key to seal rcap1 capsules.",
-                },
+                "resonance_key": {"type": "string", "description": "Optional rcap1 secret key."},
                 "include_capsules": {
                     "type": "boolean",
                     "default": True,
                     "description": "Whether to attach rcap1 capsule_token envelopes.",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "orchestrate_ephemeral_fork",
+        "description": "Spawn, inspect, evaluate, or reap TTL-bounded ephemeral Department Bots.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": list(VALID_EPHEMERAL_ACTIONS),
+                    "default": "evaluate",
+                    "description": "Lifecycle action ('spawn', 'inspect', 'evaluate', or 'reap').",
+                },
+                "fork_id": {
+                    "type": "string",
+                    "description": "Existing fork_id (or 'all' for reap).",
+                },
+                "bot_role": {
+                    "type": "string",
+                    "default": "dept-specialist-bot",
+                    "description": "Kebab-case role identity for the Department Bot.",
+                },
+                "target_path": {
+                    "type": "string",
+                    "description": "Target surface path to evaluate.",
+                },
+                "target_globs": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional glob boundaries for the ephemeral fork.",
+                },
+                "architectural_planes": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional architectural planes for the ephemeral fork.",
+                },
+                "mount_templates": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of template packs to activate.",
+                },
+                "mount_layers": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Optional subset of mounted layers/* to link.",
+                },
+                "mount_project_rules_from": {
+                    "type": "string",
+                    "description": "Optional project directory to bridge .agents/rules/*.md from.",
+                },
+                "model_tier": {
+                    "type": "string",
+                    "enum": list(VALID_AGENT_TIERS),
+                    "default": "flash",
+                    "description": "Target subagent model tier ('flash', 'inherit', 'pro').",
+                },
+                "access_mode": {
+                    "type": "string",
+                    "enum": list(VALID_EPHEMERAL_ACCESS_MODES),
+                    "default": "strictly-read-only",
+                    "description": "Capability boundary for the ephemeral Department Bot.",
+                },
+                "resolution": {
+                    "type": "string",
+                    "enum": ["L0", "L1", "L2"],
+                    "default": "L2",
+                    "description": "Context resolution depth for the Department Bot.",
+                },
+                "ttl_seconds": {
+                    "type": "integer",
+                    "default": 300,
+                    "description": "Time-to-live in seconds (10..3600).",
+                },
+                "one_shot": {
+                    "type": "boolean",
+                    "default": True,
+                    "description": "Whether action='evaluate' auto-reaps its ephemeral fork.",
                 },
             },
             "additionalProperties": False,
@@ -371,10 +351,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
 MCP_PROMPTS_CATALOG: tuple[dict[str, Any], ...] = (
     {
         "name": "orient-on-layer",
-        "description": (
-            "Orient an AI agent on this dotfiles-ubuntu layer/node using a "
-            "4-Channel Executive Digest and navigable docs/ index."
-        ),
+        "description": "Orient an AI agent on this layer using a 4-Channel Executive Digest.",
         "arguments": [
             {
                 "name": "task_description",
@@ -385,9 +362,7 @@ MCP_PROMPTS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "audit-container-or-node",
-        "description": (
-            "Audit live package, symlink, and repository drift on this container or server node."
-        ),
+        "description": "Audit live package, symlink, and repository drift on this node.",
         "arguments": [
             {
                 "name": "target_service",
@@ -398,11 +373,7 @@ MCP_PROMPTS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "orchestrate-federated-mcps",
-        "description": (
-            "Discover federated MCP servers on this layer/node and load "
-            "their inherited effective_guardrails and activation_policy before "
-            "executing cross-service operations."
-        ),
+        "description": "Discover federated MCP servers and load inherited effective_guardrails.",
         "arguments": [
             {
                 "name": "workflow_goal",

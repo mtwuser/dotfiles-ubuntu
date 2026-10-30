@@ -71,8 +71,8 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}}
     )
     _require(
-        bool(tools_list and len(tools_list["result"]["tools"]) == 8),
-        "Expected 8 tools",
+        bool(tools_list and len(tools_list["result"]["tools"]) == 9),
+        "Expected 9 tools",
     )
 
     overview = server.handle_request(
@@ -212,6 +212,25 @@ def run_self_test(server: DotfilesMCPServer) -> int:
     _require(
         len(surf_payload.get("resolved_bindings", [])) >= 2,
         "resolve_surface_governance did not match expected baseline bindings",
+    )
+    eph_res = server.handle_request(
+        {
+            "jsonrpc": "2.0",
+            "id": 92,
+            "method": "tools/call",
+            "params": {
+                "name": "orchestrate_ephemeral_fork",
+                "arguments": {
+                    "action": "evaluate",
+                    "bot_role": "dept-hexagonal-architect",
+                    "target_path": "src/checkout/service.py",
+                },
+            },
+        }
+    )
+    _require(
+        bool(eph_res and not eph_res["result"]["isError"]),
+        "orchestrate_ephemeral_fork failed",
     )
 
     # 4. Path-containment security gate verification

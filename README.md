@@ -231,7 +231,8 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
 │   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1 contracts, 11 skills
 │   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (v1.2)
-│   │   └── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver & promotion engines
+│   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver & promotion engines
+│   │   └── 05_ephemeral_forks_and_department_bots.md       ← Ephemeral Department Bot forks, project bridges & TTL GC
 │   └── reference/                     ←   Enterprise use cases & maintainer extension guides
 │       ├── enterprise_pair_programming_governance.md         ← Enterprise Human-AI governance & Copilot mapping
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
@@ -248,18 +249,20 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (14 modules, < 465 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (16 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
 │   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
 │   │   ├── promotion_engine.py        ←     Multi-layer pattern comparison, diff-project & promote-from-project
+│   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
 │   │   ├── surface_weaver.py          ←     Stack-agnostic surface selector inference & Lex Specialis scoring
 │   │   ├── capsule_engine.py          ←     Resonant rcap1 Matryoshka L0->L3 encryption & compression engine
 │   │   ├── node_base.py, resources.py ←     Base node path-containment, warnings & 9 MCP resource readers
 │   │   ├── tools_federation.py        ←     Overview, drift audit, doc reader & federated MCP discovery tools
 │   │   ├── tools_compaction.py        ←     Multi-resolution query_governance_rules & capsule minting
 │   │   ├── tools_unfold.py            ←     Hop-by-hop unfold_context_capsule & TOCTOU line-drift relocation
-│   │   └── tools_surface.py, server.py←     0..N resolve_surface_governance weaver & JSON-RPC 2.0 dispatcher
+│   │   ├── tools_surface.py           ←     0..N resolve_surface_governance weaver & delegation advisories
+│   │   └── tools_ephemeral.py, server.py←   orchestrate_ephemeral_fork tool & JSON-RPC 2.0 dispatcher
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
 │   ├── layer-config.sh                ←   Fork parameterization (init-fork), template scaffolding, project projection & promotion
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)
@@ -288,10 +291,11 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
 │   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
-│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 12 executable MCP package modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 14 executable MCP package modules
 │   │   │   ├── test_manifest_helpers.py
 │   │   │   ├── test_fork_configurator.py
 │   │   │   ├── test_promotion_engine.py
+│   │   │   ├── test_ephemeral_fork_engine.py
 │   │   │   ├── test_surface_weaver.py
 │   │   │   ├── test_capsule_engine.py
 │   │   │   ├── test_node_base.py
@@ -300,6 +304,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   │   ├── test_tools_compaction.py
 │   │   │   ├── test_tools_unfold.py
 │   │   │   ├── test_tools_surface.py
+│   │   │   ├── test_tools_ephemeral.py
 │   │   │   └── test_server.py
 │   │   ├── test_pre_tool_guard.py
 │   │   ├── test_post_edit_format.py
@@ -310,9 +315,10 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │   ├── test_mcp_and_hooks_stdio.py
 │   │   ├── test_cli_scripts.py
 │   │   └── test_repo_parity_gates.py
-│   └── e2e/                           ←   chained multi-node MCP federation, surface weaving & agent-turn hook tests
+│   └── e2e/                           ←   chained multi-node MCP federation, surface weaving, ephemeral bots & hook tests
 │       ├── test_chained_mcp_federation_e2e.py
 │       ├── test_surface_and_compaction_e2e.py
+│       ├── test_ephemeral_forks_e2e.py
 │       └── test_agent_turn_lifecycle_hooks_e2e.py
 │
 ├── bootstrap.sh                       ← restore system from manifests
@@ -435,8 +441,13 @@ Templates under `templates/<name>/` are polymorphic (discovered dynamically acro
 # 5. Diff & promote matured project rules, skills, or assets back into Root, layers/*, or templates/*:
 ./scripts/layer-config.sh diff-project <your-project>
 ./scripts/layer-config.sh promote-from-project <your-project> \
-  --asset .agents/rules/security-audit.md \
+  --source .agents/rules/security-audit.md \
   --to-layer dept-security
+
+# 6. Spawn, inspect, or reap TTL-bounded ephemeral Department Bot forks:
+./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
+./scripts/layer-config.sh inspect-ephemeral
+./scripts/layer-config.sh reap-ephemeral --id all
 ```
 
 ### Layer 3: Custom (Project-Specific)

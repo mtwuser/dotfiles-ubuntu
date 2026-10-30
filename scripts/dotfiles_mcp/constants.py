@@ -15,6 +15,7 @@ VALID_LAYER_ROLES = (
     "corporate",
     "department",
     "domain-policy",
+    "ephemeral-bot",
     "team",
     "service-node",
     "environment-cluster",
@@ -31,6 +32,7 @@ ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
     "domain-policy": 5,
     "corporate": 10,
     "workstation": 10,
+    "ephemeral-bot": 15,
     "department": 30,
     "team": 50,
     "service-node": 60,
@@ -132,6 +134,16 @@ VALID_BINDING_MODES = ("authoritative", "transversal")
 VALID_RESOLUTIONS = ("L0", "L1", "L2")
 VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
 VALID_AGENT_TIERS = ("flash", "inherit", "pro")
+VALID_EPHEMERAL_ACTIONS = ("spawn", "inspect", "evaluate", "reap")
+VALID_EPHEMERAL_ACCESS_MODES = (
+    "strictly-read-only",
+    "read-and-test-trigger",
+    "read-write-scoped",
+)
+DEFAULT_EPHEMERAL_TTL_SECONDS = 300
+MIN_EPHEMERAL_TTL_SECONDS = 10
+MAX_EPHEMERAL_TTL_SECONDS = 3600
+MAX_ACTIVE_EPHEMERAL_FORKS = 16
 AGENT_TIER_RANK: dict[str, int] = {"flash": 1, "inherit": 2, "pro": 3}
 LEVEL_INDEX: dict[str, int] = {"L0": 0, "L1": 1, "L2": 2, "L3": 3}
 NEXT_LEVEL_MAP: dict[str, str] = {"L0": "L1", "L1": "L2", "L2": "L3"}

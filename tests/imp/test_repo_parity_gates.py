@@ -76,7 +76,7 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
             untraced_sources.append(str(src.relative_to(REPO_DIR)))
 
     # Assert
-    assert len(pkg_modules) == 12
+    assert len(pkg_modules) == 14
     assert missing_unit_tests == []
     assert oversized_files == []
     assert untraced_sources == []
@@ -100,7 +100,10 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     arch_04 = (
         REPO_DIR / "docs/architecture/04_compaction_surface_and_promotion_engines.md"
     ).read_text(encoding="utf-8")
-    arch_mcp = arch_03 + "\n" + arch_04
+    arch_05 = (REPO_DIR / "docs/architecture/05_ephemeral_forks_and_department_bots.md").read_text(
+        encoding="utf-8"
+    )
+    arch_mcp = arch_03 + "\n" + arch_04 + "\n" + arch_05
     security_md = (REPO_DIR / "SECURITY.md").read_text(encoding="utf-8")
     readme_md = (REPO_DIR / "README.md").read_text(encoding="utf-8")
     ext_guide = (REPO_DIR / "docs/reference/developer_and_extension_guide.md").read_text(
@@ -132,12 +135,16 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
     for mcp_token in (
         "unfold_context_capsule",
         "resolve_surface_governance",
+        "orchestrate_ephemeral_fork",
+        "ephemeral_fork_policy",
         "surface_bindings",
         "collect_layer_effective_bindings",
         "promotion_routing",
         "SURFACE_PRECEDENCE_COLLISION",
         "SURFACE_ASSET_MISSING",
         "TEMPLATE_PACK_MISSING",
+        "EPHEMERAL_FORK_LIMIT_REACHED",
+        "EPHEMERAL_FORK_EXPIRED",
         "rcap1",
         "CAPSULE_CAPABILITY_INSUFFICIENT",
         "CAPSULE_RESONANCE_DENIED",
@@ -151,6 +158,9 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "apply-project",
         "diff-project",
         "promote-from-project",
+        "spawn-ephemeral",
+        "inspect-ephemeral",
+        "reap-ephemeral",
     ):
         assert sub in readme_md
         assert sub in ext_guide

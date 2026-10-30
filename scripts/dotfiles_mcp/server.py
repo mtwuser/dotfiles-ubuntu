@@ -20,11 +20,11 @@ from dotfiles_mcp.manifest_helpers import (
     _read_version,
 )
 from dotfiles_mcp.resources import ResourcesMixin
+from dotfiles_mcp.tools_ephemeral import EphemeralToolsMixin
 from dotfiles_mcp.tools_federation import FederationToolsMixin
-from dotfiles_mcp.tools_surface import SurfaceToolsMixin
 
 
-class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, SurfaceToolsMixin):
+class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixin):
     """Read-only MCP server exposing dotfiles-ubuntu system & governance context."""
 
     def list_tools(self) -> list[dict[str, Any]]:
@@ -48,6 +48,8 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, SurfaceToolsMixin)
             return self._tool_compare_layer_patterns(args)
         if name == "resolve_surface_governance":
             return self._tool_resolve_surface_governance(args)
+        if name == "orchestrate_ephemeral_fork":
+            return self._tool_orchestrate_ephemeral_fork(args)
         raise ValueError(f"Unknown tool name: {name!r}")
 
     def handle_request(self, message: dict[str, Any]) -> dict[str, Any] | None:

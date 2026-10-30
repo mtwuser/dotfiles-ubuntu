@@ -61,6 +61,7 @@ for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CO
            docs/architecture/02_antigravity_governance_and_hooks.md \
            docs/architecture/03_contextual_mcp_and_federation.md \
            docs/architecture/04_compaction_surface_and_promotion_engines.md \
+           docs/architecture/05_ephemeral_forks_and_department_bots.md \
            docs/reference/enterprise_pair_programming_governance.md \
            docs/reference/contextual_mcp_and_multi_service_orchestration.md \
            docs/reference/developer_and_extension_guide.md \
@@ -295,7 +296,8 @@ agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
 arch_02 = (repo / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(encoding="utf-8")
 arch_03 = (repo / "docs/architecture/03_contextual_mcp_and_federation.md").read_text(encoding="utf-8")
 arch_04 = (repo / "docs/architecture/04_compaction_surface_and_promotion_engines.md").read_text(encoding="utf-8")
-arch_mcp = arch_03 + "\n" + arch_04
+arch_05 = (repo / "docs/architecture/05_ephemeral_forks_and_department_bots.md").read_text(encoding="utf-8")
+arch_mcp = arch_03 + "\n" + arch_04 + "\n" + arch_05
 security_md = (repo / "SECURITY.md").read_text(encoding="utf-8")
 readme_md = (repo / "README.md").read_text(encoding="utf-8")
 
@@ -331,12 +333,16 @@ for budget_token in (
 for mcp_token in (
     "unfold_context_capsule",
     "resolve_surface_governance",
+    "orchestrate_ephemeral_fork",
+    "ephemeral_fork_policy",
     "surface_bindings",
     "collect_layer_effective_bindings",
     "promotion_routing",
     "SURFACE_PRECEDENCE_COLLISION",
     "SURFACE_ASSET_MISSING",
     "TEMPLATE_PACK_MISSING",
+    "EPHEMERAL_FORK_LIMIT_REACHED",
+    "EPHEMERAL_FORK_EXPIRED",
     "rcap1",
     "CAPSULE_CAPABILITY_INSUFFICIENT",
     "CAPSULE_RESONANCE_DENIED",
@@ -388,7 +394,17 @@ for code in sorted(emitted_codes):
         sys.exit(1)
 
 ext_guide = (repo / "docs/reference/developer_and_extension_guide.md").read_text(encoding="utf-8")
-for cli_sub in ("init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project", "promote-from-project"):
+for cli_sub in (
+    "init-fork",
+    "list-templates",
+    "scaffold-template",
+    "apply-project",
+    "diff-project",
+    "promote-from-project",
+    "spawn-ephemeral",
+    "inspect-ephemeral",
+    "reap-ephemeral",
+):
     if cli_sub not in readme_md or cli_sub not in ext_guide:
         print(f"CLI-to-doc drift: layer-config.sh subcommand '{cli_sub}' missing from README.md or developer_and_extension_guide.md", file=sys.stderr)
         sys.exit(1)

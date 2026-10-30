@@ -27,7 +27,7 @@ class TestDotfilesMCPServer:
             server.call_tool("nonexistent_tool", {})
 
         # Assert
-        assert len(server.list_tools()) == 8
+        assert len(server.list_tools()) == 9
 
     def test_handle_request_covers_notifications_ping_templates_and_errors(
         self,

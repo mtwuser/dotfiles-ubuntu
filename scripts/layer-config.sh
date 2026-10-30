@@ -56,6 +56,16 @@ Commands:
       Promote a matured rule, skill, or asset from <target-project-dir> into the target
       fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates).
 
+  spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
+                  [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
+      Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork under logs/ephemeral_forks/.
+
+  inspect-ephemeral [--id <fork-id>]
+      List active ephemeral forks (after automatic TTL garbage collection) or inspect one fork.
+
+  reap-ephemeral --id <fork-id|all>
+      Destroy a specific ephemeral fork or all active ephemeral forks ('--id all').
+
 Options:
   -n, --dry-run   Preview changes in JSON output without modifying files on disk
   -h, --help      Show this help message and exit
@@ -118,6 +128,11 @@ from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
 from dotfiles_mcp.promotion_engine import (  # noqa: E402
     diff_project_against_layers,
     promote_project_asset_to_layer,
+)
+from dotfiles_mcp.ephemeral_fork_engine import (  # noqa: E402
+    inspect_ephemeral_forks,
+    reap_ephemeral_fork,
+    spawn_ephemeral_fork,
 )
 
 if subcmd == "list-templates":
@@ -289,6 +304,91 @@ if subcmd == "promote-from-project":
         target_template=target_template,
         dry_run=dry_run,
     )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "spawn-ephemeral":
+    bot_role = ""
+    tpls = None
+    layers_f = None
+    globs = None
+    bridge_dir = None
+    tier = "flash"
+    ttl = 300
+    i = 0
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--role" and i + 1 < len(rest):
+            bot_role = rest[i + 1]
+            i += 2
+        elif arg == "--templates" and i + 1 < len(rest):
+            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
+        elif arg == "--layers" and i + 1 < len(rest):
+            layers_f = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
+        elif arg == "--globs" and i + 1 < len(rest):
+            globs = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
+        elif arg == "--project-bridge" and i + 1 < len(rest):
+            bridge_dir = Path(rest[i + 1]).resolve()
+            i += 2
+        elif arg == "--tier" and i + 1 < len(rest):
+            tier = rest[i + 1]
+            i += 2
+        elif arg == "--ttl" and i + 1 < len(rest):
+            ttl = int(rest[i + 1])
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete spawn-ephemeral argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    if not bot_role:
+        print("❌ Missing required --role <bot-role> for spawn-ephemeral.", file=sys.stderr)
+        sys.exit(1)
+    node = MCPNodeBase(repo_dir=repo_dir)
+    res = spawn_ephemeral_fork(
+        repo_dir,
+        node._load_layer_manifest(),
+        bot_role=bot_role,
+        target_globs=globs,
+        mount_templates=tpls,
+        mount_layers=layers_f,
+        mount_project_rules_from=bridge_dir,
+        model_tier=tier,
+        ttl_seconds=ttl,
+        dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "inspect-ephemeral":
+    fork_id = None
+    i = 0
+    while i < len(rest):
+        if rest[i] == "--id" and i + 1 < len(rest):
+            fork_id = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown inspect-ephemeral argument: {rest[i]}", file=sys.stderr)
+            sys.exit(1)
+    res = inspect_ephemeral_forks(repo_dir, fork_id=fork_id)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "reap-ephemeral":
+    fork_id = ""
+    i = 0
+    while i < len(rest):
+        if rest[i] == "--id" and i + 1 < len(rest):
+            fork_id = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown reap-ephemeral argument: {rest[i]}", file=sys.stderr)
+            sys.exit(1)
+    if not fork_id:
+        print("❌ Missing required --id <fork-id|all> for reap-ephemeral.", file=sys.stderr)
+        sys.exit(1)
+    res = reap_ephemeral_fork(repo_dir, fork_id=fork_id, dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
