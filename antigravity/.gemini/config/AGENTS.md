@@ -23,7 +23,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 > *"Valorar bien el mejor enfoque de implementación posible, robusto, profesional"*
 
 **Mandate:** Reject the "easiest" fallback if a scalable, dynamic implementation is attainable. Code must be parameterized, strongly typed, and resilient to scale. Never sacrifice architectural integrity for a fast patch.
-- **File Size & Pre-Growth Modularity Gate (`< 465` lines)**: Keep every source and test file strictly `< 465` lines (target $\le 400$). If a new feature will push any file past `465` lines, proactively propose extracting cohesive modules and their `1:1` test files before or within the plan (mandatory structural hygiene, exempt from `§9.4` scope-creep restrictions).
+- **File Size & Pre-Growth Modularity Gate (`< 465` lines)**: Keep every source, test, and navigable `docs/**/*.md` file strictly `< 465` lines (target $\le 400$). If a new feature will push any file past `465` lines, proactively propose extracting cohesive modules, `1:1` test files, and modular `docs/architecture/` specs before or within the plan (mandatory structural hygiene, exempt from `§9.4` scope-creep restrictions).
 
 #### 3. Strict Linter & Typing Integrity
 > *"Sin errores de linters"*
@@ -39,6 +39,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 > *"Repasar la documentación técnica... detectar discrepancias"*
 
 **Mandate:** Approach `docs/` and architectural feature files as supreme law. When planning any component change, parse the relevant specs first. If the codebase has drifted or contradicts documentation, flag it as a P0 discrepancy and unify them immediately.
+- **1:1:1 Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability**: Executable modules must declare a `Specification: docs/architecture/<spec>.md` pointer in their module docstring, and navigable architecture specs (`< 465` lines) must maintain a `1:1:1` traceability table linking source modules, unit tests, and specifications.
 - **Generation Rule:** When generating ANY template, scaffold, boilerplate, or canonical example, derive the output strictly from the corresponding specification in `docs/` or `ARCHITECTURE.md` — never from context memory: (1) Locate spec → (2) Extract layout/imports/conventions → (3) Instantiate spec → (4) Cross-verify diff.
 
 #### 6. Continuous Consolidation
@@ -132,7 +133,7 @@ If generated output contains errors, fix the generator/template at the SOURCE, n
 - **Description**: Rules for moving, renaming, extracting, restructuring, and decommissioning code (step-by-step workflow → `skills/refactoring/SKILL.md`)
 - **Applies**: All source code files
 
-1. **Behavioral Invariant & Atomic 1:1 Test Alignment**: When modifying internal structure or splitting a monolithic module into submodules, all tests pass with identical results, test count must remain equal or increase (NEVER decrease), coverage remains 100%, and monolithic test files MUST be split/aligned `1:1` (`tests/unit/**/test_<module>.py`, `Test*` class per file, docstrings, and AAA comments) in the SAME iteration — never defer test alignment to a follow-up prompt.
+1. **Behavioral Invariant & Atomic 1:1:1 Test/Spec Alignment**: When modifying internal structure or splitting a monolithic module into submodules, all tests pass with identical results, test count must remain equal or increase (NEVER decrease), coverage remains 100%, and monolithic test files and `docs/architecture/` traceability tables (`Specification:` docstring pointers) MUST be split/aligned `1:1:1` (`tests/unit/**/test_<module>.py`, `Test*` class per file, docstrings, and AAA comments) in the SAME iteration — never defer test or spec alignment to a follow-up prompt.
 2. **Zero-Residue**: When `A` is replaced by `B`, `A` must be **fully removed** in the same changeset. Backward-compatibility aliases (`OldName = NewName`), `@deprecated` classes, and re-export shims (`from new import New as Old`) are strictly forbidden. Delete the old file and update all imports and `@patch` targets atomically.
 3. **Rename Urgency**: When moving `A` from module `X` to module `Y`, if `A`'s name no longer reflects `Y`'s context, rename it in the same changeset.
 4. **Code & Feature Decommissioning (Mandatory Test Pruning Audit)**: When deleting a module, class, method, endpoint, or feature (intentionally changing external surface area), **never leave obsolete or orphan tests behind**. Execute a 3-step pruning audit in the same changeset: (a) **1:1 File Purge** — delete or consolidate any `test_<module>.py` whose source module no longer exists; (b) **Symbol & Fixture Purge** — grep `tests/` for removed symbols, mock specs, and obsolete enum/contract assertions; (c) **Default-Parameter Sensitivity Verification** — when adding new fields/parameters with defaults (e.g., cryptographic hashes, filters, state transitions), write explicit tests proving non-default values alter the output, rather than relying on 100% line coverage achieved solely via default arguments.

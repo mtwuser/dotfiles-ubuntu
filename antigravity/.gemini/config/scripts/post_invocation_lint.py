@@ -41,7 +41,7 @@ def resolve_effective_workspaces(
 
 
 def check_universal_python_structure(py_files: list[str]) -> list[str]:
-    """Enforce universal < 465-line file cap and AAA test comments on modified .py files."""
+    """Enforce universal < 465-line file cap, AAA test comments, and 1:1:1 spec pointers."""
     violations: list[str] = []
     for file_str in py_files:
         p = Path(file_str)
@@ -62,6 +62,34 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
                 violations.append(
                     f"{file_str}:1 [missing-aaa] Test file missing {', '.join(missing_aaa)}"
                 )
+        elif p.name != "__init__.py" and "Specification: docs/architecture/" not in text:
+            sibling_has_spec = any(
+                "Specification: docs/architecture/"
+                in sib.read_text(encoding="utf-8", errors="ignore")
+                for sib in p.parent.glob("*.py")
+                if sib != p and sib.name != "__init__.py"
+            )
+            if sibling_has_spec:
+                violations.append(
+                    f"{file_str}:1 [missing-spec-pointer] Module missing "
+                    "'Specification: docs/architecture/<spec>.md' docstring header"
+                )
+    return violations
+
+
+def check_universal_doc_structure(doc_files: list[str]) -> list[str]:
+    """Enforce universal < 465-line file cap on navigable docs/**/*.md files."""
+    violations: list[str] = []
+    for file_str in doc_files:
+        p = Path(file_str)
+        if not p.is_file():
+            continue
+        line_count = len(p.read_text(encoding="utf-8", errors="ignore").splitlines())
+        if line_count >= _MAX_PYTHON_FILE_LINES:
+            violations.append(
+                f"{file_str}:1 [max-doc-lines] Documentation file has {line_count} lines "
+                f"(must be < {_MAX_PYTHON_FILE_LINES}; split into modular specs)"
+            )
     return violations
 
 
@@ -143,6 +171,33 @@ def get_changed_python_files(workspace_path: str) -> list[str]:
     return sorted(files)
 
 
+def get_changed_doc_files(workspace_path: str) -> list[str]:
+    """Get navigable docs/**/*.md files with uncommitted or untracked changes."""
+    git_bin = shutil.which("git") or "git"
+    files: set[str] = set()
+    for cmd in [
+        [git_bin, "diff", "--name-only", "--diff-filter=ACMR", "--", "docs/"],
+        [git_bin, "diff", "--name-only", "--cached", "--diff-filter=ACMR", "--", "docs/"],
+        [git_bin, "ls-files", "--others", "--exclude-standard", "--", "docs/*.md", "docs/**/*.md"],
+    ]:
+        with contextlib.suppress(subprocess.TimeoutExpired, FileNotFoundError):
+            result = subprocess.run(  # noqa: S603
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=workspace_path,
+                timeout=5,
+            )
+            for raw_line in result.stdout.splitlines():
+                rel_file = raw_line.strip()
+                if rel_file.startswith("docs/") and rel_file.endswith(".md"):
+                    full = Path(workspace_path) / rel_file
+                    if full.exists():
+                        files.add(str(full))
+    return sorted(files)
+
+
 def run_osa_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
     """Run fast AST check_project and check_tests if workspace is an OSA repo."""
     ws = Path(workspace_path)
@@ -193,6 +248,7 @@ def main() -> None:
 
     all_lines: list[str] = check_rules_token_budget(workspace_paths)
     for ws in workspace_paths:
+        all_lines.extend(check_universal_doc_structure(get_changed_doc_files(ws)))
         ws_files = get_changed_python_files(ws)
         if not ws_files:
             continue

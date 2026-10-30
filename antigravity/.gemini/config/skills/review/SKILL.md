@@ -78,19 +78,20 @@ For each test file, verify classification is correct:
 | **Integration tests** | Uses real DB operations or external services |
 | **Misclassified** | Unit test that needs DB → move to integration. Integration test that doesn't need DB → move to unit |
 
-### 2.2 File Mapping
+### 2.2 1:1:1 File & Specification Mapping (`< 465` Lines)
 
 // delegate: flash
 
-Every production file with **executable logic** must have a corresponding test file (do NOT require artificial test files for purely declarative models/DTOs without custom methods or trivial 1-line DI getters already covered by router tests):
+Every production file with **executable logic** must have a corresponding unit test file and a bidirectional specification pointer (`Specification: docs/architecture/<spec>.md` in its docstring $\leftrightarrow$ `1:1:1` traceability table in `docs/architecture/`), and every source, test, and navigable `docs/**/*.md` file must stay strictly `< 465` lines (do NOT require artificial unit test files for purely declarative models/DTOs/catalogs without custom executable logic):
 
 ```
-<module>/services/foo.py       →  <module>/tests/unit/services/test_foo.py
-<module>/models/bar.py         →  <module>/tests/unit/models/test_bar.py  (only if bar.py has custom methods/properties)
+<module>/services/foo.py       →  <module>/tests/unit/services/test_foo.py  ↔  docs/architecture/<spec>.md
+<module>/models/bar.py         →  <module>/tests/unit/models/test_bar.py    ↔  docs/architecture/<spec>.md (if bar.py has custom methods)
 ```
 
-- [ ] List missing test files
+- [ ] List missing unit test files or missing `Specification: docs/architecture/...` docstring pointers
 - [ ] List orphan test files (testing deleted code)
+- [ ] List any source, test, or `docs/**/*.md` file $\ge 465$ lines
 
 ### 2.3 Patch Targets
 

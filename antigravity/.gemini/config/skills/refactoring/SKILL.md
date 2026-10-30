@@ -22,21 +22,22 @@ from new_module.services.impl import NewClass
 
 ## God Component Criteria
 Identify candidates for extraction when a file meets any of these thresholds:
-- **Line count**: > 500 lines.
-- **Test classes**: > 5 unrelated classes in one file.
-- **Source files tested**: > 1 source file per test file.
+- **Line count**: $\ge 465$ lines (target $\le 400$ lines across source, test, and navigable `docs/**/*.md` files).
+- **Test classes**: > 1 unrelated class in a single unit test file (prefer 1 `Test*` class per `test_<module>.py`).
+- **Source files tested**: > 1 source file per unit test file (`1:1:1` mapping: `Source <-> Unit Test <-> Specification`).
 
 ## Execution Workflow
 Follow this sequence strictly to ensure no behavioral changes are introduced.
 
 1. **Baseline**: Run tests, confirm 100% coverage, record the test count.
 2. **Audit**: List all files that will be changed and all imports that will need updating.
-3. **Plan**: Document exact targets (which code → which new files).
+3. **Plan**: Document exact targets (which code → which new source files, `1:1` unit test files, and `docs/architecture/` specification entries).
 4. **Execute per file**: 
-   - Move the isolated logic.
+   - Move the isolated logic and include the `Specification: docs/architecture/<spec>.md` header in the module docstring.
+   - Split/align the corresponding `1:1` unit test file (`test_<module>.py`) and update the `1:1:1` traceability table in `docs/architecture/<spec>.md`.
    - Fix all imports.
    - Run tests after EACH move to isolate breakages immediately.
-5. **Final verification**: Ensure the test count is identical (or higher) and coverage is 100%.
+5. **Final verification**: Ensure the test count is identical (or higher), coverage is 100%, and every source, test, and `docs/**/*.md` file is `< 465` lines.
 6. **Commit**: One atomic commit per logical change.
 
 ## Move Protocol Between Modules

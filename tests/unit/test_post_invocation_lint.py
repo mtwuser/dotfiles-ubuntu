@@ -83,6 +83,35 @@ def test_get_changed_python_files_filters_docs_and_missing(
     assert changed == [str(existing_py)]
 
 
+def test_get_changed_doc_files_and_check_universal_doc_structure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Arrange
+    small_doc = tmp_path / "docs" / "architecture" / "01_spec.md"
+    small_doc.parent.mkdir(parents=True)
+    small_doc.write_text("# Spec\n", encoding="utf-8")
+    big_doc = tmp_path / "docs" / "architecture" / "02_big.md"
+    big_doc.write_text("# Line\n" * 465, encoding="utf-8")
+    fake_proc = subprocess.CompletedProcess(
+        args=["git"],
+        returncode=0,
+        stdout="docs/architecture/01_spec.md\ndocs/architecture/02_big.md\ndocs/missing.md\nREADME.md\n",
+        stderr="",
+    )
+    monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
+
+    # Act
+    changed_docs = post_invocation_lint.get_changed_doc_files(str(tmp_path))
+    violations = post_invocation_lint.check_universal_doc_structure(
+        [*changed_docs, str(tmp_path / "docs" / "missing.md")]
+    )
+
+    # Assert
+    assert changed_docs == [str(small_doc), str(big_doc)]
+    assert len(violations) == 1
+    assert "[max-doc-lines]" in violations[0]
+
+
 def test_run_osa_ast_checks_skips_non_osa_workspace(tmp_path: Path) -> None:
     # Arrange
     venv_py = "/usr/bin/python3"
@@ -318,6 +347,19 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
 ) -> None:
     # Arrange
     missing_file = tmp_path / "missing.py"
+    init_file = tmp_path / "__init__.py"
+    init_file.write_text("", encoding="utf-8")
+    sibling_with_spec = tmp_path / "sibling.py"
+    sibling_with_spec.write_text(
+        '"""Mod.\n\nSpecification: docs/architecture/01_spec.md\n"""\nx = 1\n',
+        encoding="utf-8",
+    )
+    missing_spec_mod = tmp_path / "untraced.py"
+    missing_spec_mod.write_text('"""Mod without spec pointer."""\nx = 1\n', encoding="utf-8")
+    plain_dir = tmp_path / "plain_pkg"
+    plain_dir.mkdir()
+    plain_mod = plain_dir / "app.py"
+    plain_mod.write_text('"""App without spec pointer in plain dir."""\nx = 1\n', encoding="utf-8")
     clean_test = tmp_path / "test_clean.py"
     clean_test.write_text(
         "def test_ok() -> None:\n"
@@ -329,14 +371,27 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
     bad_test = tmp_path / "test_missing_aaa.py"
     bad_test.write_text("def test_bad() -> None:\n    assert 1 == 1\n", encoding="utf-8")
     oversized_mod = tmp_path / "big_module.py"
-    oversized_mod.write_text("x = 1\n" * 465, encoding="utf-8")
+    oversized_mod.write_text(
+        '"""Big.\n\nSpecification: docs/architecture/01_spec.md\n"""\n' + "x = 1\n" * 465,
+        encoding="utf-8",
+    )
 
     # Act
     violations = post_invocation_lint.check_universal_python_structure(
-        [str(missing_file), str(clean_test), str(bad_test), str(oversized_mod)]
+        [
+            str(missing_file),
+            str(init_file),
+            str(sibling_with_spec),
+            str(missing_spec_mod),
+            str(plain_mod),
+            str(clean_test),
+            str(bad_test),
+            str(oversized_mod),
+        ]
     )
 
     # Assert
-    assert len(violations) == 2
-    assert "[missing-aaa]" in violations[0]
-    assert "[max-file-lines]" in violations[1]
+    assert len(violations) == 3
+    assert "[missing-spec-pointer]" in violations[0]
+    assert "[missing-aaa]" in violations[1]
+    assert "[max-file-lines]" in violations[2]

@@ -16,13 +16,14 @@
   ],
   "baseline_guardrails": [
     "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+    "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & 1:1:1 Source-Test-Spec traceability)",
     "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
     "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
   ],
   "surface_bindings": [
     {
       "binding_id": "universal-engineering-baseline",
-      "description": "Universal software quality, typing, and clean-cutover rules across all planes and scopes",
+      "description": "Universal software quality, typing, 1:1:1 traceability, and clean-cutover rules across all planes and scopes",
       "mode": "transversal",
       "target_globs": ["*"],
       "architectural_planes": ["*"],
@@ -31,6 +32,7 @@
       "default_resolution": "L1",
       "invariants": [
         "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
+        "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & 1:1:1 Source-Test-Spec traceability)",
         "AGENTS.md §3 (Strict Linter & Typing Integrity — zero compiler or linter warnings)",
         "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or deprecated branches)"
       ],
