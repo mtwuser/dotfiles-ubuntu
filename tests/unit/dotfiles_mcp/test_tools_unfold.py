@@ -47,11 +47,11 @@ class TestUnfoldToolsMixin:
         (tpl_rules / "coding.md").write_text("# Coding Rule\nStrict typing.\n", encoding="utf-8")
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
+        sec_hdr = (
+            "## Resonant Section\n- See [Coding](../templates/fastapi-hexagonal/rules/coding.md)\n"
+        )
         (docs_dir / "spec.md").write_text(
-            "# Main Spec\n## Resonant Section\n"
-            "- See [Coding](../templates/fastapi-hexagonal/rules/coding.md)\n"
-            + ("Padding text " * 650)
-            + "\n",
+            f"# Main Spec\n{sec_hdr}" + ("P" * (8001 - len(sec_hdr))) + "\n",
             encoding="utf-8",
         )
         server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=tmp_path / "logs")
@@ -163,9 +163,21 @@ class TestUnfoldToolsMixin:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
         linked_md = docs_dir / "linked.md"
-        linked_md.write_text("# Linked L3 Spec\nOriginal L3 body.\n", encoding="utf-8")
+        linked_md.write_text("L" * 4000, encoding="utf-8")
+        for idx in range(2, 7):
+            (docs_dir / f"l{idx}.md").write_text(f"# L{idx}\n", encoding="utf-8")
+        (docs_dir / "lbig.md").write_text("B" * 4001, encoding="utf-8")
+        links_5_line = (
+            "Body line with [Linked](linked.md) [L2](l2.md) [L3](l3.md) [L4](l4.md) [L5](l5.md)."
+        )
+        pad_8000 = "P" * (8000 - len(f"## !!!\n{links_5_line}\n"))
         doc_md = docs_dir / "gate.md"
-        doc_md.write_text("# Gate\n## !!!\nBody line with [Linked](linked.md).\n", encoding="utf-8")
+        doc_md.write_text(
+            f"# Gate\n## !!!\n{links_5_line}\n{pad_8000}\n"
+            "## SixLinks\n[1](linked.md) [2](l2.md) [3](l3.md) [4](l4.md) [5](l5.md) [6](l6.md)\n"
+            "## BigLink\nSee [Big](lbig.md).\n",
+            encoding="utf-8",
+        )
         server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=tmp_path / "logs")
 
         q_pro = json.loads(
@@ -271,14 +283,44 @@ class TestUnfoldToolsMixin:
             server.call_tool("unfold_context_capsule", {"capsule_token": bad_ph_token})
 
         doc_md.write_text(
-            "# Gate\n\nInserted intro line 1.\nInserted intro line 2.\n## !!!\n"
-            "Body line with [Linked](linked.md).\n",
+            f"# Gate\n\nInserted intro line 1.\nInserted intro line 2.\n## !!!\n"
+            f"{links_5_line}\n{pad_8000}\n"
+            "## SixLinks\n[1](linked.md) [2](l2.md) [3](l3.md) [4](l4.md) [5](l5.md) [6](l6.md)\n"
+            "## BigLink\nSee [Big](lbig.md).\n",
             encoding="utf-8",
         )
         relocated_l1 = json.loads(
             server.call_tool("unfold_context_capsule", {"capsule_token": cap_l0_default})[
                 "content"
             ][0]["text"]
+        )
+        l3_exact_ok = json.loads(
+            server.call_tool(
+                "unfold_context_capsule",
+                {"capsule_token": cap_l0_default, "target_level": "L3", "agent_tier": "pro"},
+            )["content"][0]["text"]
+        )
+        q_six = json.loads(
+            server.call_tool(
+                "query_governance_rules", {"query": "SixLinks", "scope": "docs", "resolution": "L0"}
+            )["content"][0]["text"]
+        )["matches"][0]["capsule_token"]
+        l3_six_trunc = json.loads(
+            server.call_tool(
+                "unfold_context_capsule",
+                {"capsule_token": q_six, "target_level": "L3", "agent_tier": "pro"},
+            )["content"][0]["text"]
+        )
+        q_big = json.loads(
+            server.call_tool(
+                "query_governance_rules", {"query": "BigLink", "scope": "docs", "resolution": "L0"}
+            )["content"][0]["text"]
+        )["matches"][0]["capsule_token"]
+        l3_big_trunc = json.loads(
+            server.call_tool(
+                "unfold_context_capsule",
+                {"capsule_token": q_big, "target_level": "L3", "agent_tier": "pro"},
+            )["content"][0]["text"]
         )
         other_node = DotfilesMCPServer(
             repo_dir=tmp_path, layer_id_override="other-service-node", log_dir=tmp_path / "logs"
@@ -314,6 +356,11 @@ class TestUnfoldToolsMixin:
         assert relocated_l1["line_drift_relocated"] is True
         assert "Cross-node capsule mismatch" in err_rpc["error"]["message"]
         assert l2_still_ok["unfolded_level"] == "L2"
+        assert l2_still_ok["truncated"] is False
+        assert l3_exact_ok["truncated"] is False
+        assert len(l3_exact_ok["content"]["linked_l3_documents"]) == 5
+        assert l3_six_trunc["truncated"] is True
+        assert l3_big_trunc["truncated"] is True
         assert "CAPSULE_CHAIN_BROKEN" in alerts_text
         assert "CAPSULE_RESONANCE_DENIED" in alerts_text
         assert "CAPSULE_CAPABILITY_INSUFFICIENT" in alerts_text

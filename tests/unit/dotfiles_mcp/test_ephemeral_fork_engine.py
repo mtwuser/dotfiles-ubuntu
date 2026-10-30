@@ -225,7 +225,7 @@ class TestEphemeralForkEngine:
         expired_dir = eph_root / "eph-expired" / "system"
         expired_dir.mkdir(parents=True)
         (expired_dir / "mcp-layer.json").write_text(
-            json.dumps({"ephemeral_metadata": {"expires_at_epoch": 50.0}}), encoding="utf-8"
+            json.dumps({"ephemeral_metadata": {"expires_at_epoch": 100.0}}), encoding="utf-8"
         )
         active_dir = eph_root / "eph-active" / "system"
         active_dir.mkdir(parents=True)
@@ -233,7 +233,7 @@ class TestEphemeralForkEngine:
             json.dumps(
                 {
                     "default_stack_templates": ["t1"],
-                    "ephemeral_metadata": {"bot_role": "active-bot", "expires_at_epoch": 500.0},
+                    "ephemeral_metadata": {"bot_role": "active-bot", "expires_at_epoch": 101.0},
                 }
             ),
             encoding="utf-8",

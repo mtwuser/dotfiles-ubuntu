@@ -51,12 +51,16 @@ class TestCapsuleEngine:
 
         # Act
         skeleton = capsule_engine._extract_axiom_skeleton("Strict Architecture", lines)
+        unfolded_skeleton = capsule_engine._extract_axiom_skeleton(
+            "Short Section", ["## Short Section", "- Bullet 1", "- Bullet 2", "- Bullet 3"]
+        )
 
         # Assert
         assert "Core mandate quote" in skeleton
         assert "- Bullet 4" in skeleton
         assert "Bullet 5" not in skeleton
         assert "folded in rcap1:L1]" in skeleton
+        assert "[+" not in unfolded_skeleton
 
     def test_seal_and_parse_capsule_envelope_roundtrip_and_invalid_tokens(
         self,

@@ -312,13 +312,19 @@ class TestMCPToolsEphemeral:
             server.call_tool(
                 "orchestrate_ephemeral_fork", {"action": "evaluate", "fork_id": "eph-exp-mem2"}
             )
-        for idx in range(16):
+        for idx in range(14):
             server._ephemeral_memory_store[f"eph-mem-{idx}"] = {
                 "fork_id": f"eph-mem-{idx}",
                 "expires_at_epoch": 9999999999.0,
                 "active": True,
                 "in_memory_only": True,
             }
+        sixteenth_spawn = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork", {"action": "spawn", "bot_role": "dept-ro-16th"}
+            )["content"][0]["text"]
+        )
+        assert sixteenth_spawn["bot_role"] == "dept-ro-16th"
         with pytest.raises(ValueError, match="EPHEMERAL_FORK_LIMIT_REACHED"):
             server.call_tool(
                 "orchestrate_ephemeral_fork", {"action": "spawn", "bot_role": "dept-ro-over"}
@@ -328,4 +334,4 @@ class TestMCPToolsEphemeral:
                 "content"
             ][0]["text"]
         )
-        assert len(reap_all["reaped_forks"]) == 17
+        assert len(reap_all["reaped_forks"]) == 16

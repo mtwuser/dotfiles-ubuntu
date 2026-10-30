@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 from pathlib import Path
@@ -258,3 +259,51 @@ def test_framework_agnostic_and_compaction_terminology_purity() -> None:
         "_copy_zero_copy",
     ):
         assert eph_canonical in arch_05
+
+
+def test_test_suite_ast_anti_deception_invariants() -> None:
+    # Arrange
+    prod_py = sorted(
+        [
+            *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
+        ]
+    )
+    test_py = sorted((REPO_DIR / "tests").rglob("*.py"))
+
+    # Act
+    pragma_violations = [
+        f"{p.relative_to(REPO_DIR)}:{idx}"
+        for p in prod_py
+        for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+        if "pragma:" in line and "no cover" in line
+    ]
+    unmatched_raises: list[str] = []
+    blind_subprocess_mocks: list[str] = []
+    for tp in test_py:
+        tree = ast.parse(tp.read_text(encoding="utf-8"), filename=str(tp))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "raises"
+                and not any(kw.arg == "match" for kw in node.keywords)
+            ):
+                unmatched_raises.append(f"{tp.relative_to(REPO_DIR)}:{node.lineno}")
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "setattr"
+                and len(node.args) >= 2
+                and isinstance(node.args[0], ast.Constant)
+                and node.args[0].value == "subprocess.run"
+                and isinstance(node.args[1], ast.Lambda)
+            ):
+                blind_subprocess_mocks.append(f"{tp.relative_to(REPO_DIR)}:{node.lineno}")
+
+    # Assert
+    assert len(prod_py) == 22
+    assert pragma_violations == []
+    assert unmatched_raises == []
+    assert blind_subprocess_mocks == []

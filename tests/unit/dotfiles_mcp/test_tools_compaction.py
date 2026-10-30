@@ -138,4 +138,64 @@ class TestCompactionToolsMixin:
         assert q_l1["token_compaction_metrics"]["capsule_overhead_tokens"] == 0
         assert "folded in rcap1:L1" in q_l1["matches"][0]["axiom_skeleton"]
         assert q_l2_short["match_count"] == 1
+        assert q_l2_short["truncated"] is False
         assert q_l2_trunc["truncated"] is True
+
+    def test_query_governance_rules_exact_boundary_cutpoints_for_excerpt_and_match_cap(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Verify 1500 vs 1501 L2 char cap and 15 vs 16 match cap truncation cut-points."""
+        # Arrange
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        exact_1500 = "exact1500 " + ("x" * (1500 - len("## Exact1500\nexact1500 ")))
+        over_1501 = "over1501 " + ("y" * (1501 - len("## Over1501\nover1501 ")))
+        sections_15 = "".join(f"## Cap15 Sec {i}\ncap15word\n" for i in range(15))
+        sections_16 = "".join(f"## Cap16 Sec {i}\ncap16word\n" for i in range(16))
+        (docs_dir / "bounds.md").write_text(
+            f"# Bounds\n## Exact1500\n{exact_1500}\n## Over1501\n{over_1501}\n"
+            + sections_15
+            + sections_16,
+            encoding="utf-8",
+        )
+        server = DotfilesMCPServer(repo_dir=tmp_path)
+
+        # Act
+        res_1500 = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "exact1500", "scope": "docs", "resolution": "L2"},
+            )["content"][0]["text"]
+        )
+        res_1501 = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "over1501", "scope": "docs", "resolution": "L2"},
+            )["content"][0]["text"]
+        )
+        res_15_matches = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "cap15word", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
+        res_16_matches = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "cap16word", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
+
+        # Assert
+        assert len(res_1500["matches"][0]["excerpt"]) == 1500
+        assert res_1500["truncated"] is False
+        assert res_1500["warnings"] == []
+        assert res_1501["truncated"] is True
+        assert res_1501["warnings"][0]["code"] == "RESPONSE_TRUNCATED"
+        assert res_15_matches["total_matches_found"] == 15
+        assert res_15_matches["truncated"] is False
+        assert res_15_matches["warnings"] == []
+        assert res_16_matches["total_matches_found"] == 16
+        assert res_16_matches["truncated"] is True
+        assert res_16_matches["warnings"][0]["code"] == "RESPONSE_TRUNCATED"

@@ -90,10 +90,7 @@ def run_tests(venv_python: Path, workspace_path: str) -> tuple[bool, str]:
             timeout=120,
         )
         lines = result.stdout.strip().splitlines()
-        if len(lines) >= _SUMMARY_TAIL_LINES:
-            summary = "\n".join(lines[-_SUMMARY_TAIL_LINES:])
-        else:
-            summary = result.stdout.strip()
+        summary = "\n".join(lines[-_SUMMARY_TAIL_LINES:])
 
         if result.returncode == 0:
             return True, summary

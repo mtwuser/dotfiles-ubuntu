@@ -109,12 +109,14 @@ class TestMCPNodeBase:
         assert "audit_node_drift" in audit["messages"][0]["content"]["text"]
         assert "discover_federated_mcps" in orch["messages"][0]["content"]["text"]
 
-    def test_evaluate_layer_warnings_emits_template_pack_missing(
+    def test_evaluate_layer_warnings_and_log_rotation_boundary_cutpoints(
         self,
         tmp_path: Path,
     ) -> None:
-        """Emit TEMPLATE_PACK_MISSING when default_stack_templates lists a missing directory."""
+        """Verify exact cut-points for budget alerts, log rotation, and memory fork reaping."""
         # Arrange
+        from dotfiles_mcp import constants
+
         (tmp_path / "system").mkdir(parents=True)
         (tmp_path / "templates" / "existing-pack").mkdir(parents=True)
         (tmp_path / "system/mcp-layer.json").write_text(
@@ -127,13 +129,43 @@ class TestMCPNodeBase:
             ),
             encoding="utf-8",
         )
-        server = DotfilesMCPServer(repo_dir=tmp_path)
+        log_dir = tmp_path / "logs"
+        log_dir.mkdir()
+        log_file = log_dir / "test.jsonl"
+        log_file.write_text("X" * (constants.MAX_LOG_FILE_BYTES - 1), encoding="utf-8")
+        server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=log_dir)
+        server._ephemeral_memory_store = {
+            "f-exact": {"expires_at_epoch": 200.0},
+            "f-future": {"expires_at_epoch": 201.0},
+        }
 
         # Act
-        warnings = server._evaluate_layer_warnings(tmp_path, 16500)
+        reaped = server._reap_expired_memory_forks(now_epoch=200.0)
+        server._write_jsonl("test.jsonl", {"step": 1})
+        rotated_after_below_cap = (log_dir / "test.jsonl.1").is_file()
+        log_file.write_text("X" * constants.MAX_LOG_FILE_BYTES, encoding="utf-8")
+        server._write_jsonl("test.jsonl", {"step": 2})
+        rotated_at_exact_cap = (log_dir / "test.jsonl.1").is_file()
+        w_15999 = server._evaluate_layer_warnings(tmp_path, 15999)
+        w_16000 = server._evaluate_layer_warnings(tmp_path, 16000)
+        w_18000 = server._evaluate_layer_warnings(tmp_path, 18000)
+        w_18001 = server._evaluate_layer_warnings(tmp_path, 18001)
 
         # Assert
-        assert [w["code"] for w in warnings] == [
+        assert reaped == ["f-exact"]
+        assert list(server._ephemeral_memory_store) == ["f-future"]
+        assert rotated_after_below_cap is False
+        assert rotated_at_exact_cap is True
+        assert [w["code"] for w in w_15999] == ["TEMPLATE_PACK_MISSING"]
+        assert [w["code"] for w in w_16000] == [
             "TOKEN_BUDGET_NEAR_LIMIT",
+            "TEMPLATE_PACK_MISSING",
+        ]
+        assert [w["code"] for w in w_18000] == [
+            "TOKEN_BUDGET_NEAR_LIMIT",
+            "TEMPLATE_PACK_MISSING",
+        ]
+        assert [w["code"] for w in w_18001] == [
+            "TOKEN_BUDGET_EXCEEDED",
             "TEMPLATE_PACK_MISSING",
         ]

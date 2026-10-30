@@ -58,7 +58,8 @@ class TestSurfaceToolsMixin:
         (priv_dir / "docs/privacy_rules.md").write_text(
             "# Statutory Privacy Rules\n"
             "## Explicit Consent Gate\n"
-            "Every PII form must render `templates/legal/consent.html`.\n",
+            + ("P" * (1500 - len("## Explicit Consent Gate\n")))
+            + "\n## Audit Trail\nLog consent.\n",
             encoding="utf-8",
         )
         (priv_dir / "system/mcp-layer.json").write_text(
@@ -213,7 +214,8 @@ class TestSurfaceToolsMixin:
         assert adaptive_res["canonical_templates"] == [
             "statutory-privacy:templates/legal/consent.html"
         ]
-        assert any(w["code"] == "SURFACE_ASSET_MISSING" for w in adaptive_res["warnings"])
+        assert adaptive_res["truncated"] is False
+        assert [w["code"] for w in adaptive_res["warnings"]] == ["SURFACE_ASSET_MISSING"]
         assert "gdpr-art-25-by-design" in adaptive_res["effective_invariants"]
         assert "pre-read-only" in adaptive_res["effective_invariants"]
         assert l0_no_cap_res["surface_query"]["effective_plane"] == "all"
@@ -231,9 +233,9 @@ class TestSurfaceToolsMixin:
         root_dir = tmp_path / "collision_repo"
         (root_dir / "system").mkdir(parents=True)
         (root_dir / "docs").mkdir(parents=True)
-        long_body = "A" * 1600
+        long_body = "A" * (1501 - len("## Double Entry\n"))
         (root_dir / "docs/many_sections.md").write_text(
-            f"# Title\n## Sec 1\n{long_body}\n## Sec 2\nB\n## Sec 3\nC\n## Sec 4\nD\n",
+            "# Title\n## Sec 1\nA\n## Sec 2\nB\n## Sec 3\nC\n## Sec 4\nD\n",
             encoding="utf-8",
         )
         (root_dir / "system/mcp-layer.json").write_text(
@@ -246,14 +248,19 @@ class TestSurfaceToolsMixin:
                     "surface_bindings": [
                         {
                             "binding_id": "generic-checkout-owner",
-                            "target_globs": ["**"],
+                            "target_globs": ["src/checkout/**"],
                             "architectural_planes": ["*"],
                             "scopes": ["*"],
                             "traits": [],
                             "mode": "authoritative",
                             "rule_files": ["docs/many_sections.md"],
                             "canonical_templates": ["templates/missing_tpl.html"],
-                        }
+                        },
+                        {
+                            "binding_id": "empty-rules-binding",
+                            "target_globs": ["src/empty/**"],
+                            "rule_files": [],
+                        },
                     ],
                 }
             ),
@@ -264,7 +271,7 @@ class TestSurfaceToolsMixin:
         (fin_dir / "system").mkdir(parents=True)
         (fin_dir / "docs").mkdir(parents=True)
         (fin_dir / "docs/ledger.md").write_text(
-            "# Ledger\n## Double Entry\nEnforce double-entry ledger invariants.\n",
+            f"# Ledger\n## Double Entry\n{long_body}\n",
             encoding="utf-8",
         )
         (fin_dir / "system/mcp-layer.json").write_text(
@@ -277,9 +284,9 @@ class TestSurfaceToolsMixin:
                     "surface_bindings": [
                         {
                             "binding_id": "specific-checkout-ledger",
-                            "target_globs": ["src/checkout/**"],
+                            "target_globs": ["src/checkout/**", "src/ledger/**"],
                             "architectural_planes": ["domain"],
-                            "scopes": ["checkout"],
+                            "scopes": ["checkout", "ledger"],
                             "traits": ["financial"],
                             "mode": "authoritative",
                             "rule_files": ["docs/ledger.md"],
@@ -328,6 +335,24 @@ class TestSurfaceToolsMixin:
                 {"target_path": "src/checkout/service.py", "traits": ["financial"]},
             )["content"][0]["text"]
         )
+        res_four_sec = json.loads(
+            server.call_tool(
+                "resolve_surface_governance",
+                {"target_path": "src/checkout/other.py"},
+            )["content"][0]["text"]
+        )
+        res_long_l2 = json.loads(
+            server.call_tool(
+                "resolve_surface_governance",
+                {"target_path": "src/ledger/service.py", "traits": ["financial"]},
+            )["content"][0]["text"]
+        )
+        res_zero_tokens = json.loads(
+            server.call_tool(
+                "resolve_surface_governance",
+                {"target_path": "src/empty/item.py"},
+            )["content"][0]["text"]
+        )
         with pytest.raises(ValueError, match="Invalid layer precedence"):
             DotfilesMCPServer(repo_dir=bad_layer_prec_dir).call_tool(
                 "resolve_surface_governance", {"target_path": "src/a.py"}
@@ -350,8 +375,11 @@ class TestSurfaceToolsMixin:
         assert res["resolved_bindings"][0]["ephemeral_fork_policy"] == {
             "bot_role": "dept-ledger-bot"
         }
-        assert res["resolved_bindings"][1]["specificity_score"] == 0
+        assert res["resolved_bindings"][1]["specificity_score"] == 1
         assert res["truncated"] is True
+        assert res_four_sec["truncated"] is True
+        assert res_long_l2["truncated"] is True
+        assert res_zero_tokens["token_compaction_metrics"]["savings_pct"] == 0.0
         warning_codes = [w["code"] for w in res["warnings"]]
         assert "SURFACE_PRECEDENCE_COLLISION" in warning_codes
         assert "SURFACE_ASSET_MISSING" in warning_codes

@@ -117,7 +117,7 @@ class TestPromotionEngine:
             json.dumps(
                 {
                     "schema_version": "1.2",
-                    "layer_id": "acme-design",
+                    "layer_id": "ab-sec",
                     "layer_role": "department",
                     "default_stack_templates": ["brand-ui"],
                 }
@@ -136,8 +136,8 @@ class TestPromotionEngine:
                         "coding.md",
                         "layer-05-dept-legal.md",
                         "checkout-pii.md",
-                        "design-tokens.md",
-                        "general-arch.md",
+                        "sec-tokens.md",
+                        "ab-arch.md",
                     ],
                     "project_skills": ["start", "legal-audit", "global-helper"],
                 },
@@ -161,10 +161,10 @@ class TestPromotionEngine:
         routes = {r["item"]: r for r in all_resp["promotion_routing"]}
         assert routes["checkout-pii.md"]["target_layer"] == "dept-legal"
         assert "AGENTS.md" in routes["checkout-pii.md"]["target_destination"]
-        assert routes["design-tokens.md"]["target_layer"] == "dept-design"
-        assert "templates/brand-ui/rules/" in routes["design-tokens.md"]["target_destination"]
-        assert routes["general-arch.md"]["target_layer"] == "root"
-        assert routes["general-arch.md"]["target_scope"] == "template-pack:root:web-starter"
+        assert routes["sec-tokens.md"]["target_layer"] == "dept-design"
+        assert "templates/brand-ui/rules/" in routes["sec-tokens.md"]["target_destination"]
+        assert routes["ab-arch.md"]["target_layer"] == "root"
+        assert routes["ab-arch.md"]["target_scope"] == "template-pack:root:web-starter"
         assert routes["legal-audit"]["target_layer"] == "dept-legal"
         assert routes["global-helper"]["target_scope"] == "global-skills-root"
         assert single_resp["compared_against_layer"] == "acme-legal"
@@ -266,9 +266,15 @@ class TestPromotionEngine:
         (proj_dir / ".agents/assets/gdpr-pack/snippet.md").write_text(
             "<!-- asset -->\n", encoding="utf-8"
         )
-        (proj_dir / ".agents/rules/huge.md").write_text("X" * 19000, encoding="utf-8")
+        (proj_dir / ".agents/rules/huge.md").write_text("X" * 18001, encoding="utf-8")
+        (proj_dir / ".agents/rules/AGENTS.md").write_text("Y" * 18000, encoding="utf-8")
         (proj_dir / ".agents/skills/good-skill/SKILL.md").write_text(
-            "---\nname: good-skill\ndescription: valid skill\n---\n# Guide\n",
+            "---\nname: good-skill\ndescription: valid skill\n---\n" + ("# Guide\n" * 496),
+            encoding="utf-8",
+        )
+        (proj_dir / ".agents/skills/long-skill").mkdir(parents=True)
+        (proj_dir / ".agents/skills/long-skill/SKILL.md").write_text(
+            "---\nname: long-skill\ndescription: too long\n---\n" + ("# Guide\n" * 497),
             encoding="utf-8",
         )
         (proj_dir / ".agents/skills/bad-skill/SKILL.md").write_text(
@@ -374,6 +380,20 @@ class TestPromotionEngine:
                 proj_dir,
                 source_rel_path=".agents/rules/huge.md",
                 target_layer="root",
+            )
+        exact_18k_res = promote_project_asset_to_layer(
+            repo_dir,
+            proj_dir,
+            source_rel_path=".agents/rules/AGENTS.md",
+            target_layer="root",
+            dry_run=True,
+        )
+        assert exact_18k_res["destination"] == "antigravity/.gemini/config/AGENTS.md"
+        with pytest.raises(ValueError, match="<= 500 lines"):
+            promote_project_asset_to_layer(
+                repo_dir,
+                proj_dir,
+                source_rel_path=".agents/skills/long-skill/SKILL.md",
             )
         with pytest.raises(ValueError, match="YAML frontmatter"):
             promote_project_asset_to_layer(

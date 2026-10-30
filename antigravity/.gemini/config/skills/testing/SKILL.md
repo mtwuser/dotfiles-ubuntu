@@ -45,11 +45,14 @@ Test files: `test_{source_file}.py` (or equivalent for your stack).
 Test classes: `Test{SourceClassName}` — ONE class per test file. NEVER append suffixes like `Coverage`, `Expanded`, `Extended`.
 Test methods: `test_<method>_<scenario>_<expected>`.
 
-### Anti-Characterization Trap — CRITICAL
+### Anti-Characterization Trap & Bipolar Guard Verification — CRITICAL
 
-When adding tests to close coverage gaps on pre-existing code:
+When adding tests to close coverage gaps or testing security/lifecycle guards:
 1. **Cross-check the caller/template contract**: Before writing a router or service test, check the HTML template (`hx-post`, `hx-get`, `hx-target`) and project rules. If an HTMX endpoint returns JSON or a missing ID returns `200 {"error": ...}`, **fix the production code first** — never write a test that locks in the bug.
 2. **Never mutate existing test scenarios for branch coverage**: If a loop branch requires multiple items to execute, add a new test method (`test_<method>_second_item`) instead of altering an existing single-item test.
+3. **Bipolar Guard Verification (Negative-First, Positive-Second)**: Any test for a security gate, lifecycle hook (`PreToolUse`, `PostToolUse`, `Stop`), schema validator, or drift auditor that only asserts the passing ("allow"/"stop") state is vulnerable to silent early-return/short-circuit bugs (e.g., mismatched JSON keys returning a default pass). Every guard test MUST execute **both poles**:
+   - **Negative Pole First**: Feed a deliberate violation (failing test, syntax error, forbidden command, expired token) and assert the guard blocks or flags it (`"deny"`, `"continue"`, or specific error code).
+   - **Positive Pole Second**: Fix the violation and assert the guard transitions cleanly to the passing state.
 
 ---
 
@@ -108,5 +111,6 @@ When moving source files between modules, **tests MUST be migrated in the same c
 3. **Boundary Cut-Point & Default-Parameter Sensitivity (Zero-Dependency Mutation Hardening)**:
    - **Boundary Cut-Point Invariant (`N` vs `N ± 1`)**: Branch coverage alone only checks one `True` and one `False` sample (allowing off-by-one `<` vs `<=` and `>` vs `>=` mutants to survive). Whenever production logic compares against a numeric threshold (line caps, byte/token budgets, TTLs, capacity limits, hop counts, pagination bounds), unit tests MUST assert the exact cut-point pair (`threshold` and `threshold ± 1`).
    - **Default-Parameter Sensitivity**: Never rely on default parameter values alone to satisfy 100% line/branch coverage. When a function computes a hash, query filter, or state transition over fields with defaults, include explicit tests proving that mutating each field changes the output.
+   - **AST Anti-Deception Invariants**: Enforce zero `# pragma: no cover` in production code, zero `pytest.raises(...)` without an explicit `match=` pattern, and zero argument-ignoring `subprocess.run` lambdas across the test suite.
 4. Compare coverage before and after. Any new uncovered lines correlate to a missed test migration.
 5. Verify no orphaned test files exist. Every unit test file must map to an actual current source file.

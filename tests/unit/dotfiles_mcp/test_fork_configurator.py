@@ -168,18 +168,30 @@ class TestForkConfigurator:
         self,
         tmp_path: Path,
     ) -> None:
-        """Reject invalid layer_id, layer_role, or out-of-bounds precedence."""
+        """Reject invalid layer_id, layer_role, or out-of-bounds precedence and accept 0..100."""
         # Arrange
         bad_id = "INVALID_ID"
         bad_role = "invalid-role"
 
-        # Act & Assert
+        # Act
+        prec_zero = configure_fork_manifest(
+            tmp_path, layer_id="valid-id", precedence=0, dry_run=True
+        )
+        prec_hundred = configure_fork_manifest(
+            tmp_path, layer_id="valid-id", precedence=100, dry_run=True
+        )
         with pytest.raises(ValueError, match="must be kebab-case"):
             configure_fork_manifest(tmp_path, layer_id=bad_id)
         with pytest.raises(ValueError, match="Invalid layer_role"):
             configure_fork_manifest(tmp_path, layer_id="valid-id", layer_role=bad_role)
         with pytest.raises(ValueError, match="Invalid precedence"):
-            configure_fork_manifest(tmp_path, layer_id="valid-id", precedence=105)
+            configure_fork_manifest(tmp_path, layer_id="valid-id", precedence=-1)
+        with pytest.raises(ValueError, match="Invalid precedence"):
+            configure_fork_manifest(tmp_path, layer_id="valid-id", precedence=101)
+
+        # Assert
+        assert prec_zero["precedence"] == 0
+        assert prec_hundred["precedence"] == 100
 
     def test_scaffold_template_pack_creates_files_and_registers_surface_binding(
         self,

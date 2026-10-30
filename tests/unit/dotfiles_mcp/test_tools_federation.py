@@ -148,7 +148,12 @@ class TestFederationToolsMixin:
                             "mcp_id": "bq-catalog-mcp",
                             "role": "database",
                             "environments": ["dev", "tst"],
-                        }
+                        },
+                        {
+                            "mcp_id": "bq-audit-mcp",
+                            "role": "audit",
+                            "environments": ["dev"],
+                        },
                     ],
                 }
             ),
@@ -196,7 +201,8 @@ class TestFederationToolsMixin:
         assert "Partition by date" in doc_sub
         assert query_all["match_count"] == 1
         assert query_sub["match_count"] == 1
-        assert mcps_all["federated_mcp_count"] == 2
+        assert mcps_all["federated_mcp_count"] == 3
+        assert mcps_all["warnings"] == []
         assert mcps_tst["federated_mcp_count"] == 1
         assert mcps_tst["federated_mcps"][0]["source_layer"] == "acme-dept-data"
 

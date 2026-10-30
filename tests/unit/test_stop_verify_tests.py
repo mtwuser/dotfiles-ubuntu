@@ -95,7 +95,7 @@ def test_run_tests_returns_true_on_passing_pytest(
 
     # Assert
     assert passed is True
-    assert "5 passed in 0.12s" in summary
+    assert summary == "line2\nline3\n5 passed in 0.12s"
     assert recorded_cmds[0][:3] == [str(tmp_path / "python"), "-m", "pytest"]
 
 

@@ -38,8 +38,10 @@ class TestDotfilesMCPServer:
         # Arrange
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
-        (docs_dir / "huge.md").write_text("H" * 17000, encoding="utf-8")
-        server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=tmp_path / "logs")
+        (docs_dir / "exact.md").write_text("E" * (16000 - 101), encoding="utf-8")
+        (docs_dir / "huge.md").write_text("H" * (16001 - 101), encoding="utf-8")
+        log_dir = tmp_path / "logs"
+        server = DotfilesMCPServer(repo_dir=tmp_path, log_dir=log_dir)
 
         # Act
         init_resp = server.handle_request({"jsonrpc": "2.0", "id": 1, "method": "initialize"})
@@ -84,10 +86,22 @@ class TestDotfilesMCPServer:
                 "params": {"uri": "dotfiles://invalid"},
             }
         )
-        large_resp = server.handle_request(
+        exact_resp = server.handle_request(
             {
                 "jsonrpc": "2.0",
                 "id": 15,
+                "method": "tools/call",
+                "params": {
+                    "name": "read_layer_document",
+                    "arguments": {"relative_path": "docs/exact.md"},
+                },
+            }
+        )
+        alerts_after_exact = (log_dir / "mcp_alerts.jsonl").read_text(encoding="utf-8")
+        large_resp = server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 16,
                 "method": "tools/call",
                 "params": {
                     "name": "read_layer_document",
@@ -95,6 +109,7 @@ class TestDotfilesMCPServer:
                 },
             }
         )
+        alerts_after_large = (log_dir / "mcp_alerts.jsonl").read_text(encoding="utf-8")
 
         def _boom() -> list[dict[str, object]]:
             raise RuntimeError("unexpected failure")
@@ -116,7 +131,10 @@ class TestDotfilesMCPServer:
         assert tpl_resp == {"jsonrpc": "2.0", "id": 11, "result": {"resourceTemplates": []}}
         assert not_found_resp is not None and not_found_resp["error"]["code"] == -32601
         assert invalid_param_resp is not None and invalid_param_resp["error"]["code"] == -32602
+        assert exact_resp is not None and "result" in exact_resp
+        assert "LARGE_MCP_PAYLOAD_WARNING" not in alerts_after_exact
         assert large_resp is not None and "result" in large_resp
+        assert "LARGE_MCP_PAYLOAD_WARNING" in alerts_after_large
         assert internal_err_resp is not None and internal_err_resp["error"]["code"] == -32603
 
     def test_run_stdio_loop_processes_line_and_content_length_and_invalid_json(
