@@ -1,11 +1,45 @@
 [project]
 name = "dotfiles-ubuntu"
 version = "1.8.1"
-description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 governance suite, and Contextual MCP Server"
+description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 Human-AI governance suite (AGENTS.md, hooks, skills), and zero-dependency Contextual MCP Server (N-layer surface projection, rcap1 context compaction, ephemeral forks & Docker)."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = []
+keywords = [
+    "dotfiles",
+    "ubuntu",
+    "gnu-stow",
+    "antigravity",
+    "gemini",
+    "mcp",
+    "model-context-protocol",
+    "ai-governance",
+    "pair-programming",
+    "context-compaction",
+    "git-subtree",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Unix Shell",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/mtwuser/dotfiles-ubuntu"
+Documentation = "https://github.com/mtwuser/dotfiles-ubuntu/blob/master/docs/README.md"
+Repository = "https://github.com/mtwuser/dotfiles-ubuntu.git"
+Issues = "https://github.com/mtwuser/dotfiles-ubuntu/issues"
+Changelog = "https://github.com/mtwuser/dotfiles-ubuntu/blob/master/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

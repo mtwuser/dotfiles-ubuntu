@@ -18,8 +18,8 @@ body:
         - "GNU Stow Dotfile Modules (bash/, git/, antigravity/)"
         - "Antigravity 2.0 Rules & Skills (antigravity/.gemini/config/)"
         - "Antigravity 2.0 Lifecycle Hooks (hooks.json, scripts/*.py)"
-        - "Contextual MCP Server, Subtree Graph & Docker (scripts/dotfiles_mcp_server.py, layer-subtree.sh, Dockerfile)"
-        - "Project Starter Templates (templates/fastapi-hexagonal/)"
+        - "Contextual MCP Server, rcap1 Compaction & Ephemeral Forks (scripts/dotfiles_mcp/, scripts/dotfiles_mcp_server.py, Dockerfile)"
+        - "Polymorphic Layer Configurator, Subtree Graph & Templates (scripts/layer-config.sh, scripts/layer-subtree.sh, templates/)"
         - "Automated Test Suite & CI Verification (tests/{unit,imp,e2e}/, scripts/verify-repo.sh)"
     validations:
       required: true

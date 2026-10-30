@@ -47,13 +47,13 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
    cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity
    ```
 
-### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`), the MCP Server (`scripts/dotfiles_mcp_server.py`), or Subtree/Docker Tooling (`scripts/layer-subtree.sh`, `Dockerfile`)
+### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`), the Contextual MCP Package (`scripts/dotfiles_mcp/` & `scripts/dotfiles_mcp_server.py`), or Layer/Subtree/Docker Tooling (`scripts/layer-config.sh`, `scripts/layer-subtree.sh`, `Dockerfile`)
 
-All Python scripts in `antigravity/.gemini/config/scripts/*.py` and `scripts/dotfiles_mcp_server.py` must:
+All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/*.py` must:
 - Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`).
-- Include `from __future__ import annotations` and pass `mypy --strict` and `ruff check` with 0 errors.
-- Be executable (`chmod +x`).
-- Maintain **100% statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` with explicit `# Arrange`, `# Act`, `# Assert` comments and `0-byte` `tests/**/__init__.py` files.
+- Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), stay strictly **`< 465` lines**, and pass `mypy --strict` and `ruff check` with 0 errors.
+- Keep `scripts/dotfiles_mcp/__init__.py` and all `tests/**/__init__.py` files at **`0 bytes`** (package marker purity).
+- Maintain **100% isolated unit test coverage** (`tests/unit/dotfiles_mcp/`) and **100% total statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` with explicit `# Arrange`, `# Act`, `# Assert` comments, exact boundary cut-points (`N` vs `N ± 1`), bipolar guard assertions (negative pole first, positive pole second), and zero `# pragma: no cover` or blind `subprocess.run` lambdas.
 
 ---
 
