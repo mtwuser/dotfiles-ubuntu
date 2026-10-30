@@ -265,6 +265,11 @@ def test_e2e_post_invocation_lint_structural_budget_and_ast_violations_in_git_re
     (ws / "src" / "demo_framework" / "untraced.py").write_text(
         '"""Module without spec pointer."""\n', encoding="utf-8"
     )
+    (ws / "tests" / "unit" / "__init__.py").write_text("__all__ = ['x']\n", encoding="utf-8")
+    (ws / "alembic" / "versions").mkdir(parents=True)
+    (ws / "alembic" / "versions" / "001_manual.py").write_text(
+        "def upgrade() -> None: pass\n", encoding="utf-8"
+    )
     (ws / "tests" / "unit" / "test_missing_aaa.py").write_text(
         '"""Test file without AAA comments."""\n\n\ndef test_bad() -> None:\n    assert 1 == 1\n',
         encoding="utf-8",
@@ -289,6 +294,8 @@ def test_e2e_post_invocation_lint_structural_budget_and_ast_violations_in_git_re
     assert "[WORKSPACE_RULES_BUDGET_EXCEEDED]" in msg
     assert "[max-doc-lines]" in msg
     assert "[missing-spec-pointer]" in msg
+    assert "[init-purity]" in msg
+    assert "[zero-touch-migration]" in msg
     assert "[missing-aaa]" in msg
     assert "[domain-purity]" in msg
     assert "[service-mock]" in msg

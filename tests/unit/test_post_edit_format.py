@@ -31,8 +31,10 @@ def test_main_ignores_non_python_file(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_main_ignores_missing_python_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Arrange
-    missing = tmp_path / "does_not_exist.py"
-    payload = {"toolCall": {"args": {"Path": str(missing)}}}
+    payload = {
+        "toolCall": {"args": {"Path": "does_not_exist.py"}},
+        "workspacePaths": [str(tmp_path)],
+    }
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
     monkeypatch.setattr("sys.stdout", stdout_buf)
@@ -56,7 +58,7 @@ def test_main_formats_using_workspace_venv_ruff(
     mock_run = MagicMock()
     monkeypatch.setattr("subprocess.run", mock_run)
     payload = {
-        "toolCall": {"args": {"Path": str(py_file)}},
+        "toolCall": {"args": {"Path": "sample.py"}},
         "workspacePaths": [str(tmp_path / "other"), str(tmp_path)],
     }
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))

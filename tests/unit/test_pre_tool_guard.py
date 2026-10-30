@@ -308,6 +308,14 @@ def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
     )
     cmd_py_open = "python -c \"open('alembic/versions/001.py', 'w').write('pass')\""
     cmd_subshell = 'bash -lc "echo x > tests/unit/__init__.py"'
+    cmd_outer_redir = 'bash -c "git status" > tests/unit/__init__.py'
+    cmd_sed_inplace = "sed -i 's/pass/return/' alembic/versions/001.py"
+    cmd_truncate = "truncate -s 10 src/orders/__init__.py"
+    cmd_touch = "touch alembic/versions/002_new.py"
+    cmd_py_subproc_git = (
+        "python3 -c \"import subprocess; subprocess.run(['git', 'commit', '-m', 'x'])\""
+    )
+    cmd_py_ossys_alembic = "python3 -c \"import os; os.system('alembic upgrade head')\""
 
     # Act
     ok_redir, r_redir = pre_tool_guard._check_command({"CommandLine": cmd_redir})
@@ -324,26 +332,41 @@ def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
     ok_py_w, _ = pre_tool_guard._check_command({"CommandLine": cmd_py_write})
     ok_py_o, _ = pre_tool_guard._check_command({"CommandLine": cmd_py_open})
     ok_sub, _ = pre_tool_guard._check_command({"CommandLine": cmd_subshell})
+    ok_outer, _ = pre_tool_guard._check_command({"CommandLine": cmd_outer_redir})
+    ok_sed, _ = pre_tool_guard._check_command({"CommandLine": cmd_sed_inplace})
+    ok_trunc, _ = pre_tool_guard._check_command({"CommandLine": cmd_truncate})
+    ok_touch, _ = pre_tool_guard._check_command({"CommandLine": cmd_touch})
+    ok_py_git, r_py_git = pre_tool_guard._check_command({"CommandLine": cmd_py_subproc_git})
+    ok_py_alembic, r_py_alembic = pre_tool_guard._check_command(
+        {"CommandLine": cmd_py_ossys_alembic}
+    )
 
     # Assert
     assert (ok_redir, ok_append, ok_tee, ok_mv, ok_install, ok_py_w, ok_sub) == (False,) * 7
     assert (ok_clobber, ok_amp, ok_fd, ok_heredoc, ok_cp, ok_dd, ok_py_o) == (False,) * 7
+    assert (ok_outer, ok_sed, ok_trunc, ok_touch, ok_py_git, ok_py_alembic) == (False,) * 6
     assert "__init__.py Purity" in r_redir
     assert "__init__.py Purity" in r_tee
     assert "Zero-Touch Migration Policy" in r_clobber
     assert "Zero-Touch Migration Policy" in r_heredoc
+    assert "Commit Discipline" in r_py_git
+    assert "Migration Policy" in r_py_alembic
 
 
 def test_check_command_allows_benign_shell_reads_quotes_and_unprotected_writes() -> None:
     # Arrange
     cmd_quoted = 'echo "Do not run: cat > alembic/versions/001.py or tee src/orders/__init__.py"'
-    cmd_input_redir = "wc -c < src/orders/__init__.py && cat src/orders/__init__.py"
+    cmd_input_redir = (
+        "wc -c < src/orders/__init__.py && cat src/orders/__init__.py && "
+        "sed 's/a/b/' src/orders/__init__.py"
+    )
     cmd_devnull = "echo 'ok' > /tmp/test.txt 2>&1 >/dev/null"
     cmd_fw_init = "echo '__all__ = []' > src/core_framework/__init__.py"
     cmd_safe_ops = (
         "tee -a /tmp/out.txt < /dev/null && cp /tmp/a.txt /tmp/b.txt && "
         "dd if=/dev/zero of=/tmp/ok.bin count=1 && "
-        "python3 -c \"from pathlib import Path; Path('/tmp/safe.py').write_text('x')\""
+        "python3 -c \"from pathlib import Path; Path('/tmp/safe.py').write_text('x')\" && "
+        "python3 -c \"import subprocess; subprocess.run(['git', 'status', '-s'])\""
     )
 
     # Act

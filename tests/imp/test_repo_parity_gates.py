@@ -143,8 +143,14 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         sh_tee_ok, sh_tee_reason = pre_tool_guard._check_command(
             {"CommandLine": f"echo 'x = 1' | tee {protected_target}"}
         )
-        assert (fw_ok, sh_redir_ok, sh_tee_ok) == (False, False, False)
-        assert fw_reason == sh_redir_reason == sh_tee_reason
+        sh_sed_ok, sh_sed_reason = pre_tool_guard._check_command(
+            {"CommandLine": f"sed -i 's/a/b/' {protected_target}"}
+        )
+        sh_py_ok, sh_py_reason = pre_tool_guard._check_command(
+            {"CommandLine": f"python3 -c \"open('{protected_target}', 'w').write('x')\""}
+        )
+        assert (fw_ok, sh_redir_ok, sh_tee_ok, sh_sed_ok, sh_py_ok) == (False,) * 5
+        assert fw_reason == sh_redir_reason == sh_tee_reason == sh_sed_reason == sh_py_reason
     for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"):
         assert agents_token in agents_md
     for budget_token in (

@@ -54,7 +54,19 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
                 f"{file_str}:1 [max-file-lines] File has {line_count} lines "
                 f"(must be < {_MAX_PYTHON_FILE_LINES}; extract modules and 1:1 tests)"
             )
-        if p.name.startswith("test_") and "def test_" in text:
+        norm = "/" + str(p).replace("\\", "/").lstrip("/")
+        if "/alembic/versions/" in norm:
+            violations.append(
+                f"{file_str}:1 [zero-touch-migration] Never create or modify "
+                "alembic/versions/*.py files manually"
+            )
+        if p.name == "__init__.py":
+            if ("/tests/" in norm or ("/src/" in norm and "_framework/" not in norm)) and text:
+                violations.append(
+                    f"{file_str}:1 [init-purity] Consumer src/**/__init__.py and "
+                    "tests/**/__init__.py must remain 0 bytes"
+                )
+        elif p.name.startswith("test_") and "def test_" in text:
             missing_aaa = [
                 marker for marker in ("# Arrange", "# Act", "# Assert") if marker not in text
             ]
@@ -62,7 +74,7 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
                 violations.append(
                     f"{file_str}:1 [missing-aaa] Test file missing {', '.join(missing_aaa)}"
                 )
-        elif p.name != "__init__.py" and "Specification: docs/architecture/" not in text:
+        elif "Specification: docs/architecture/" not in text:
             sibling_has_spec = any(
                 "Specification: docs/architecture/"
                 in sib.read_text(encoding="utf-8", errors="ignore")

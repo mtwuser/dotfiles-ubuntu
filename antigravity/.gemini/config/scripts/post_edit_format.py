@@ -26,13 +26,19 @@ def main() -> None:
         json.dump({}, sys.stdout)
         return
 
+    workspace_paths = payload.get("workspacePaths", [])
     target_path = Path(target)
+    if not target_path.is_absolute():
+        for ws in workspace_paths:
+            candidate = Path(ws) / target_path
+            if candidate.exists():
+                target_path = candidate
+                break
     if not target_path.exists():
         json.dump({}, sys.stdout)
         return
 
     # Find ruff: check venv in each workspace, then fall back to PATH
-    workspace_paths = payload.get("workspacePaths", [])
     ruff_bin: str | None = None
 
     for ws in workspace_paths:

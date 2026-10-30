@@ -47,6 +47,8 @@ _DOCUMENTED_ALEMBIC_SUBCOMMANDS: tuple[str, ...] = (
 
 _SEPARATOR_CHARS = frozenset(";&|()\n")
 _OUTPUT_REDIRECT_OPS = frozenset({">", ">>", ">|", "&>", "&>>", ">&"})
+_FILE_MUTATING_PROGS = frozenset({"tee", "cp", "mv", "install", "touch", "truncate"})
+_INPLACE_EDIT_PROGS = frozenset({"sed", "perl"})
 _COMMAND_WRAPPERS = frozenset({"env", "command", "sudo", "nohup", "nice", "time"})
 _SHELL_BINARIES = frozenset({"sh", "bash", "zsh", "dash"})
 _GIT_FLAGS_WITH_ARG = frozenset(
@@ -76,6 +78,9 @@ _ALEMBIC_MUTATE_RE = re.compile(
 )
 _PYTHON_WRITE_CALL_RE = re.compile(
     r"\b(?:write_text|write_bytes|open|write|copy\w*|move|replace|rename)\s*\("
+)
+_PYTHON_EXEC_CALL_RE = re.compile(
+    r"\b(?:os\.system|subprocess\.(?:run|call|check_call|check_output|Popen))\s*\("
 )
 _INLINE_PATH_TOKEN_RE = re.compile(r"['\"]([^'\"]+)['\"]")
 _SHELL_WRITE_FALLBACK_RE = re.compile(
@@ -149,16 +154,22 @@ def _strip_leading_env_and_wrappers(tokens: list[str]) -> list[str]:
 
 
 def _extract_subshell_command(tokens: list[str]) -> str | None:
-    """Return nested command string if tokens invoke sh/bash -c '<cmd>'."""
+    """Return nested command string if tokens invoke sh/bash -c or python -c os/subprocess."""
     if not tokens:
         return None
     prog = tokens[0].rsplit("/", 1)[-1]
-    if prog not in _SHELL_BINARIES:
-        return None
     for idx in range(1, len(tokens) - 1):
         tok = tokens[idx]
-        if tok == "-c" or (tok.startswith("-") and not tok.startswith("--") and tok.endswith("c")):
+        if prog in _SHELL_BINARIES and (
+            tok == "-c" or (tok.startswith("-") and not tok.startswith("--") and tok.endswith("c"))
+        ):
             return tokens[idx + 1]
+        if (
+            prog.startswith("python")
+            and tok == "-c"
+            and _PYTHON_EXEC_CALL_RE.search(tokens[idx + 1])
+        ):
+            return " ".join(_INLINE_PATH_TOKEN_RE.findall(tokens[idx + 1]))
     return None
 
 
@@ -221,8 +232,12 @@ def _detect_protected_write_in_segment(
 
     prog = stripped_tokens[0].rsplit("/", 1)[-1]
     args = stripped_tokens[1:]
+    is_inplace = prog in _INPLACE_EDIT_PROGS and any(
+        a == "--in-place" or (a.startswith("-") and not a.startswith("--") and "i" in a)
+        for a in args
+    )
 
-    if prog in {"tee", "cp", "mv", "install"}:
+    if prog in _FILE_MUTATING_PROGS or is_inplace:
         targets = [a for a in args if not a.startswith("-")]
         for arg in targets if prog == "tee" else targets[-1:]:
             hit = _classify_protected_path(arg)

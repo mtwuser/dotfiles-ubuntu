@@ -402,6 +402,12 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
         '"""Big.\n\nSpecification: docs/architecture/01_spec.md\n"""\n' + "x = 1\n" * 461,
         encoding="utf-8",
     )
+    dirty_init = tmp_path / "src" / "orders" / "__init__.py"
+    dirty_init.parent.mkdir(parents=True)
+    dirty_init.write_text("__all__ = ['Order']\n", encoding="utf-8")
+    manual_migration = tmp_path / "alembic" / "versions" / "001_manual.py"
+    manual_migration.parent.mkdir(parents=True)
+    manual_migration.write_text("def upgrade() -> None: pass\n", encoding="utf-8")
 
     # Act
     violations = post_invocation_lint.check_universal_python_structure(
@@ -414,11 +420,15 @@ def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
             str(clean_test),
             str(bad_test),
             str(oversized_mod),
+            str(dirty_init),
+            str(manual_migration),
         ]
     )
 
     # Assert
-    assert len(violations) == 3
+    assert len(violations) == 5
     assert "[missing-spec-pointer]" in violations[0]
     assert "[missing-aaa]" in violations[1]
     assert "[max-file-lines]" in violations[2]
+    assert "[init-purity]" in violations[3]
+    assert "[zero-touch-migration]" in violations[4]
