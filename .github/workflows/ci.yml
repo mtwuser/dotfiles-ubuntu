@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Install system dependencies (GNU Stow)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends stow
+
       - name: Install development & testing dependencies
         run: pip install -r requirements-dev.txt
 

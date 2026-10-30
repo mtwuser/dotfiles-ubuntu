@@ -23,6 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         git \
         python3 \
+        stow \
     && if [ "$INSTALL_RUNTIME_DEPS" = "true" ]; then \
         apt-get install -y --no-install-recommends python3-pip python3-venv; \
     fi \
