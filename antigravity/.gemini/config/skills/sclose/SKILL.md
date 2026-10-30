@@ -65,7 +65,7 @@ Scan the task tracker for **fully completed task blocks** (every item `[x]`):
 > a. **Delete the completed item** from `BACKLOG.md` / `WORKROAD.md` (Zero-clutter invariant)
 > b. **Write CHANGELOG entry** if the work is user-facing
 > c. **Delete implemented phases from source roadmap** if applicable
-> d. **Multi-Repo Parity**: If multiple repositories (e.g., framework + validation verticals) were modified during the session, update `CHANGELOG.md` and verify `README.md` directory trees (§10) in **every** modified repository before delivering commits.
+> d. **Multi-Repo Parity**: If multiple repositories (e.g., shared platform + consumer services) were modified during the session, update `CHANGELOG.md` and verify `README.md` directory trees (§10) in **every** modified repository before delivering commits.
 
 ---
 

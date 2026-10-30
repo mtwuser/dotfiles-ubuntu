@@ -116,7 +116,7 @@ class TestEphemeralForkEngine:
         proj = tmp_path / "consumer_proj"
         proj_rules = proj / ".agents" / "rules"
         proj_rules.mkdir(parents=True)
-        (proj_rules / "vertical.md").write_text("# Vertical Rule\n", encoding="utf-8")
+        (proj_rules / "domain.md").write_text("# Domain Rule\n", encoding="utf-8")
 
         base_manifest = {
             "layer_id": "acme-root",
@@ -145,7 +145,7 @@ class TestEphemeralForkEngine:
         reaped_real = reap_ephemeral_fork(repo, spawned["fork_id"], dry_run=False)
 
         # Assert
-        assert spawned["bridged_project_files"] == [".agents/rules/vertical.md"]
+        assert spawned["bridged_project_files"] == [".agents/rules/domain.md"]
         fork_dir = repo / "logs" / "ephemeral_forks" / spawned["fork_id"]
         assert not fork_dir.exists()
         assert inspected["active_count"] == 1

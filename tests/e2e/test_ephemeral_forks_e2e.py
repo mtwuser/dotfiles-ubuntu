@@ -17,7 +17,7 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
     """Validate advisory detection -> ephemeral fork evaluation -> rcap1 capsule unfolding."""
     # Arrange
     eph_root = tmp_path / "ephemeral_forks"
-    consumer_proj = tmp_path / "osa_vertical_shop"
+    consumer_proj = tmp_path / "checkout_service_app"
     (consumer_proj / ".agents" / "rules").mkdir(parents=True)
     (consumer_proj / ".agents" / "rules" / "shop-domain.md").write_text(
         '# Shop Domain Rules\n\n## Cart Invariants\n\n> *"Never allow negative quantities"*\n\n'

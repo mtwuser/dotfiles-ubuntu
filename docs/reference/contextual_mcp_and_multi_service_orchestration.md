@@ -88,7 +88,7 @@ flowchart TD
 1. **Context Before Action (Guardrailed MCP Execution)**:
    - Suppose an agent needs to inspect or troubleshoot `staging-db-01`, which has a `postgres-mcp` server attached.
    - Before touching the database MCP, the agent queries `dotfiles-node-staging` via `discover_federated_mcps()`.
-   - The node's [`system/mcp-layer.json`](../../system/mcp-layer.json) returns not only the `postgres-mcp` descriptor, but also its **`required_guardrails`** (e.g., *"Strictly read-only queries; never run `DROP`/`TRUNCATE` without explicit human approval per `accidental-data-loss-prevention`; schema changes must go through `osa db` migrations in `checkout-api`"*).
+   - The node's [`system/mcp-layer.json`](../../system/mcp-layer.json) returns not only the `postgres-mcp` descriptor, but also its **`required_guardrails`** (e.g., *"Strictly read-only queries; never run `DROP`/`TRUNCATE` without explicit human approval per `accidental-data-loss-prevention`; schema changes must go through declarative Alembic migrations in `checkout-api`"*).
 2. **Cross-Service Drift Diagnosis**:
    - A feature works in `checkout-api` but fails in `payment-worker` due to a native library mismatch (`libpq` / `cairo` / Node version).
    - The agent calls `audit_node_drift` and reads `dotfiles://system/manifests` on both `dotfiles-node-api` and `dotfiles-node-worker`, immediately pinpointing the exact package discrepancy between the two containers.

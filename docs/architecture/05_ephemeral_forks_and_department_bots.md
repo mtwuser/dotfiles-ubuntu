@@ -17,15 +17,15 @@ This document specifies the **3rd Orthogonal Governance Dimension** of `dotfiles
 
 ## 2. Why Ephemeral Scoped Forks Exist (The 4 High-Value Operational Cases)
 
-When a primary AI agent works across a complex enterprise or framework workspace (such as `OSA_FRAMEWORK` + validation verticals), loading full `L2`/`L3` specifications for every department (Security, DBA/Migrations, UX/Accessibility, Hexagonal Domain) simultaneously causes **context window dilution** (*lost-in-the-middle* drift). Conversely, keeping everything at `L0` risks subtle domain violations when editing specialized surfaces.
+When a primary AI agent works across a complex enterprise or multi-service workspace (such as a shared core platform + multiple consumer microservices or client applications), loading full `L2`/`L3` specifications for every department (Security, DBA/Migrations, UX/Accessibility, Hexagonal Domain) simultaneously causes **context window dilution** (*lost-in-the-middle* drift). Conversely, keeping everything at `L0` risks subtle domain violations when editing specialized surfaces.
 
 Ephemeral Scoped Forks solve this paradox by keeping the primary orchestrator lightweight (`L0`/`L1`) while delegating surface-specific work to short-lived, rule-bounded **"Department Bots"**:
 
 1. **Case 1 — Parallel Department Specialist Bot (`"on_surface_match"`)**:
    - When `resolve_surface_governance` matches a surface binding containing an `ephemeral_fork_policy` (e.g., `dept-dba-guardian` on `alembic/**` or `dept-hexagonal-architect` on `src/**`), it emits an **`ephemeral_delegation_advisories`** entry.
    - The agent (or orchestrator) calls `orchestrate_ephemeral_fork(action="spawn")` or `action="evaluate"`, creating an isolated fork mounting **only** that department's template pack and rules promoted to `authoritative` at `L2`/`L3`.
-2. **Case 2 — Cross-Repository / Cross-Vertical Context Bridge (`mount_project_rules_from`)**:
-   - When validating contract compatibility between a core framework (`OSA_FRAMEWORK`) and a consumer vertical (`osa_example_notes`), `spawn` can mount the consumer's `.agents/rules/*.md` into `layers/ephemeral-project-bridge/` inside the ephemeral fork—enabling cross-repo rule weaving and `rcap1` capsule exchange without polluting the permanent `dotfiles-ubuntu` tree.
+2. **Case 2 — Cross-Repository / Consumer-Service Context Bridge (`mount_project_rules_from`)**:
+   - When validating contract compatibility between a shared core platform (`acme-core-platform`) and a consumer service (`checkout-service`), `spawn` can mount the consumer's `.agents/rules/*.md` into `layers/ephemeral-project-bridge/` inside the ephemeral fork—enabling cross-repo rule weaving and `rcap1` capsule exchange without polluting the permanent `dotfiles-ubuntu` tree.
 3. **Case 3 — Privilege & Scope Sandboxing (`access_mode`, `model_tier`, `target_globs`)**:
    - Each ephemeral fork locks its `system/mcp-layer.json` to an explicit `model_tier` (`"flash"`, `"inherit"`, `"pro"`), `access_mode` (`"strictly-read-only"`, `"read-and-test-trigger"`, `"read-write-scoped"`), and `target_globs` boundary, preventing a support subagent from drifting outside its assigned surface (`AGENTS.md §13` & `§14.3`).
 4. **Case 4 — Canary Governance Dry-Run (`"on_demand"`)**:
@@ -74,17 +74,18 @@ sequenceDiagram
     participant MCP as DotfilesMCPServer (Root)
     participant Eph as Ephemeral Fork Node (logs/ephemeral_forks/<id>)
 
-    Agent->>MCP: 1. resolve_surface_governance(target_path="src/notes/router.py")
+    Agent->>MCP: 1. resolve_surface_governance(target_path="src/checkout/router.py")
     MCP-->>Agent: Returns L1 bindings + ephemeral_delegation_advisories (dept-hexagonal-architect)
-    Agent->>MCP: 2. orchestrate_ephemeral_fork(action="evaluate", bot_role="dept-hexagonal-architect", target_path="src/notes/router.py")
-    MCP->>Eph: Materializes zero-copy symlink overlay + scoped mcp-layer.json (TTL=300s)
-    Eph-->>MCP: Evaluates scoped L2/L3 projection + mints rcap1 capsule + 4-Channel subagent_invocation_brief
-    MCP-->>Agent: Returns subagent_invocation_brief + ephemeral_capsule (auto-reaps if one_shot=true)
+    Agent->>MCP: 2. orchestrate_ephemeral_fork(action="evaluate", bot_role="dept-hexagonal-architect", target_path="src/checkout/router.py")
+    MCP->>Eph: Materializes hardlink-isolated fork tree + scoped mcp-layer.json (TTL=300s)
+    Eph-->>MCP: Evaluates scoped L2/L3 projection + mints rcap1 capsules + 4-Channel subagent_invocation_brief
+    MCP-->>Agent: Returns subagent_invocation_brief + ephemeral_capsule + ephemeral_capsules (auto-reaps if one_shot=true)
 ```
 
-1. **Zero-Copy Materialization (`logs/ephemeral_forks/<fork_id>/`)**:
-   - Ephemeral forks reside under `logs/ephemeral_forks/` (git-ignored and wiped by `make clean`), linking `antigravity/`, `docs/`, `templates/`, and selected `layers/*` via OS symlinks while writing an isolated `system/mcp-layer.json` (`layer_role: "ephemeral-bot"`).
-   - A real `DotfilesMCPServer(repo_dir=ephemeral_fork_dir)` can be instantiated or launched over `stdio` (`--manifest <ephemeral_dir>/system/mcp-layer.json`) with zero file duplication.
+1. **Hardlink-Isolated Materialization, Read-Only Container Fallback & Path Containment (`default_ephemeral_root`)**:
+   - Ephemeral forks reside under `logs/ephemeral_forks/<fork_id>/` by default (git-ignored and wiped by `make clean`), or automatically fall back to `/tmp/dotfiles_ephemeral_forks/<fork_id>/` (and in-memory `_ephemeral_memory_store` if `/tmp` is non-writable) when the repository is mounted read-only (`:ro` in Docker/Kubernetes).
+   - Instead of OS directory symlinks (which would cause `Path.resolve().is_relative_to(fork_dir)` to escape back to the parent repository), `_copy_zero_copy` constructs real directory trees and hardlinks files via `os.link` (falling back to `shutil.copy2` across filesystem boundaries). In `_prepare_project_bridge`, every candidate `.agents/rules/*.md` is verified via `rf.resolve().is_relative_to(proj)` to block outbound symlink escapes.
+   - `action="evaluate"` returns both the primary `ephemeral_capsule` and the complete `ephemeral_capsules` catalog (including bridged project rules). While an ephemeral fork is active (or preserved in `_ephemeral_memory_store` for `one_shot=True` bridged rules), the parent `DotfilesMCPServer` can unfold (`L0 → L3`) any `rcap1` capsule minted by that fork (`iss="eph-..."` via `_resolve_ephemeral_issuer_meta`), automatically revoking unfolding once the fork is reaped or its TTL expires.
 2. **Deterministic Garbage Collection & Capacity Cap**:
    - Every invocation of `orchestrate_ephemeral_fork` first executes `reap_expired_ephemeral_forks`, deleting any fork whose `expires_at_epoch <= time.time()` and emitting `EPHEMERAL_FORK_EXPIRED` when a targeted `fork_id` has expired.
    - Active ephemeral forks are capped at `MAX_ACTIVE_EPHEMERAL_FORKS = 16` (emitting `EPHEMERAL_FORK_LIMIT_REACHED` if exceeded).

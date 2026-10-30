@@ -182,7 +182,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                                 "chain_verified": True,
                                 "truncated": False,
                                 "warnings": [],
-                                "promoter_header": header,
+                                "promoter_codon": header,
                                 "next_capsule_token": raw_token,
                             },
                             indent=2,
@@ -420,7 +420,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
             "level_digest": digest_map[target_level],
             "truncated": bool(unfold_warnings),
             "warnings": unfold_warnings,
-            "promoter_header": header,
+            "promoter_codon": header,
             "content": unfolded_body,
             "next_capsule_token": next_capsule_token,
         }

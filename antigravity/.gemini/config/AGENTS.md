@@ -60,7 +60,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 2. **Side-Effect Coherence**: Verify that changed logic does not break global scripts (`build`, `reset`, `setup`, `test-all`).
 3. **Commit Rigor**: Confirm the directory root is sterile before suggesting `git add`.
 4. **Transversal Build Verification**: Run isolated tests and full lint/type checks to catch cascading issues.
-5. **Multi-Repo Governance Parity**: When a task modifies multiple repositories (e.g., framework + validation verticals), verify `CHANGELOG.md`, `README.md` tree sync (§10), and the full test/lint battery in **every** modified repository individually.
+5. **Multi-Repo Governance Parity**: When a task modifies multiple repositories (e.g., platform + consumer services), verify `CHANGELOG.md`, `README.md` tree sync (§10), and the full test/lint battery in **every** modified repository individually.
 
 #### 9. Exhaustive Implementation Planning (Anti-Myopia)
 > *"Move deliberately rather than rushing: short verified steps backed by comprehensive cross-cutting plans."*
@@ -83,7 +83,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 #### 11. Scaffolding-First Mandate (CLI over Manual)
 > *"The project provides dedicated CLI scaffolding tools — use them."*
 
-**Mandate:** Before manually creating project files, configuration, or boilerplate, check if the project provides CLI scaffolding tools (`osa init`, `osa context`, `osa scaffold`, `osa db`, `layer-config.sh`, etc.). Use the CLI tool exclusively unless no CLI covers the need, the CLI is broken (document in `BACKLOG.md`), or the user explicitly requests manual creation.
+**Mandate:** Before manually creating project files, configuration, or boilerplate, check if the project provides CLI scaffolding tools (`layer-config.sh`, `make scaffold`, project CLI generators, etc.). Use the CLI tool exclusively unless no CLI covers the need, the CLI is broken (document in `BACKLOG.md`), or the user explicitly requests manual creation.
 
 #### 12. Generated Output Verification (Anti-Ghost Dependencies)
 > *"Whenever you generate code, verify that the generated output works with what is installed."*
@@ -92,7 +92,7 @@ This file governs the fundamental mindset and operating rigor of the AI Agent. T
 1. **Import verification**: All `import` statements reference packages present in project dependencies.
 2. **Syntax verification**: Generated files pass linters and type-checkers without errors.
 3. **No ghost references**: Zero references to renamed, removed, or non-existent packages.
-4. **Identity & placeholder verification**: `grep` generated headers/configs for default placeholders (`osa_app`, etc.) to confirm real project identity resolution.
+4. **Identity & placeholder verification**: `grep` generated headers/configs for default placeholders (`my_app`, etc.) to confirm real project identity resolution.
 5. **Package marker purity (`0-byte` `__init__.py`)**: In Python consumer/domain packages (`src/**/__init__.py`) and `tests/**/__init__.py`, `__init__.py` files MUST remain completely empty (`0 bytes`). Never place variables, metadata, configuration, imports, or runtime logic inside `__init__.py` — project and bounded-context metadata belong exclusively in declarative manifest/configuration files.
 
 If generated output contains errors, fix the generator/template at the SOURCE, not just the generated file.
@@ -123,7 +123,7 @@ If generated output contains errors, fix the generator/template at the SOURCE, n
 > *"Before blind-debugging a runtime, import, or test failure, run the project's deterministic diagnostic sweep."*
 
 **Mandate:** Before deep-debugging runtime errors (e.g., 422s, DI resolution failures), import anomalies, or test discrepancies:
-1. **Run the project's diagnostic command first** (e.g., `make doctor` / `osa doctor --clean-cache` or equivalent architecture/lint checker) to deterministically sweep architectural boundaries, runtime import traps, test structure, and stale bytecode caches.
+1. **Run the project's diagnostic command first** (e.g., `make doctor`, `make verify`, or the project's architecture/lint checker) to deterministically sweep architectural boundaries, runtime import traps, test structure, and stale bytecode caches.
 2. **Crystallize recurring verification routines**: Whenever a multi-step check is repeated across tasks, crystallize it into a deterministic `Makefile` target or CLI subcommand rather than ad-hoc shell invocations.
 
 ---
@@ -174,4 +174,4 @@ When creating or modifying ANY file in `~/.gemini/config/` (`AGENTS.md`, `hooks.
 3. **Patch Targets**: Patch where the object is looked up at runtime (`consumer.func` when imported via `from source import func`). Update all patch targets when moving files.
 4. **100% Coverage, Speed & Deprecation-Free Gates**: Maintain 100% statement and branch coverage, `< 1s` per unit test, and 0 `DeprecationWarning` (`-W error::DeprecationWarning`).
 5. **Anti-Characterization Trap**: When writing tests to close coverage gaps, never blindly lock in broken production behavior. Cross-check the caller/template contract (`hx-get`/`hx-post`/`hx-target`) and project rules first — fix production bugs before writing the test, and add new test methods for extra loop/branch scenarios rather than mutating existing single-item tests.
-6. **What NOT to Test**: Test our executable logic (1:1 mapping for files with executable logic), never language/framework axiomatics (`isinstance(StrEnum, str)`, `issubclass`, Pydantic `Field(default=...)`, literal constants). DO test public contract defaults (`OSAManifest`, `BaseOSASettings`, exception `error_code`/`http_status`, protocol enums).
+6. **What NOT to Test**: Test our executable logic (1:1 mapping for files with executable logic), never language/framework axiomatics (`isinstance(StrEnum, str)`, `issubclass`, Pydantic `Field(default=...)`, literal constants). DO test public contract defaults (manifest schemas, `BaseSettings`, exception `error_code`/`http_status`, protocol enums).

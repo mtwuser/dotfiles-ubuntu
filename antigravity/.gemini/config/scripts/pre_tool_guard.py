@@ -203,14 +203,15 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
         msg = (
             "Blocked by pre_tool_guard (Zero-Touch Migration Policy): "
             "Never create or modify files in alembic/versions/*.py manually. "
-            "Ask the user to run 'osa db revision' / 'osa db upgrade'."
+            "Ask the user to run the project migration CLI "
+            "('alembic revision' / 'alembic upgrade')."
         )
         return False, msg
 
     # 2. 0-byte __init__.py purity in consumer src/** and all tests/**
     if target.endswith("/__init__.py"):
         is_tests_init = "/tests/" in target
-        is_consumer_src_init = "/src/" in target and "/src/osa_framework/" not in target
+        is_consumer_src_init = "/src/" in target and "_framework/" not in target
         if is_tests_init or is_consumer_src_init:
             content = str(
                 args.get("Content") or args.get("Replacement") or args.get("CodeContent") or ""
@@ -224,7 +225,8 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
                     "Blocked by pre_tool_guard (__init__.py Purity): "
                     "Consumer src/**/__init__.py and tests/**/__init__.py files "
                     "MUST remain 100% empty (0 bytes). Declare bounded-context "
-                    "metadata and exclude_contexts in osa-manifest.yaml."
+                    "metadata and exclude_contexts in declarative project manifests "
+                    "(e.g., app-manifest.yaml or pyproject.toml)."
                 )
                 return False, msg
 
@@ -251,7 +253,7 @@ def _check_command(args: dict[str, object]) -> tuple[bool, str]:
         msg = (
             "Blocked by pre_tool_guard (Migration Policy): "
             "Never run 'alembic revision/upgrade/downgrade' directly. "
-            "The user handles migrations interactively via 'osa db'."
+            "The user handles database migrations interactively."
         )
         return False, msg
 

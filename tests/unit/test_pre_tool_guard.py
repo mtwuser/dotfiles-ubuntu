@@ -106,10 +106,10 @@ def test_check_file_write_allows_empty_consumer_src_init() -> None:
     assert reason == ""
 
 
-def test_check_file_write_allows_osa_framework_internal_init() -> None:
+def test_check_file_write_allows_framework_package_internal_init() -> None:
     # Arrange
     args: dict[str, object] = {
-        "Path": "/workspace/OSA/src/osa_framework/core/__init__.py",
+        "Path": "/workspace/core/src/core_framework/kernel/__init__.py",
         "Content": "from .types import Identifier",
     }
 

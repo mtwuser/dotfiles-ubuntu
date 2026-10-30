@@ -140,8 +140,10 @@ class TestUnfoldToolsMixin:
         # Assert
         assert inspect_l0["unfolded_level"] == "L0"
         assert inspect_l0["decrypted_hops"] == 0
+        assert "promoter_codon" in inspect_l0
         assert unfold_l1["unfolded_level"] == "L1"
         assert unfold_l1["unfold_chain"] == ["L0->L1"]
+        assert "promoter_codon" in unfold_l1
         assert unfold_l2["unfolded_level"] == "L2"
         assert unfold_l2["truncated"] is True
         assert len(unfold_l2["content"]["l3_links"]) == 1

@@ -63,7 +63,7 @@ INFRASTRUCTURE (Persistence)    → Adapter layer (I/O)
 - **Dependency Rule**: Domain NEVER imports from Infrastructure or Application.
 - **Port Purity**: Ports are abstract interfaces (Protocol/ABC) in `domain/ports.py`. Infrastructure implements them.
 - **Service Purity**: Domain services have ZERO I/O. They receive data through method parameters, not by fetching it.
-- **`__init__.py` Purity**: All `__init__.py` files in consumer `src/` and `tests/` MUST remain **100% empty (`0 bytes`)**. Never place variables, configuration, imports, docstrings, or logic inside `__init__.py`. Bounded context configuration and `exclude_contexts` live exclusively in `osa-manifest.yaml` (`domain.bounded_contexts`).
+- **`__init__.py` Purity**: All `__init__.py` files in consumer `src/` and `tests/` MUST remain **100% empty (`0 bytes`)**. Never place variables, configuration, imports, docstrings, or logic inside `__init__.py`. Bounded context configuration and `exclude_contexts` live exclusively in `app-manifest.yaml` (`domain.bounded_contexts`).
 
 ## Zone Architecture (Layer 3: Presentation)
 
@@ -121,10 +121,10 @@ class User(BaseModel):
 
 ## Manifest System (YAML-driven)
 
-Application behavior is configured via `osa-manifest.yaml`, NOT hardcoded conditionals:
+Application behavior is configured via `app-manifest.yaml`, NOT hardcoded conditionals:
 
 ```yaml
-# osa-manifest.yaml
+# app-manifest.yaml
 project:
   name: my_app
   scale: medium

@@ -415,7 +415,7 @@ Templates under `templates/<name>/` are polymorphic (discovered dynamically acro
 - **`stack-starter`**: Full tech-stack starter (`rules/`, `skills/`, `governance/`, e.g., `fastapi-hexagonal`, `nextjs-web`, `rust-axum`).
 - **`domain-policy-pack`**: Authoritative legal, security, or financial domain rules and canonical assets (`rules/`, `skills/`, `assets/`, `mode: "authoritative"`).
 - **`department-pack`**: Transversal departmental guidelines, design tokens, or UX/SEO checklists (`rules/`, `skills/`, `assets/`, `mode: "transversal"`).
-- **`project-overlay`**: Project- or vertical-specific rules and assets (`rules/`, `assets/`, `governance/`).
+- **`project-overlay`**: Project- or service-specific rules and assets (`rules/`, `assets/`, `governance/`).
 
 ```bash
 # 1. Inspect available template packs across Root and mounted layers/*:

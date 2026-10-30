@@ -45,6 +45,6 @@ Files use these placeholders that you should replace:
 
 | Placeholder | Replace with |
 |-------------|-------------|
-| `{PROJECT_NAME}` | Your project name (e.g., `OSA`, `MyApp`) |
+| `{PROJECT_NAME}` | Your project name (e.g., `CheckoutService`, `MyApp`) |
 | `{PROJECT_PATH}` | Absolute path (e.g., `/home/<user>/Projects/MyApp`) |
 | `{USERNAME}` | Your system username |

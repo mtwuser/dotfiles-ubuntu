@@ -137,7 +137,7 @@ When deciding what to work on next:
 NEVER suggest ad-hoc work from memory.
 
 ## Cognitive & Agent Governance (DNA)
-- **Epigenetic Context Cap (`0-byte` `__init__.py`)**: All `__init__.py` files in consumer `src/` and `tests/` MUST remain completely empty (`0 bytes`). Bounded context metadata and `exclude_contexts` belong in declarative manifest configuration (`osa-manifest.yaml`).
+- **Epigenetic Context Cap (`0-byte` `__init__.py`)**: All `__init__.py` files in consumer `src/` and `tests/` MUST remain completely empty (`0 bytes`). Bounded context metadata and `exclude_contexts` belong in declarative manifest configuration (`app-manifest.yaml`).
 - **`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability (`< 465` lines)**: Executable modules must declare `Specification: docs/architecture/<spec>.md` in their docstring, navigable `docs/architecture/` specs must maintain a `1:1:1` traceability table, and every source, test, and `docs/**/*.md` file must stay strictly `< 465` lines.
 - **Asymmetric Context Routing (4-Channel Subagent Digest)**: When delegating research or scanning tasks to subagents, require a 4-channel digest (`Domain State`, `Affected Port/Contract`, `Invariants & Constraints`, `Actionable Delta`) instead of raw file dumps.
-- **Pre-Debug Diagnostic Sweep**: Before deep-debugging runtime errors (422s, DI failures) or import anomalies, run `make doctor` / `osa doctor --clean-cache` first.
+- **Pre-Debug Diagnostic Sweep**: Before deep-debugging runtime errors (422s, DI failures) or import anomalies, run `make doctor` / `make verify` first.

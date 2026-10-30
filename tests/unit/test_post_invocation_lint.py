@@ -112,22 +112,22 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     assert "[max-doc-lines]" in violations[0]
 
 
-def test_run_osa_ast_checks_skips_non_osa_workspace(tmp_path: Path) -> None:
+def test_run_project_ast_checks_skips_non_manifest_workspace(tmp_path: Path) -> None:
     # Arrange
     venv_py = "/usr/bin/python3"
 
     # Act
-    violations = post_invocation_lint.run_osa_ast_checks(venv_py, str(tmp_path))
+    violations = post_invocation_lint.run_project_ast_checks(venv_py, str(tmp_path))
 
     # Assert
     assert violations == []
 
 
-def test_run_osa_ast_checks_returns_violations_when_nonzero(
+def test_run_project_ast_checks_returns_violations_when_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
-    (tmp_path / "osa-manifest.yaml").write_text("name: demo\n", encoding="utf-8")
+    (tmp_path / "app-manifest.yaml").write_text("name: demo\n", encoding="utf-8")
     (tmp_path / "src").mkdir()
     (tmp_path / "tests" / "unit").mkdir(parents=True)
     fake_proc = subprocess.CompletedProcess(
@@ -139,22 +139,22 @@ def test_run_osa_ast_checks_returns_violations_when_nonzero(
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
 
     # Act
-    violations = post_invocation_lint.run_osa_ast_checks("/usr/bin/python3", str(tmp_path))
+    violations = post_invocation_lint.run_project_ast_checks("/usr/bin/python3", str(tmp_path))
 
     # Assert
     assert violations == ["src/models.py:10 [missing-aaa] Missing AAA comments"]
 
 
-def test_run_osa_ast_checks_returns_empty_when_zero_exit(
+def test_run_project_ast_checks_returns_empty_when_zero_exit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
-    (tmp_path / "src" / "osa_framework").mkdir(parents=True)
+    (tmp_path / "src" / "core_framework").mkdir(parents=True)
     fake_proc = subprocess.CompletedProcess(args=["python"], returncode=0, stdout="", stderr="")
     monkeypatch.setattr("subprocess.run", lambda *_a, **_k: fake_proc)
 
     # Act
-    violations = post_invocation_lint.run_osa_ast_checks("/usr/bin/python3", str(tmp_path))
+    violations = post_invocation_lint.run_project_ast_checks("/usr/bin/python3", str(tmp_path))
 
     # Assert
     assert violations == []
@@ -231,7 +231,7 @@ def test_main_injects_truncated_summary_and_force_continue(
     )
     monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: "/usr/bin/python3")
     monkeypatch.setattr(
-        "post_invocation_lint.run_osa_ast_checks",
+        "post_invocation_lint.run_project_ast_checks",
         lambda _py, _ws: [f"ast_err_{i}" for i in range(10)],
     )
     lint_lines = "\n".join(f"lint_err_{i}" for i in range(10))

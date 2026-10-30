@@ -4,7 +4,7 @@
 Specification: docs/architecture/02_antigravity_governance_and_hooks.md
 Contract: reads JSON from stdin, writes {"injectSteps": [...], ...} to stdout.
 Runs ruff check, universal structural gates (< 465 lines, AAA test comments),
-and OSA check_project/check_tests (when available) on Python files with
+and hexagonal AST check_project/check_tests (when available) on Python files with
 uncommitted or untracked changes across active workspaces and dotfiles-ubuntu.
 If issues are found, injects an ephemeral message and forces continuation so the
 agent resolves them in the same turn.
@@ -198,21 +198,24 @@ def get_changed_doc_files(workspace_path: str) -> list[str]:
     return sorted(files)
 
 
-def run_osa_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
-    """Run fast AST check_project and check_tests if workspace is an OSA repo."""
+def run_project_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
+    """Run fast AST check_project and check_tests if workspace is a manifest/framework repo."""
     ws = Path(workspace_path)
-    if not (ws / "osa-manifest.yaml").exists() and not (ws / "src" / "osa_framework").exists():
+    fw_dirs = sorted(ws.glob("src/*_framework"))
+    has_manifest = any(ws.glob("*-manifest.yaml"))
+    if not has_manifest and not fw_dirs:
         return []
 
-    src_dir = (
-        ws / "src" / "osa_framework" if (ws / "src" / "osa_framework").exists() else ws / "src"
-    )
+    src_dir = fw_dirs[0] if fw_dirs else ws / "src"
     tests_dir = ws / "tests" / "unit" if (ws / "tests" / "unit").exists() else ws / "tests"
     snippet = (
-        "import sys; from pathlib import Path; "
-        "from osa_framework.core.testing.architecture_linter import check_project, check_tests; "
-        f"v1 = check_project(Path({str(src_dir)!r})) if Path({str(src_dir)!r}).is_dir() else []; "
-        f"v2 = check_tests(Path({str(tests_dir)!r})) if Path({str(tests_dir)!r}).is_dir() else []; "
+        "import importlib, pkgutil, sys; from pathlib import Path; "
+        "pkgs = [m.name for m in pkgutil.iter_modules() if m.name.endswith('_framework')]; "
+        "mod = importlib.import_module("
+        "f'{pkgs[0]}.core.testing.architecture_linter') if pkgs else None; "
+        f"p1, p2 = Path({str(src_dir)!r}), Path({str(tests_dir)!r}); "
+        "v1 = mod.check_project(p1) if (mod and p1.is_dir()) else []; "
+        "v2 = mod.check_tests(p2) if (mod and p2.is_dir()) else []; "
         "lines = [f'{v.file}:{v.line} [{v.rule}] {v.message}' for v in (*v1, *v2)]; "
         "print('\\n'.join(lines)); sys.exit(1 if lines else 0)"
     )
@@ -231,7 +234,7 @@ def run_osa_ast_checks(venv_python: str, workspace_path: str) -> list[str]:
 
 
 def main() -> None:
-    """Run ruff check, universal structural gates, and OSA AST checks on modified Python files."""
+    """Run ruff check, structural gates, and project AST checks on modified Python files."""
     payload = json.load(sys.stdin)
     raw_workspaces = payload.get("workspacePaths", [])
     invocation_num = int(payload.get("invocationNum") or 0)
@@ -268,7 +271,7 @@ def main() -> None:
 
         venv_py = find_venv_python([ws, *workspace_paths])
         if venv_py is not None:
-            all_lines.extend(run_osa_ast_checks(venv_py, ws))
+            all_lines.extend(run_project_ast_checks(venv_py, ws))
 
     if not all_lines:
         json.dump({}, sys.stdout)

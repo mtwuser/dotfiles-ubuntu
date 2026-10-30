@@ -206,3 +206,55 @@ def test_single_language_english_purity_across_repository_files() -> None:
     # Assert
     assert len(targets) >= 80
     assert violations == []
+
+
+def test_framework_agnostic_and_compaction_terminology_purity() -> None:
+    # Arrange
+    retired_token_re = re.compile(
+        r"\b(\x6f\x73\x61|\x70romoter_header|\x5fopen_single_capsule"
+        r"|\x5flocate_section_with_drift_tolerance)\b|\x6f\x73\x61_|\x6f\x73\x61-",
+        re.IGNORECASE,
+    )
+    arch_04 = (
+        REPO_DIR / "docs/architecture/04_compaction_surface_and_promotion_engines.md"
+    ).read_text(encoding="utf-8")
+    arch_05 = (REPO_DIR / "docs/architecture/05_ephemeral_forks_and_department_bots.md").read_text(
+        encoding="utf-8"
+    )
+    targets = sorted(
+        [
+            REPO_DIR / "README.md",
+            REPO_DIR / "CHANGELOG.md",
+            *list((REPO_DIR / "antigravity").rglob("*.md")),
+            *list((REPO_DIR / "antigravity").rglob("*.py")),
+            *list((REPO_DIR / "docs").rglob("*.md")),
+            *list((REPO_DIR / "templates").rglob("*.md")),
+            *list((REPO_DIR / "scripts").rglob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.sh")),
+            *list((REPO_DIR / "tests").rglob("*.py")),
+        ]
+    )
+
+    # Act
+    violations = [
+        f"{p.relative_to(REPO_DIR)}:{idx}"
+        for p in targets
+        if p.is_file()
+        for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
+        if retired_token_re.search(line)
+    ]
+
+    # Assert
+    assert violations == []
+    for canonical in (
+        "promoter_codon",
+        "_parse_capsule_envelope",
+        "_resolve_ephemeral_issuer_meta",
+    ):
+        assert canonical in arch_04
+    for eph_canonical in (
+        "ephemeral_capsules",
+        "default_ephemeral_root",
+        "_copy_zero_copy",
+    ):
+        assert eph_canonical in arch_05

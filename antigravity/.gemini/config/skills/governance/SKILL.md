@@ -57,7 +57,7 @@ Always write for the **USER**, not the developer.
 3. **Fit & Gap Matrix**: Classify each extracted mechanism against the current architecture (`100% Aligned`, `Conceptual Enrichment`, or `Actionable Gap`) and present the gap analysis before modifying normative specs.
 
 #### Stage 2 — Normative Architectural & Roadmap Integration (`docs/architecture/` & `roadmaps/`)
-1. **Theoretical Foundations**: Add formal mathematical/theoretical sections to the project's foundation reference (e.g., `docs/reference/biotech_foundations*.md`) with full bilingual parity.
+1. **Theoretical Foundations**: Add formal mathematical/theoretical sections to the project's foundation reference (e.g., `docs/reference/domain_foundations*.md`) with full bilingual parity.
 2. **Normative Specifications**: Integrate the approved mechanisms and glossary definitions into the authoritative architecture documents (`docs/architecture/01`–`04`, ES and EN).
 3. **Roadmap Propagation**: Update pending roadmap files (`roadmaps/*.md`) so future implementation phases incorporate the newly formalized invariants.
 
