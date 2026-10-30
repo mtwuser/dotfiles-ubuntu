@@ -263,7 +263,11 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                     l2_excerpt = joined[:1500]
                     l2_full = joined[:8000]
                     l1_skeleton = _extract_axiom_skeleton(heading, body)
-                    l3_links = _extract_l3_links(rf_path, joined, ldir)
+                    l3_links = (
+                        []
+                        if lname == "ephemeral-project-bridge"
+                        else _extract_l3_links(rf_path, joined, ldir)
+                    )
                     promoter_codon, capsule_token = self._build_section_capsule(
                         resolution=res,
                         layer_name=lname,

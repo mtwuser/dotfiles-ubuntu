@@ -255,14 +255,6 @@ def spawn_ephemeral_fork(
         and not c.name.startswith(".")
         and (mount_layers is None or c.name in mount_layers)
     ]
-    bridged_files, bridge_md, bridge_manifest = (
-        _prepare_project_bridge(mount_project_rules_from)
-        if mount_project_rules_from is not None
-        else ([], "", {})
-    )
-    if mount_project_rules_from is not None:
-        selected_layers.append("ephemeral-project-bridge")
-
     parent_id = str(base_manifest.get("layer_id", "dotfiles-ubuntu-default"))
     eph_meta: dict[str, Any] = dict(
         fork_id=fork_id,
@@ -280,12 +272,19 @@ def spawn_ephemeral_fork(
         session_resonance_key=session_secret,
         handback_contract="4-channel-digest+rcap1",
     )
-    if bridge_manifest:
+    if mount_project_rules_from is not None:
+        bridged_files, bridge_md, bridge_manifest = _prepare_project_bridge(
+            mount_project_rules_from
+        )
+        selected_layers.append("ephemeral-project-bridge")
         eph_meta.update(
             bridge_layer_id=str(bridge_manifest.get("layer_id", "")),
             bridge_agents_md=bridge_md,
             bridge_manifest=bridge_manifest,
+            bridged_project_files=bridged_files,
         )
+    else:
+        bridged_files, bridge_md, bridge_manifest = [], "", {}
 
     binding = dict(
         binding_id=f"{role_clean}-ephemeral-authority",

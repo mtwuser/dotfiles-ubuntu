@@ -106,7 +106,7 @@ class CompactionToolsMixin(MCPNodeBase):
                 "next": nxt,
                 "iss": issuer_id,
                 "lyr": layer_name,
-                "sec": heading[:80],
+                "sec": heading,
                 "codon": promoter_codon["codon"],
                 "tags": tags,
                 "cost": cost_map,

@@ -223,7 +223,9 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
                         "session_resonance_key": str(
                             meta_existing.get("session_resonance_key", "")
                         ),
-                        "bridged_project_files": [],
+                        "bridged_project_files": list(
+                            meta_existing.get("bridged_project_files", [])
+                        ),
                         "reaped_expired": [],
                         "manifest": manifest_existing,
                     }

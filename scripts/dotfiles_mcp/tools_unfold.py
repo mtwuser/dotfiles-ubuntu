@@ -286,7 +286,11 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                     live_h1 = _compute_digest16(live_h0, l1_skeleton)
                     line_drift_relocated = live_h1 == inner.get("h1")
                 joined_section = "\n".join(section_lines)
-                l3_links = _extract_l3_links(target_file, joined_section, layer_dir)
+                l3_links = (
+                    []
+                    if is_eph_bridge
+                    else _extract_l3_links(target_file, joined_section, layer_dir)
+                )
                 live_h2 = _compute_digest16(live_h1, joined_section[:8000])
                 live_h3 = _compute_digest16(
                     live_h2,

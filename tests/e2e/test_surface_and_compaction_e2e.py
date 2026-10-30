@@ -399,8 +399,11 @@ class TestSurfaceAndCompactionE2E:
         l3_doc = alpha_sub / "docs/l3_settlement_spec.md"
         l3_doc.write_text("# Settlement Ledger Spec v1\nUse idempotent keys.\n", encoding="utf-8")
         rule_doc = alpha_sub / "docs/payment_rules.md"
+        long_sec = (
+            "Payment Settlement Rule for Idempotent Distributed Ledger Reconciliation Gateways"
+        )
         rule_body = (
-            "## Payment Settlement Rule\n"
+            f"## {long_sec}\n"
             '> *"Settle every transaction idempotently"*\n'
             "Follow `docs/l3_settlement_spec.md` for ledger reconciliation.\n"
         )
@@ -415,7 +418,7 @@ class TestSurfaceAndCompactionE2E:
             for b in surf_data["resolved_bindings"]  # type: ignore[attr-defined]
             if b["layer"] == "dept-alpha"
             for s in b["sections"]
-            if s["section"] == "Payment Settlement Rule"
+            if s["section"] == long_sec
         )
         rule_doc.write_text(
             f"# Payment Governance\n\n<!-- Drift 1 -->\n<!-- Drift 2 -->\n\n{rule_body}",

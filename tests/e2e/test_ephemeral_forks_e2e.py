@@ -117,7 +117,8 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
     (consumer_proj / ".agents" / "rules").mkdir(parents=True)
     (consumer_proj / ".agents" / "rules" / "shop-domain.md").write_text(
         '# Shop Domain Rules\n\n## Cart Invariants\n\n> *"Never allow negative quantities"*\n\n'
-        "- Cart totals must use Decimal.\n",
+        "- Cart totals must use Decimal (see `README.md`"
+        " and `antigravity/.gemini/config/AGENTS.md`).\n",
         encoding="utf-8",
     )
     server = DotfilesMCPServer(repo_dir=REPO_DIR, log_dir=tmp_path / "logs")
@@ -202,7 +203,7 @@ def test_e2e_surface_advisory_to_ephemeral_department_bot_and_capsule_unfold(
     assert not unfold_root_resp["isError"]
     assert not unfold_bridge_resp["isError"]
     bridge_unfolded = json.loads(unfold_bridge_resp["content"][0]["text"])
-    assert "Cart totals must use Decimal." in bridge_unfolded["content"]["full_section"]
+    assert "Cart totals must use Decimal" in bridge_unfolded["content"]["full_section"]
     assert json.loads(reap_resp["content"][0]["text"])["reaped_forks"] == [fid]
     assert "CAPSULE_RESONANCE_DENIED" in diag["alerts_summary"]["by_code"]
 
@@ -321,14 +322,10 @@ def test_e2e_read_only_container_mount_stdio_tmp_fallback_and_post_reap_denial(
             3,
             "orchestrate_ephemeral_fork",
             action="evaluate",
-            bot_role="dept-ro-evaluator",
+            fork_id=fid_spawn,
             target_path="src/ledger/service.py",
-            mount_layers=["dept-security"],
-            mount_project_rules_from=str(consumer_proj),
-            one_shot=False,
         )
         eval_data = json.loads(r_eval["result"]["content"][0]["text"])
-        spawned_ids.append(str(eval_data["fork_id"]))
 
         r_unfold_ok = _send_tool(
             proc,
