@@ -1,4 +1,4 @@
-.PHONY: help venv install install-dev install-runtime test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
+.PHONY: help venv install install-dev install-runtime setup-dev test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -12,6 +12,7 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 help:
 	@echo "dotfiles-ubuntu development & verification targets:"
 	@echo "  make install          Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
+	@echo "  make setup-dev        Initialize ./venv and materialize local .agents/ (human-core,technical-base)"
 	@echo "  make install-runtime  Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
@@ -35,6 +36,9 @@ $(VENV_BIN)/pytest:
 	$(VENV_BIN)/pip install -r requirements-dev.txt -q
 
 venv install install-dev: $(VENV_BIN)/pytest
+
+setup-dev: $(VENV_BIN)/pytest
+	./scripts/layer-config.sh apply-project $(CURDIR) --template human-core,technical-base
 
 install-runtime:
 	$(PYTHON) -m venv $(VENV_DIR)

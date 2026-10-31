@@ -315,13 +315,11 @@ def promote_project_asset_to_layer(
         meta = _parse_skill_frontmatter(src_file, project_dir)
         if not KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
             raise ValueError("Promoted SKILL.md must have kebab-case name and description")
+        sub_p = f"skills/{src_file.parent.name}/SKILL.md"
         dest_file = (
-            layer_base / "templates" / eff_template / "skills" / src_file.parent.name / "SKILL.md"
+            layer_base / "templates" / eff_template / sub_p
             if eff_template
-            else layer_base
-            / "antigravity/.gemini/config/skills"
-            / src_file.parent.name
-            / "SKILL.md"
+            else layer_base / "antigravity/.gemini/config" / sub_p
         )
     elif eff_template:
         dest_file = layer_base / "templates" / eff_template / "rules" / src_file.name
@@ -352,17 +350,18 @@ def promote_project_asset_to_layer(
     src_rel_str = str(src_file.relative_to(project_dir.resolve()))
     dest_rel_str = str(dest_file.relative_to(repo_resolved))
     sha256_str = _sha256_file(src_file)
+    push_cmd = (
+        f"./scripts/layer-subtree.sh push {eff_layer} feat/promote-{src_file.stem}"
+        if eff_layer != "root"
+        else None
+    )
     result: dict[str, Any] = {
         "source": src_rel_str,
         "target_layer": eff_layer,
         "target_template": eff_template,
         "destination": dest_rel_str,
         "sha256": sha256_str,
-        "subtree_push_command": (
-            f"./scripts/layer-subtree.sh push {eff_layer} feat/promote-{src_file.stem}"
-            if eff_layer != "root"
-            else None
-        ),
+        "subtree_push_command": push_cmd,
         "dry_run": dry_run,
     }
     if prepare_pr or upstream_dir is not None:

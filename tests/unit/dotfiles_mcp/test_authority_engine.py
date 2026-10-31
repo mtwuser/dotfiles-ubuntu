@@ -177,7 +177,7 @@ class TestAuthorityEngine:
         block_tpl_dir = verify_layer_operation_authority(
             squad_dir,
             operation="edit-asset",
-            target_rel_path="templates/dept-tech/rules/tech.md",
+            target_rel_path="templates/dept-tech",
         )
         block_agent_rule = verify_layer_operation_authority(
             squad_dir,

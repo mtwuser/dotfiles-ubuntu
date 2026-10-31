@@ -108,6 +108,8 @@ broken: list[str] = []
 checked = 0
 
 for md in sorted(repo.rglob("*.md")):
+    if any(part in {".git", "venv", ".venv", ".agents"} for part in md.parts):
+        continue
     text = md.read_text(encoding="utf-8")
     stripped = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
     stripped = re.sub(r"`\[[^\]]+\]\([^)]+\)`", "", stripped)

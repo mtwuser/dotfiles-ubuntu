@@ -187,7 +187,7 @@ class TestManifestHelpers:
         # Arrange
         src_tpl = tmp_path / "src_tpl"
         dest_tpl = tmp_path / "dest_tpl"
-        assert manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl) is False
+        newer_missing = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
         (src_tpl / "rules").mkdir(parents=True)
         (dest_tpl / "rules").mkdir(parents=True)
         src_rf = src_tpl / "rules/base.md"
@@ -198,8 +198,8 @@ class TestManifestHelpers:
         os.utime(src_rf, ns=(1_000_000_000, 1_000_000_000))
         os.utime(dest_rf, ns=(2_000_000_000, 2_000_000_000))
         newer_true = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
-        os.utime(dest_rf, ns=(500_000_000, 500_000_000))
-        newer_false = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+        os.utime(dest_rf, ns=(1_000_000_000, 1_000_000_000))
+        newer_equal = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
 
         parent_ws = tmp_path / "corp-root"
         (parent_ws / "system").mkdir(parents=True)
@@ -250,8 +250,9 @@ class TestManifestHelpers:
         )
 
         # Assert
+        assert newer_missing is False
         assert newer_true is True
-        assert newer_false is False
+        assert newer_equal is False
         assert missing_resolved is None
         assert len(drifts_before) == 1
         assert "README.md" in drifts_before[0]["drift_files"]
