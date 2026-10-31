@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.2.2] - 2026-10-31
 
 ### Fixed
 - **GitHub Markdown / LaTeX Math Rendering Fix & Verification Gate (`docs/architecture/03_contextual_mcp_and_federation.md`, `SECURITY.md`, `scripts/verify-repo.sh`)**:
   - Replaced `\_` inside `\text{...}` / `\texttt{...}` in the `effective_guardrails` union formula of [`docs/architecture/03_contextual_mcp_and_federation.md`](docs/architecture/03_contextual_mcp_and_federation.md) with inline code backticks + `$\cup$` (resolving GitHub's `cmark-gfm` pre-parser unescape error `'_' allowed only in math mode` and aligning all 5 guardrail inheritance levels), fixed the `HMAC-SHA256` math delimiter and `2.x` version matrix in [`SECURITY.md`](SECURITY.md), and added a preventive LaTeX text-mode underscore check in Stage `[1/8]` of [`scripts/verify-repo.sh`](scripts/verify-repo.sh).
+- **Cross-Document Organizational Tier vs. Physical Context Pillar Nomenclature Alignment (`docs/reference/enterprise_pair_programming_governance.md`, `docs/architecture/01..04`, `CONTRIBUTING.md`)**:
+  - Decoupled **Organizational Hierarchy Tiers** (`Tier 0: workstation` $\rightarrow$ `Tier 1: corporate Root 0` $\rightarrow$ `Tier 2A: domain-policy / department` $\rightarrow$ `Tier 2B: team` $\rightarrow$ `Tier 3: Application Repo`) from the **4 Physical Context Pillars** (`Layer A: Global Baseline`, `Layer B: Templates & Subtrees`, `Layer C: Workspace .agents/`, `Layer D: 3-Tier Navigable Docs`), eliminating the historical `Layer A -> Layer D -> Layer B -> Layer C` ordering collision in [`enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md) and [`02_antigravity_governance_and_hooks.md`](docs/architecture/02_antigravity_governance_and_hooks.md), clarifying how `git subtree` (`layers/*`) applies across `Tier 1` and `Tier 2B`, and synchronizing the `18-module` (`authority_engine.py`), `12-skill`, `workstation-sync.sh`, and `--create-pr` inventories across [`01_system_and_stow_engine.md`](docs/architecture/01_system_and_stow_engine.md), [`02_antigravity_governance_and_hooks.md`](docs/architecture/02_antigravity_governance_and_hooks.md), [`03_contextual_mcp_and_federation.md`](docs/architecture/03_contextual_mcp_and_federation.md), [`04_compaction_surface_and_promotion_engines.md`](docs/architecture/04_compaction_surface_and_promotion_engines.md), and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ---
 

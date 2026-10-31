@@ -114,7 +114,7 @@ Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and m
 | **[`release`](../../antigravity/.gemini/config/skills/release/SKILL.md)** (`/release`) | Explicit SemVer release cut: runs zero-leak/agnosticism scans and `make verify`, promotes `## [Unreleased]` $\rightarrow$ `## [X.Y.Z] - YYYY-MM-DD`, syncs `VERSION`/`pyproject.toml`/`README.md`, and delivers the release commit + tag + push block | `VERSION`, `pyproject.toml`, `README.md`, `CHANGELOG.md` |
 | **[`priority`](../../antigravity/.gemini/config/skills/priority/SKILL.md)** (`/priority`) | Enforces the deterministic priority chain (`WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/`) and Phase 0.5 deep-analysis | `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `roadmaps/*.md` |
 | **[`review`](../../antigravity/.gemini/config/skills/review/SKILL.md)** (`/review`) | Audits module architecture, service boundaries, `1:1:1` test/spec mapping (`< 465` lines), AAA comment separation, and 100% coverage | `src/**`, `tests/unit/**`, `tests/imp/**`, `docs/architecture/**` |
-| **[`enrich`](../../antigravity/.gemini/config/skills/enrich/SKILL.md)** (`/enrich`) | Scans active workspace `.agents/` against `~/dotfiles-ubuntu` (`Layer A`), `templates/*` (`Layer B`), and mounted `layers/*` subtrees (`Layer D`), proposes upward promotions (`layer-subtree.sh push`) and downward syncs, and runs `stow -t ~ -R antigravity` | `.agents/rules/*.md`, `.agents/skills/**`, `~/dotfiles-ubuntu/antigravity/`, `~/dotfiles-ubuntu/layers/*` |
+| **[`enrich`](../../antigravity/.gemini/config/skills/enrich/SKILL.md)** (`/enrich`) | Scans active workspace `.agents/` against `~/dotfiles-ubuntu` (`Layer A`), `templates/*` (`Layer B`), and mounted `layers/*` subtrees, proposes 1-hop upward promotions (`promote-from-project` / `layer-subtree.sh push`) and downward syncs (`sync-layer`), and runs `stow -t ~ -R antigravity` | `.agents/rules/*.md`, `.agents/skills/**`, `~/dotfiles-ubuntu/antigravity/`, `~/dotfiles-ubuntu/layers/*` |
 
 ### 4.2. Procedural Engineering Skills (Auto-Activated by Task Context)
 
@@ -128,9 +128,14 @@ Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and m
 
 ---
 
-## 5. Layer 2 Starter Templates (`templates/fastapi-hexagonal/`)
+## 5. Layer 2 Polymorphic Template Packs (`templates/`)
 
-`templates/fastapi-hexagonal/` provides a ready-to-copy Layer 2/3 configuration for Python FastAPI + Hexagonal DDD + HTMX projects:
-- **`rules/`**: `coding.md` (always-on), `environment.md` (always-on), `governance.md` (`trigger: model_decision`), `testing.md` (`trigger: model_decision`, including `orphan-test-file` decommissioning).
-- **`skills/`**: `start/SKILL.md` (`/start`), `testing/SKILL.md` (`fastapi-testing`), `frontend/SKILL.md` (`fastapi-frontend`), `database/SKILL.md` (`fastapi-database`).
-- **`governance/`**: Clean starter files for `WORKTASK.md`, `WORKROAD.md`, `WORKVALI.md`, `BACKLOG.md`, `CHANGELOG.md`, and `SESSION.md`.
+`templates/` provides composable governance profiles (`kind: "domain-policy-pack"`) and stack starter blueprints (`kind: "stack-starter"`):
+1. **3-Tier Base Governance Profiles (`human-core`, `technical-base`, `business-base`)**:
+   - **`templates/human-core/`**: Universal cognitive rigor (`§1–10`), `dotfiles-ubuntu` native self-guidance (`§11`), `antigravity-ide` vs. `antigravity-agents` isolation, model delegation (`§12`), single-language purity (`§13`), and `[Unreleased]` commit discipline. Default machine-global `AGENTS.md` baseline.
+   - **`templates/technical-base/`**: Software engineering rigor (`ruff`/`mypy --strict`), `1:1:1` Source-Test-Spec traceability (`Specification:`), `0-byte` `__init__.py` purity, Refactoring & Decommissioning (3-Step Test Pruning Audit + Dynamic Agnosticism Checks), and Testing Universal (AAA, `100%` branch coverage, `N vs N ± 1` boundary cut-points).
+   - **`templates/business-base/`**: Enterprise & normative governance, Single Source of Truth Ledger (`corporate/`), Cross-Departmental Precedence Matrix (`5..35`), *Lex Superior* IP/confidentiality firewall & Crisis Escalation SLAs (`P0/P1/P2`), Traceable Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`), Three-Part Functional Verification Structure, and AI Agent Capability Matrix by Organizational Role.
+2. **Stack Starter (`templates/fastapi-hexagonal/`)**: Ready-to-copy Layer 2/3 configuration for Python FastAPI + Hexagonal DDD + HTMX projects:
+   - **`rules/`**: `coding.md` (always-on), `environment.md` (always-on), `governance.md` (`trigger: model_decision`), `testing.md` (`trigger: model_decision`, including `orphan-test-file` decommissioning).
+   - **`skills/`**: `start/SKILL.md` (`/start`), `testing/SKILL.md` (`fastapi-testing`), `frontend/SKILL.md` (`fastapi-frontend`), `database/SKILL.md` (`fastapi-database`).
+   - **`governance/`**: Clean starter files for `WORKTASK.md`, `WORKROAD.md`, `WORKVALI.md`, `BACKLOG.md`, `CHANGELOG.md`, `SESSION.md`, and `Makefile`.
