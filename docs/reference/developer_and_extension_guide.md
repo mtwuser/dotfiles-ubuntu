@@ -76,6 +76,7 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --templates business-base
    ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
    ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
+   ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
    ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
      --id squad-patent-ops --role team --parent-dir /path/to/dept-legal
    ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root

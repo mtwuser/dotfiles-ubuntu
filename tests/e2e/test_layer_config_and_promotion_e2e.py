@@ -409,9 +409,11 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     )
     _run_layer_config(REPO_DIR, "sync-layer", str(dept_dir), "--parent-dir", str(corp_dir))
     _run_layer_config(REPO_DIR, "sync-layer", str(squad_dir), "--parent-dir", str(dept_dir))
+    corp_hz = _run_layer_config(REPO_DIR, "inspect-horizon", str(corp_dir))
     squad_diff = diff_project_against_layers(squad_dir, squad_dir)
 
     # Assert
+    assert corp_hz["is_oss_community_horizon"] is True
     assert corp_boot["applied_template"] == "business-base,acme-corporate-base"
     assert (auth_res["layer_authority"]["owner_role"], chk_ok["allowed"]) == ("CTO", True)
     assert pr_promo["promotion_pr_plan"]["origin_layer_id"] == "squad-cad-core"

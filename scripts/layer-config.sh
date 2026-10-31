@@ -72,6 +72,10 @@ Commands:
       Verify whether the caller's git user.email (or --email) may execute <operation> on
       <target-dir> (and optional --file), returning constructive promotion guidance on denial.
 
+  inspect-horizon [<target-dir>] [--parent-dir <dir>] [--email <email>]
+      Inspect 1-hop downward propagation status and quiet, role-scoped upward promotion
+      candidates (including OSS-agnostic Root 0 -> Open Source suggestions).
+
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
       Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork under logs/ephemeral_forks/.
@@ -168,6 +172,7 @@ from dotfiles_mcp.fork_configurator import (  # noqa: E402
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
 from dotfiles_mcp.promotion_engine import (  # noqa: E402
     diff_project_against_layers,
+    inspect_layer_horizon,
     promote_project_asset_to_layer,
 )
 from dotfiles_mcp.ephemeral_fork_engine import (  # noqa: E402
@@ -663,6 +668,34 @@ if subcmd == "sync-layer":
             print(f"❌ Unknown or incomplete sync-layer argument: {arg}", file=sys.stderr)
             sys.exit(1)
     res = sync_layer_workspace(repo_dir, target_dir, parent_dir=parent_dir, dry_run=dry_run)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "inspect-horizon":
+    target_dir = repo_dir
+    parent_dir = None
+    actor_email = None
+    i = 0
+    if rest and not rest[0].startswith("--"):
+        target_dir = Path(rest[0]).resolve()
+        i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--parent-dir" and i + 1 < len(rest):
+            parent_dir = Path(rest[i + 1]).resolve()
+            i += 2
+        elif arg == "--email" and i + 1 < len(rest):
+            actor_email = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete inspect-horizon argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    res = inspect_layer_horizon(
+        repo_dir,
+        target_dir,
+        parent_dir=parent_dir,
+        actor_email=actor_email,
+    )
     print(json.dumps(res, indent=2))
     sys.exit(0)
 

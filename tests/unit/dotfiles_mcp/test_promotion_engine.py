@@ -9,6 +9,7 @@ import pytest
 from dotfiles_mcp.promotion_engine import (
     collect_layer_effective_bindings,
     diff_project_against_layers,
+    inspect_layer_horizon,
     promote_project_asset_to_layer,
 )
 from dotfiles_mcp.server import DotfilesMCPServer
@@ -70,14 +71,8 @@ class TestPromotionEngine:
         # Arrange
         (tmp_path / "system").mkdir(parents=True)
         (tmp_path / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": "1.2",
-                    "layer_id": "acme-corp",
-                    "layer_role": "corporate",
-                    "default_stack_templates": ["web-starter"],
-                }
-            ),
+            '{"schema_version":"1.2","layer_id":"acme-corp","layer_role":"corporate",'
+            '"default_stack_templates":["web-starter"]}',
             encoding="utf-8",
         )
         (tmp_path / "templates/web-starter/rules").mkdir(parents=True)
@@ -94,51 +89,34 @@ class TestPromotionEngine:
         legal_dir = tmp_path / "layers/dept-legal"
         (legal_dir / "system").mkdir(parents=True)
         (legal_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": "1.2",
-                    "layer_id": "acme-legal",
-                    "layer_role": "domain-policy",
-                    "surface_bindings": [
-                        {
-                            "binding_id": "gdpr-b",
-                            "scopes": ["*", "checkout"],
-                            "traits": ["*", "pii"],
-                        }
-                    ],
-                }
-            ),
+            '{"schema_version":"1.2","layer_id":"acme-legal","layer_role":"domain-policy",'
+            '"surface_bindings":[{"binding_id":"gdpr-b","scopes":["*","checkout"],"traits":["*","pii"]}]}',
             encoding="utf-8",
         )
         design_dir = tmp_path / "layers/dept-design"
         (design_dir / "system").mkdir(parents=True)
         (design_dir / "templates/brand-ui/rules").mkdir(parents=True)
         (design_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": "1.2",
-                    "layer_id": "ab-sec",
-                    "layer_role": "department",
-                    "default_stack_templates": ["brand-ui"],
-                }
-            ),
+            '{"schema_version":"1.2","layer_id":"ab-sec","layer_role":"department",'
+            '"default_stack_templates":["brand-ui"]}',
             encoding="utf-8",
         )
         server = DotfilesMCPServer(repo_dir=tmp_path)
 
         # Act
+        p_rules = [
+            "coding.md",
+            "layer-05-dept-legal.md",
+            "checkout-pii.md",
+            "sec-tokens.md",
+            "ab-arch.md",
+        ]
         all_resp = json.loads(
             server.call_tool(
                 "compare_layer_patterns",
                 {
                     "layer": "all",
-                    "project_rules": [
-                        "coding.md",
-                        "layer-05-dept-legal.md",
-                        "checkout-pii.md",
-                        "sec-tokens.md",
-                        "ab-arch.md",
-                    ],
+                    "project_rules": p_rules,
                     "project_skills": ["start", "legal-audit", "global-helper"],
                 },
             )["content"][0]["text"]
@@ -302,22 +280,15 @@ class TestPromotionEngine:
             proj_dir,
             source_rel_path=".agents/rules/legal.md",
             target_layer="dept-legal",
-            dry_run=False,
         )
         tpl_rule_res = promote_project_asset_to_layer(
             repo_dir,
             proj_dir,
             source_rel_path=".agents/rules/legal.md",
-            target_layer="root",
             target_template="fastapi-hexagonal",
-            dry_run=False,
         )
         root_skill_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/skills/good-skill/SKILL.md",
-            target_layer="root",
-            dry_run=False,
+            repo_dir, proj_dir, source_rel_path=".agents/skills/good-skill/SKILL.md"
         )
         tpl_skill_res = promote_project_asset_to_layer(
             repo_dir,
@@ -325,21 +296,18 @@ class TestPromotionEngine:
             source_rel_path=".agents/skills/good-skill/SKILL.md",
             target_layer="dept-legal",
             target_template="gdpr-pack",
-            dry_run=False,
         )
         asset_res = promote_project_asset_to_layer(
             repo_dir,
             proj_dir,
             source_rel_path=".agents/assets/gdpr-pack/snippet.md",
             target_layer="dept-legal",
-            dry_run=False,
         )
         mat_update_res = promote_project_asset_to_layer(
             repo_dir,
             proj_dir,
             source_rel_path=".agents/rules/layer-05-dept-legal.md",
             target_layer="dept-legal",
-            dry_run=False,
         )
 
         # Assert
@@ -434,3 +402,54 @@ class TestPromotionEngine:
                 source_rel_path=".agents/rules/legal.md",
                 target_template="BAD_TEMPLATE",
             )
+
+        oss_dir = tmp_path / "oss"
+        for sub in ("system", "templates/business-base/rules", "templates/business-base/assets"):
+            (oss_dir / sub).mkdir(parents=True)
+            (proj_dir / sub).mkdir(parents=True)
+        (oss_dir / "VERSION").write_text("2.0.0\n", encoding="utf-8")
+        (oss_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id":"root","layer_role":"root"}', encoding="utf-8"
+        )
+        for name, txt in (("business-base.md", "# v1\n"), ("same.md", "# s\n"), ("p.md", "# v1\n")):
+            (oss_dir / "templates/business-base/rules" / name).write_text(txt, encoding="utf-8")
+        (proj_dir / "VERSION").write_text("0.2.0\n", encoding="utf-8")
+        (proj_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id":"corp-zyxwvut-root","layer_role":"corporate",'
+            '"default_stack_templates":["business-base"],"upstream_layer":{"layer_id":"root"}}',
+            encoding="utf-8",
+        )
+        for name, txt in (
+            ("business-base.md", "# v2 universal\n"),
+            ("same.md", "# s\n"),
+            ("p.md", "# Mentions zyxwvut\n"),
+        ):
+            (proj_dir / "templates/business-base/rules" / name).write_text(txt, encoding="utf-8")
+        (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", encoding="utf-8")
+        oss_tpl_res = promote_project_asset_to_layer(
+            oss_dir,
+            proj_dir,
+            source_rel_path="templates/business-base/rules/business-base.md",
+            upstream_dir=oss_dir,
+            dry_run=True,
+        )
+        oss_asset_res = promote_project_asset_to_layer(
+            oss_dir,
+            proj_dir,
+            source_rel_path="templates/business-base/assets/a.md",
+            upstream_dir=oss_dir,
+            dry_run=True,
+        )
+        assert oss_tpl_res["target_template"] == "business-base"
+        assert oss_asset_res["destination"] == "templates/business-base/assets/a.md"
+        hz_oss = inspect_layer_horizon(oss_dir, proj_dir)
+        hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
+        assert (
+            hz_oss["is_oss_community_horizon"],
+            len(hz_oss["upward_promotion_suggestions"]),
+        ) == (
+            True,
+            1,
+        )
+        assert hz_int["is_oss_community_horizon"] is False
+        assert len(hz_int["upward_promotion_suggestions"]) >= 1

@@ -439,6 +439,7 @@ for cli_sub in (
     "sync-layer",
     "set-authority",
     "check-authority",
+    "inspect-horizon",
 ):
     if cli_sub not in readme_md or cli_sub not in ext_guide:
         print(f"CLI-to-doc drift: layer-config.sh subcommand '{cli_sub}' missing from README.md or developer_and_extension_guide.md", file=sys.stderr)

@@ -197,6 +197,7 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "sync-layer",
         "set-authority",
         "check-authority",
+        "inspect-horizon",
     ):
         assert sub in readme_md
         assert sub in ext_guide

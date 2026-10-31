@@ -102,12 +102,12 @@ Detect patterns that have **matured** in a project and should move up:
 
 ### §2.3 Multi-Dimensional Layer & Template Classification
 
-For each candidate, determine the exact target layer and template pack (using `.agents/LAYER_LINEAGE.md`, `./scripts/layer-config.sh diff-project <project>`, or the MCP tool `compare_layer_patterns` with `layer="all"`):
+For each candidate, determine the exact target layer and template pack (using `.agents/LAYER_LINEAGE.md`, `./scripts/layer-config.sh inspect-horizon <project>`, `./scripts/layer-config.sh diff-project <project>`, or the MCP tool `compare_layer_patterns` with `layer="all"`):
 
 | If the pattern... | Target Layer & Command |
 |---|---|
-| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap) | **A (Universal Root)**: `~/dotfiles-ubuntu/antigravity/.gemini/config/` (`./scripts/layer-config.sh promote-from-project <proj> --source <path> --to-layer root`) |
-| Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/UX) | **D (Mounted Subtree Layer)**: `~/dotfiles-ubuntu/layers/<layer-name>/` (`./scripts/layer-config.sh promote-from-project <proj> --source <path> --to-layer <layer-name> [--to-template <pack>]` followed by `./scripts/layer-subtree.sh push <layer-name> <branch>`) |
+| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Root)**: `~/dotfiles-ubuntu/antigravity/.gemini/config/` (`./scripts/layer-config.sh promote-from-project <root-0> --source <path> --upstream-dir ~/dotfiles-ubuntu --prepare-pr`) |
+| Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/UX) | **D (Mounted Subtree Layer)**: `~/dotfiles-ubuntu/layers/<layer-name>/` (`./scripts/layer-config.sh promote-from-project <proj> --source <path> --to-layer <layer-name> [--to-template <pack>] --prepare-pr` followed by `./scripts/layer-subtree.sh push <layer-name> <branch>`) |
 | Applies to any project using a specific stack or template pack (`stack-starter`, `department-pack`, `domain-policy-pack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<framework>/.agents/` or `~/dotfiles-ubuntu/templates/<pack>/` (`--to-layer root --to-template <pack>`) |
 | Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer D (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `diff-project`) |
 | Only applies to this specific product/application | **C (Stays in Project)**: `<product>/.agents/` |

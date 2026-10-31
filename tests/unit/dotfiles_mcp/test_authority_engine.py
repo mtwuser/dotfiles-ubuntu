@@ -13,6 +13,8 @@ from dotfiles_mcp.authority_engine import (
     configure_layer_authority,
     resolve_git_user_email,
     verify_layer_operation_authority,
+    verify_oss_promotion_agnosticism,
+    verify_single_hop_upstream,
 )
 
 
@@ -312,3 +314,85 @@ class TestAuthorityEngine:
         assert "gh pr create" in plan["git_pr_commands"][3]
         assert fallback_plan["branch_name"] == "promote/plain-project/asset"
         assert fallback_plan["proposer_email"] == "explicit@acme.com"
+        assert plan["oss_anonymized"] is False
+
+    def test_oss_agnosticism_single_hop_and_anonymized_pr_plan(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Enforce single-hop boundary, OSS agnosticism gate, and OSS PR anonymization."""
+        # Arrange
+        oss_root = tmp_path / "oss-root"
+        (oss_root / "system").mkdir(parents=True)
+        (oss_root / "system/mcp-layer.json").write_text(
+            json.dumps({"layer_id": "root", "layer_role": "root", "precedence": 10}),
+            encoding="utf-8",
+        )
+        corp_dir = tmp_path / "corp-zyxwvut-root"
+        (corp_dir / "system").mkdir(parents=True)
+        (corp_dir / "system/mcp-layer.json").write_text(
+            json.dumps(
+                {
+                    "layer_id": "corp-zyxwvut-root",
+                    "layer_role": "corporate",
+                    "precedence": 10,
+                    "upstream_layer": {"layer_id": "root"},
+                    "mounted_layers": [
+                        {"name": "dept-quantum", "layer_id": "dept-quantum"},
+                        "invalid",
+                    ],
+                    "layer_authority": {
+                        "owner_role": "CEO",
+                        "authorized_emails": [
+                            "ceo@zyxwvut.io",
+                            "dev@users.noreply.github.com",
+                            "no-at-sign",
+                            123,
+                        ],
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        squad_dir = tmp_path / "squad-alpha"
+        (squad_dir / "system").mkdir(parents=True)
+        (squad_dir / "system/mcp-layer.json").write_text(
+            json.dumps(
+                {
+                    "layer_id": "squad-alpha",
+                    "layer_role": "team",
+                    "upstream_layer": {"layer_id": "dept-quantum"},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        # Act & Assert
+        verify_oss_promotion_agnosticism(
+            corp_dir, "# Universal Rule\nPure universal content.\n", "rules/base.md"
+        )
+        with pytest.raises(ValueError, match="OSS_AGNOSTICISM_VIOLATION"):
+            verify_oss_promotion_agnosticism(
+                corp_dir, "# Rule\nMentions zyxwvut and quantum.\n", "rules/base.md"
+            )
+        verify_single_hop_upstream(corp_dir, oss_root, actor_email="ceo@zyxwvut.io")
+        with pytest.raises(ValueError, match="CROSS_TIER_PROMOTION_BYPASS"):
+            verify_single_hop_upstream(squad_dir, oss_root, actor_email="ceo@zyxwvut.io")
+        with pytest.raises(ValueError, match="UNAUTHORIZED_OSS_PROMOTION"):
+            verify_single_hop_upstream(corp_dir, oss_root, actor_email="intruder@other.org")
+
+        oss_plan = build_upward_promotion_pr_plan(
+            corp_dir,
+            oss_root,
+            source_rel="templates/business-base/rules/business-base.md",
+            dest_rel="templates/business-base/rules/business-base.md",
+            target_layer="root",
+            target_template="business-base",
+            sha256="12345678",
+            actor_email="ceo@zyxwvut.io",
+        )
+        assert oss_plan["oss_anonymized"] is True
+        assert oss_plan["origin_layer_id"] == "enterprise-root-0"
+        assert oss_plan["proposer_email"] == "oss-contributor"
+        assert oss_plan["branch_name"] == "promote/oss/business-base"
+        assert "zyxwvut" not in oss_plan["pr_body"]

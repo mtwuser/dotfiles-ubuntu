@@ -26,6 +26,7 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "diff-project",
     "promote-from-project",
     "check-authority",
+    "inspect-horizon",
 )
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",
@@ -243,6 +244,120 @@ def verify_layer_operation_authority(
     }
 
 
+_GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
+    {
+        "root",
+        "corp",
+        "corporate",
+        "dept",
+        "department",
+        "team",
+        "squad",
+        "layer",
+        "base",
+        "pack",
+        "policy",
+        "project",
+        "enterprise",
+        "acme",
+        "demo",
+        "test",
+        "tech",
+        "legal",
+        "finance",
+        "supply",
+        "design",
+        "brand",
+        "human",
+        "core",
+        "technical",
+        "business",
+    }
+)
+_GENERIC_EMAIL_DOMAINS: frozenset[str] = frozenset(
+    {"users.noreply.github.com", "example.com", "acme.com", "localhost"}
+)
+
+
+def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
+    """Return True when manifest represents the Open-Source community root layer."""
+    return str(manifest.get("layer_id", "")) == "root" or str(manifest.get("layer_role", "")) in (
+        "root",
+        "workstation",
+    )
+
+
+def verify_oss_promotion_agnosticism(
+    project_dir: Path,
+    content: str,
+    source_rel: str,
+) -> None:
+    """Block promotion to an Open-Source root if content leaks private corporate identifiers."""
+    proj_m = _load_manifest_dict(project_dir)
+    private_tokens: set[str] = set()
+    raw_ids: list[str] = [str(proj_m.get("layer_id", ""))]
+    for m_entry in proj_m.get("mounted_layers") or []:
+        if isinstance(m_entry, dict):
+            raw_ids.append(str(m_entry.get("name", "")))
+            raw_ids.append(str(m_entry.get("layer_id", "")))
+    auth = proj_m.get("layer_authority")
+    if isinstance(auth, dict):
+        for pat in auth.get("authorized_emails") or []:
+            if isinstance(pat, str) and "@" in pat:
+                dom = pat.split("@", 1)[1].lstrip("*.").lower()
+                if dom and dom not in _GENERIC_EMAIL_DOMAINS:
+                    private_tokens.add(dom)
+                    raw_ids.append(dom)
+    for rid in raw_ids:
+        for tok in re.findall(r"[a-z0-9]{4,}", rid.lower()):
+            if tok not in _GENERIC_LAYER_TOKENS:
+                private_tokens.add(tok)
+    leaked = sorted(
+        tok for tok in private_tokens if re.search(rf"\b{re.escape(tok)}\b", content, re.IGNORECASE)
+    )
+    if leaked:
+        raise ValueError(
+            f"OSS_AGNOSTICISM_VIOLATION: Refusing to promote '{source_rel}' to Open-Source "
+            f"root because it contains private layer identifiers ({', '.join(leaked)}). "
+            "Generalize these terms before promoting to Open Source."
+        )
+
+
+def verify_single_hop_upstream(
+    project_dir: Path,
+    upstream_dir: Path,
+    *,
+    actor_email: str | None = None,
+) -> None:
+    """Enforce the 1-hop upstream boundary and Root 0 owner gate for Open-Source promotions."""
+    proj_m = _load_manifest_dict(project_dir)
+    up_m = _load_manifest_dict(upstream_dir)
+    up_cfg = proj_m.get("upstream_layer")
+    expected_up_id = str(up_cfg.get("layer_id", "")).strip() if isinstance(up_cfg, dict) else ""
+    actual_up_id = str(up_m.get("layer_id", "")).strip()
+    both_oss = (
+        str(proj_m.get("layer_role", "")) == "corporate"
+        or expected_up_id == "root"
+        or "dotfiles-ubuntu" in expected_up_id
+    ) and _is_oss_root_manifest(up_m)
+    if expected_up_id and actual_up_id and expected_up_id != actual_up_id and not both_oss:
+        src_id = str(proj_m.get("layer_id", project_dir.name))
+        raise ValueError(
+            f"CROSS_TIER_PROMOTION_BYPASS: Layer '{src_id}' can only promote directly "
+            f"to its immediate upstream_layer '{expected_up_id}' (1-hop boundary), "
+            f"not '{actual_up_id}'."
+        )
+    if _is_oss_root_manifest(up_m):
+        verdict = verify_layer_operation_authority(
+            project_dir, operation="release", actor_email=actor_email
+        )
+        if not verdict["allowed"]:
+            raise ValueError(
+                "UNAUTHORIZED_OSS_PROMOTION: Only an authorized Root 0 owner may promote "
+                f"assets to the Open-Source root ({verdict['remediation']})."
+            )
+
+
 def build_upward_promotion_pr_plan(
     project_dir: Path,
     target_repo_dir: Path,
@@ -257,8 +372,11 @@ def build_upward_promotion_pr_plan(
     """Build a Pull Request plan anchored in the originating child layer's context."""
     proj_m = _load_manifest_dict(project_dir)
     target_m = _load_manifest_dict(target_repo_dir)
-    source_layer_id = str(proj_m.get("layer_id", project_dir.name))
-    source_layer_role = str(proj_m.get("layer_role", "project"))
+    oss_anonymized = _is_oss_root_manifest(target_m)
+    source_layer_id = (
+        "enterprise-root-0" if oss_anonymized else str(proj_m.get("layer_id", project_dir.name))
+    )
+    source_layer_role = "corporate" if oss_anonymized else str(proj_m.get("layer_role", "project"))
     source_prec = int(proj_m.get("precedence", 50))
     target_layer_id = str(
         target_m.get("layer_id", target_layer if target_layer != "root" else target_repo_dir.name)
@@ -271,22 +389,31 @@ def build_upward_promotion_pr_plan(
         target_auth.get("escalation_contact", f"{owner_role} ({target_layer_id})")
     )
     proposer_email = (
-        actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
+        "oss-contributor"
+        if oss_anonymized
+        else (
+            actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
+        )
     )
     asset_slug = re.sub(r"[^a-z0-9]+", "-", Path(source_rel).stem.lower()).strip("-") or "asset"
-    safe_source_id = (
-        source_layer_id
-        if KEBAB_ID_RE.match(source_layer_id)
-        else re.sub(r"[^a-z0-9]+", "-", source_layer_id.lower()).strip("-") or "project"
-    )
-    branch_name = f"promote/{safe_source_id}/{asset_slug}"
-    commit_msg = (
-        f"feat(governance): promote {Path(source_rel).name} "
-        f"from {source_layer_id} ({source_layer_role})"
-    )
-    pr_title = (
-        f"[Promotion: {source_layer_id} -> {target_layer_id}] Promote {Path(source_rel).name}"
-    )
+    if oss_anonymized:
+        branch_name = f"promote/oss/{asset_slug}"
+        commit_msg = f"feat(governance): promote {Path(source_rel).name} from enterprise root-0"
+        pr_title = f"[OSS Promotion -> {target_layer_id}] Promote {Path(source_rel).name}"
+    else:
+        safe_source_id = (
+            source_layer_id
+            if KEBAB_ID_RE.match(source_layer_id)
+            else re.sub(r"[^a-z0-9]+", "-", source_layer_id.lower()).strip("-") or "project"
+        )
+        branch_name = f"promote/{safe_source_id}/{asset_slug}"
+        commit_msg = (
+            f"feat(governance): promote {Path(source_rel).name} "
+            f"from {source_layer_id} ({source_layer_role})"
+        )
+        pr_title = (
+            f"[Promotion: {source_layer_id} -> {target_layer_id}] Promote {Path(source_rel).name}"
+        )
     pr_body = (
         f"## Upward Governance Promotion (`{source_layer_id}` -> `{target_layer_id}`)\n\n"
         f"- **Origin Layer (Context of Need)**: `{source_layer_id}` "
@@ -311,6 +438,7 @@ def build_upward_promotion_pr_plan(
         "target_layer_id": target_layer_id,
         "target_owner_role": owner_role,
         "reviewer_contact": escalation_contact,
+        "oss_anonymized": oss_anonymized,
         "branch_name": branch_name,
         "commit_message": commit_msg,
         "pr_title": pr_title,
