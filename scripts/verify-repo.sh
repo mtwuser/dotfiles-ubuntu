@@ -104,7 +104,9 @@ import sys
 
 repo = Path(".")
 link_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+latex_text_underscore_re = re.compile(r"\\text(?:tt|rm|sf|it|bf)?\{[^}]*_[^}]*\}")
 broken: list[str] = []
+math_issues: list[str] = []
 checked = 0
 
 for md in sorted(repo.rglob("*.md")):
@@ -112,6 +114,11 @@ for md in sorted(repo.rglob("*.md")):
         continue
     text = md.read_text(encoding="utf-8")
     stripped = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    for line_no, line in enumerate(stripped.splitlines(), 1):
+        no_code = re.sub(r"`[^`]*`", "", line)
+        for math_match in re.finditer(r"\$\$?[^\$]+\$\$?", no_code):
+            if latex_text_underscore_re.search(math_match.group(0)):
+                math_issues.append(f"{md}:{line_no}: {math_match.group(0)}")
     stripped = re.sub(r"`\[[^\]]+\]\([^)]+\)`", "", stripped)
     for m in link_re.finditer(stripped):
         label, target = m.group(1), m.group(2).strip()
@@ -125,16 +132,18 @@ for md in sorted(repo.rglob("*.md")):
         if not resolved.exists():
             broken.append(f"{md}: [{label}]({target})")
 
-if broken:
+if broken or math_issues:
     for item in broken:
         print(f"  Broken relative link: {item}", file=sys.stderr)
+    for item in math_issues:
+        print(f"  GitHub LaTeX text-mode underscore error: {item}", file=sys.stderr)
     sys.exit(1)
-print(f"  Verified {checked} relative Markdown links across all .md files")
+print(f"  Verified {checked} relative Markdown links and GitHub LaTeX math syntax across all .md files")
 PYEOF
 then
-  pass "All relative Markdown links resolve to existing files"
+  pass "All relative Markdown links & GitHub LaTeX math expressions verified"
 else
-  fail "Broken relative Markdown links detected"
+  fail "Broken relative Markdown links or invalid GitHub LaTeX math expressions detected"
 fi
 
 # 2. Bash Scripts Syntax & Permissions

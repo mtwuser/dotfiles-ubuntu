@@ -272,9 +272,9 @@ To prevent **two opposite failure modes** in multi-dimensional context graphs â€
 
 ### 6.1. Hierarchical Guardrail Inheritance (`effective_guardrails`) & On-Demand Activation Policy
 
-When `discover_federated_mcps` resolves MCP servers across the root repository, mounted `layers/*` subtrees, and target `dev/tst/pre/pro` environments, a downstream subtree can **never** strip or bypass parent corporate or environment safety rules. For every discovered MCP entry, `scripts/dotfiles_mcp_server.py` computes **`effective_guardrails`** as the deduplicated union of four hierarchical levels:
+When `discover_federated_mcps` resolves MCP servers across the root repository, mounted `layers/*` subtrees, and target `dev/tst/pre/pro` environments, a downstream subtree can **never** strip or bypass parent corporate or environment safety rules. For every discovered MCP entry, `scripts/dotfiles_mcp_server.py` computes **`effective_guardrails`** as the deduplicated union of five hierarchical levels:
 
-$$\text{effective\_guardrails} = \text{Root } \texttt{baseline\_guardrails} \cup \text{Subtree } \texttt{baseline\_guardrails} \cup \text{Environment } \texttt{default\_guardrails} \cup \text{MCP } \texttt{required\_guardrails}$$
+> `effective_guardrails` $=$ Root `baseline_guardrails` $\cup$ Subtree `baseline_guardrails` $\cup$ Root Environment `default_guardrails` $\cup$ Subtree Environment `default_guardrails` $\cup$ MCP `required_guardrails`
 
 Additionally, every federated MCP entry carries explicit **on-demand routing metadata** so the AI agent neither under-uses nor over-uses underlying MCP servers:
 - `activation_policy`: `"on-demand"` (never poll or invoke speculatively).

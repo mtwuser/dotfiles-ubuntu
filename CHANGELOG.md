@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **GitHub Markdown / LaTeX Math Rendering Fix & Verification Gate (`docs/architecture/03_contextual_mcp_and_federation.md`, `SECURITY.md`, `scripts/verify-repo.sh`)**:
+  - Replaced `\_` inside `\text{...}` / `\texttt{...}` in the `effective_guardrails` union formula of [`docs/architecture/03_contextual_mcp_and_federation.md`](docs/architecture/03_contextual_mcp_and_federation.md) with inline code backticks + `$\cup$` (resolving GitHub's `cmark-gfm` pre-parser unescape error `'_' allowed only in math mode` and aligning all 5 guardrail inheritance levels), fixed the `HMAC-SHA256` math delimiter and `2.x` version matrix in [`SECURITY.md`](SECURITY.md), and added a preventive LaTeX text-mode underscore check in Stage `[1/8]` of [`scripts/verify-repo.sh`](scripts/verify-repo.sh).
+
+---
+
 ## [2.2.1] - 2026-10-31
 
 ### Added
