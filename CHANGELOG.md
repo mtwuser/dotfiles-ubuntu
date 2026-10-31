@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.0] - 2026-10-31
+
+### Added
+- **Enterprise `business-base` Cross-Departmental Governance Enhancements (`templates/business-base/rules/business-base.md`)**:
+  - Promoted four enterprise-wide normative standards validated across a live multi-tier `Root 0 <-> Department <-> Squad` hierarchy into [`templates/business-base/rules/business-base.md`](templates/business-base/rules/business-base.md):
+    1. **Cross-Departmental Precedence Matrix (`§2.1`)**: Standardized numeric precedence tiers across Legal/IP (`5`), Corporate Root (`10`), Finance/Purchasing (`15`), Operations/HSE (`20`), Technology/Engineering (`25`), Design/Brand (`30`), and Growth/Marketing (`35`).
+    2. **Public Crisis & Incident Escalation Matrix (`§3.1`)**: Defined deterministic response SLAs (`P0` `< 1h` Legal/CEO lock, `P1` `< 4h` Technical/HSE verification, `P2` `< 24h` Brand/Comms response).
+    3. **Traceable Artifact & Ledger ID Standard (`§4.1`)**: Standardized `[DEPT]-[TYPE]-[YYYY]-[NNN]` document and ledger identifiers across corporate and department repositories.
+    4. **AI Agent Capability Matrix by Organizational Role (`§6`)**: Codified allowed and forbidden agent actions per organizational tier (`Root 0`, `Department`, `Squad/Project`) with mandatory 1-hop upward promotion (`make promote`).
+- **Automatic Contributing Clone Resolution (`DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>`) & Optional Community Attribution in Upward Pull Requests (`scripts/dotfiles_mcp/manifest_helpers.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/dotfiles_mcp/authority_engine.py`, `scripts/layer-config.sh`, `.github/PULL_REQUEST_TEMPLATE.md`)**:
+  - Added `_resolve_oss_contrib_repo_dir` in [`manifest_helpers.py`](scripts/dotfiles_mcp/manifest_helpers.py) and `oss_contrib_dir` in [`inspect_layer_horizon`](scripts/dotfiles_mcp/promotion_engine.py) (plus `CONTRIB_REPO` in [`_render_layer_makefile`](scripts/dotfiles_mcp/workspace_bootstrapper.py) for `corporate` `Root 0` workspaces) so upward promotions from `Root 0` to Open Source automatically target a dedicated contributing clone (`DOTFILES_DEV_REPO_DIR` or `~/Projects/dev-<repo>`) when present, while keeping `~/dotfiles-ubuntu` as the clean workstation runtime parent for `sync-layer`.
+  - Enriched [`build_upward_promotion_pr_plan`](scripts/dotfiles_mcp/authority_engine.py), [`promote_project_asset_to_layer`](scripts/dotfiles_mcp/promotion_engine.py), [`scripts/layer-config.sh`](scripts/layer-config.sh) (`--org`, `--contributors`, `--context`), and [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) with an optional **Community Attribution & Real-World Validation** metadata table and an **Open-Source Governance & Agnosticism Checklist** (remaining 100% anonymous by default when omitted).
+
+---
+
 ## [2.1.0] - 2026-10-31
 
 ### Changed

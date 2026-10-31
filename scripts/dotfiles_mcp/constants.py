@@ -191,3 +191,58 @@ CODON_STOPWORDS = frozenset(
         "over",
     }
 )
+CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
+    "list-templates",
+    "apply-project",
+    "sync-layer",
+    "diff-project",
+    "promote-from-project",
+    "check-authority",
+    "inspect-horizon",
+)
+OWNER_RESTRICTED_OPS: tuple[str, ...] = (
+    "init-fork",
+    "scaffold-template",
+    "register-subtree",
+    "set-authority",
+    "release",
+    "commit-layer",
+    "push-layer",
+)
+GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
+    {
+        "root",
+        "corp",
+        "corporate",
+        "dept",
+        "department",
+        "team",
+        "squad",
+        "layer",
+        "base",
+        "pack",
+        "policy",
+        "project",
+        "enterprise",
+        "acme",
+        "demo",
+        "test",
+        "tech",
+        "legal",
+        "finance",
+        "supply",
+        "design",
+        "brand",
+        "marketing",
+        "social",
+        "growth",
+        "safety",
+        "human",
+        "core",
+        "technical",
+        "business",
+    }
+)
+GENERIC_EMAIL_DOMAINS: frozenset[str] = frozenset(
+    {"users.noreply.github.com", "example.com", "acme.com", "localhost"}
+)

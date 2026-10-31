@@ -106,9 +106,14 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
   --source .agents/rules/patent-claim-check.md --create-pr
 
 # Promote a generic rule from Corporate Root 0 to Open Source (anonymized + zero-leak verified):
+# Note: inspect-horizon and Root 0's Makefile automatically route to DOTFILES_DEV_REPO_DIR
+# (or ~/Projects/dev-<repo>) when present, keeping ~/dotfiles-ubuntu as the clean runtime clone.
 ./scripts/layer-config.sh promote-from-project /path/to/corp-root \
-  --source .agents/rules/universal-doc-gate.md \
-  --target-repo ~/dotfiles-ubuntu --to-template human-core --create-pr
+  --source templates/business-base/rules/business-base.md \
+  --target-repo ~/dotfiles-ubuntu --to-template business-base --create-pr \
+  --org "Anonymous Organization (default)" \
+  --contributors "Principal Enterprise Architect, CLO, CTO" \
+  --context "Validated across Corporate Root 0 + 5 Department subtrees + Squad workspaces"
 ```
 
 ### 3.3 Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`

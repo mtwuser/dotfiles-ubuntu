@@ -22,7 +22,11 @@ from .fork_configurator import (
     configure_fork_manifest,
     scaffold_template_pack,
 )
-from .manifest_helpers import _is_dest_template_newer, _sync_mounted_children_into_parent
+from .manifest_helpers import (
+    _is_dest_template_newer,
+    _merge_unique_strings,
+    _sync_mounted_children_into_parent,
+)
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
 PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
@@ -175,9 +179,16 @@ def _render_layer_makefile(
         str(effective_parent.resolve()) if effective_parent.resolve() != repo_dir.resolve() else ""
     )
     cli = "$(DOTFILES_DIR)/scripts/layer-config.sh"
+    dev_repo = "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))"
+    contrib_cfg = (
+        f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
+        f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
+        if layer_role == "corporate"
+        else ""
+    )
     return (
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
-        f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n"
+        f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
         ".PHONY: help horizon sync diff authority promote mcp-test\n\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
@@ -244,17 +255,10 @@ def bootstrap_layer_workspace(
                     text=True,
                 )
                 upstream_repo = proc.stdout.strip() or None
-            inherited_templates = [
-                str(pt).strip()
-                for pt in parent_manifest.get("default_stack_templates", [])
-                if str(pt).strip()
-            ]
-
-    requested_templates: list[str] = list(inherited_templates)
-    for t in templates or []:
-        t_clean = t.strip()
-        if t_clean and t_clean not in requested_templates:
-            requested_templates.append(t_clean)
+            inherited_templates = _merge_unique_strings(
+                [str(pt) for pt in parent_manifest.get("default_stack_templates", [])]
+            )
+    requested_templates = _merge_unique_strings(inherited_templates, templates or [])
 
     copied_templates: list[str] = []
     search_roots = (
@@ -389,13 +393,9 @@ def sync_layer_workspace(
     manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
     own_layer_id = str(manifest.get("layer_id") or "")
     own_layer_role = str(manifest.get("layer_role") or "department")
-    stack_templates = [
-        str(t).strip() for t in manifest.get("default_stack_templates", []) if str(t).strip()
-    ]
-    for extra_tpl in templates or []:
-        t_clean = extra_tpl.strip()
-        if t_clean and t_clean not in stack_templates:
-            stack_templates.append(t_clean)
+    stack_templates = _merge_unique_strings(
+        [str(t) for t in manifest.get("default_stack_templates", [])], templates or []
+    )
     if not dry_run and templates:
         manifest["default_stack_templates"] = list(stack_templates)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")

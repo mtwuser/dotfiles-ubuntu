@@ -278,3 +278,14 @@ def _ensure_rule_file_frontmatter(rule_path: Path, *, sync_in_place: bool = True
     if sync_in_place:
         rule_path.write_text(updated, encoding="utf-8")
     return updated
+
+
+def _resolve_oss_contrib_repo_dir(up: Path) -> Path:
+    """Resolve the dedicated contributing repository for OSS upward promotions."""
+    env_dir = os.environ.get("DOTFILES_DEV_REPO_DIR", "").strip()
+    candidates = [Path(env_dir).expanduser()] if env_dir else []
+    candidates.append(up.parent / "Projects" / f"dev-{up.name}")
+    for cand in candidates:
+        if (cand / "system" / "mcp-layer.json").is_file():
+            return cand.resolve()
+    return up

@@ -59,7 +59,8 @@ Commands:
 
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
                        [--to-template <template-name>] [--upstream-dir <dir>] [--prepare-pr]
-                       [--email <proposer-email>]
+                       [--email <proposer-email>] [--org <name>] [--contributors <list>]
+                       [--context <text>]
       Promote a matured rule, skill, or asset from <target-project-dir> into the target
       fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates)
       and optionally generate a child-layer-contextualized Pull Request plan (--prepare-pr).
@@ -350,6 +351,9 @@ if subcmd == "promote-from-project":
     upstream_dir = None
     prepare_pr = False
     actor_email = None
+    contributing_org = None
+    contributors = None
+    validation_context = None
     i = 1
     while i < len(rest):
         arg = rest[i]
@@ -367,6 +371,15 @@ if subcmd == "promote-from-project":
             i += 2
         elif arg == "--email" and i + 1 < len(rest):
             actor_email = rest[i + 1]
+            i += 2
+        elif arg == "--org" and i + 1 < len(rest):
+            contributing_org = rest[i + 1]
+            i += 2
+        elif arg == "--contributors" and i + 1 < len(rest):
+            contributors = rest[i + 1]
+            i += 2
+        elif arg == "--context" and i + 1 < len(rest):
+            validation_context = rest[i + 1]
             i += 2
         elif arg in ("--prepare-pr", "--create-pr"):
             prepare_pr = True
@@ -386,6 +399,9 @@ if subcmd == "promote-from-project":
         upstream_dir=upstream_dir,
         prepare_pr=prepare_pr,
         actor_email=actor_email,
+        contributing_org=contributing_org,
+        contributors=contributors,
+        validation_context=validation_context,
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))

@@ -15,8 +15,8 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 
 1. **Utility Function & Pattern Reuse Gate**: Search the project (`grep` or semantic search) before writing helpers; import and reuse (moving to a shared module first if needed).
 2. **Strict Linter, Compiler & Typing Integrity**: Zero compilation or linter (`ruff`, `mypy --strict`, `shellcheck`) warnings/errors. Prefer `unknown`/`Protocol` over `Any`.
-3. **`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability**: Executable modules must declare `Specification: docs/architecture/<spec>.md`, and architecture specs (`< 465` lines) must maintain a `1:1:1` table linking sources, unit tests (`tests/unit/**/test_<module>.py`), and specs.
-4. **Generated Output Verification & Package Marker Purity**: Verify all `import` packages exist, generated files pass linters, zero ghost placeholders (`my_app`), and **Package marker purity (`0-byte` `__init__.py`)** — Python consumer `src/**/__init__.py` and `tests/**/__init__.py` files MUST remain `0 bytes`.
+3. **`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability**: Executable modules must declare `Specification: docs/architecture/<spec>.md`, and specs (`< 465` lines) must maintain a `1:1:1` table linking sources, unit tests (`tests/unit/**/test_<module>.py`), and specs.
+4. **Generated Output Verification & Package Marker Purity**: Verify all `import` packages exist, generated files pass linters, zero ghost placeholders (`my_app`), and **Package marker purity (`0-byte` `__init__.py`)** — Python `src/**/__init__.py` and `tests/**/__init__.py` files MUST remain `0 bytes`.
 5. **Pre-Debug Diagnostic Sweep**: Run `make doctor` / `make verify` before blind-debugging, and crystallize repeated checks into `Makefile` targets.
 
 ---
@@ -28,7 +28,7 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 
 1. **Behavioral Invariant & Atomic `1:1:1` Test/Spec Alignment**: When splitting modules, all tests pass with identical results, test count never decreases, coverage stays 100%, and unit tests (`tests/unit/**/test_<module>.py`, AAA comments) and `docs/architecture/` tables are aligned `1:1:1` in the SAME iteration.
 2. **Zero-Residue & Rename Urgency**: When `A` is replaced by `B`, remove `A` completely in the same changeset (zero `OldName = NewName` aliases, `@deprecated` classes, or re-export shims). Rename symbols moved across modules when context changes.
-3. **Code & Feature Decommissioning (3-Step Test Pruning Audit & Zero-Literal Leak Gate)**: When deleting a module/symbol or retiring internal names: (a) **`1:1` File Purge** — delete orphan `test_<module>.py`; (b) **Symbol & Fixture Purge** — grep `tests/` for removed symbols/mocks; (c) **Default-Parameter Sensitivity** — test non-default parameter values; (d) **Dynamic Agnosticism Checks** — never embed private downstream repo names (plain or hex-escaped) in public tests; discover local sibling workspaces dynamically (`Path.home() / "Projects"`).
+3. **Code & Feature Decommissioning (3-Step Test Pruning Audit & Zero-Literal Leak Gate)**: When deleting a module/symbol or retiring internal names: (a) **`1:1` File Purge** — delete orphan `test_<module>.py`; (b) **Symbol & Fixture Purge** — grep `tests/` for removed symbols/mocks; (c) **Default-Parameter Sensitivity** — test non-default parameter values; (d) **Dynamic Agnosticism Checks** — never embed private downstream repo names (plain or hex-escaped) in public tests; discover sibling workspaces dynamically (`Path.home() / "Projects"`).
 
 ---
 

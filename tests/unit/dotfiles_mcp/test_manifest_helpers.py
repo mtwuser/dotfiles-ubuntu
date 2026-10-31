@@ -263,7 +263,9 @@ class TestManifestHelpers:
         assert drifts_after == []
 
     def test_ensure_rule_file_frontmatter_normalizes_missing_and_preserves_existing(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         # Arrange
         plain_h1 = tmp_path / "custom-rule.md"
@@ -272,11 +274,24 @@ class TestManifestHelpers:
         plain_no_h1.write_text("Body without heading.\n", encoding="utf-8")
         existing = tmp_path / "existing.md"
         existing.write_text("---\ntrigger: model_decision\n---\n# Existing\n", encoding="utf-8")
+        up_repo = tmp_path / "home" / "oss-repo"
+        up_repo.mkdir(parents=True)
+        dev_sibling = tmp_path / "home" / "Projects" / "dev-oss-repo"
+        env_contrib = tmp_path / "custom-contrib"
+        (env_contrib / "system").mkdir(parents=True)
+        (env_contrib / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
 
         # Act
         res_h1 = manifest_helpers._ensure_rule_file_frontmatter(plain_h1, sync_in_place=True)
         res_no_h1 = manifest_helpers._ensure_rule_file_frontmatter(plain_no_h1, sync_in_place=False)
         res_existing = manifest_helpers._ensure_rule_file_frontmatter(existing, sync_in_place=True)
+        monkeypatch.delenv("DOTFILES_DEV_REPO_DIR", raising=False)
+        fallback_contrib = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
+        (dev_sibling / "system").mkdir(parents=True)
+        (dev_sibling / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
+        sibling_contrib = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
+        monkeypatch.setenv("DOTFILES_DEV_REPO_DIR", str(env_contrib))
+        env_resolved = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
 
         # Assert
         assert res_h1.startswith(
@@ -286,3 +301,6 @@ class TestManifestHelpers:
         assert 'description: "Governance rules for fallback"' in res_no_h1
         assert plain_no_h1.read_text(encoding="utf-8") == "Body without heading.\n"
         assert res_existing.startswith("---\ntrigger: model_decision\n---\n")
+        assert fallback_contrib == up_repo
+        assert sibling_contrib == dev_sibling.resolve()
+        assert env_resolved == env_contrib.resolve()

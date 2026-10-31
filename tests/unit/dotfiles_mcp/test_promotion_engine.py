@@ -439,6 +439,8 @@ class TestPromotionEngine:
             hz_oss["downward_sync_needed"],
             len(hz_oss["upward_promotion_suggestions"]),
         ) == (True, False, 1)
+        assert hz_oss["oss_contrib_dir"] is not None
         assert hz_int["is_oss_community_horizon"] is False
+        assert hz_int["oss_contrib_dir"] is None
         assert len(hz_int["upward_promotion_suggestions"]) >= 1
         assert hz_after_up["downward_sync_needed"] is True

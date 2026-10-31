@@ -249,7 +249,8 @@ class TestWorkspaceBootstrapper:
         bare_layer = tmp_path / "bare-layer"
         (bare_layer / "system").mkdir(parents=True)
         (bare_layer / "system/mcp-layer.json").write_text(
-            '{"schema_version": "1.2", "layer_id": "bare-layer", "default_stack_templates": []}',
+            '{"schema_version": "1.2", "layer_id": "bare-layer", '
+            '"layer_role": "corporate", "default_stack_templates": []}',
             encoding="utf-8",
         )
         sync_bare = sync_layer_workspace(repo_dir, bare_layer, templates=[""], dry_run=False)
@@ -269,7 +270,7 @@ class TestWorkspaceBootstrapper:
         assert "Makefile" in live_res["baseline_files_created"]
         assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert str(target_dir.resolve()) in (squad_dir / "Makefile").read_text(encoding="utf-8")
-        assert (bare_layer / "Makefile").is_file()
+        assert "CONTRIB_REPO ?=" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert ".agents/rules/business-base.md" in live_res["files_materialized"]
         assert ".agents/rules/dept-legal-ip.md" in live_res["files_materialized"]
         assert ".agents/rules/layer-05-root.md" not in live_res["files_materialized"]

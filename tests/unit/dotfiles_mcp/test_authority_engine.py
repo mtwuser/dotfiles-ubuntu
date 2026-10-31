@@ -391,8 +391,26 @@ class TestAuthorityEngine:
             sha256="12345678",
             actor_email="ceo@zyxwvut.io",
         )
+        credited_plan = build_upward_promotion_pr_plan(
+            corp_dir,
+            oss_root,
+            source_rel="templates/business-base/rules/business-base.md",
+            dest_rel="templates/business-base/rules/business-base.md",
+            target_layer="root",
+            target_template="business-base",
+            sha256="12345678",
+            actor_email="ceo@zyxwvut.io",
+            contributing_org="Acme Industrial Group",
+            contributors="CLO, CTO, Principal Architect",
+            validation_context="Root 0 + 5 Department layers + Squads",
+        )
         assert oss_plan["oss_anonymized"] is True
         assert oss_plan["origin_layer_id"] == "enterprise-root-0"
         assert oss_plan["proposer_email"] == "oss-contributor"
+        assert oss_plan["contributing_org"] == "Anonymous Organization (default)"
         assert oss_plan["branch_name"] == "promote/oss/business-base"
+        assert "Community Attribution & Real-World Validation (Optional)" in oss_plan["pr_body"]
         assert "zyxwvut" not in oss_plan["pr_body"]
+        assert credited_plan["contributing_org"] == "Acme Industrial Group"
+        assert credited_plan["contributors"] == "CLO, CTO, Principal Architect"
+        assert "Acme Industrial Group" in credited_plan["pr_body"]

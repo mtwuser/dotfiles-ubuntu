@@ -87,6 +87,13 @@ make docker-build && make docker-self-test
 ./scripts/audit-global-config.sh
 ```
 
+### Dual-Clone Contributing Setup (`~/dotfiles-ubuntu` Runtime vs. Dedicated Dev Clone)
+
+When contributing upward from an Enterprise `Root 0` workspace while keeping `~/dotfiles-ubuntu` as your clean workstation runtime (`human-core` stowed into `~/.gemini/config/`):
+- Maintain a dedicated development clone at `~/Projects/dev-<repo>` (or set `DOTFILES_DEV_REPO_DIR`) with `technical-base` projected into `.agents/rules/`.
+- `inspect-horizon` and `Root 0` generated `Makefile` (`CONTRIB_REPO`) automatically detect `DOTFILES_DEV_REPO_DIR` or `~/Projects/dev-<repo>` and route upward Open-Source promotions (`promote-from-project --prepare-pr`) to the contributing clone while keeping `~/dotfiles-ubuntu` as the runtime `sync-layer` parent.
+- Use optional `--org "<Organization>"`, `--contributors "<Roles/Handles>"`, and `--context "<Validation Topology>"` flags when generating upward PR plans (defaults remain 100% anonymous when omitted).
+
 ---
 
 ## 4. Versioning & Commit Conventions

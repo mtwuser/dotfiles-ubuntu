@@ -17,25 +17,13 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import KEBAB_ID_RE, MATERIALIZED_RULE_RE
-
-CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
-    "list-templates",
-    "apply-project",
-    "sync-layer",
-    "diff-project",
-    "promote-from-project",
-    "check-authority",
-    "inspect-horizon",
-)
-OWNER_RESTRICTED_OPS: tuple[str, ...] = (
-    "init-fork",
-    "scaffold-template",
-    "register-subtree",
-    "set-authority",
-    "release",
-    "commit-layer",
-    "push-layer",
+from dotfiles_mcp.constants import (
+    CONSUMER_ALLOWED_OPS,
+    GENERIC_EMAIL_DOMAINS,
+    GENERIC_LAYER_TOKENS,
+    KEBAB_ID_RE,
+    MATERIALIZED_RULE_RE,
+    OWNER_RESTRICTED_OPS,
 )
 
 
@@ -244,45 +232,6 @@ def verify_layer_operation_authority(
     }
 
 
-_GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
-    {
-        "root",
-        "corp",
-        "corporate",
-        "dept",
-        "department",
-        "team",
-        "squad",
-        "layer",
-        "base",
-        "pack",
-        "policy",
-        "project",
-        "enterprise",
-        "acme",
-        "demo",
-        "test",
-        "tech",
-        "legal",
-        "finance",
-        "supply",
-        "design",
-        "brand",
-        "marketing",
-        "social",
-        "growth",
-        "safety",
-        "human",
-        "core",
-        "technical",
-        "business",
-    }
-)
-_GENERIC_EMAIL_DOMAINS: frozenset[str] = frozenset(
-    {"users.noreply.github.com", "example.com", "acme.com", "localhost"}
-)
-
-
 def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
     """Return True when manifest represents the Open-Source community root layer."""
     return str(manifest.get("layer_id", "")) == "root" or str(manifest.get("layer_role", "")) in (
@@ -309,12 +258,12 @@ def verify_oss_promotion_agnosticism(
         for pat in auth.get("authorized_emails") or []:
             if isinstance(pat, str) and "@" in pat:
                 dom = pat.split("@", 1)[1].lstrip("*.").lower()
-                if dom and dom not in _GENERIC_EMAIL_DOMAINS:
+                if dom and dom not in GENERIC_EMAIL_DOMAINS:
                     private_tokens.add(dom)
                     raw_ids.append(dom)
     for rid in raw_ids:
         for tok in re.findall(r"[a-z0-9]{4,}", rid.lower()):
-            if tok not in _GENERIC_LAYER_TOKENS:
+            if tok not in GENERIC_LAYER_TOKENS:
                 private_tokens.add(tok)
     leaked = sorted(
         tok for tok in private_tokens if re.search(rf"\b{re.escape(tok)}\b", content, re.IGNORECASE)
@@ -372,10 +321,12 @@ def build_upward_promotion_pr_plan(
     target_template: str | None,
     sha256: str,
     actor_email: str | None = None,
+    contributing_org: str | None = None,
+    contributors: str | None = None,
+    validation_context: str | None = None,
 ) -> dict[str, Any]:
     """Build a Pull Request plan anchored in the originating child layer's context."""
-    proj_m = _load_manifest_dict(project_dir)
-    target_m = _load_manifest_dict(target_repo_dir)
+    proj_m, target_m = _load_manifest_dict(project_dir), _load_manifest_dict(target_repo_dir)
     oss_anonymized = _is_oss_root_manifest(target_m)
     source_layer_id = (
         "enterprise-root-0" if oss_anonymized else str(proj_m.get("layer_id", project_dir.name))
@@ -398,6 +349,17 @@ def build_upward_promotion_pr_plan(
         else (
             actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
         )
+    )
+    eff_org = (contributing_org or "").strip() or (
+        "Anonymous Organization (default)" if oss_anonymized else source_layer_id
+    )
+    eff_contributors = (contributors or "").strip() or (
+        "Principal Enterprise Architect / Domain Leads"
+        if oss_anonymized
+        else (proposer_email or "unspecified")
+    )
+    eff_context = (validation_context or "").strip() or (
+        f"Multi-layer governance hierarchy ({source_layer_role}, precedence {source_prec})"
     )
     asset_slug = re.sub(r"[^a-z0-9]+", "-", Path(source_rel).stem.lower()).strip("-") or "asset"
     if oss_anonymized:
@@ -427,6 +389,20 @@ def build_upward_promotion_pr_plan(
         f"- **Target Template Pack**: `{target_template or 'layer-root'}`\n"
         f"- **Source Path**: `{source_rel}` -> **Destination**: `{dest_rel}`\n"
         f"- **SHA-256 Digest**: `{sha256}`\n\n"
+        f"### Community Attribution & Real-World Validation (Optional)\n"
+        f"| Field | Value (Edit or leave anonymous) |\n"
+        f"| :--- | :--- |\n"
+        f"| **Contributing Organization / Company** | `{eff_org}` |\n"
+        f"| **Contributors / Roles Involved** | `{eff_contributors}` |\n"
+        f"| **Real-World Validation Topology** | `{eff_context}` |\n"
+        f"| **Public Release Credit Preference** | "
+        f"`[ ] Credit organization/contributors in CHANGELOG.md` / `[x] Keep anonymous` |\n\n"
+        f"### Open-Source Governance & Agnosticism Checklist\n"
+        f"- [x] Passed `OSS_AGNOSTICISM_VIOLATION` zero-leak gate "
+        f"(no private brand, domain, or internal codename literals).\n"
+        f"- [x] Validated in a live multi-tier governance hierarchy "
+        f"(`Root 0 <-> Department <-> Squad`).\n"
+        f"- [x] Preserves `< 465` line file gate and `18,000`-byte `AGENTS.md` token budget.\n\n"
         f"### Post-Merge Downstream Inheritance\n"
         f"Once reviewed and merged by `{owner_role}`, downstream workspaces inherit "
         f"this update via:\n"
@@ -439,6 +415,9 @@ def build_upward_promotion_pr_plan(
         "origin_layer_id": source_layer_id,
         "origin_layer_role": source_layer_role,
         "proposer_email": proposer_email,
+        "contributing_org": eff_org,
+        "contributors": eff_contributors,
+        "validation_context": eff_context,
         "target_layer_id": target_layer_id,
         "target_owner_role": owner_role,
         "reviewer_contact": escalation_contact,

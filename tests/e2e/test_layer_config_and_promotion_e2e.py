@@ -386,6 +386,7 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     promo_args = [
         *["--source", ".agents/rules/squad-cad-core.md", "--to-layer", "dept-eng-platform"],
         *["--to-template", "dept-eng-platform", "--prepare-pr", "--email", "dev@squad.acme.com"],
+        *["--org", "Acme Corp", "--contributors", "CAD Squad", "--context", "4-Tier E2E"],
         "--upstream-dir",
         str(dept_dir),
     ]
@@ -418,6 +419,8 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     assert (auth_res["layer_authority"]["owner_role"], chk_ok["allowed"]) == ("CTO", True)
     assert pr_promo["promotion_pr_plan"]["origin_layer_id"] == "squad-cad-core"
     assert pr_promo["promotion_pr_plan"]["target_layer_id"] == "dept-eng-platform"
+    assert pr_promo["promotion_pr_plan"]["contributing_org"] == "Acme Corp"
+    assert "CONTRIB_REPO ?=" in (corp_dir / "Makefile").read_text(encoding="utf-8")
     assert (
         dept_boot["applied_template"]
         == "business-base,acme-corporate-base,technical-base,dept-eng-platform"
