@@ -286,9 +286,9 @@ class TestWorkspaceBootstrapper:
         assert sync_dry["dry_run"] is True
         assert "business-base" in sync_dept["synced_templates"]
         assert "business-base" in sync_squad["synced_templates"]
-        assert (squad_dir / ".agents/rules/business-base.md").read_text(
-            encoding="utf-8"
-        ) == "# Business Base v2\n"
+        assert (squad_dir / ".agents/rules/business-base.md").read_text(encoding="utf-8") == (
+            '---\ntrigger: always_on\ndescription: "Business Base v2"\n---\n# Business Base v2\n'
+        )
         assert sync_bare["synced_templates"] == []
         assert sync_bare_add["synced_templates"] == ["business-base"]
         with pytest.raises(ValueError, match="Missing target layer manifest"):

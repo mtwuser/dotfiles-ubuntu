@@ -428,9 +428,10 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     )
     assert reg_res["total_mounted_layers"] == 1
     assert (squad_diff["modified_in_project"], squad_diff["novel_in_project"]) == ([], [])
-    assert (squad_dir / ".agents/rules/acme-corporate-base.md").read_text(
-        encoding="utf-8"
-    ) == "# Updated Corp Policy v2\n"
+    assert (squad_dir / ".agents/rules/acme-corporate-base.md").read_text(encoding="utf-8") == (
+        '---\ntrigger: always_on\ndescription: "Updated Corp Policy v2"\n---\n'
+        "# Updated Corp Policy v2\n"
+    )
     for r in (
         "business-base",
         "acme-corporate-base",

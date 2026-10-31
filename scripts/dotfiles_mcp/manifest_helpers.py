@@ -262,3 +262,19 @@ def _sync_mounted_children_into_parent(
                 shutil.rmtree(dst_sub, ignore_errors=True)
                 shutil.copytree(src_sub, dst_sub)
     return synced
+
+
+def _ensure_rule_file_frontmatter(rule_path: Path, *, sync_in_place: bool = True) -> str:
+    """Ensure a markdown rule file starts with Antigravity 2.0 'trigger: always_on' frontmatter."""
+    text = rule_path.read_text(encoding="utf-8")
+    if text.startswith("---\n"):
+        return text
+    desc = f"Governance rules for {rule_path.stem}"
+    for line in text.splitlines():
+        if line.startswith("# "):
+            desc = line[2:].strip().replace('"', "'")
+            break
+    updated = f'---\ntrigger: always_on\ndescription: "{desc}"\n---\n{text}'
+    if sync_in_place:
+        rule_path.write_text(updated, encoding="utf-8")
+    return updated

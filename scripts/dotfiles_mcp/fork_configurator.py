@@ -17,6 +17,7 @@ from dotfiles_mcp.constants import (
     VALID_TEMPLATE_KINDS,
 )
 from dotfiles_mcp.manifest_helpers import (
+    _ensure_rule_file_frontmatter,
     _merge_unique_strings,
     _parse_skill_frontmatter,
 )
@@ -36,17 +37,12 @@ def discover_layer_template_names(layer_dir: Path) -> list[str]:
 
 
 def _inspect_single_template_dir(
-    tpl_dir: Path,
-    layer_dir: Path,
-    source_layer: str,
+    tpl_dir: Path, layer_dir: Path, source_layer: str
 ) -> dict[str, Any]:
     """Build catalog metadata for a single template pack directory."""
     meta_file = tpl_dir / "template.json"
-    meta: dict[str, Any] = {}
-    if meta_file.is_file():
-        loaded = json.loads(meta_file.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            meta = loaded
+    loaded = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.is_file() else {}
+    meta: dict[str, Any] = loaded if isinstance(loaded, dict) else {}
     rules = [
         str(p.relative_to(layer_dir))
         for p in sorted((tpl_dir / "rules").glob("*.md"))
@@ -390,6 +386,8 @@ def apply_fork_to_project(
                     dest = dest_sub / rel
                     copied_files.append(str(dest.relative_to(target_project_dir)))
                     if not dry_run:
+                        if sub_name == "rules" and src_file.suffix == ".md":
+                            _ensure_rule_file_frontmatter(src_file)
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         dest.unlink(missing_ok=True)
                         shutil.copy2(src_file, dest)
@@ -441,6 +439,7 @@ def apply_fork_to_project(
         elif layer_agents.is_file():
             copied_files.append(str(dest_rule.relative_to(target_project_dir)))
             if not dry_run:
+                _ensure_rule_file_frontmatter(layer_agents)
                 dest_rule.parent.mkdir(parents=True, exist_ok=True)
                 dest_rule.unlink(missing_ok=True)
                 shutil.copy2(layer_agents, dest_rule)
