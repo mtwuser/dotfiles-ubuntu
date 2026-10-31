@@ -1,7 +1,7 @@
 # dotfiles-ubuntu
 
 [![CI](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml/badge.svg)](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.8.3-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.8.2-blue.svg)](VERSION)
 [![Coverage](https://img.shields.io/badge/coverage-100%25%20(unit%20%2B%20branch)-brightgreen.svg)](scripts/verify-repo.sh)
 [![Python](https://img.shields.io/badge/python-3.14%20(zero--deps)-3776AB.svg)](pyproject.toml)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
@@ -44,8 +44,8 @@ cd ~/dotfiles-ubuntu
 What this configures (via GNU Stow tree-unfolding, preserving your local credentials, MCP servers, and plugins):
 - **Global Rules (`~/.gemini/config/AGENTS.md`)** — Universal engineering standards (clean code, strict typing, AAA testing, hexagonal boundaries, zero-residue governance).
 - **Lifecycle Hooks (`~/.gemini/config/hooks.json` + `scripts/`)** — Deterministic `PreToolUse` safety guards (`pre_tool_guard.py`), automatic `ruff format` on file edits (`PostToolUse`), lint + AST checks with `force_continue` (`PostInvocation`), and test verification (`Stop`).
-- **11 Global Skills (`~/.gemini/config/skills/`)** — Available immediately in every workspace across Antigravity Agents, IDE, and CLI:
-  - **Session & Workflow Slash Commands**: `/sopen` (initialize session & sync state), `/sclose` (close session, update changelog & commit), `/continue` (mid-session checkpoint), `/priority` (pick next task from governance files), `/review` (audit code, architecture & tests), `/enrich` (extract reusable patterns from a project into global skills).
+- **12 Global Skills (`~/.gemini/config/skills/`)** — Available immediately in every workspace across Antigravity Agents, IDE, and CLI:
+  - **Session & Workflow Slash Commands**: `/sopen` (initialize session & sync state), `/sclose` (close session, update `[Unreleased]` changelog & commit), `/continue` (mid-session checkpoint), `/release` (cut & publish explicit SemVer release `vX.Y.Z`), `/priority` (pick next task from governance files), `/review` (audit code, architecture & tests), `/enrich` (extract reusable patterns from a project into global skills).
   - **Procedural Skills**: `architecture-review`, `governance`, `refactoring`, `testing`, `validation`.
 - **Desktop Launchers (`~/.local/share/applications/`)** — Application menu entries for Antigravity Agents and Antigravity IDE.
 
@@ -223,7 +223,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   │       ├── scripts/               ←   → ~/.gemini/config/scripts/
 │   │       └── skills/                ←   → ~/.gemini/config/skills/<name>/
 │   │           ├── architecture-review/, governance/, refactoring/, testing/, validation/
-│   │           └── sopen/, sclose/, continue/, enrich/, priority/, review/
+│   │           └── sopen/, sclose/, continue/, release/, enrich/, priority/, review/
 │   └── .local/share/applications/
 │       ├── antigravity-agents.desktop ←   → ~/.local/share/applications/
 │       └── antigravity-ide.desktop    ←   → ~/.local/share/applications/
@@ -247,15 +247,19 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │   └── workflows/ci.yml               ← GitHub Actions CI verification workflow
 │
 ├── templates/                         ← NOT stow — polymorphic template packs (stack-starter, domain-policy-pack, department-pack)
+│   ├── human-core/                    ←   Default global machine baseline (cognitive rigor, dotfiles-ubuntu self-guidance, commit/priority rules)
+│   ├── technical-base/                ←   Software engineering, 1:1:1 traceability, refactoring & 100% AAA testing baseline
+│   ├── business-base/                 ←   Enterprise corporate ledger, Lex Superior IP/compliance & cross-surface cascade baseline
 │   └── fastapi-hexagonal/             ←   FastAPI + Hexagonal DDD + HTMX (template.json, rules, skills, governance)
 │
 ├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (16 modules, < 465 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (17 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
 │   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
+│   │   ├── workspace_bootstrapper.py  ←     Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
 │   │   ├── promotion_engine.py        ←     Multi-layer pattern comparison, diff-project & promote-from-project
 │   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
 │   │   ├── surface_weaver.py          ←     Stack-agnostic surface selector inference & Lex Specialis scoring
@@ -294,9 +298,10 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
 │   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
-│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 14 executable MCP package modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 15 executable MCP package modules
 │   │   │   ├── test_manifest_helpers.py
 │   │   │   ├── test_fork_configurator.py
+│   │   │   ├── test_workspace_bootstrapper.py
 │   │   │   ├── test_promotion_engine.py
 │   │   │   ├── test_ephemeral_fork_engine.py
 │   │   │   ├── test_surface_weaver.py
@@ -383,15 +388,16 @@ Contains:
   - `post_edit_format.py` (`PostToolUse`) — Runs `ruff format` automatically whenever the agent edits a `.py` file
   - `post_invocation_lint.py` (`PostInvocation`) — Runs `ruff check`, AST architecture/test checks (`check_project`, `check_tests`), and `always_on` rule token-budget checks (`AGENTS.md` 18 KB cap & 80 KB / ~20k-token combined workspace budget) on modified and untracked Python files at the end of a turn (`force_continue` on errors)
   - `stop_verify_tests.py` (`Stop`) — Verifies affected unit tests pass on modified and untracked Python workspaces before concluding a task
-- **skills/** — 6 interactive slash-command skills and 5 procedural engineering skills:
+- **skills/** — 7 interactive slash-command skills and 5 procedural engineering skills:
 
 #### Global Slash Commands (`~/.gemini/config/skills/<command>/SKILL.md`)
 
 | Command | When to Run | Purpose & Actions |
 |---------|-------------|-------------------|
 | `/sopen` | Start of every session | Pulls latest `~/dotfiles-ubuntu`, recovers session context across 3 tiers (`brain/` → `.agents/SESSION.md` → `git status` + `WORKTASK.md`), and activates project-specific `/start` if present |
-| `/continue` | Mid-session (between tasks or before `/compact`) | Checkpoints active progress into `WORKTASK.md` and `.agents/SESSION.md` so zero context is lost if the conversation is compacted or closed |
-| `/sclose` | End of every session | Consolidates completed tasks (`WORKTASK.md` → `CHANGELOG.md`), updates `.agents/SESSION.md`, syncs `~/dotfiles-ubuntu` if modified, and outputs ready-to-run `git commit` blocks per repository |
+| `/continue` | Mid-session (between tasks or before `/compact`) | Checkpoints active progress into `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md` so zero context is lost |
+| `/sclose` | End of every session | Consolidates completed tasks (`WORKTASK.md` → `CHANGELOG.md` `[Unreleased]`), updates `.agents/SESSION.md`, verifies `~/dotfiles-ubuntu` if modified, and outputs ready-to-run local `git commit` blocks |
+| `/release` | When explicitly cutting & publishing a versioned release | Runs zero-leak/agnosticism scans and `make verify`, promotes `## [Unreleased]` → `## [X.Y.Z] - YYYY-MM-DD`, syncs `VERSION`/`pyproject.toml`/`README.md`, and outputs the release commit + tag + push block |
 | `/priority` | When picking the next task | Audits `WORKTASK.md` → `WORKROAD.md` → `roadmaps/` in strict priority order and recommends the next actionable work item |
 | `/review` | After implementing a feature or before release | Audits code structure, Clean Code compliance, hexagonal architecture boundaries, and AAA test coverage against global and project rules |
 | `/enrich` | Periodically / after project milestones | Scans `.agents/rules/` and `.agents/skills/` across active workspace repos and compares them with `~/dotfiles-ubuntu` to promote universal patterns upward (`Project → Framework → Global`) or fix downward drift |
@@ -452,6 +458,13 @@ Templates under `templates/<name>/` are polymorphic (discovered dynamically acro
 ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
 ./scripts/layer-config.sh inspect-ephemeral
 ./scripts/layer-config.sh reap-ephemeral --id all
+
+# 7. Compose machine-global AGENTS.md profile, register a mounted subtree, bootstrap or sync a multi-tier workspace (Corporate -> Department -> Squad/Team):
+./scripts/layer-config.sh set-global-profile human-core --stow
+./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
+./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
+./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents --id squad-patent-ops --role team --parent-dir /path/to/dept-legal
+./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
 ```
 
 ### Layer 3: Custom (Project-Specific)
@@ -929,7 +942,7 @@ make docker-build && make docker-self-test
 
 ### Versioning & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.8.3`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.8.2`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
   1. Open-source metadata, SemVer sync, `Dockerfile` / `.dockerignore`, and all relative Markdown links across `.md` files.
   2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.

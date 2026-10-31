@@ -387,3 +387,69 @@ def test_e2e_ro_template_apply_idempotency_and_promotion_symlink_containment(
     assert (proj_dir / "SECURITY_POLICY.md").is_file()
     assert prom_first["destination"] == "templates/pci-pack/rules/policy.md"
     assert prom_second["destination"] == "templates/pci-pack/rules/policy.md"
+
+
+def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
+    tmp_path: Path,
+) -> None:
+    """Validate 4-tier chain (Platform -> Corporate -> Department -> Squad) via CLI."""
+    # Arrange
+    corp_dir, dept_dir, squad_dir = tmp_path / "corp", tmp_path / "dept", tmp_path / "squad"
+    corp_args = (
+        "--id",
+        "acme-corporate-base",
+        "--role",
+        "corporate",
+        "--templates",
+        "business-base",
+    )
+    dept_args = (
+        "--id",
+        "dept-eng-platform",
+        "--role",
+        "department",
+        "--parent-dir",
+        str(corp_dir),
+        "--templates",
+        "technical-base",
+    )
+    squad_args = ("--id", "squad-cad-core", "--role", "team", "--parent-dir", str(dept_dir))
+
+    # Act
+    corp_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(corp_dir), *corp_args)
+    dept_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(dept_dir), *dept_args)
+    squad_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(squad_dir), *squad_args)
+    reg_res = _run_layer_config(
+        corp_dir, "register-subtree", "dept-eng", "https://example.com/dept.git"
+    )
+    (corp_dir / "templates/acme-corporate-base/rules/acme-corporate-base.md").write_text(
+        "# Updated Corp Policy v2\n", encoding="utf-8"
+    )
+    _run_layer_config(REPO_DIR, "sync-layer", str(dept_dir), "--parent-dir", str(corp_dir))
+    _run_layer_config(REPO_DIR, "sync-layer", str(squad_dir), "--parent-dir", str(dept_dir))
+    squad_diff = diff_project_against_layers(squad_dir, squad_dir)
+
+    # Assert
+    assert corp_boot["applied_template"] == "business-base,acme-corporate-base"
+    assert (
+        dept_boot["applied_template"]
+        == "business-base,acme-corporate-base,technical-base,dept-eng-platform"
+    )
+    assert (
+        squad_boot["applied_template"]
+        == "business-base,acme-corporate-base,technical-base,dept-eng-platform,squad-cad-core"
+    )
+    assert reg_res["total_mounted_layers"] == 1
+    assert (squad_diff["modified_in_project"], squad_diff["novel_in_project"]) == ([], [])
+    assert (squad_dir / ".agents/rules/acme-corporate-base.md").read_text(
+        encoding="utf-8"
+    ) == "# Updated Corp Policy v2\n"
+    for expected_rule in (
+        ".agents/rules/business-base.md",
+        ".agents/rules/acme-corporate-base.md",
+        ".agents/rules/technical-base.md",
+        ".agents/rules/dept-eng-platform.md",
+        ".agents/rules/squad-cad-core.md",
+        ".agents/rules/layer-50-root.md",
+    ):
+        assert expected_rule in squad_boot["files_materialized"]  # type: ignore[operator]

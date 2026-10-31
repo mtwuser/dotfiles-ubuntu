@@ -195,6 +195,7 @@ def scaffold_template_pack(
     kind: str = "stack-starter",
     description: str | None = None,
     register_binding: bool = False,
+    rule_filename: str | None = None,
     scopes: list[str] | None = None,
     planes: list[str] | None = None,
     traits: list[str] | None = None,
@@ -206,6 +207,9 @@ def scaffold_template_pack(
         raise ValueError(f"Invalid template_name {template_name!r}: must be kebab-case")
     if kind not in VALID_TEMPLATE_KINDS:
         raise ValueError(f"Invalid template kind {kind!r}: must be one of {VALID_TEMPLATE_KINDS}")
+    effective_rule = rule_filename or "policy.md"
+    if not effective_rule.endswith(".md") or "/" in effective_rule or ".." in effective_rule:
+        raise ValueError(f"Invalid rule_filename {effective_rule!r}: must be a simple .md filename")
 
     tpl_dir = repo_dir / "templates" / template_name
     if tpl_dir.exists():
@@ -224,7 +228,7 @@ def scaffold_template_pack(
         "traits": traits or ["*"],
         "default_resolution": default_res,
         "invariants": [f"Enforce {template_name} ({kind}) rules and canonical assets"],
-        "rule_files": [f"templates/{template_name}/rules/policy.md"],
+        "rule_files": [f"templates/{template_name}/rules/{effective_rule}"],
         "canonical_templates": (
             [f"templates/{template_name}/assets/canonical_snippet.md"]
             if kind != "stack-starter"
@@ -241,11 +245,15 @@ def scaffold_template_pack(
     }
     files_to_write: dict[str, str] = {
         f"templates/{template_name}/template.json": json.dumps(tpl_manifest, indent=2) + "\n",
-        f"templates/{template_name}/rules/policy.md": (
+        f"templates/{template_name}/rules/{effective_rule}": (
             f"# {template_name} Governance Rules ({kind})\n\n"
-            f"## Core Mandate\n"
+            f"## Scope & Surface Target\n"
+            f"- **Template Pack**: `templates/{template_name}/` (`{kind}`).\n\n"
+            f"## Normative Invariants\n"
             f'> *"Enforce {template_name} invariants consistently across matching surfaces"*\n\n'
-            f"- Follow the canonical patterns defined in `templates/{template_name}/`.\n"
+            f"- Follow the canonical patterns defined in `templates/{template_name}/`.\n\n"
+            f"## Verification & Sign-Off Gates\n"
+            f"- [ ] Verify zero drift via `./scripts/layer-config.sh diff-project`.\n"
         ),
         f"templates/{template_name}/skills/{template_name}-guide/SKILL.md": (
             f"---\n"
@@ -253,7 +261,7 @@ def scaffold_template_pack(
             f'description: "Procedural guide for applying {template_name} ({kind}) rules."\n'
             f"---\n\n"
             f"# {template_name} Guide\n\n"
-            f"1. Review `templates/{template_name}/rules/policy.md`.\n"
+            f"1. Review `templates/{template_name}/rules/{effective_rule}`.\n"
             f"2. Verify all invariants before completing the task.\n"
         ),
     }
@@ -331,40 +339,42 @@ def apply_fork_to_project(
         ]
     candidate_layers.sort(key=lambda item: (int(item[2].get("precedence", 50)), item[0]))
 
-    resolved_tpl_dir: Path | None = None
-    resolved_tpl_name = ""
+    resolved_templates: list[tuple[str, Path]] = []
     if template_ref:
-        if ":" in template_ref:
-            layer_part, tpl_part = template_ref.split(":", 1)
-            for name, ldir, _m in candidate_layers:
-                if name == layer_part and (ldir / "templates" / tpl_part).is_dir():
-                    resolved_tpl_dir = ldir / "templates" / tpl_part
-                    resolved_tpl_name = tpl_part
-                    break
-        else:
-            for _name, ldir, _m in candidate_layers:
-                if (ldir / "templates" / template_ref).is_dir():
-                    resolved_tpl_dir = ldir / "templates" / template_ref
-                    resolved_tpl_name = template_ref
-                    break
-        if resolved_tpl_dir is None:
-            raise ValueError(f"Template {template_ref!r} not found in selected layers")
+        for raw_ref in [r.strip() for r in template_ref.split(",") if r.strip()]:
+            found_dir: Path | None = None
+            found_name = ""
+            if ":" in raw_ref:
+                layer_part, tpl_part = raw_ref.split(":", 1)
+                for name, ldir, _m in candidate_layers:
+                    if name == layer_part and (ldir / "templates" / tpl_part).is_dir():
+                        found_dir = ldir / "templates" / tpl_part
+                        found_name = tpl_part
+                        break
+            else:
+                for _name, ldir, _m in sorted(candidate_layers, key=lambda item: item[0] != "root"):
+                    if (ldir / "templates" / raw_ref).is_dir():
+                        found_dir = ldir / "templates" / raw_ref
+                        found_name = raw_ref
+                        break
+            if found_dir is None:
+                raise ValueError(f"Template {raw_ref!r} not found in selected layers")
+            resolved_templates.append((found_name, found_dir))
     else:
-        default_tpls = root_manifest.get("default_stack_templates", [])
-        if default_tpls:
-            first_tpl = str(default_tpls[0])
-            if (repo_dir / "templates" / first_tpl).is_dir():
-                resolved_tpl_dir = repo_dir / "templates" / first_tpl
-                resolved_tpl_name = first_tpl
+        for tpl_item in root_manifest.get("default_stack_templates", []):
+            tpl_str = str(tpl_item)
+            if (repo_dir / "templates" / tpl_str).is_dir():
+                resolved_templates.append((tpl_str, repo_dir / "templates" / tpl_str))
 
+    resolved_tpl_name = ",".join(t[0] for t in resolved_templates)
     copied_files: list[str] = []
     agents_dir = target_project_dir / ".agents"
-    if resolved_tpl_dir is not None:
+    for tpl_name, tpl_dir in resolved_templates:
         for sub_name, dest_sub in (
             ("rules", agents_dir / "rules"),
             ("skills", agents_dir / "skills"),
         ):
-            src_sub = resolved_tpl_dir / sub_name
+            src_sub = tpl_dir / sub_name
             if src_sub.is_dir():
                 for src_file in sorted(src_sub.rglob("*")):
                     if not src_file.is_file():
@@ -377,7 +387,7 @@ def apply_fork_to_project(
                         dest.unlink(missing_ok=True)
                         shutil.copy2(src_file, dest)
                         dest.chmod(0o644)
-        gov_src = resolved_tpl_dir / "governance"
+        gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
             for gfile in sorted(gov_src.glob("*.md")):
                 dest_g = target_project_dir / gfile.name
@@ -387,12 +397,12 @@ def apply_fork_to_project(
                         target_project_dir.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(gfile, dest_g)
                         dest_g.chmod(0o644)
-        assets_src = resolved_tpl_dir / "assets"
+        assets_src = tpl_dir / "assets"
         if assets_src.is_dir():
             for afile in sorted(assets_src.rglob("*")):
                 if not afile.is_file():
                     continue
-                dest_a = agents_dir / "assets" / resolved_tpl_name / afile.relative_to(assets_src)
+                dest_a = agents_dir / "assets" / tpl_name / afile.relative_to(assets_src)
                 copied_files.append(str(dest_a.relative_to(target_project_dir)))
                 if not dry_run:
                     dest_a.parent.mkdir(parents=True, exist_ok=True)

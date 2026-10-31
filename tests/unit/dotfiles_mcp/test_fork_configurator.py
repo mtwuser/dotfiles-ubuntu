@@ -236,6 +236,7 @@ class TestForkConfigurator:
             tmp_path,
             template_name="rust-axum",
             kind="stack-starter",
+            rule_filename="rust-axum.md",
             register_binding=False,
             dry_run=False,
         )
@@ -252,6 +253,7 @@ class TestForkConfigurator:
         assert real_res["binding_registered"] is True
         assert (tmp_path / "templates/gdpr-policy/assets/canonical_snippet.md").is_file()
         assert (tmp_path / "templates/rust-axum/governance/WORKTASK.md").is_file()
+        assert (tmp_path / "templates/rust-axum/rules/rust-axum.md").is_file()
         assert starter_res["kind"] == "stack-starter"
         updated_manifest = json.loads(
             (tmp_path / "system/mcp-layer.json").read_text(encoding="utf-8")
@@ -264,6 +266,8 @@ class TestForkConfigurator:
             scaffold_template_pack(tmp_path, template_name="BAD_NAME")
         with pytest.raises(ValueError, match="Invalid template kind"):
             scaffold_template_pack(tmp_path, template_name="good-name", kind="invalid")
+        with pytest.raises(ValueError, match="Invalid rule_filename"):
+            scaffold_template_pack(tmp_path, template_name="good-name", rule_filename="../bad.md")
         with pytest.raises(ValueError, match="already exists"):
             scaffold_template_pack(tmp_path, template_name="rust-axum")
 

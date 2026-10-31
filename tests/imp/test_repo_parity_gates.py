@@ -77,7 +77,7 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
             untraced_sources.append(str(src.relative_to(REPO_DIR)))
 
     # Assert
-    assert len(pkg_modules) == 14
+    assert len(pkg_modules) == 15
     assert missing_unit_tests == []
     assert oversized_files == []
     assert untraced_sources == []
@@ -190,6 +190,10 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "spawn-ephemeral",
         "inspect-ephemeral",
         "reap-ephemeral",
+        "set-global-profile",
+        "register-subtree",
+        "bootstrap-workspace",
+        "sync-layer",
     ):
         assert sub in readme_md
         assert sub in ext_guide
@@ -239,9 +243,25 @@ def test_single_language_english_purity_across_repository_files() -> None:
 
 def test_framework_agnostic_and_compaction_terminology_purity() -> None:
     # Arrange
+    local_project_tokens = sorted(
+        {
+            variant
+            for d in (Path.home() / "Projects").glob("*")
+            if d.is_dir() and len(d.name) >= 5
+            for variant in (d.name.lower(), d.name.lower().replace("_", "-"))
+        }
+    )
+    dynamic_tokens = [
+        re.escape(tok)
+        for tok in (
+            *local_project_tokens,
+            "\x70romoter_header",
+            "\x5fopen_single_capsule",
+            "\x5flocate_section_with_drift_tolerance",
+        )
+    ]
     retired_token_re = re.compile(
-        r"\b(\x6f\x73\x61|\x70romoter_header|\x5fopen_single_capsule"
-        r"|\x5flocate_section_with_drift_tolerance)\b|\x6f\x73\x61_|\x6f\x73\x61-",
+        r"\b(" + "|".join(dynamic_tokens) + r")\b|\[DOTFILES-" + r"\d+\]",
         re.IGNORECASE,
     )
     arch_04 = (
@@ -331,7 +351,7 @@ def test_test_suite_ast_anti_deception_invariants() -> None:
                 blind_subprocess_mocks.append(f"{tp.relative_to(REPO_DIR)}:{node.lineno}")
 
     # Assert
-    assert len(prod_py) == 22
+    assert len(prod_py) == 23
     assert pragma_violations == []
     assert unmatched_raises == []
     assert blind_subprocess_mocks == []

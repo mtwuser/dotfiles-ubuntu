@@ -44,7 +44,8 @@ Commands:
       Configure system/mcp-layer.json (schema v1.2) for this fork's organizational purpose
       (corporate, domain-policy, department, team, service-node, environment-cluster, workstation).
 
-  scaffold-template <template-name> [--kind <kind>] [--description <text>] [--register-binding]
+  scaffold-template <template-name> [--kind <kind>] [--description <text>]
+                    [--rule-file <filename.md>] [--register-binding]
       Scaffold templates/<template-name>/ (kind: stack-starter, domain-policy-pack,
       department-pack, or project-overlay) and optionally register its surface_binding.
 
@@ -70,6 +71,27 @@ Commands:
 
   reap-ephemeral --id <fork-id|all>
       Destroy a specific ephemeral fork or all active ephemeral forks ('--id all').
+
+  set-global-profile <human-core|technical|business|full> [--stow]
+      Compose antigravity/.gemini/config/AGENTS.md from modular base templates and
+      optionally re-stow into ~/.gemini/config/AGENTS.md.
+
+  register-subtree <layer-name> <repo-url> [branch]
+      Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers
+      sorted by precedence (0..100).
+
+  bootstrap-workspace <target-dir> --id <layer-id> [--role <role>] [--precedence <0..100>]
+                      [--parent-dir <dir>] [--upstream-url <url>] [--upstream-id <id>]
+                      [--upstream-branch <branch>] [--description <text>] [--templates <csv>]
+                      [--no-scaffold-own]
+      One-shot workspace initializer: inherits parent templates/lineage (when --parent-dir is
+      passed or repo is a non-workstation layer), copies base templates, configures
+      system/mcp-layer.json, scaffolds templates/<layer-id>/, creates baseline governance
+      files, and runs apply-project.
+
+  sync-layer <target-dir> [--parent-dir <dir>]
+      Propagate upstream template pack improvements (from --parent-dir and repo_dir) into
+      <target-dir>/templates/ and re-materialize <target-dir>/.agents/ in one step.
 
 Options:
   -n, --dry-run   Preview changes in JSON output without modifying files on disk
@@ -138,6 +160,12 @@ from dotfiles_mcp.ephemeral_fork_engine import (  # noqa: E402
     inspect_ephemeral_forks,
     reap_ephemeral_fork,
     spawn_ephemeral_fork,
+)
+from dotfiles_mcp.workspace_bootstrapper import (  # noqa: E402
+    bootstrap_layer_workspace,
+    register_mounted_subtree,
+    set_global_agents_profile,
+    sync_layer_workspace,
 )
 
 if subcmd == "list-templates":
@@ -210,6 +238,7 @@ if subcmd == "scaffold-template":
     tpl_name = rest[0]
     kind = "stack-starter"
     description = None
+    rule_filename = None
     register_binding = False
     i = 1
     while i < len(rest):
@@ -219,6 +248,9 @@ if subcmd == "scaffold-template":
             i += 2
         elif arg == "--description" and i + 1 < len(rest):
             description = rest[i + 1]
+            i += 2
+        elif arg == "--rule-file" and i + 1 < len(rest):
+            rule_filename = rest[i + 1]
             i += 2
         elif arg == "--register-binding":
             register_binding = True
@@ -232,6 +264,7 @@ if subcmd == "scaffold-template":
         kind=kind,
         description=description,
         register_binding=register_binding,
+        rule_filename=rule_filename,
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
@@ -394,6 +427,128 @@ if subcmd == "reap-ephemeral":
         print("❌ Missing required --id <fork-id|all> for reap-ephemeral.", file=sys.stderr)
         sys.exit(1)
     res = reap_ephemeral_fork(repo_dir, fork_id=fork_id, dry_run=dry_run)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "set-global-profile":
+    if not rest:
+        print(
+            "❌ Usage: ./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> [--stow]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    profile = rest[0]
+    run_stow = "--stow" in rest[1:]
+    res = set_global_agents_profile(repo_dir, profile, run_stow=run_stow, dry_run=dry_run)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "register-subtree":
+    if len(rest) < 2:
+        print(
+            "❌ Usage: ./scripts/layer-config.sh register-subtree <layer-name> <repo-url> [branch]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    branch = rest[2] if len(rest) >= 3 else "master"
+    res = register_mounted_subtree(repo_dir, rest[0], rest[1], branch, dry_run=dry_run)
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "bootstrap-workspace":
+    if not rest or rest[0].startswith("--"):
+        print(
+            "❌ Usage: ./scripts/layer-config.sh bootstrap-workspace <target-dir> --id <layer-id> [...]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    target_dir = Path(rest[0]).resolve()
+    layer_id = ""
+    layer_role = "department"
+    precedence = None
+    description = None
+    parent_dir = None
+    upstream_url = None
+    upstream_id = None
+    upstream_branch = "master"
+    tpls = None
+    scaffold_own = True
+    i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--id" and i + 1 < len(rest):
+            layer_id = rest[i + 1]
+            i += 2
+        elif arg == "--role" and i + 1 < len(rest):
+            layer_role = rest[i + 1]
+            i += 2
+        elif arg == "--precedence" and i + 1 < len(rest):
+            precedence = int(rest[i + 1])
+            i += 2
+        elif arg == "--description" and i + 1 < len(rest):
+            description = rest[i + 1]
+            i += 2
+        elif arg == "--parent-dir" and i + 1 < len(rest):
+            parent_dir = Path(rest[i + 1]).resolve()
+            i += 2
+        elif arg == "--upstream-url" and i + 1 < len(rest):
+            upstream_url = rest[i + 1]
+            i += 2
+        elif arg == "--upstream-id" and i + 1 < len(rest):
+            upstream_id = rest[i + 1]
+            i += 2
+        elif arg == "--upstream-branch" and i + 1 < len(rest):
+            upstream_branch = rest[i + 1]
+            i += 2
+        elif arg == "--templates" and i + 1 < len(rest):
+            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
+        elif arg == "--no-scaffold-own":
+            scaffold_own = False
+            i += 1
+        else:
+            print(f"❌ Unknown or incomplete bootstrap-workspace argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    if not layer_id:
+        print("❌ Missing required --id <layer-id> for bootstrap-workspace.", file=sys.stderr)
+        sys.exit(1)
+    res = bootstrap_layer_workspace(
+        repo_dir,
+        target_dir,
+        layer_id=layer_id,
+        layer_role=layer_role,
+        precedence=precedence,
+        description=description,
+        upstream_repo=upstream_url,
+        upstream_branch=upstream_branch,
+        upstream_layer_id=upstream_id,
+        parent_dir=parent_dir,
+        templates=tpls,
+        scaffold_own_template=scaffold_own,
+        dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "sync-layer":
+    if not rest or rest[0].startswith("--"):
+        print(
+            "❌ Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>]",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    target_dir = Path(rest[0]).resolve()
+    parent_dir = None
+    i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--parent-dir" and i + 1 < len(rest):
+            parent_dir = Path(rest[i + 1]).resolve()
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete sync-layer argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    res = sync_layer_workspace(repo_dir, target_dir, parent_dir=parent_dir, dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 

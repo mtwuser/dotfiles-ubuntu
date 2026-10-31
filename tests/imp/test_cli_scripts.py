@@ -142,16 +142,48 @@ def test_layer_config_script_supports_list_init_scaffold_and_apply(tmp_path: Pat
         capture_output=True,
         text=True,
     )
+    prof_proc = subprocess.run(
+        [script, "--dry-run", "set-global-profile", "full"],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
+    boot_proc = subprocess.run(
+        [
+            script,
+            "--dry-run",
+            "bootstrap-workspace",
+            str(tmp_path / "dept_ws"),
+            "--id",
+            "dept-legal-ip",
+            "--role",
+            "domain-policy",
+            "--precedence",
+            "5",
+            "--templates",
+            "business-base",
+        ],
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+    )
 
     # Assert
     assert list_proc.returncode == 0
     assert "fastapi-hexagonal" in list_proc.stdout
+    assert "human-core" in list_proc.stdout
+    assert "technical-base" in list_proc.stdout
+    assert "business-base" in list_proc.stdout
     assert init_proc.returncode == 0
     assert '"precedence": 30' in init_proc.stdout
     assert scaffold_proc.returncode == 0
     assert '"template_id": "brand-tokens"' in scaffold_proc.stdout
     assert apply_proc.returncode == 0
     assert '"applied_template": "fastapi-hexagonal"' in apply_proc.stdout
+    assert prof_proc.returncode == 0
+    assert '"profile": "full"' in prof_proc.stdout
+    assert boot_proc.returncode == 0
+    assert '"layer_id": "dept-legal-ip"' in boot_proc.stdout
 
 
 def test_layer_subtree_script_supports_dry_run_and_list_commands() -> None:

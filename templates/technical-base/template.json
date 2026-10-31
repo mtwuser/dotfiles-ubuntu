@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "template_id": "technical-base",
+  "kind": "domain-policy-pack",
+  "target_role": "team",
+  "description": "Software Engineering, 1:1:1 Code-Test-Spec Traceability, Refactoring & 100% AAA Testing Baseline",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "technical-base-engineering-rigor",
+      "description": "Strict typing/linting, 0-byte __init__.py purity, 1:1:1 traceability, refactoring & 100% AAA test coverage",
+      "mode": "transversal",
+      "target_globs": [
+        "src/**",
+        "scripts/**",
+        "tests/**",
+        "*.py",
+        "*.sh",
+        "*.ts",
+        "*.js",
+        "Makefile",
+        "pyproject.toml"
+      ],
+      "architectural_planes": [
+        "schema",
+        "domain",
+        "application",
+        "presentation",
+        "infrastructure",
+        "testing"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L2",
+      "invariants": [
+        "Enforce 1:1:1 Source <-> Unit Test <-> Specification traceability and < 465-line modularity",
+        "Keep consumer src/**/__init__.py and tests/**/__init__.py files strictly 0 bytes",
+        "Maintain 100% statement and branch coverage with explicit # Arrange, # Act, # Assert comments and N vs N ± 1 boundary cut-points"
+      ],
+      "rule_files": [
+        "templates/technical-base/rules/technical-base.md"
+      ],
+      "canonical_templates": []
+    }
+  ]
+}

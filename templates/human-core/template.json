@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "template_id": "human-core",
+  "kind": "domain-policy-pack",
+  "target_role": "workstation",
+  "description": "Universal Human Cognitive Rigor, dotfiles-ubuntu Native Orchestration Self-Guidance, and Commit/Priority Governance",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "human-core-universal-baseline",
+      "description": "Universal cognitive rigor, modularity (< 465 lines), documentation coherence, and dotfiles-ubuntu self-guidance",
+      "mode": "transversal",
+      "target_globs": [
+        "*"
+      ],
+      "architectural_planes": [
+        "*"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L1",
+      "invariants": [
+        "Preserve workspace consistency and scan before creating duplicates",
+        "Keep every source, test, and navigable documentation file strictly < 465 lines",
+        "Never run mutating git commands automatically; deliver one commit block per repository"
+      ],
+      "rule_files": [
+        "templates/human-core/rules/human-core.md"
+      ],
+      "canonical_templates": []
+    }
+  ]
+}

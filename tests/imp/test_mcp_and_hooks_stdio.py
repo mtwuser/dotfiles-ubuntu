@@ -27,6 +27,15 @@ def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip(
             }
         )
         + "\n"
+        + json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "query_governance_rules", "arguments": {"query": "e"}},
+            }
+        )
+        + "\n"
     )
     body = json.dumps(
         {
@@ -58,7 +67,7 @@ def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip(
     )
 
     # Assert
-    resp_line = json.loads(proc_line.stdout.decode("utf-8").strip())
+    resp_line = json.loads(proc_line.stdout.decode("utf-8").strip().splitlines()[0])
     overview = json.loads(resp_line["result"]["content"][0]["text"])
     assert "channel_1_node_and_system_state" in overview
     assert proc_framed.stdout.startswith(b"Content-Length:")

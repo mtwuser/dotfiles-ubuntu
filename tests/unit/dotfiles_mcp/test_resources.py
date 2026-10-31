@@ -71,8 +71,13 @@ class TestResourcesMixin:
         assert "pre-tool-guard" in hooks
         assert skills["count"] >= 10
         assert any(s["name"] == "testing" for s in skills["skills"])
-        assert templates["count"] >= 1
-        assert templates["templates"][0]["template_name"] == "fastapi-hexagonal"
+        assert templates["count"] == 4
+        assert [t["template_name"] for t in templates["templates"]] == [
+            "business-base",
+            "fastapi-hexagonal",
+            "human-core",
+            "technical-base",
+        ]
         assert docs_idx["mimeType"] == "text/markdown"
         assert "Documentation Index" in docs_idx["text"]
         assert topology["schema_version"] == "1.2"

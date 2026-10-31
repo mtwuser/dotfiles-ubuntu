@@ -89,6 +89,12 @@ else
   fail "CHANGELOG.md is missing section for [$VERSION_STR]"
 fi
 
+if grep -q "^version = \"$VERSION_STR\"" pyproject.toml && grep -q "version-${VERSION_STR}-blue\.svg" README.md && grep -q "(\`$VERSION_STR\`)" README.md; then
+  pass "VERSION ($VERSION_STR) is synchronized across pyproject.toml and README.md"
+else
+  fail "Version mismatch between VERSION ($VERSION_STR), pyproject.toml, and README.md"
+fi
+
 if python3 - <<'PYEOF'
 from pathlib import Path
 import re
@@ -426,6 +432,10 @@ for cli_sub in (
     "spawn-ephemeral",
     "inspect-ephemeral",
     "reap-ephemeral",
+    "set-global-profile",
+    "register-subtree",
+    "bootstrap-workspace",
+    "sync-layer",
 ):
     if cli_sub not in readme_md or cli_sub not in ext_guide:
         print(f"CLI-to-doc drift: layer-config.sh subcommand '{cli_sub}' missing from README.md or developer_and_extension_guide.md", file=sys.stderr)

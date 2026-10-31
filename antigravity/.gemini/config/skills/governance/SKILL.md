@@ -35,10 +35,12 @@ When working on a specific task, you might spot unrelated improvements:
 2. **Continue**: Return to your current task immediately.
 3. **Never mix modes**: E.g., do not refactor an unrelated file while writing tests for a new feature.
 
-### CHANGELOG Entries
+### CHANGELOG Entries & `[Unreleased]` Release Discipline
 
-Always write for the **USER**, not the developer.
-- **No file names**, **no function names**, **no implementation details**.
+Always write for the **USER** (or downstream adopter), not internal scratch notes:
+- **Always log ongoing work under `## [Unreleased]`**: During active development, place all `### Added`, `### Changed`, and `### Fixed` entries under `## [Unreleased]` at the top of `CHANGELOG.md`.
+- **Never bump `VERSION` prematurely**: Keep `VERSION`, `pyproject.toml`, and `README.md` badges at the last published release on `origin`. Never append `(vX.Y.Z)` to ordinary work commits or chain `git push` by default.
+- **Explicit Release Cuts (`/release`)**: Only promote `## [Unreleased]` $\rightarrow$ `## [X.Y.Z] - YYYY-MM-DD`, bump `VERSION`, and deliver a tag/push block when the user explicitly triggers `/release` (`skills/release/SKILL.md`).
 - Explain how the user's experience or the system's external behavior changed.
 - ✅ *Good*: "Profile section streamlined with real-time notification count."
 - ❌ *Bad*: "Refactored ProfileService.get_stats() to use aggregate query and serializers."

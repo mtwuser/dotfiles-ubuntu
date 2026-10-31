@@ -86,14 +86,13 @@ Follow commit rules in `/continue` (`skills/continue/SKILL.md` §3) — provide 
 
 ## 3.5. Global Config Sync (Post-Commits)
 
-If any shared rules, skills, or system config in `dotfiles-ubuntu` were modified during this session, run `cd ~/dotfiles-ubuntu && make verify` first to confirm all 8 verification gates pass, then include them in the commit delivery:
+If any shared rules, skills, or system config in `dotfiles-ubuntu` were modified during this session, run `cd ~/dotfiles-ubuntu && make verify` first to confirm all 8 verification gates pass, log changes under `## [Unreleased]` in `CHANGELOG.md` without bumping `VERSION`, and include a local commit block (do NOT append `git push` or `(vX.Y.Z)` unless explicitly requested via `/release`):
 
 ```bash
 ### dotfiles-ubuntu
 cd ~/dotfiles-ubuntu
 git add -A
 git commit -m "<summary of config changes>"
-git push
 ```
 
 > [!NOTE]

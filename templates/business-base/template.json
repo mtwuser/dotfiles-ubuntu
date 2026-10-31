@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "template_id": "business-base",
+  "kind": "domain-policy-pack",
+  "target_role": "corporate",
+  "description": "Enterprise Corporate Governance, Single Source of Truth Ledger Integrity, Lex Superior Compliance & Cross-Surface Cascade Baseline",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "business-base-corporate-governance",
+      "description": "Single Source of Truth Ledger integrity, Lex Superior IP/regulatory gates, Cross-Surface Cascade, and Quantitative/Unit precision",
+      "mode": "transversal",
+      "target_globs": [
+        "corporate/**",
+        "surfaces/**",
+        "docs/**",
+        "*.md",
+        "*.json"
+      ],
+      "architectural_planes": [
+        "*"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L2",
+      "invariants": [
+        "Treat corporate/ official ledgers (legal, finance, lab/operations) as immutable Single Source of Truth schemas",
+        "Enforce Lex Superior deontic precedence (0..100) and confidentiality/IP disclosure boundaries across all surfaces",
+        "Structure every policy, contract, or operational SOP with explicit # Scope & Surface Target, # Normative Invariants, and # Verification & Sign-Off Gates"
+      ],
+      "rule_files": [
+        "templates/business-base/rules/business-base.md"
+      ],
+      "canonical_templates": []
+    }
+  ]
+}
