@@ -52,11 +52,11 @@ Layer A — Universal (dotfiles-ubuntu)
 > Before evaluating any upward promotion, `/enrich` MUST ensure the active workspace is synchronized with the latest rules from its hierarchical ancestors (`Open Source Layer A` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `Department` $\rightarrow$ `Squad` $\rightarrow$ `Project`).
 
 1. **Run `make horizon` and `make diff`** in the active workspace (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`).
-2. **Inspect Version & Downward Sync Status**:
-   - Check `oss_root_version` (`~/dotfiles-ubuntu/VERSION`), `upstream_version` (`1-hop parent VERSION`), `workspace_version`, and `downward_sync_needed` (`shared_template_drifts` with `drift_direction: "upstream_newer"`).
-   - **If `downward_sync_needed: true`** (the 1-hop parent `Root 0` / `Department` or `Open Source` has a newer version of an inherited template such as `human-core`, `technical-base`, `business-base`, or a corporate/departmental base pack):
-     1. Run **`make sync`** (`downward_sync_command`) FIRST so the workspace absorbs the latest upstream rules into `templates/` and `.agents/`.
-     2. Verify `make diff` reports `0` drift (`modified_in_project: []`).
+2. **Inspect Version, Upstream & Mounted Child Sync Status (`downward_sync_needed` & `child_sync_needed`)**:
+   - Check `oss_root_version` (`~/dotfiles-ubuntu/VERSION`), `upstream_version` (`1-hop parent VERSION`), `workspace_version`, `downward_sync_needed` (`shared_template_drifts` with `drift_direction: "upstream_newer"`), and `child_sync_needed` (`downstream_layer_drifts` across mounted `layers/*` children).
+   - **If `downward_sync_needed: true`, `child_sync_needed: true`, or `make diff` reports `modified_in_project`**:
+     1. Run **`make sync`** (`downward_sync_command`) FIRST so the workspace absorbs both the latest 1-hop upstream templates (while preserving any newer locally promoted templates) and all updated 1-hop downstream mounted child layers (`layers/*`) into `.agents/`.
+     2. Verify `make diff` reports `0` drift (`modified_in_project: []`) and `make horizon` reports `downward_sync_needed: false`.
      3. Never mistake an `"upstream_newer"` template drift for an upward promotion candidate — doing so would overwrite newer parent rules with stale local copies.
 3. **Inspect Git Authority (`actor_is_layer_owner` & `actor_is_upstream_owner`)**:
    - Determine the required Git Flow strategy based on `git config user.email` authority:

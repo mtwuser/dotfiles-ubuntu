@@ -6,6 +6,7 @@ Specification: docs/architecture/03_contextual_mcp_and_federation.md
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import json
 import os
 import platform
@@ -151,3 +152,113 @@ def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dic
                 "decrypted_hops": int(parsed.get("decrypted_hops", 0)),
             }
     return {}
+
+
+def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
+    """Return True if dest_tpl has a modified rule file with a newer timestamp than src_tpl."""
+    if not (dest_tpl / "rules").is_dir() or not (src_tpl / "rules").is_dir():
+        return False
+    for dest_rf in sorted((dest_tpl / "rules").glob("*.md")):
+        src_rf = src_tpl / "rules" / dest_rf.name
+        if src_rf.is_file():
+            dest_sha = hashlib.sha256(dest_rf.read_bytes()).hexdigest()
+            src_sha = hashlib.sha256(src_rf.read_bytes()).hexdigest()
+            if dest_sha != src_sha and dest_rf.stat().st_mtime_ns > src_rf.stat().st_mtime_ns:
+                return True
+    return False
+
+
+def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | None:
+    """Resolve the live sibling checkout for a mounted child layer."""
+    ws = workspace_dir.resolve()
+    candidates = (ws.parent / f"{ws.name}-org" / child_name, ws.parent / child_name)
+    for cand in candidates:
+        if cand.resolve() != ws and (cand / "system" / "mcp-layer.json").is_file():
+            return cand.resolve()
+    return None
+
+
+_CHILD_TRACKED_REL_PATHS: tuple[str, ...] = (
+    "antigravity/.gemini/config/AGENTS.md",
+    "system/mcp-layer.json",
+    "README.md",
+    "CHANGELOG.md",
+    "WORKTASK.md",
+    "BACKLOG.md",
+    "Makefile",
+    "VERSION",
+)
+
+
+def _inspect_mounted_children_drifts(
+    workspace_dir: Path, mounted_layers: list[Any]
+) -> list[dict[str, Any]]:
+    """Detect 1-hop downstream mounted layers with newer/changed sibling files."""
+    ws = workspace_dir.resolve()
+    drifts: list[dict[str, Any]] = []
+    for entry in mounted_layers or []:
+        if not isinstance(entry, dict):
+            continue
+        child_name = str(entry.get("name") or entry.get("layer_id") or "").strip()
+        mounted_dir = ws / "layers" / child_name
+        child_ws = _resolve_mounted_child_dir(ws, child_name) if child_name else None
+        if not child_name or not mounted_dir.is_dir() or child_ws is None:
+            continue
+        changed_files: list[str] = []
+        for rel in _CHILD_TRACKED_REL_PATHS:
+            src_f, dst_f = child_ws / rel, mounted_dir / rel
+            if src_f.is_file() and (
+                not dst_f.is_file()
+                or hashlib.sha256(src_f.read_bytes()).hexdigest()
+                != hashlib.sha256(dst_f.read_bytes()).hexdigest()
+            ):
+                changed_files.append(rel)
+        for sub_name in ("docs", "templates"):
+            sub_dir = child_ws / sub_name
+            for src_f in sorted(sub_dir.rglob("*")) if sub_dir.is_dir() else []:
+                if not src_f.is_file():
+                    continue
+                rel_d = str(src_f.relative_to(child_ws)).replace("\\", "/")
+                dst_f = mounted_dir / rel_d
+                if not dst_f.is_file() or (
+                    hashlib.sha256(src_f.read_bytes()).hexdigest()
+                    != hashlib.sha256(dst_f.read_bytes()).hexdigest()
+                ):
+                    changed_files.append(rel_d)
+        if changed_files:
+            drifts.append(
+                {
+                    "layer_id": child_name,
+                    "child_workspace_dir": str(child_ws),
+                    "mounted_path": f"layers/{child_name}",
+                    "drift_files": changed_files,
+                }
+            )
+    return drifts
+
+
+def _sync_mounted_children_into_parent(
+    target_dir: Path, mounted_layers: list[Any], *, dry_run: bool = False
+) -> list[str]:
+    """Synchronize mounted layers/<child>/ and child template packs from live sibling checkouts."""
+    ws = target_dir.resolve()
+    drifts = _inspect_mounted_children_drifts(ws, mounted_layers)
+    synced: list[str] = []
+    for d_info in drifts:
+        child_name = str(d_info["layer_id"])
+        child_ws = Path(d_info["child_workspace_dir"])
+        mounted_dir = ws / "layers" / child_name
+        synced.append(child_name)
+        if dry_run:
+            continue
+        for rel in _CHILD_TRACKED_REL_PATHS:
+            src_f, dst_f = child_ws / rel, mounted_dir / rel
+            if src_f.is_file():
+                dst_f.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_f, dst_f)
+        for sub_name in ("docs", ".agents", "templates"):
+            src_sub, dst_sub = child_ws / sub_name, mounted_dir / sub_name
+            if src_sub.is_dir():
+                shutil.rmtree(dst_sub, ignore_errors=True)
+                shutil.copytree(src_sub, dst_sub)
+    return synced

@@ -22,6 +22,7 @@ from .fork_configurator import (
     configure_fork_manifest,
     scaffold_template_pack,
 )
+from .manifest_helpers import _is_dest_template_newer, _sync_mounted_children_into_parent
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
 
@@ -399,15 +400,11 @@ def sync_layer_workspace(
         manifest["default_stack_templates"] = list(stack_templates)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    existing_tpls = (
-        [
-            d.name
-            for d in sorted((target_dir / "templates").iterdir())
-            if d.is_dir() and not d.name.startswith(".")
-        ]
-        if (target_dir / "templates").is_dir()
-        else []
-    )
+    existing_tpls = [
+        d.name
+        for d in sorted((target_dir / "templates").glob("*"))
+        if d.is_dir() and not d.name.startswith(".")
+    ]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     search_roots = (
@@ -415,33 +412,38 @@ def sync_layer_workspace(
         if effective_parent.resolve() != repo_dir.resolve()
         else [repo_dir]
     )
-
     synced_templates: list[str] = []
     for tpl_name in candidate_tpls:
         if tpl_name == own_layer_id:
             continue
         src_tpl = next(
             (
-                root / "templates" / tpl_name
-                for root in search_roots
-                if (root / "templates" / tpl_name).is_dir()
+                r / "templates" / tpl_name
+                for r in search_roots
+                if (r / "templates" / tpl_name).is_dir()
             ),
             None,
         )
         dest_tpl = target_dir / "templates" / tpl_name
-        if src_tpl is not None and src_tpl.resolve() != dest_tpl.resolve():
+        if (
+            src_tpl is not None
+            and src_tpl.resolve() != dest_tpl.resolve()
+            and not _is_dest_template_newer(src_tpl, dest_tpl)
+        ):
             synced_templates.append(tpl_name)
             if not dry_run:
                 shutil.rmtree(dest_tpl, ignore_errors=True)
                 shutil.copytree(src_tpl, dest_tpl)
 
+    synced_children = _sync_mounted_children_into_parent(
+        target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
+    )
     makefile_path = target_dir / "Makefile"
     if not dry_run and not makefile_path.exists():
         makefile_path.write_text(
             _render_layer_makefile(own_layer_id, own_layer_role, effective_parent, repo_dir),
             encoding="utf-8",
         )
-
     tpl_ref = ",".join(stack_templates) if stack_templates else None
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
@@ -450,6 +452,7 @@ def sync_layer_workspace(
         "target_dir": str(target_dir),
         "layer_id": own_layer_id,
         "synced_templates": synced_templates,
+        "synced_mounted_layers": synced_children,
         "applied_template": apply_res.get("applied_template"),
         "files_materialized": apply_res.get("files_materialized", []),
         "participating_layers": apply_res.get("participating_layers", []),

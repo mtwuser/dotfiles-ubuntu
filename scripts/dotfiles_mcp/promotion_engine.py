@@ -21,7 +21,10 @@ from dotfiles_mcp.authority_engine import (
     verify_single_hop_upstream,
 )
 from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES, KEBAB_ID_RE, MATERIALIZED_RULE_RE
-from dotfiles_mcp.manifest_helpers import _parse_skill_frontmatter
+from dotfiles_mcp.manifest_helpers import (
+    _inspect_mounted_children_drifts,
+    _parse_skill_frontmatter,
+)
 
 
 def _sha256_file(path: Path) -> str:
@@ -426,8 +429,15 @@ def inspect_layer_horizon(
                     }
                 )
     local_diff = diff_project_against_layers(ws, ws)
+    child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))
     sync_sfx = f" --parent-dir {up}" if parent_dir is not None else ""
     up_drifts = [d for d in drifts if d["drift_direction"] == "workspace_newer"]
+    need_sync = any(d["drift_direction"] == "upstream_newer" for d in drifts) or bool(child_drifts)
+    novel_cmds = [
+        f"./scripts/layer-config.sh promote-from-project {ws} "
+        f"--source .agents/{rel} --upstream-dir {up} --prepare-pr"
+        for rel in local_diff["novel_in_project"]
+    ]
     return {
         "workspace_dir": str(ws),
         "layer_id": str(ws_m.get("layer_id", ws.name)),
@@ -441,19 +451,14 @@ def inspect_layer_horizon(
         "oss_root_version": oss_ver,
         "upstream_version": up_ver,
         "workspace_version": ws_ver,
-        "downward_sync_needed": any(d["drift_direction"] == "upstream_newer" for d in drifts),
+        "downward_sync_needed": need_sync,
+        "child_sync_needed": bool(child_drifts),
         "downward_sync_command": f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}",
         "shared_template_drifts": drifts,
+        "downstream_layer_drifts": child_drifts,
         "upward_promotion_suggestions": (
             [d for d in up_drifts if d["oss_agnostic"]]
             if is_oss
-            else [
-                *(d["promote_command"] for d in up_drifts),
-                *(
-                    f"./scripts/layer-config.sh promote-from-project {ws} "
-                    f"--source .agents/{rel} --upstream-dir {up} --prepare-pr"
-                    for rel in local_diff["novel_in_project"]
-                ),
-            ]
+            else [*(d["promote_command"] for d in up_drifts), *novel_cmds]
         ),
     }

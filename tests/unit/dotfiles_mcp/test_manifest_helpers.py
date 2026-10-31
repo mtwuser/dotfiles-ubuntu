@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -180,3 +181,84 @@ class TestManifestHelpers:
         assert missing_lines == []
         assert valid_lines == ["curl", "git"]
         assert merged == ["a", "b", "c"]
+
+    def test_is_dest_template_newer_and_mounted_child_drift_sync(self, tmp_path: Path) -> None:
+        """Detect newer destination templates and synchronize mounted child layers from siblings."""
+        # Arrange
+        src_tpl = tmp_path / "src_tpl"
+        dest_tpl = tmp_path / "dest_tpl"
+        assert manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl) is False
+        (src_tpl / "rules").mkdir(parents=True)
+        (dest_tpl / "rules").mkdir(parents=True)
+        src_rf = src_tpl / "rules/base.md"
+        dest_rf = dest_tpl / "rules/base.md"
+        (dest_tpl / "rules/extra.md").write_text("# extra\n", encoding="utf-8")
+        src_rf.write_text("# v1\n", encoding="utf-8")
+        dest_rf.write_text("# v2\n", encoding="utf-8")
+        os.utime(src_rf, ns=(1_000_000_000, 1_000_000_000))
+        os.utime(dest_rf, ns=(2_000_000_000, 2_000_000_000))
+        newer_true = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+        os.utime(dest_rf, ns=(500_000_000, 500_000_000))
+        newer_false = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+
+        parent_ws = tmp_path / "corp-root"
+        (parent_ws / "system").mkdir(parents=True)
+        (parent_ws / "system/mcp-layer.json").write_text(
+            '{"layer_id": "corp-root"}', encoding="utf-8"
+        )
+        mounted_child = parent_ws / "layers/dept-alpha"
+        (mounted_child / "system").mkdir(parents=True)
+        (mounted_child / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-alpha"}', encoding="utf-8"
+        )
+        (mounted_child / "README.md").write_text("# Old\n", encoding="utf-8")
+
+        org_child = tmp_path / "corp-root-org/dept-alpha"
+        (org_child / "system").mkdir(parents=True)
+        (org_child / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-alpha"}', encoding="utf-8"
+        )
+        (org_child / "README.md").write_text("# New\n", encoding="utf-8")
+        (org_child / "docs").mkdir(parents=True)
+        (org_child / "docs/guide.md").write_text("# Guide\n", encoding="utf-8")
+        (org_child / "docs/sub").mkdir(parents=True)
+        (org_child / "templates/dept-alpha/rules").mkdir(parents=True)
+        (org_child / "templates/dept-alpha/rules/alpha.md").write_text(
+            "# Alpha\n", encoding="utf-8"
+        )
+        mounted_entries: list[object] = [
+            "invalid",
+            {"name": ""},
+            {"name": "dept-missing"},
+            {"name": "dept-alpha"},
+        ]
+
+        # Act
+        missing_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-missing")
+        drifts_before = manifest_helpers._inspect_mounted_children_drifts(
+            parent_ws, mounted_entries
+        )
+        dry_synced = manifest_helpers._sync_mounted_children_into_parent(
+            parent_ws, mounted_entries, dry_run=True
+        )
+        readme_after_dry = (mounted_child / "README.md").read_text(encoding="utf-8")
+        live_synced = manifest_helpers._sync_mounted_children_into_parent(
+            parent_ws, mounted_entries, dry_run=False
+        )
+        drifts_after = manifest_helpers._inspect_mounted_children_drifts(
+            parent_ws, mounted_entries
+        )
+
+        # Assert
+        assert newer_true is True
+        assert newer_false is False
+        assert missing_resolved is None
+        assert len(drifts_before) == 1
+        assert "README.md" in drifts_before[0]["drift_files"]
+        assert "docs/guide.md" in drifts_before[0]["drift_files"]
+        assert dry_synced == ["dept-alpha"]
+        assert readme_after_dry == "# Old\n"
+        assert live_synced == ["dept-alpha"]
+        assert (mounted_child / "README.md").read_text(encoding="utf-8") == "# New\n"
+        assert (mounted_child / "docs/guide.md").is_file()
+        assert drifts_after == []
