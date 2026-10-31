@@ -76,6 +76,13 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
         m = spec_re.search(src.read_text(encoding="utf-8"))
         if not m or src.name not in (REPO_DIR / m.group(1)).read_text(encoding="utf-8"):
             untraced_sources.append(str(src.relative_to(REPO_DIR)))
+    template_rules = sorted((REPO_DIR / "templates").glob("*/rules/*.md"))
+    missing_rule_frontmatter = [
+        str(rf.relative_to(REPO_DIR))
+        for rf in template_rules
+        if not rf.read_text(encoding="utf-8").startswith("---\n")
+        or "trigger:" not in rf.read_text(encoding="utf-8").split("---", 2)[1]
+    ]
 
     # Assert
     assert len(pkg_modules) == 16
@@ -84,6 +91,8 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
     assert missing_unit_tests == []
     assert oversized_files == []
     assert untraced_sources == []
+    assert missing_rule_frontmatter == []
+    assert not (REPO_DIR / "antigravity/.gemini/config/AGENTS.md").read_text().startswith("---\n")
 
 
 def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:

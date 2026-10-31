@@ -245,9 +245,7 @@ class TestManifestHelpers:
         live_synced = manifest_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
         )
-        drifts_after = manifest_helpers._inspect_mounted_children_drifts(
-            parent_ws, mounted_entries
-        )
+        drifts_after = manifest_helpers._inspect_mounted_children_drifts(parent_ws, mounted_entries)
 
         # Assert
         assert newer_missing is False

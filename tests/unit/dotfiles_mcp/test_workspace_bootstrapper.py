@@ -23,11 +23,15 @@ class TestWorkspaceBootstrapper:
     def test_set_global_agents_profile_supports_all_profiles_and_stow(self, tmp_path: Path) -> None:
         # Arrange
         for tpl_id, fname, body in (
-            ("human-core", "human-core.md", "# Human Core\n\n> Base quote\n\n---\n\nCore rule 1."),
+            (
+                "human-core",
+                "human-core.md",
+                "---\ntrigger: always_on\n---\n# Human Core\n\n> Base quote\n\n---\n\nCore rule 1.",
+            ),
             (
                 "technical-base",
                 "technical-base.md",
-                "# Tech Base\n\n> Tech quote\n\n---\n\nTech rule 1.",
+                "---\ntrigger: always_on\n---\n# Tech Base\n\n> Tech quote\n\n---\n\nTech rule 1.",
             ),
             (
                 "business-base",
@@ -61,6 +65,8 @@ class TestWorkspaceBootstrapper:
         assert "Core rule 1." in written
         assert "Tech rule 1." in written
         assert "Biz rule 1." in written
+        assert not written.startswith("---")
+        assert "trigger: always_on" not in written
         assert "# Tech Base" not in written
         assert "# Business Base" not in written
 

@@ -25,7 +25,6 @@ from .fork_configurator import (
 from .manifest_helpers import _is_dest_template_newer, _sync_mounted_children_into_parent
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
-
 PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
     "human-core": (("human-core", "human-core.md"),),
     "technical": (("human-core", "human-core.md"), ("technical-base", "technical-base.md")),
@@ -38,9 +37,16 @@ PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
 }
 
 
+def _strip_frontmatter(markdown_text: str) -> str:
+    """Strip an optional leading YAML frontmatter block ('--- ... ---')."""
+    text = markdown_text.strip()
+    end_idx = text.find("\n---\n", 4) if text.startswith("---\n") else -1
+    return text[end_idx + 5 :].strip() if end_idx != -1 else text
+
+
 def _strip_secondary_header(markdown_text: str) -> str:
-    """Strip the top H1 and introductory blockquote when appending a secondary profile."""
-    lines = markdown_text.strip().splitlines()
+    """Strip frontmatter, top H1, and introductory blockquote for secondary profiles."""
+    lines = _strip_frontmatter(markdown_text).splitlines()
     idx = 0
     while idx < len(lines) and (
         lines[idx].startswith(("# ", ">")) or not lines[idx].strip() or lines[idx].strip() == "---"
@@ -74,7 +80,9 @@ def set_global_agents_profile(
             )
         source_files.append(str(rule_path.relative_to(repo_dir)))
         raw_text = rule_path.read_text(encoding="utf-8").strip()
-        sections.append(raw_text if idx == 0 else _strip_secondary_header(raw_text))
+        sections.append(
+            _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
+        )
 
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes = len(composed.encode("utf-8"))
@@ -146,7 +154,7 @@ def register_mounted_subtree(
         "branch": branch,
     }
 
-    existing: list[dict[str, Any]] = [
+    existing = [
         item
         for item in root_manifest.get("mounted_layers", [])
         if isinstance(item, dict) and item.get("name") != layer_name
@@ -154,15 +162,9 @@ def register_mounted_subtree(
     existing.append(entry)
     existing.sort(key=lambda item: (int(item.get("precedence", 50)), str(item.get("name", ""))))
     root_manifest["mounted_layers"] = existing
-
     if not dry_run:
         root_manifest_path.write_text(json.dumps(root_manifest, indent=2) + "\n", encoding="utf-8")
-
-    return {
-        "registered_layer": entry,
-        "total_mounted_layers": len(existing),
-        "dry_run": dry_run,
-    }
+    return {"registered_layer": entry, "total_mounted_layers": len(existing), "dry_run": dry_run}
 
 
 def _render_layer_makefile(
@@ -273,10 +275,8 @@ def bootstrap_layer_workspace(
         if src_tpl is not None and src_tpl.resolve() != dest_tpl.resolve():
             copied_templates.append(tpl_name)
             if not dry_run:
-                if dest_tpl.exists():
-                    shutil.rmtree(dest_tpl)
+                shutil.rmtree(dest_tpl, ignore_errors=True)
                 shutil.copytree(src_tpl, dest_tpl)
-
     manifest_res = configure_fork_manifest(
         target_dir,
         layer_id=layer_id,
@@ -289,12 +289,10 @@ def bootstrap_layer_workspace(
         prune_default_templates=True,
         dry_run=dry_run,
     )
-
     own_tpl_id = own_template_name or layer_id
     all_tpls = list(requested_templates)
     if scaffold_own_template and own_tpl_id not in all_tpls:
         all_tpls.append(own_tpl_id)
-
     if not dry_run and all_tpls:
         m_path = target_dir / "system" / "mcp-layer.json"
         m_data = json.loads(m_path.read_text(encoding="utf-8"))
@@ -332,11 +330,13 @@ def bootstrap_layer_workspace(
             f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v0.1.0`).\n"
         ),
         "antigravity/.gemini/config/AGENTS.md": (
+            f"---\ntrigger: always_on\n"
+            f'description: "Layer governance rules for {layer_id} ({layer_role})."\n---\n\n'
             f"# {layer_id} Layer Rules (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
             f"> Governed by `system/mcp-layer.json` (`layer_id: {layer_id}`).\n\n"
-            "## Scope & Surface Target\n"
+            f"## Scope & Surface Target\n"
             f"- Governs `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`).\n\n"
-            "## Normative Invariants\n"
+            f"## Normative Invariants\n"
             f"- Respect *Lex Superior* (`0..100`) and `templates/{own_tpl_id}/` contracts.\n\n"
             "## Verification & Sign-Off Gates\n"
             "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"

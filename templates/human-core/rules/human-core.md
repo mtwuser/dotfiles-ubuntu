@@ -1,3 +1,7 @@
+---
+trigger: always_on
+description: Universal cognitive, organizational, and dotfiles-ubuntu orchestration rules applying to all workspaces
+---
 # Antigravity Universal Rules (`human-core` Global Baseline)
 
 > Universal cognitive, organizational, and `dotfiles-ubuntu` orchestration rules applying to ALL workspaces. Domain rules layer via **`technical-base`** (software engineering) and **`business-base`** (enterprise & normative governance).

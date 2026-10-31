@@ -246,7 +246,9 @@ def scaffold_template_pack(
     files_to_write: dict[str, str] = {
         f"templates/{template_name}/template.json": json.dumps(tpl_manifest, indent=2) + "\n",
         f"templates/{template_name}/rules/{effective_rule}": (
-            f"# {template_name} Governance Rules ({kind})\n\n"
+            f"---\ntrigger: always_on\n"
+            f'description: "Governance rules and invariants for {template_name} ({kind})."\n'
+            f"---\n\n# {template_name} Governance Rules ({kind})\n\n"
             f"## Scope & Surface Target\n"
             f"- **Template Pack**: `templates/{template_name}/` (`{kind}`).\n\n"
             f"## Normative Invariants\n"
@@ -256,11 +258,9 @@ def scaffold_template_pack(
             f"- [ ] Verify zero drift via `./scripts/layer-config.sh diff-project`.\n"
         ),
         f"templates/{template_name}/skills/{template_name}-guide/SKILL.md": (
-            f"---\n"
-            f"name: {template_name}-guide\n"
+            f"---\nname: {template_name}-guide\n"
             f'description: "Procedural guide for applying {template_name} ({kind}) rules."\n'
-            f"---\n\n"
-            f"# {template_name} Guide\n\n"
+            f"---\n\n# {template_name} Guide\n\n"
             f"1. Review `templates/{template_name}/rules/{effective_rule}`.\n"
             f"2. Verify invariants via `./scripts/layer-config.sh diff-project` "
             f"and promote via `promote-from-project --prepare-pr`.\n"

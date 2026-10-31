@@ -1,3 +1,7 @@
+---
+trigger: always_on
+description: Universal corporate ledger integrity, Lex Superior IP firewall, cross-surface cascade, and functional verification rules
+---
 # Enterprise, Normative & Functional Governance Baseline (`business-base`)
 
 > Universal corporate, regulatory, financial, industrial, and communicative rules for enterprise holdings, departments, and functional workspaces. Translates software engineering rigor (`1:1:1` traceability, `100%` coverage, and `AAA` verification) to business operations and multi-surface governance.

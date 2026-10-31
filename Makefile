@@ -12,7 +12,7 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 help:
 	@echo "dotfiles-ubuntu development & verification targets:"
 	@echo "  make install          Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
-	@echo "  make setup-dev        Initialize ./venv and materialize local .agents/ (human-core,technical-base)"
+	@echo "  make setup-dev        Initialize ./venv and materialize local .agents/ (technical-base overlay)"
 	@echo "  make install-runtime  Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
@@ -38,7 +38,8 @@ $(VENV_BIN)/pytest:
 venv install install-dev: $(VENV_BIN)/pytest
 
 setup-dev: $(VENV_BIN)/pytest
-	./scripts/layer-config.sh apply-project $(CURDIR) --template human-core,technical-base
+	@rm -f $(CURDIR)/.agents/rules/human-core.md
+	./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base
 
 install-runtime:
 	$(PYTHON) -m venv $(VENV_DIR)
