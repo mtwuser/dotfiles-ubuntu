@@ -1,7 +1,7 @@
 # dotfiles-ubuntu
 
 [![CI](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml/badge.svg)](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](VERSION)
 [![Coverage](https://img.shields.io/badge/coverage-100%25%20(unit%20%2B%20branch)-brightgreen.svg)](scripts/verify-repo.sh)
 [![Python](https://img.shields.io/badge/python-3.14%20(zero--deps)-3776AB.svg)](pyproject.toml)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
@@ -38,13 +38,14 @@ Install global rules (`~/.gemini/config/AGENTS.md`), deterministic lifecycle hoo
 ```bash
 git clone https://github.com/mtwuser/dotfiles-ubuntu.git ~/dotfiles-ubuntu
 cd ~/dotfiles-ubuntu
-./bootstrap.sh --antigravity
+./bootstrap.sh --workstation   # Sets up read-only runtime, boot auto-sync & dotfiles-sync command
+                               # (or ./bootstrap.sh --antigravity for standalone Antigravity links only)
 
 # Optional: install/upgrade Antigravity IDE & Agents binaries from ~/Downloads/
 ./scripts/antigravity-install.sh --all      # or --agents / --ide
 
-# Optional: switch global AGENTS.md profile (human-core | technical | business | full)
-./scripts/layer-config.sh set-global-profile human-core --stow
+# Any time in terminal: pull latest release, re-apply global profile & re-stow
+dotfiles-sync                               # or ./scripts/workstation-sync.sh --status
 ```
 
 ### Path 2: Fork & Manage YOUR Own Ubuntu 26.04 System
@@ -119,6 +120,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
+│   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
 │   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (18 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
@@ -202,6 +204,6 @@ make docker-build && make docker-self-test    # (Optional) Build & verify Ubuntu
 
 ### Versioning, Security & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`2.2.0`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`2.2.1`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
 - **Security & Secret Isolation**: Personal Git identity (`~/.gitconfig.local`) and shell secrets (`~/.bashrc.local`) are strictly isolated from tracked files; see [`SECURITY.md`](SECURITY.md).
 - **Contributing & Extending**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md).

@@ -15,6 +15,7 @@ CLI_SCRIPTS = [
     REPO_DIR / "scripts" / "verify-repo.sh",
     REPO_DIR / "scripts" / "layer-subtree.sh",
     REPO_DIR / "scripts" / "layer-config.sh",
+    REPO_DIR / "scripts" / "workstation-sync.sh",
 ]
 
 
@@ -367,3 +368,68 @@ def test_dockerfile_dockerignore_and_makefile_docker_targets_contract() -> None:
     assert "docker-build:" in mk_text
     assert "docker-self-test:" in mk_text
     assert "docker-mcp:" in mk_text
+    assert "workstation-setup:" in mk_text
+    assert "workstation-sync:" in mk_text
+    assert "workstation-status:" in mk_text
+
+
+def test_workstation_sync_script_setup_status_and_auto(tmp_path: Path) -> None:
+    # Arrange
+    script = str(REPO_DIR / "scripts" / "workstation-sync.sh")
+    runtime_dir = tmp_path / "dotfiles-ubuntu"
+    runtime_dir.mkdir(parents=True)
+    (runtime_dir / "VERSION").write_text("2.2.1\n", encoding="utf-8")
+    conf_file = tmp_path / "workstation.conf"
+    stamp_dir = tmp_path / "runtime"
+    stamp_dir.mkdir(parents=True)
+    env = {
+        "PATH": "/usr/bin:/bin",
+        "HOME": str(tmp_path),
+        "DOTFILES_RUNTIME_DIR": str(runtime_dir),
+        "DOTFILES_WORKSTATION_CONF": str(conf_file),
+        "XDG_RUNTIME_DIR": str(stamp_dir),
+        "DOTFILES_SKIP_PULL": "1",
+        "DOTFILES_SKIP_STOW": "1",
+    }
+
+    # Act
+    setup_proc = subprocess.run(
+        [
+            script,
+            "--setup",
+            "--mode",
+            "readonly",
+            "--profile",
+            "human-core",
+            "--auto-sync",
+            "boot",
+            "--no-sync",
+        ],
+        cwd=REPO_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    auto_proc = subprocess.run(
+        [script, "--auto"],
+        cwd=REPO_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    status_proc = subprocess.run(
+        [script, "--status"],
+        cwd=REPO_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+
+    # Assert
+    assert setup_proc.returncode == 0
+    assert "Workstation configuration written to" in setup_proc.stdout
+    assert auto_proc.returncode == 0
+    assert status_proc.returncode == 0
+    assert '"mode": "readonly"' in status_proc.stdout
+    assert '"profile": "human-core"' in status_proc.stdout
+    assert '"boot_synced": true' in status_proc.stdout

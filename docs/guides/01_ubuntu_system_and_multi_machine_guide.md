@@ -124,6 +124,7 @@ The installer extracts the archives from `~/Downloads/`, backs up the previous i
 | Script & Flag | Action |
 |---------------|--------|
 | `./bootstrap.sh` *(no flag)* | Interactive — asks confirmation before each provisioning step. |
+| `./bootstrap.sh --workstation` | Configures `~/dotfiles-ubuntu` as a declarative read-only workstation runtime appliance (`~/.config/dotfiles-ubuntu/workstation.conf`), enables once-per-boot auto-sync, and exposes `dotfiles-sync`. |
 | `./bootstrap.sh --antigravity` | Only Antigravity global rules, skills, and lifecycle hooks (`~/.gemini/config/`) + desktop launchers. |
 | `./bootstrap.sh --all` | Unattended — installs all packages, external recipes, NVM, GNOME settings, and Stow symlinks. |
 | `./bootstrap.sh --packages` | Only APT + Snaps + NPM globals from `system/*.txt`. |
@@ -160,6 +161,23 @@ chmod +x bootstrap.sh backup.sh audit.sh scripts/*.sh
 # 3. Clone project repositories, sign in to Antigravity IDE, and run /sopen
 git clone https://github.com/<your-user>/<your-project>.git ~/Projects/<your-project>
 ```
+
+### 5.1.1 Workstation Runtime Appliance Mode & Boot Auto-Sync (`workstation-sync.sh` / `dotfiles-sync`)
+
+When using `~/dotfiles-ubuntu` as the machine's global runtime appliance (while developing changes either in a dedicated clone `~/Projects/dev-<repo>` or pulling releases from upstream), configure the workstation once with:
+
+```bash
+cd ~/dotfiles-ubuntu
+./bootstrap.sh --workstation
+# Or customize options explicitly:
+./scripts/workstation-sync.sh --setup --mode readonly --profile human-core --auto-sync boot
+```
+
+This creates `~/.config/dotfiles-ubuntu/workstation.conf` (untracked per-device state) and activates four protections:
+1. **Read-Only Runtime Guard (`mode=readonly`)**: Sets `remote.origin.pushurl = VALIDATION_BLOCKED_READONLY_RUNTIME` on `~/dotfiles-ubuntu` so accidental `git push` from the global runtime is blocked while `git pull --ff-only` works normally.
+2. **Profile-Preserving Fast-Forward Sync (`dotfiles-sync`)**: Running `dotfiles-sync` (or `./scripts/workstation-sync.sh --sync`) from any terminal resets local `AGENTS.md` profile composition drift, runs `git pull --ff-only`, re-applies your device's `DOTFILES_GLOBAL_PROFILE` (`human-core`, `technical`, `business`, or `full`), and runs `stow -t ~ -R bash git antigravity`.
+3. **Once-Per-Boot Terminal Auto-Sync**: On the first interactive terminal opened after booting Ubuntu, `bash/.bashrc` checks `${XDG_RUNTIME_DIR:-/tmp}/dotfiles-ubuntu-${UID}.synced` (stored in RAM `tmpfs`, cleared on reboot) and runs `workstation-sync.sh --auto` with a 4-second network timeout so offline boots never hang.
+4. **Contributor Clone Export (`DOTFILES_DEV_REPO_DIR`)**: Automatically exports `DOTFILES_DEV_REPO_DIR` when `~/Projects/dev-<repo>` is present so Corporate `Root 0` upward promotions target the development clone automatically.
 
 ### 5.2 Migrating an Existing Computer & Rescuing Unique Config
 

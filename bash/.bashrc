@@ -134,6 +134,19 @@ if [ -f "$HOME/google-cloud-sdk/completion.bash.inc" ]; then . "$HOME/google-clo
 # Added by Antigravity CLI installer
 export PATH="$HOME/.local/bin:$PATH"
 
+# Load declarative workstation configuration & boot-throttled runtime sync
+if [ -f "$HOME/.config/dotfiles-ubuntu/workstation.conf" ]; then
+    . "$HOME/.config/dotfiles-ubuntu/workstation.conf"
+fi
+if [ -x "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" ]; then
+    dotfiles-sync() {
+        "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" "$@"
+    }
+    if [ "${DOTFILES_AUTO_SYNC:-boot}" = "always" ] || { [ "${DOTFILES_AUTO_SYNC:-boot}" = "boot" ] && [ ! -f "${XDG_RUNTIME_DIR:-/tmp}/dotfiles-ubuntu-${UID}.synced" ]; }; then
+        "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" --auto
+    fi
+fi
+
 # Load machine-local overrides if present (not tracked in git)
 if [ -f ~/.bashrc.local ]; then
     . ~/.bashrc.local

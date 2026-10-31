@@ -1,4 +1,4 @@
-.PHONY: help venv install install-dev install-runtime setup-dev test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
+.PHONY: help venv install install-dev install-runtime setup-dev workstation-setup workstation-sync workstation-status test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -11,9 +11,12 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 
 help:
 	@echo "dotfiles-ubuntu development & verification targets:"
-	@echo "  make install          Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
-	@echo "  make setup-dev        Initialize ./venv and materialize local .agents/ (technical-base overlay)"
-	@echo "  make install-runtime  Create ./venv and install only runtime base requirements.txt"
+	@echo "  make install            Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
+	@echo "  make setup-dev          Initialize ./venv and materialize local .agents/ (technical-base overlay)"
+	@echo "  make workstation-setup  Configure local workstation runtime (readonly mode, human-core, boot auto-sync)"
+	@echo "  make workstation-sync   Pull latest fast-forward release, apply global profile, and re-stow"
+	@echo "  make workstation-status Show local workstation configuration and runtime status JSON"
+	@echo "  make install-runtime    Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
 	@echo "  make test-imp         Run implementation/integration tests (tests/imp/)"
@@ -40,6 +43,15 @@ venv install install-dev: $(VENV_BIN)/pytest
 setup-dev: $(VENV_BIN)/pytest
 	@rm -f $(CURDIR)/.agents/rules/human-core.md
 	./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base
+
+workstation-setup:
+	./scripts/workstation-sync.sh --setup
+
+workstation-sync:
+	./scripts/workstation-sync.sh --sync
+
+workstation-status:
+	./scripts/workstation-sync.sh --status
 
 install-runtime:
 	$(PYTHON) -m venv $(VENV_DIR)

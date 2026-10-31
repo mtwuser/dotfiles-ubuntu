@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.2.1] - 2026-10-31
+
+### Added
+- **Declarative Workstation Runtime Appliance Setup (`--workstation`), Boot-Throttled Auto-Sync (`--auto`) & `dotfiles-sync` Shell Command (`scripts/workstation-sync.sh`, `bash/.bashrc`, `bootstrap.sh`, `Makefile`, `docs/guides/01_ubuntu_system_and_multi_machine_guide.md`)**:
+  - Added [`scripts/workstation-sync.sh`](scripts/workstation-sync.sh) (`setup`, `sync`, `status`, `--auto`) and wired `./bootstrap.sh --workstation` plus `make workstation-setup` / `make workstation-sync` / `make workstation-status`:
+    1. **Declarative Device Config (`~/.config/dotfiles-ubuntu/workstation.conf`)**: Records `DOTFILES_WORKSTATION_MODE` (`readonly` vs `mutable`), `DOTFILES_GLOBAL_PROFILE` (`human-core`, `technical`, `business`, or `full`), `DOTFILES_AUTO_SYNC` (`boot`, `always`, or `off`), and `DOTFILES_DEV_REPO_DIR` (`~/Projects/dev-<repo>` when present).
+    2. **Read-Only Runtime Push Guard**: In `readonly` mode (default), sets `git config remote.origin.pushurl VALIDATION_BLOCKED_READONLY_RUNTIME` on `~/dotfiles-ubuntu` so accidental `git push` from the global runtime clone is deterministically blocked while `git pull --ff-only` remains active.
+    3. **Clean Profile-Preserving Fast-Forward Sync (`dotfiles-sync`)**: Discards local profile composition drift on `antigravity/.gemini/config/AGENTS.md` before `git pull --ff-only`, then re-applies `DOTFILES_GLOBAL_PROFILE` and re-stows `bash`, `git`, and `antigravity`.
+    4. **Once-Per-Boot Terminal Auto-Sync (`bash/.bashrc`)**: Sources `~/.config/dotfiles-ubuntu/workstation.conf`, defines the interactive `dotfiles-sync` shell command, and runs `workstation-sync.sh --auto` once per OS boot (tracked via RAM `tmpfs` stamp `${XDG_RUNTIME_DIR:-/tmp}/dotfiles-ubuntu-${UID}.synced` with a 4-second network timeout so offline boots never hang).
+
+---
+
 ## [2.2.0] - 2026-10-31
 
 ### Added

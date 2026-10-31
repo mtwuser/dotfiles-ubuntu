@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Restores system configuration from dotfiles repo
-# Usage: ./bootstrap.sh [--all | --antigravity | --packages | --stow | --nvm | --gnome | --external]
+# Usage: ./bootstrap.sh [--all | --workstation | --antigravity | --packages | --stow | --nvm | --gnome | --external]
 # Without arguments, runs interactive mode (asks before each step)
 
 set -euo pipefail
@@ -12,10 +12,11 @@ MODE="${1:-interactive}"
 
 usage() {
   cat <<EOF
-Usage: ./bootstrap.sh [--all | --antigravity | --packages | --stow | --nvm | --gnome | --external | --version | --help]
+Usage: ./bootstrap.sh [--all | --workstation | --antigravity | --packages | --stow | --nvm | --gnome | --external | --version | --help]
 
 Modes:
   (no flag)      Interactive mode — asks before each step
+  --workstation  Configure local workstation runtime (readonly mode, human-core profile, boot auto-sync)
   --antigravity  Install only Antigravity global rules, skills, and hooks (~/.gemini/config/)
   --all          Install everything without prompting
   --packages     APT + Snaps + NPM globals
@@ -29,7 +30,7 @@ EOF
 }
 
 case "$MODE" in
-  interactive|--all|--antigravity|--packages|--stow|--nvm|--gnome|--external) ;;
+  interactive|--all|--workstation|--antigravity|--packages|--stow|--nvm|--gnome|--external) ;;
   -v|--version)
     echo "dotfiles-ubuntu v$VERSION_STR"
     exit 0
@@ -62,7 +63,12 @@ confirm() {
   [ "$answer" = "y" ] || [ "$answer" = "Y" ]
 }
 
-# --- Step 0: Antigravity-only shortcut ---
+# --- Step 0: Workstation or Antigravity-only shortcut ---
+if [ "$MODE" = "--workstation" ]; then
+  shift || true
+  exec "$SCRIPT_DIR/scripts/workstation-sync.sh" --setup "$@"
+fi
+
 if [ "$MODE" = "--antigravity" ]; then
   echo "=== Installing Antigravity Global Configuration ==="
   if ! command -v stow &>/dev/null; then
