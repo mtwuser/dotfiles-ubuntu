@@ -416,14 +416,15 @@ def apply_fork_to_project(
         role = str(m.get("layer_role", "department"))
         bindings = collect_layer_effective_bindings(ldir, m)
         lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
-        if name != "root":
-            layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
-            if layer_agents.is_file():
-                dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
-                copied_files.append(str(dest_rule.relative_to(target_project_dir)))
-                if not dry_run:
-                    dest_rule.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(layer_agents, dest_rule)
+        layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
+        if layer_agents.is_file():
+            dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
+            copied_files.append(str(dest_rule.relative_to(target_project_dir)))
+            if not dry_run:
+                dest_rule.parent.mkdir(parents=True, exist_ok=True)
+                dest_rule.unlink(missing_ok=True)
+                shutil.copy2(layer_agents, dest_rule)
+                dest_rule.chmod(0o644)
 
     lineage_dest = agents_dir / "LAYER_LINEAGE.md"
     copied_files.append(str(lineage_dest.relative_to(target_project_dir)))

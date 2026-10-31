@@ -1,7 +1,7 @@
 # dotfiles-ubuntu
 
 [![CI](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml/badge.svg)](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.8.2-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-1.8.3-blue.svg)](VERSION)
 [![Coverage](https://img.shields.io/badge/coverage-100%25%20(unit%20%2B%20branch)-brightgreen.svg)](scripts/verify-repo.sh)
 [![Python](https://img.shields.io/badge/python-3.14%20(zero--deps)-3776AB.svg)](pyproject.toml)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
@@ -929,7 +929,7 @@ make docker-build && make docker-self-test
 
 ### Versioning & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.8.2`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`1.8.3`) and [`CHANGELOG.md`](CHANGELOG.md). All CLI scripts support `--version` / `-v`.
 - **Repository Verification & CI**: Run `make verify` or `./scripts/verify-repo.sh` locally (also executed automatically by GitHub Actions in [`.github/workflows/ci.yml`](.github/workflows/ci.yml)) to validate:
   1. Open-source metadata, SemVer sync, `Dockerfile` / `.dockerignore`, and all relative Markdown links across `.md` files.
   2. Bash syntax (`bash -n`) and executable permissions across all 17 shell scripts and external recipes.

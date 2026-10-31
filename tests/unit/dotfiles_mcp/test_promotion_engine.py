@@ -189,6 +189,10 @@ class TestPromotionEngine:
         (repo_dir / "templates/base/skills/sopen/SKILL.md").write_text(
             "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
         )
+        (repo_dir / "antigravity/.gemini/config").mkdir(parents=True)
+        (repo_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
+            "# Root v1\n", encoding="utf-8"
+        )
         legal_sub = repo_dir / "layers/dept-legal/antigravity/.gemini/config"
         legal_sub.mkdir(parents=True)
         (legal_sub / "AGENTS.md").write_text("# Legal v1\n", encoding="utf-8")
@@ -207,6 +211,7 @@ class TestPromotionEngine:
         (proj_dir / ".agents/rules/layer-05-dept-legal.md").write_text(
             "# Legal v2 modified\n", encoding="utf-8"
         )
+        (proj_dir / ".agents/rules/layer-10-root.md").write_text("# Root v1\n", encoding="utf-8")
         (proj_dir / ".agents/rules/layer-10-dept-sync.md").write_text(
             "# Sync v1\n", encoding="utf-8"
         )
@@ -235,6 +240,7 @@ class TestPromotionEngine:
         in_sync_files = [x["file"] for x in diff["in_sync"]]
         mod_files = [x["file"] for x in diff["modified_in_project"]]
         assert "rules/coding.md" in in_sync_files
+        assert "rules/layer-10-root.md" in in_sync_files
         assert "rules/layer-10-dept-sync.md" in in_sync_files
         assert "skills/sopen/SKILL.md" in in_sync_files
         assert "rules/testing.md" in mod_files

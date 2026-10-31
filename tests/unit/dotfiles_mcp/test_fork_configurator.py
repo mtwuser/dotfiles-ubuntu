@@ -296,6 +296,10 @@ class TestForkConfigurator:
         )
         (fork_dir / "templates/web-starter/rules/subdir").mkdir(parents=True)
         (fork_dir / "templates/web-starter/assets/subdir").mkdir(parents=True)
+        (fork_dir / "antigravity/.gemini/config").mkdir(parents=True)
+        (fork_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
+            "# Root Team Rules\n", encoding="utf-8"
+        )
 
         legal_sub = fork_dir / "layers" / "dept-legal"
         (legal_sub / "system").mkdir(parents=True)
@@ -371,6 +375,7 @@ class TestForkConfigurator:
         assert real_res["applied_template"] == "web-starter"
         assert real_res["participating_layers"] == ["dept-legal", "root", "dept-nometa"]
         assert (project_dir / ".agents/rules/layer-05-dept-legal.md").is_file()
+        assert (project_dir / ".agents/rules/layer-40-root.md").is_file()
         assert (project_dir / ".agents/LAYER_LINEAGE.md").is_file()
         assert (project_dir / "WORKTASK.md").is_file()
         assert second_res["applied_template"] == "gdpr-pack"

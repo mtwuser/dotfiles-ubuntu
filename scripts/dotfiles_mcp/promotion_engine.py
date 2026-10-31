@@ -266,7 +266,11 @@ def diff_project_against_layers(
         m = MATERIALIZED_RULE_RE.match(pfile.name)
         if m:
             sub_name = m.group(2)
-            sub_agents = repo_dir / "layers" / sub_name / "antigravity/.gemini/config/AGENTS.md"
+            sub_agents = (
+                repo_dir / "antigravity/.gemini/config/AGENTS.md"
+                if sub_name == "root"
+                else repo_dir / "layers" / sub_name / "antigravity/.gemini/config/AGENTS.md"
+            )
             if sub_agents.is_file():
                 if _sha256_file(pfile) == _sha256_file(sub_agents):
                     in_sync.append({"file": rel_key, "source": f"layer:{sub_name}"})

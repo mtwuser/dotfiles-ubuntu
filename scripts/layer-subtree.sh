@@ -20,7 +20,7 @@ export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="${DOTFILES_REPO_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
-VERSION_STR="$(tr -d '[:space:]' < "$REPO_DIR/VERSION" 2>/dev/null || echo "unknown")"
+VERSION_STR="$({ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown")"
 
 DRY_RUN=false
 
@@ -81,16 +81,45 @@ run_cmd() {
 
 resolve_layer_upstream_url() {
   local name="$1"
-  python3 - "$REPO_DIR/layers/$name/system/mcp-layer.json" <<'PYEOF'
+  python3 - "$REPO_DIR" "$name" <<'PYEOF'
 import json
+import subprocess
 import sys
 from pathlib import Path
 
-p = Path(sys.argv[1])
+repo_dir = Path(sys.argv[1])
+name = sys.argv[2]
+
+root_manifest = repo_dir / "system" / "mcp-layer.json"
+if root_manifest.is_file():
+    try:
+        rm = json.loads(root_manifest.read_text(encoding="utf-8"))
+        for entry in rm.get("mounted_layers", []):
+            if (
+                isinstance(entry, dict)
+                and entry.get("name") in (name, f"layers/{name}")
+                and entry.get("repository")
+            ):
+                print(entry["repository"])
+                sys.exit(0)
+    except Exception:
+        pass
+
+proc = subprocess.run(
+    ["git", "-C", str(repo_dir), "remote", "get-url", name],
+    capture_output=True,
+    text=True,
+    check=False,
+)
+if proc.returncode == 0 and proc.stdout.strip():
+    print(proc.stdout.strip())
+    sys.exit(0)
+
+p = repo_dir / "layers" / name / "system" / "mcp-layer.json"
 if p.is_file():
     try:
         d = json.loads(p.read_text(encoding="utf-8"))
-        print(d.get("upstream_layer", {}).get("repository", ""))
+        print(d.get("repository") or d.get("upstream_layer", {}).get("repository", ""))
     except Exception:
         print("")
 else:

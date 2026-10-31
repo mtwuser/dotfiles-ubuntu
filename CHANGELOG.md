@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.3] - 2026-10-31
+
+### Fixed
+- **Clean Missing-`VERSION` Stderr Redirection (`[DOTFILES-001]`), 3-Tier Subtree Upstream URL Resolution (`[DOTFILES-002]`) & Root `layer-<NN>-root.md` Materialization (`[DOTFILES-003]`) (`scripts/`, `tests/`)**:
+  - Wrapped `< "$REPO_DIR/VERSION"` inside `{ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown"` in [`scripts/layer-config.sh`](scripts/layer-config.sh) and [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh) so bootstrapping a brand-new fork before `VERSION` is created emits zero bash redirection noise on `stderr`.
+  - Updated `resolve_layer_upstream_url` in [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh) to resolve a mounted subtree's own repository URL via a 3-tier priority order: (1) root `system/mcp-layer.json -> mounted_layers[].repository`, (2) `git remote get-url <layer-name>`, and (3) `layers/<layer-name>/system/mcp-layer.json -> repository` / `upstream_layer.repository`, preventing multi-tier hierarchies (`dotfiles-ubuntu` $\rightarrow$ `Corporate Root` $\rightarrow$ `Department`) from pulling the parent repository into `layers/<dept>`.
+  - Updated [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) and [`diff_project_against_layers`](scripts/dotfiles_mcp/promotion_engine.py) so `apply-project` materializes the root layer's `antigravity/.gemini/config/AGENTS.md` as `.agents/rules/layer-<NN>-root.md` alongside mounted `layers/*` (`layer-<NN>-<name>.md`) with idempotent read-only destination replacement (`unlink(missing_ok=True)` + `chmod(0o644)`) (`153 passed`, **100.00% statement and branch coverage**).
+
+---
+
 ## [1.8.2] - 2026-10-30
 
 ### Fixed

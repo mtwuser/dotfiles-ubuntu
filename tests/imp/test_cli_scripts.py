@@ -254,9 +254,15 @@ def test_layer_subtree_auto_resolves_upstream_url_for_pull_push_and_pull_all(
         '"upstream_layer": {"repository": "https://example.com/dept-data.git", "branch": "main"}}',
         encoding="utf-8",
     )
+    no_ver_dir = tmp_path / "no_ver_repo"
+    no_ver_dir.mkdir(parents=True)
     env = {"PATH": "/usr/bin:/bin", "DOTFILES_REPO_DIR": str(tmp_path)}
+    no_ver_env = {"PATH": "/usr/bin:/bin", "DOTFILES_REPO_DIR": str(no_ver_dir)}
 
     # Act
+    no_ver_proc = subprocess.run(
+        [script, "--version"], cwd=no_ver_dir, env=no_ver_env, capture_output=True, text=True
+    )
     list_proc = subprocess.run(
         [script, "list"], cwd=tmp_path, env=env, capture_output=True, text=True
     )
@@ -283,6 +289,9 @@ def test_layer_subtree_auto_resolves_upstream_url_for_pull_push_and_pull_all(
     )
 
     # Assert
+    assert no_ver_proc.returncode == 0
+    assert no_ver_proc.stderr == ""
+    assert "unknown" in no_ver_proc.stdout
     assert list_proc.returncode == 0
     assert "layers/dept-data  [id=acme-dept-data, role=department" in list_proc.stdout
     assert pull_auto.returncode == 0

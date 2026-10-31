@@ -250,7 +250,7 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
     assert prom_skill["destination"] == "templates/pci-compliance/skills/pci-audit-flow/SKILL.md"
     assert diff_after["modified_in_project"] == []
     assert diff_after["novel_in_project"] == []
-    assert len(diff_after["in_sync"]) == 6  # type: ignore[arg-type]
+    assert len(diff_after["in_sync"]) == 7  # type: ignore[arg-type]
 
 
 def test_e2e_gnu_stow_bootstrap_antigravity_and_audit_global_config(
