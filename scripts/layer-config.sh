@@ -58,9 +58,19 @@ Commands:
       to detect in_sync, modified_in_project, and novel_in_project files.
 
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
-                       [--to-template <template-name>]
+                       [--to-template <template-name>] [--upstream-dir <dir>] [--prepare-pr]
+                       [--email <proposer-email>]
       Promote a matured rule, skill, or asset from <target-project-dir> into the target
-      fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates).
+      fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates)
+      and optionally generate a child-layer-contextualized Pull Request plan (--prepare-pr).
+
+  set-authority [<target-dir>] --owner-role <role> [--emails <csv>] [--contact <text>]
+      Configure layer_authority (owner_role, authorized_emails, escalation_contact) in
+      <target-dir>/system/mcp-layer.json to govern owner vs. consumer operations.
+
+  check-authority [<target-dir>] --op <operation> [--email <email>] [--file <rel-path>]
+      Verify whether the caller's git user.email (or --email) may execute <operation> on
+      <target-dir> (and optional --file), returning constructive promotion guidance on denial.
 
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
@@ -145,6 +155,10 @@ subcmd = sys.argv[4]
 rest = sys.argv[5:]
 
 sys.path.insert(0, str(script_dir))
+from dotfiles_mcp.authority_engine import (  # noqa: E402
+    configure_layer_authority,
+    verify_layer_operation_authority,
+)
 from dotfiles_mcp.fork_configurator import (  # noqa: E402
     apply_fork_to_project,
     configure_fork_manifest,
@@ -167,6 +181,14 @@ from dotfiles_mcp.workspace_bootstrapper import (  # noqa: E402
     set_global_agents_profile,
     sync_layer_workspace,
 )
+
+
+def _enforce_authority_or_exit(target: Path, op: str) -> None:
+    verdict = verify_layer_operation_authority(target, operation=op)
+    if not verdict["allowed"]:
+        print(f"❌ {verdict['remediation']}", file=sys.stderr)
+        print(json.dumps(verdict, indent=2))
+        sys.exit(2)
 
 if subcmd == "list-templates":
     node = MCPNodeBase(repo_dir=repo_dir)
@@ -216,6 +238,7 @@ if subcmd == "init-fork":
     if not layer_id:
         print("❌ Missing required --id <layer-id> for init-fork.", file=sys.stderr)
         sys.exit(1)
+    _enforce_authority_or_exit(repo_dir, "init-fork")
     manifest = configure_fork_manifest(
         repo_dir,
         layer_id=layer_id,
@@ -258,6 +281,7 @@ if subcmd == "scaffold-template":
         else:
             print(f"❌ Unknown or incomplete scaffold-template argument: {arg}", file=sys.stderr)
             sys.exit(1)
+    _enforce_authority_or_exit(repo_dir, "scaffold-template")
     res = scaffold_template_pack(
         repo_dir,
         template_name=tpl_name,
@@ -316,6 +340,9 @@ if subcmd == "promote-from-project":
     source_rel = ""
     target_layer = "root"
     target_template = None
+    upstream_dir = None
+    prepare_pr = False
+    actor_email = None
     i = 1
     while i < len(rest):
         arg = rest[i]
@@ -328,6 +355,15 @@ if subcmd == "promote-from-project":
         elif arg == "--to-template" and i + 1 < len(rest):
             target_template = rest[i + 1]
             i += 2
+        elif arg == "--upstream-dir" and i + 1 < len(rest):
+            upstream_dir = Path(rest[i + 1]).resolve()
+            i += 2
+        elif arg == "--email" and i + 1 < len(rest):
+            actor_email = rest[i + 1]
+            i += 2
+        elif arg == "--prepare-pr":
+            prepare_pr = True
+            i += 1
         else:
             print(f"❌ Unknown or incomplete promote-from-project argument: {arg}", file=sys.stderr)
             sys.exit(1)
@@ -340,6 +376,9 @@ if subcmd == "promote-from-project":
         source_rel_path=source_rel,
         target_layer=target_layer,
         target_template=target_template,
+        upstream_dir=upstream_dir,
+        prepare_pr=prepare_pr,
+        actor_email=actor_email,
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
@@ -450,9 +489,84 @@ if subcmd == "register-subtree":
             file=sys.stderr,
         )
         sys.exit(1)
+    _enforce_authority_or_exit(repo_dir, "register-subtree")
     branch = rest[2] if len(rest) >= 3 else "master"
     res = register_mounted_subtree(repo_dir, rest[0], rest[1], branch, dry_run=dry_run)
     print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "set-authority":
+    target_dir = repo_dir
+    owner_role = ""
+    emails: list[str] = []
+    contact = None
+    i = 0
+    if rest and not rest[0].startswith("--"):
+        target_dir = Path(rest[0]).resolve()
+        i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--owner-role" and i + 1 < len(rest):
+            owner_role = rest[i + 1]
+            i += 2
+        elif arg == "--emails" and i + 1 < len(rest):
+            emails = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
+        elif arg == "--contact" and i + 1 < len(rest):
+            contact = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete set-authority argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    if not owner_role:
+        print("❌ Missing required --owner-role <role> for set-authority.", file=sys.stderr)
+        sys.exit(1)
+    res = configure_layer_authority(
+        target_dir,
+        owner_role=owner_role,
+        authorized_emails=emails,
+        escalation_contact=contact,
+        dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "check-authority":
+    target_dir = repo_dir
+    op = ""
+    actor_email = None
+    target_rel_path = None
+    i = 0
+    if rest and not rest[0].startswith("--"):
+        target_dir = Path(rest[0]).resolve()
+        i = 1
+    while i < len(rest):
+        arg = rest[i]
+        if arg == "--op" and i + 1 < len(rest):
+            op = rest[i + 1]
+            i += 2
+        elif arg == "--email" and i + 1 < len(rest):
+            actor_email = rest[i + 1]
+            i += 2
+        elif arg == "--file" and i + 1 < len(rest):
+            target_rel_path = rest[i + 1]
+            i += 2
+        else:
+            print(f"❌ Unknown or incomplete check-authority argument: {arg}", file=sys.stderr)
+            sys.exit(1)
+    if not op:
+        print("❌ Missing required --op <operation> for check-authority.", file=sys.stderr)
+        sys.exit(1)
+    verdict = verify_layer_operation_authority(
+        target_dir,
+        operation=op,
+        actor_email=actor_email,
+        target_rel_path=target_rel_path,
+    )
+    print(json.dumps(verdict, indent=2))
+    if not verdict["allowed"]:
+        print(f"❌ {verdict['remediation']}", file=sys.stderr)
+        sys.exit(2)
     sys.exit(0)
 
 if subcmd == "bootstrap-workspace":

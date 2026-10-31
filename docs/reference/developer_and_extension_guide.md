@@ -67,13 +67,15 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
    ./scripts/layer-config.sh inspect-ephemeral
    ./scripts/layer-config.sh reap-ephemeral --id all
    ```
-6. **Compose Global Workstation Profile, Register Subtrees, Bootstrap & Sync Multi-Tier Workspaces (`set-global-profile`, `register-subtree`, `bootstrap-workspace`, `sync-layer`)**:
+6. **Compose Global Workstation Profile, Register Subtrees, Bootstrap, Sync & Enforce Layer Authority (`set-global-profile`, `register-subtree`, `bootstrap-workspace`, `sync-layer`, `set-authority`, `check-authority`)**:
    ```bash
    ./scripts/layer-config.sh set-global-profile human-core --stow
    ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
    ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
      --id dept-legal-ip --role domain-policy --precedence 5 \
      --templates business-base
+   ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
+   ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
    ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
      --id squad-patent-ops --role team --parent-dir /path/to/dept-legal
    ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
@@ -151,7 +153,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_post_invocation_lint.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_invocation_lint.py`
   - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
-  - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all 15 executable modules in `scripts/dotfiles_mcp/` (`capsule_engine`, `ephemeral_fork_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_ephemeral`, `tools_federation`, `tools_surface`, `tools_unfold`, `workspace_bootstrapper`).
+  - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all 16 executable modules in `scripts/dotfiles_mcp/` (`authority_engine`, `capsule_engine`, `ephemeral_fork_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_ephemeral`, `tools_federation`, `tools_surface`, `tools_unfold`, `workspace_bootstrapper`).
 - **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0, Bash CLI & Parity Gate Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh`, `layer-config.sh`, and `bash -n` syntax across all `.sh` scripts and external package recipes.

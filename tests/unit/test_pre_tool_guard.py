@@ -310,6 +310,7 @@ def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
     cmd_subshell = 'bash -lc "echo x > tests/unit/__init__.py"'
     cmd_outer_redir = 'bash -c "git status" > tests/unit/__init__.py'
     cmd_sed_inplace = "sed -i 's/pass/return/' alembic/versions/001.py"
+    cmd_layer_rule = "echo '# hack' > .agents/rules/layer-05-dept-legal.md"
     cmd_truncate = "truncate -s 10 src/orders/__init__.py"
     cmd_touch = "touch alembic/versions/002_new.py"
     cmd_py_subproc_git = (
@@ -334,6 +335,10 @@ def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
     ok_sub, _ = pre_tool_guard._check_command({"CommandLine": cmd_subshell})
     ok_outer, _ = pre_tool_guard._check_command({"CommandLine": cmd_outer_redir})
     ok_sed, _ = pre_tool_guard._check_command({"CommandLine": cmd_sed_inplace})
+    ok_layer, r_layer = pre_tool_guard._check_command({"CommandLine": cmd_layer_rule})
+    ok_fw_layer, r_fw_layer = pre_tool_guard._check_file_write(
+        {"Path": ".agents/rules/layer-05-dept-legal.md", "Content": "# x"}
+    )
     ok_trunc, _ = pre_tool_guard._check_command({"CommandLine": cmd_truncate})
     ok_touch, _ = pre_tool_guard._check_command({"CommandLine": cmd_touch})
     ok_py_git, r_py_git = pre_tool_guard._check_command({"CommandLine": cmd_py_subproc_git})
@@ -349,6 +354,9 @@ def test_check_command_blocks_shell_writes_to_protected_paths() -> None:
     assert "__init__.py Purity" in r_tee
     assert "Zero-Touch Migration Policy" in r_clobber
     assert "Zero-Touch Migration Policy" in r_heredoc
+    assert (ok_layer, ok_fw_layer) == (False, False)
+    assert "Inherited Layer Rule Immutability" in r_layer
+    assert r_layer == r_fw_layer
     assert "Commit Discipline" in r_py_git
     assert "Migration Policy" in r_py_alembic
 

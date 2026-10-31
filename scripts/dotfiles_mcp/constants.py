@@ -164,6 +164,7 @@ ALLOWED_ROOT_FILES = {
 }
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 KEBAB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+MATERIALIZED_RULE_RE = re.compile(r"^layer-(\d{2})-([a-z0-9-]+)\.md$")
 MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.(?:md|html|j2|css))`")
 BOLD_TERM_RE = re.compile(r"\*\*([^*]{3,40})\*\*")

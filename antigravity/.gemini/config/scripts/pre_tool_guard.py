@@ -69,6 +69,14 @@ _INIT_PURITY_MSG = (
     "metadata and exclude_contexts in declarative project manifests "
     "(e.g., app-manifest.yaml or pyproject.toml)."
 )
+_MATERIALIZED_LAYER_RULE_MSG = (
+    "Blocked by pre_tool_guard (Inherited Layer Rule Immutability): "
+    "Never edit materialized upstream layer rules (.agents/rules/layer-<NN>-*.md) directly. "
+    "Author local rules in your own layer or promote changes upward via "
+    "'./scripts/layer-config.sh promote-from-project <dir> --source .agents/rules/<file>.md "
+    "--to-layer <layer-id> --prepare-pr' and coordinate with the layer owner."
+)
+_MATERIALIZED_LAYER_RULE_RE = re.compile(r"(?:^|/)\.agents/rules/layer-\d{2}-[a-z0-9-]+\.md$")
 
 _MUTATING_GIT_RE = re.compile(
     r"(?:^|[;&|(`]\s*|\$\(\s*|\n\s*)git\s+(?:(?:-[Cc]|--git-dir|--work-tree)\s+\S+\s+|-\S+\s+)*(?:add|commit|push|reset\s+--hard|clean\s+-[a-zA-Z]*f|subtree\s+(?:add|pull|push|merge))\b"
@@ -91,13 +99,15 @@ _SHELL_WRITE_FALLBACK_RE = re.compile(
 
 
 def _classify_protected_path(raw_path: str) -> str | None:
-    """Return 'alembic_file' or 'init_purity' if raw_path targets a protected file."""
+    """Return protected file category if raw_path targets a guarded path."""
     cleaned = raw_path.replace("\\", "/").strip().strip("'\"")
     while cleaned.startswith("./"):
         cleaned = cleaned[2:]
     norm = cleaned if cleaned.startswith("/") else f"/{cleaned}"
     if "/alembic/versions/" in norm and norm.endswith(".py"):
         return "alembic_file"
+    if _MATERIALIZED_LAYER_RULE_RE.search(norm):
+        return "materialized_layer_rule"
     if norm.endswith("/__init__.py"):
         is_tests_init = "/tests/" in norm
         is_consumer_src_init = "/src/" in norm and "_framework/" not in norm
@@ -308,6 +318,9 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
     if kind == "alembic_file":
         return False, _ZERO_TOUCH_MIGRATION_MSG
 
+    if kind == "materialized_layer_rule":
+        return False, _MATERIALIZED_LAYER_RULE_MSG
+
     # 2. 0-byte __init__.py purity in consumer src/** and all tests/**
     if kind == "init_purity":
         content = str(
@@ -349,6 +362,9 @@ def _check_command(args: dict[str, object]) -> tuple[bool, str]:
 
     if hit == "alembic_file":
         return False, _ZERO_TOUCH_MIGRATION_MSG
+
+    if hit == "materialized_layer_rule":
+        return False, _MATERIALIZED_LAYER_RULE_MSG
 
     if hit == "init_purity":
         return False, _INIT_PURITY_MSG

@@ -77,7 +77,7 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
             untraced_sources.append(str(src.relative_to(REPO_DIR)))
 
     # Assert
-    assert len(pkg_modules) == 15
+    assert len(pkg_modules) == 16
     assert missing_unit_tests == []
     assert oversized_files == []
     assert untraced_sources == []
@@ -133,6 +133,7 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "alembic/versions/001_init.py",
         "src/orders/__init__.py",
         "tests/unit/__init__.py",
+        ".agents/rules/layer-05-dept-legal.md",
     ):
         fw_ok, fw_reason = pre_tool_guard._check_file_write(
             {"Path": f"/workspace/app/{protected_target}", "Content": "x = 1"}
@@ -194,6 +195,8 @@ def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity() -> None:
         "register-subtree",
         "bootstrap-workspace",
         "sync-layer",
+        "set-authority",
+        "check-authority",
     ):
         assert sub in readme_md
         assert sub in ext_guide
@@ -351,7 +354,7 @@ def test_test_suite_ast_anti_deception_invariants() -> None:
                 blind_subprocess_mocks.append(f"{tp.relative_to(REPO_DIR)}:{node.lineno}")
 
     # Assert
-    assert len(prod_py) == 23
+    assert len(prod_py) == 24
     assert pragma_violations == []
     assert unmatched_raises == []
     assert blind_subprocess_mocks == []

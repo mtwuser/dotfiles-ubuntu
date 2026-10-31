@@ -328,6 +328,7 @@ for protected_target in (
     "alembic/versions/001_init.py",
     "src/orders/__init__.py",
     "tests/unit/__init__.py",
+    ".agents/rules/layer-05-dept-legal.md",
 ):
     fw_ok, fw_reason = pre_tool_guard._check_file_write(
         {"Path": f"/workspace/app/{protected_target}", "Content": "x = 1"}
@@ -436,6 +437,8 @@ for cli_sub in (
     "register-subtree",
     "bootstrap-workspace",
     "sync-layer",
+    "set-authority",
+    "check-authority",
 ):
     if cli_sub not in readme_md or cli_sub not in ext_guide:
         print(f"CLI-to-doc drift: layer-config.sh subcommand '{cli_sub}' missing from README.md or developer_and_extension_guide.md", file=sys.stderr)

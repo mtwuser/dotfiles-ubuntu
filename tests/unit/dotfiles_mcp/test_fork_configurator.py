@@ -253,6 +253,7 @@ class TestForkConfigurator:
         assert real_res["binding_registered"] is True
         assert (tmp_path / "templates/gdpr-policy/assets/canonical_snippet.md").is_file()
         assert (tmp_path / "templates/rust-axum/governance/WORKTASK.md").is_file()
+        assert (tmp_path / "templates/rust-axum/governance/Makefile").is_file()
         assert (tmp_path / "templates/rust-axum/rules/rust-axum.md").is_file()
         assert starter_res["kind"] == "stack-starter"
         updated_manifest = json.loads(

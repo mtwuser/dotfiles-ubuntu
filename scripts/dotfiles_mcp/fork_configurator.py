@@ -262,12 +262,19 @@ def scaffold_template_pack(
             f"---\n\n"
             f"# {template_name} Guide\n\n"
             f"1. Review `templates/{template_name}/rules/{effective_rule}`.\n"
-            f"2. Verify all invariants before completing the task.\n"
+            f"2. Verify invariants via `./scripts/layer-config.sh diff-project` "
+            f"and promote via `promote-from-project --prepare-pr`.\n"
         ),
     }
     if kind in ("stack-starter", "project-overlay"):
         files_to_write[f"templates/{template_name}/governance/WORKTASK.md"] = (
             f"# Active Work Tasks — {template_name}\n\n- [ ] Initial setup\n"
+        )
+    if kind == "stack-starter":
+        files_to_write[f"templates/{template_name}/governance/Makefile"] = (
+            ".PHONY: install format lint test test-cov verify\n"
+            "install:\n\t@echo 'Configure stack dependencies'\n"
+            "verify:\n\t@echo 'Run stack verification gates'\n"
         )
     if kind != "stack-starter":
         files_to_write[f"templates/{template_name}/assets/canonical_snippet.md"] = (
@@ -389,7 +396,7 @@ def apply_fork_to_project(
                         dest.chmod(0o644)
         gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
-            for gfile in sorted(gov_src.glob("*.md")):
+            for gfile in [*sorted(gov_src.glob("*.md")), *sorted(gov_src.glob("Makefile"))]:
                 dest_g = target_project_dir / gfile.name
                 if not dest_g.exists():
                     copied_files.append(gfile.name)

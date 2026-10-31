@@ -9,12 +9,15 @@ Execute this workflow **ONLY** when the user explicitly requests cutting or publ
 
 ---
 
-## 1. Pre-Release Agnosticism & Zero-Residue Scan
+## 1. Layer Authority, Agnosticism & Zero-Residue Scan
 
-1. **Open-Source Agnosticism & Zero-Literal Exclusion Gate (Public / Upstream Repos)**:
+1. **Layer Owner vs. Consumer Authority Gate (`check-authority --op release`)**:
+   - When releasing a governance layer repository (`system/mcp-layer.json`), verify caller authority via `./scripts/layer-config.sh check-authority <repo-dir> --op release`.
+   - If the caller is a downstream consumer (or their `git config user.email` does not match `layer_authority.authorized_emails`), **STOP**: a consumer team/squad must **never** publish upstream department/corporate rules directly. Instead, run `./scripts/layer-config.sh promote-from-project <your-workspace> --source <file> --to-layer <upstream-layer> --prepare-pr` to open a Pull Request from the originating layer's context and coordinate with `layer_authority.escalation_contact`.
+2. **Open-Source Agnosticism & Zero-Literal Exclusion Gate (Public / Upstream Repos)**:
    - Verify that zero private downstream organization names, internal project codenames, or private backlog ticket IDs appear anywhere in `CHANGELOG.md`, `README.md`, `docs/`, `templates/`, `scripts/`, or `tests/`.
    - **Anti-Streisand Invariant**: Never hardcode forbidden private names (not even hex- or base64-encoded) inside the repository's own tests or scripts; rely on dynamic local discovery (`Path.home() / "Projects"`) or structural regex patterns.
-2. **Sterile Working Tree & Residue Scan**:
+3. **Sterile Working Tree & Residue Scan**:
    - Check `git status --short` and remove any temporary scratch files, `.svg` renders, or untracked artifacts.
 
 ---

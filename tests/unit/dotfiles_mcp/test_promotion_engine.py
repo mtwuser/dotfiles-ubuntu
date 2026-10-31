@@ -392,9 +392,23 @@ class TestPromotionEngine:
             proj_dir,
             source_rel_path=".agents/rules/AGENTS.md",
             target_layer="root",
+            prepare_pr=True,
+            actor_email="member@squad.acme.com",
             dry_run=True,
         )
         assert exact_18k_res["destination"] == "antigravity/.gemini/config/AGENTS.md"
+        assert exact_18k_res["promotion_pr_plan"]["proposer_email"] == "member@squad.acme.com"
+        upstream_res = promote_project_asset_to_layer(
+            repo_dir,
+            proj_dir,
+            source_rel_path=".agents/rules/legal.md",
+            target_layer="dept-legal",
+            target_template="gdpr-pack",
+            upstream_dir=repo_dir / "layers" / "dept-legal",
+            dry_run=True,
+        )
+        assert upstream_res["destination"] == "templates/gdpr-pack/rules/legal.md"
+        assert "promotion_pr_plan" in upstream_res
         with pytest.raises(ValueError, match="<= 500 lines"):
             promote_project_asset_to_layer(
                 repo_dir,

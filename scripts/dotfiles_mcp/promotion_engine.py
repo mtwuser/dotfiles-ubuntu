@@ -12,10 +12,9 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES, KEBAB_ID_RE
+from dotfiles_mcp.authority_engine import build_upward_promotion_pr_plan
+from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES, KEBAB_ID_RE, MATERIALIZED_RULE_RE
 from dotfiles_mcp.manifest_helpers import _parse_skill_frontmatter
-
-MATERIALIZED_RULE_RE = re.compile(r"^layer-(\d{2})-([a-z0-9-]+)\.md$")
 
 
 def _sha256_file(path: Path) -> str:
@@ -313,6 +312,9 @@ def promote_project_asset_to_layer(
     source_rel_path: str,
     target_layer: str = "root",
     target_template: str | None = None,
+    upstream_dir: Path | None = None,
+    prepare_pr: bool = False,
+    actor_email: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Promote a rule, skill, or asset from <project_dir> into a fork layer or template pack."""
@@ -320,10 +322,10 @@ def promote_project_asset_to_layer(
     if not src_file.is_relative_to(project_dir.resolve()) or not src_file.is_file():
         raise ValueError(f"Invalid or missing project source file: {source_rel_path!r}")
 
-    repo_resolved = repo_dir.resolve()
+    repo_resolved = upstream_dir.resolve() if upstream_dir is not None else repo_dir.resolve()
     layer_base = (
         repo_resolved
-        if target_layer in ("", "root")
+        if target_layer in ("", "root") or upstream_dir is not None
         else (repo_resolved / "layers" / target_layer).resolve()
     )
     if not layer_base.is_relative_to(repo_resolved) or not layer_base.is_dir():
@@ -378,13 +380,16 @@ def promote_project_asset_to_layer(
         shutil.copy2(src_file, dest_file)
         dest_file.chmod(0o644)
 
-    eff_layer = "root" if layer_base == repo_resolved else target_layer
-    return {
-        "source": str(src_file.relative_to(project_dir.resolve())),
+    eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
+    src_rel_str = str(src_file.relative_to(project_dir.resolve()))
+    dest_rel_str = str(dest_file.relative_to(repo_resolved))
+    sha256_str = _sha256_file(src_file)
+    result: dict[str, Any] = {
+        "source": src_rel_str,
         "target_layer": eff_layer,
         "target_template": eff_template,
-        "destination": str(dest_file.relative_to(repo_dir.resolve())),
-        "sha256": _sha256_file(src_file),
+        "destination": dest_rel_str,
+        "sha256": sha256_str,
         "subtree_push_command": (
             f"./scripts/layer-subtree.sh push {eff_layer} feat/promote-{src_file.stem}"
             if eff_layer != "root"
@@ -392,3 +397,15 @@ def promote_project_asset_to_layer(
         ),
         "dry_run": dry_run,
     }
+    if prepare_pr or upstream_dir is not None:
+        result["promotion_pr_plan"] = build_upward_promotion_pr_plan(
+            project_dir,
+            layer_base,
+            source_rel=src_rel_str,
+            dest_rel=str(dest_file.relative_to(layer_base)),
+            target_layer=eff_layer,
+            target_template=eff_template,
+            sha256=sha256_str,
+            actor_email=actor_email,
+        )
+    return result

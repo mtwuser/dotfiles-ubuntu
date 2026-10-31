@@ -255,11 +255,12 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 ├── scripts/                           ← NOT stow — utility, MCP, subtree, fork-config & CI verification scripts
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ symlinks & orphans
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (17 modules, < 465 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP Server & Fork/Promotion package (18 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
 │   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
 │   │   ├── workspace_bootstrapper.py  ←     Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
+│   │   ├── authority_engine.py        ←     Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
 │   │   ├── promotion_engine.py        ←     Multi-layer pattern comparison, diff-project & promote-from-project
 │   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
 │   │   ├── surface_weaver.py          ←     Stack-agnostic surface selector inference & Lex Specialis scoring
@@ -298,7 +299,8 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/*.md /path/to/my-app
 │
 ├── tests/                             ← ❌ NOT stowed — automated test suite (100% branch coverage)
 │   ├── unit/                          ←   1:1 unit tests for lifecycle hooks & MCP server modules
-│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 15 executable MCP package modules
+│   │   ├── dotfiles_mcp/              ←     1:1 unit tests for all 16 executable MCP package modules
+│   │   │   ├── test_authority_engine.py
 │   │   │   ├── test_manifest_helpers.py
 │   │   │   ├── test_fork_configurator.py
 │   │   │   ├── test_workspace_bootstrapper.py
@@ -459,10 +461,12 @@ Templates under `templates/<name>/` are polymorphic (discovered dynamically acro
 ./scripts/layer-config.sh inspect-ephemeral
 ./scripts/layer-config.sh reap-ephemeral --id all
 
-# 7. Compose machine-global AGENTS.md profile, register a mounted subtree, bootstrap or sync a multi-tier workspace (Corporate -> Department -> Squad/Team):
+# 7. Compose machine-global AGENTS.md profile, register a mounted subtree, bootstrap/sync workspaces, or configure/verify layer authority:
 ./scripts/layer-config.sh set-global-profile human-core --stow
 ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
+./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
+./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
 ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents --id squad-patent-ops --role team --parent-dir /path/to/dept-legal
 ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
 ```

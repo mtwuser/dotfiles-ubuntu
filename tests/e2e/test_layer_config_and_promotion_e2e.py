@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 from dotfiles_mcp.promotion_engine import (
@@ -67,16 +68,12 @@ def _create_node_fixture(
     )
 
 
-def _run_layer_config(fork_dir: Path, *args: str) -> dict[str, object]:
+def _run_layer_config(fork_dir: Path, *args: str) -> dict[str, Any]:
     """Execute scripts/layer-config.sh against fork_dir and parse its JSON stdout."""
-    env = {
-        **os.environ,
-        "DOTFILES_REPO_DIR": str(fork_dir),
-    }
     proc = subprocess.run(
         [str(LAYER_CONFIG_SCRIPT), *args],
         cwd=fork_dir,
-        env=env,
+        env={**os.environ, "DOTFILES_REPO_DIR": str(fork_dir)},
         capture_output=True,
         text=True,
         timeout=15,
@@ -90,25 +87,20 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
 ) -> None:
     """Validate init-fork -> scaffold -> apply -> compare -> diff -> promote -> in_sync."""
     # Arrange
-    fork_dir = tmp_path / "fintech_fork"
-    proj_dir = tmp_path / "checkout_app"
+    fork_dir, proj_dir = tmp_path / "fintech_fork", tmp_path / "checkout_app"
     _create_node_fixture(
         fork_dir,
-        layer_id="acme-fintech-fork",
-        layer_role="domain-policy",
-        manifest_extra={"default_stack_templates": ["fastapi-hexagonal"]},
+        "acme-fintech-fork",
+        "domain-policy",
+        {"default_stack_templates": ["fastapi-hexagonal"]},
     )
     _create_node_fixture(
         fork_dir / "layers" / "dept-security",
-        layer_id="acme-dept-security",
-        layer_role="department",
-        manifest_extra={"precedence": 20, "surface_bindings": []},
+        "acme-dept-security",
+        "department",
+        {"precedence": 20, "surface_bindings": []},
     )
-
-    # Act — Step 1: Parameterize fork and scaffold template pack with surface binding via CLI
-    init_res = _run_layer_config(
-        fork_dir,
-        "init-fork",
+    init_args = (
         "--id",
         "acme-fintech-fork",
         "--role",
@@ -117,6 +109,9 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
         "15",
         "--prune-default-templates",
     )
+
+    # Act — Step 1: Parameterize fork and scaffold template pack with surface binding via CLI
+    init_res = _run_layer_config(fork_dir, "init-fork", *init_args)
     scaffold_res = _run_layer_config(
         fork_dir,
         "scaffold-template",
@@ -126,20 +121,12 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
         "--register-binding",
     )
     apply_res = _run_layer_config(
-        fork_dir,
-        "apply-project",
-        str(proj_dir),
-        "--template",
-        "pci-compliance",
-        "--layers",
-        "all",
+        fork_dir, "apply-project", str(proj_dir), "--template", "pci-compliance", "--layers", "all"
     )
 
     # Act — Step 2: Modify materialized rules and create novel rule & skill in consumer project
     (proj_dir / ".agents" / "rules" / "policy.md").write_text(
-        "# PCI Compliance Rules (Updated in Project)\n\n"
-        "## Core Mandate\n\n"
-        '> *"Tokenize PAN before logging"* \n',
+        '# PCI Compliance Rules (Updated in Project)\n\n## Core Mandate\n\n> *"Tokenize PAN"* \n',
         encoding="utf-8",
     )
     (proj_dir / ".agents" / "rules" / "layer-20-dept-security.md").write_text(
@@ -153,12 +140,7 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
     novel_skill_dir = proj_dir / ".agents" / "skills" / "pci-audit-flow"
     novel_skill_dir.mkdir(parents=True, exist_ok=True)
     (novel_skill_dir / "SKILL.md").write_text(
-        "---\n"
-        "name: pci-audit-flow\n"
-        'description: "Audit PCI-DSS tokenization flows across services."\n'
-        "---\n\n"
-        "# PCI Audit Flow\n\n"
-        "1. Verify PAN masking.\n",
+        '---\nname: pci-audit-flow\ndescription: "Audit PCI flows."\n---\n\n# PCI Audit\n',
         encoding="utf-8",
     )
 
@@ -179,16 +161,14 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
         )["content"][0]["text"]
     )
     diff_before = _run_layer_config(fork_dir, "diff-project", str(proj_dir))
+    tpl_flag = ("--to-layer", "root", "--to-template", "pci-compliance")
     prom_policy = _run_layer_config(
         fork_dir,
         "promote-from-project",
         str(proj_dir),
         "--source",
         ".agents/rules/policy.md",
-        "--to-layer",
-        "root",
-        "--to-template",
-        "pci-compliance",
+        *tpl_flag,
     )
     prom_dept = _run_layer_config(
         fork_dir,
@@ -205,10 +185,7 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
         str(proj_dir),
         "--source",
         ".agents/rules/security-webhook.md",
-        "--to-layer",
-        "root",
-        "--to-template",
-        "pci-compliance",
+        *tpl_flag,
     )
     prom_skill = _run_layer_config(
         fork_dir,
@@ -216,15 +193,12 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
         str(proj_dir),
         "--source",
         ".agents/skills/pci-audit-flow/SKILL.md",
-        "--to-layer",
-        "root",
-        "--to-template",
-        "pci-compliance",
+        *tpl_flag,
     )
     diff_after = _run_layer_config(fork_dir, "diff-project", str(proj_dir))
 
     # Assert
-    assert init_res["manifest"]["precedence"] == 15  # type: ignore[index]
+    assert init_res["manifest"]["precedence"] == 15
     assert scaffold_res["binding_registered"] is True
     assert apply_res["applied_template"] == "pci-compliance"
     assert apply_res["participating_layers"] == ["root", "dept-security"]
@@ -236,7 +210,7 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
     routing_by_item = {r["item"]: r for r in cmp_resp["promotion_routing"]}
     assert routing_by_item["security-webhook.md"]["target_layer"] == "dept-security"
     assert routing_by_item["pci-audit-flow"]["target_layer"] == "root"
-    assert [m["file"] for m in diff_before["modified_in_project"]] == [  # type: ignore[attr-defined]
+    assert [m["file"] for m in diff_before["modified_in_project"]] == [
         "rules/layer-20-dept-security.md",
         "rules/policy.md",
     ]
@@ -250,7 +224,7 @@ def test_e2e_cli_and_mcp_downward_projection_to_upward_promotion_cycle(
     assert prom_skill["destination"] == "templates/pci-compliance/skills/pci-audit-flow/SKILL.md"
     assert diff_after["modified_in_project"] == []
     assert diff_after["novel_in_project"] == []
-    assert len(diff_after["in_sync"]) == 7  # type: ignore[arg-type]
+    assert len(diff_after["in_sync"]) == 7
 
 
 def test_e2e_gnu_stow_bootstrap_antigravity_and_audit_global_config(
@@ -395,30 +369,38 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     """Validate 4-tier chain (Platform -> Corporate -> Department -> Squad) via CLI."""
     # Arrange
     corp_dir, dept_dir, squad_dir = tmp_path / "corp", tmp_path / "dept", tmp_path / "squad"
-    corp_args = (
+    corp_args = [
         "--id",
         "acme-corporate-base",
         "--role",
         "corporate",
         "--templates",
         "business-base",
-    )
-    dept_args = (
-        "--id",
-        "dept-eng-platform",
-        "--role",
-        "department",
+    ]
+    dept_args = [
+        *["--id", "dept-eng-platform", "--role", "department", "--templates", "technical-base"],
         "--parent-dir",
         str(corp_dir),
-        "--templates",
-        "technical-base",
-    )
+    ]
     squad_args = ("--id", "squad-cad-core", "--role", "team", "--parent-dir", str(dept_dir))
+    promo_args = [
+        *["--source", ".agents/rules/squad-cad-core.md", "--to-layer", "dept-eng-platform"],
+        *["--to-template", "dept-eng-platform", "--prepare-pr", "--email", "dev@squad.acme.com"],
+        "--upstream-dir",
+        str(dept_dir),
+    ]
 
     # Act
     corp_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(corp_dir), *corp_args)
     dept_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(dept_dir), *dept_args)
     squad_boot = _run_layer_config(REPO_DIR, "bootstrap-workspace", str(squad_dir), *squad_args)
+    auth_res = _run_layer_config(
+        REPO_DIR, "set-authority", str(dept_dir), "--owner-role", "CTO", "--emails", "cto@acme.com"
+    )
+    chk_ok = _run_layer_config(
+        REPO_DIR, "check-authority", str(dept_dir), "--op", "release", "--email", "cto@acme.com"
+    )
+    pr_promo = _run_layer_config(REPO_DIR, "promote-from-project", str(squad_dir), *promo_args)
     reg_res = _run_layer_config(
         corp_dir, "register-subtree", "dept-eng", "https://example.com/dept.git"
     )
@@ -431,6 +413,9 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
 
     # Assert
     assert corp_boot["applied_template"] == "business-base,acme-corporate-base"
+    assert (auth_res["layer_authority"]["owner_role"], chk_ok["allowed"]) == ("CTO", True)
+    assert pr_promo["promotion_pr_plan"]["origin_layer_id"] == "squad-cad-core"
+    assert pr_promo["promotion_pr_plan"]["target_layer_id"] == "dept-eng-platform"
     assert (
         dept_boot["applied_template"]
         == "business-base,acme-corporate-base,technical-base,dept-eng-platform"
@@ -444,12 +429,12 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
     assert (squad_dir / ".agents/rules/acme-corporate-base.md").read_text(
         encoding="utf-8"
     ) == "# Updated Corp Policy v2\n"
-    for expected_rule in (
-        ".agents/rules/business-base.md",
-        ".agents/rules/acme-corporate-base.md",
-        ".agents/rules/technical-base.md",
-        ".agents/rules/dept-eng-platform.md",
-        ".agents/rules/squad-cad-core.md",
-        ".agents/rules/layer-50-root.md",
+    for r in (
+        "business-base",
+        "acme-corporate-base",
+        "technical-base",
+        "dept-eng-platform",
+        "squad-cad-core",
+        "layer-50-root",
     ):
-        assert expected_rule in squad_boot["files_materialized"]  # type: ignore[operator]
+        assert f".agents/rules/{r}.md" in squad_boot["files_materialized"]
