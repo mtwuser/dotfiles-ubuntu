@@ -9,7 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [2.0.0] - 2026-10-31
+
 ### Added
+- **Role-Specialized Layer Workspace `Makefile` & Day-to-Day `/sopen` / `/enrich` Horizon Integration (`scripts/dotfiles_mcp/workspace_bootstrapper.py`, `antigravity/.gemini/config/skills/sopen/SKILL.md`, `antigravity/.gemini/config/skills/enrich/SKILL.md`, `docs/guides/02_hierarchical_layers_and_team_workflows.md`)**:
+  - Updated `bootstrap_layer_workspace` and `sync_layer_workspace` in [`workspace_bootstrapper.py`](scripts/dotfiles_mcp/workspace_bootstrapper.py) (`_render_layer_makefile`) so every `corporate`, `domain-policy`, `department`, and `team` workspace receives a role-specialized `Makefile` pre-wired with `PARENT_DIR` (`make horizon`, `make sync`, `make diff`, `make authority`, `make promote SOURCE=<rel-path> [TEMPLATE=<pack>]`, `make mcp-test`).
+  - Enhanced [`/sopen`](antigravity/.gemini/config/skills/sopen/SKILL.md) (`§0`) and [`/enrich`](antigravity/.gemini/config/skills/enrich/SKILL.md) (`§2.3`) to run `make horizon` and `make diff` automatically on layer workspaces and execute 1-hop promotions/syncs without manual CLI invocations.
 - **Modular 3-Tier Base Governance Profiles (`human-core`, `technical-base`, `business-base`), Multi-Tier Workspace Bootstrapper & Template Sync (`bootstrap-workspace`, `sync-layer`), Zero-Literal Exclusion Gate & `/release` Skill (`templates/`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/layer-config.sh`, `antigravity/.gemini/config/skills/release/SKILL.md`)**:
   - Decoupled the global ruleset into three composable domain-policy template packs under `templates/`:
     1. **[`templates/human-core/`](templates/human-core/rules/human-core.md)** (default machine-global `antigravity/.gemini/config/AGENTS.md`): Universal human cognitive rigor (`§1–10`, including `§8.5` **Zero-Literal Exclusion / Anti-Streisand Gate** forbidding literal or encoded exclusion lists inside repository rules/tests), `dotfiles-ubuntu` native orchestration self-guidance (`§11`), `antigravity-ide` (360° viewer) vs. `antigravity-agents` (scoped workspaces) isolation, model delegation (`§12`), single-language purity (`§13`), and `[Unreleased]` commit/release governance — reducing idle global rule tokens by **~46%** while preserving 100% of universal behavioral gates.
@@ -23,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clean Missing-`VERSION` Stderr Redirection, 3-Tier Subtree Upstream URL Resolution & Root `layer-<NN>-root.md` Materialization (`scripts/`, `tests/`)**:
   - Wrapped `< "$REPO_DIR/VERSION"` inside `{ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown"` in [`scripts/layer-config.sh`](scripts/layer-config.sh) and [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh) so bootstrapping a brand-new fork before `VERSION` is created emits zero bash redirection noise on `stderr`.
   - Updated `resolve_layer_upstream_url` in [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh) to resolve a mounted subtree's own repository URL via a 3-tier priority order: (1) root `system/mcp-layer.json -> mounted_layers[].repository`, (2) `git remote get-url <layer-name>`, and (3) `layers/<layer-name>/system/mcp-layer.json -> repository` / `upstream_layer.repository`, preventing multi-tier hierarchies (`dotfiles-ubuntu` $\rightarrow$ `Corporate Root` $\rightarrow$ `Department`) from pulling the parent repository into `layers/<dept>`.
-  - Updated [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) and [`diff_project_against_layers`](scripts/dotfiles_mcp/promotion_engine.py) so `apply-project` materializes the root layer's `antigravity/.gemini/config/AGENTS.md` as `.agents/rules/layer-<NN>-root.md` alongside mounted `layers/*` (`layer-<NN>-<name>.md`) with idempotent read-only destination replacement (`unlink(missing_ok=True)` + `chmod(0o644)`) (`158 passed`, **100.00% statement and branch coverage**).
+  - Updated [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) and [`diff_project_against_layers`](scripts/dotfiles_mcp/promotion_engine.py) so external consumer projects materialize `.agents/rules/layer-<NN>-root.md` while self-hosted layer workspaces (`repo_dir == target_project_dir`) omit redundant `layer-<NN>-root.md` duplicates alongside their own `<pack>.md` and mounted `layers/*` (`layer-<NN>-<name>.md`) (`158 passed`, **100.00% statement and branch coverage**).
 
 ---
 

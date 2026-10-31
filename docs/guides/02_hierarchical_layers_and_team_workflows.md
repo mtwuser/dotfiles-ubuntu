@@ -111,6 +111,21 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
   --target-repo ~/dotfiles-ubuntu --to-template human-core --create-pr
 ```
 
+### 3.3 Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`
+
+Nobody needs to memorize long `layer-config.sh` invocations for daily operations. Every layer workspace initialized or synced via `bootstrap-workspace` / `sync-layer` provides two built-in ergonomic channels:
+
+1. **In Chat (`/sopen` & `/enrich` Slash Workflows)**:
+   - **`/sopen`**: Automatically inspects the workspace's 1-hop horizon (`make horizon`) and rule drift (`make diff`) at session start.
+   - **`/enrich`**: Classifies local `.agents/` rules against the 1-hop parent layer, runs `make promote` (upward) or `make sync` (downward) after user approval, and prepares commit/PR blocks.
+2. **In Terminal (Role-Specialized `Makefile` in Every Layer Workspace)**:
+   - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
+   - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
+   - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
+   - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
+   - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr`.
+   - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
+
 ---
 
 ## 4. Authoring Custom Skills & Slash Commands

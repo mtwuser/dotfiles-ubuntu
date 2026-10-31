@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -196,12 +197,30 @@ class TestWorkspaceBootstrapper:
             scaffold_own_template=True,
             dry_run=False,
         )
-        dept_manifest = json.loads(
-            (target_dir / "system" / "mcp-layer.json").read_text(encoding="utf-8")
+        squad_pre_git = bootstrap_layer_workspace(
+            repo_dir,
+            tmp_path / "squad-pre-git",
+            layer_id="squad-pre-git",
+            layer_role="team",
+            parent_dir=target_dir,
+            scaffold_own_template=False,
+            dry_run=True,
         )
-        dept_manifest["repository"] = "https://example.com/dept-legal-ip.git"
-        (target_dir / "system" / "mcp-layer.json").write_text(
-            json.dumps(dept_manifest, indent=2) + "\n", encoding="utf-8"
+        subprocess.run(
+            ["/usr/bin/git", "init", "-q"],
+            cwd=target_dir,
+            check=True,
+        )
+        subprocess.run(
+            [
+                "/usr/bin/git",
+                "remote",
+                "add",
+                "origin",
+                "https://example.com/dept-legal-ip.git",
+            ],
+            cwd=target_dir,
+            check=True,
         )
         squad_dir = tmp_path / "squad-patent-ops"
         squad_res = bootstrap_layer_workspace(
@@ -216,7 +235,9 @@ class TestWorkspaceBootstrapper:
         )
         (bdir / "business-base.md").write_text("# Business Base v2\n", encoding="utf-8")
         (squad_dir / "templates/local-only").mkdir(parents=True)
-        sync_dry = sync_layer_workspace(repo_dir, target_dir, dry_run=True)
+        sync_dry = sync_layer_workspace(
+            repo_dir, target_dir, templates=["human-core"], dry_run=True
+        )
         sync_dept = sync_layer_workspace(repo_dir, target_dir, dry_run=False)
         sync_squad = sync_layer_workspace(repo_dir, squad_dir, parent_dir=target_dir, dry_run=False)
         bare_layer = tmp_path / "bare-layer"
@@ -225,19 +246,27 @@ class TestWorkspaceBootstrapper:
             '{"schema_version": "1.2", "layer_id": "bare-layer", "default_stack_templates": []}',
             encoding="utf-8",
         )
-        sync_bare = sync_layer_workspace(repo_dir, bare_layer, dry_run=False)
+        sync_bare = sync_layer_workspace(repo_dir, bare_layer, templates=[""], dry_run=False)
+        sync_bare_add = sync_layer_workspace(
+            repo_dir, bare_layer, templates=["business-base"], dry_run=False
+        )
 
         # Assert
         assert dry_res["dry_run"] is True
+        assert squad_pre_git["dry_run"] is True
         assert dry_res["scaffolded_template"] is None
         assert dry_res["precedence"] == 50
         assert live_res["precedence"] == 5
         assert live_res["copied_templates"] == ["business-base", "human-core"]
         assert live_res["scaffolded_template"] == "dept-legal-ip"
         assert "VERSION" not in live_res["baseline_files_created"]
+        assert "Makefile" in live_res["baseline_files_created"]
+        assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
+        assert str(target_dir.resolve()) in (squad_dir / "Makefile").read_text(encoding="utf-8")
+        assert (bare_layer / "Makefile").is_file()
         assert ".agents/rules/business-base.md" in live_res["files_materialized"]
         assert ".agents/rules/dept-legal-ip.md" in live_res["files_materialized"]
-        assert ".agents/rules/layer-05-root.md" in live_res["files_materialized"]
+        assert ".agents/rules/layer-05-root.md" not in live_res["files_materialized"]
         assert squad_res["precedence"] == 50
         assert squad_res["manifest"]["upstream_layer"]["layer_id"] == "dept-legal-ip"
         assert (
@@ -247,7 +276,7 @@ class TestWorkspaceBootstrapper:
         assert ".agents/rules/business-base.md" in squad_res["files_materialized"]
         assert ".agents/rules/dept-legal-ip.md" in squad_res["files_materialized"]
         assert ".agents/rules/squad-patent-ops.md" in squad_res["files_materialized"]
-        assert ".agents/rules/layer-50-root.md" in squad_res["files_materialized"]
+        assert ".agents/rules/layer-50-root.md" not in squad_res["files_materialized"]
         assert sync_dry["dry_run"] is True
         assert "business-base" in sync_dept["synced_templates"]
         assert "business-base" in sync_squad["synced_templates"]
@@ -255,6 +284,7 @@ class TestWorkspaceBootstrapper:
             encoding="utf-8"
         ) == "# Business Base v2\n"
         assert sync_bare["synced_templates"] == []
+        assert sync_bare_add["synced_templates"] == ["business-base"]
         with pytest.raises(ValueError, match="Missing target layer manifest"):
             sync_layer_workspace(repo_dir, tmp_path / "missing-layer")
         with pytest.raises(ValueError, match="Invalid layer_id"):

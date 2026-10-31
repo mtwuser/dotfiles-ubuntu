@@ -402,10 +402,12 @@ def inspect_layer_horizon(
     ws_ver = ws_vf.read_text(encoding="utf-8").strip() if ws_vf.is_file() else None
     is_oss = _is_oss_root_manifest(up_m)
     auth_v = verify_layer_operation_authority(ws, operation="release", actor_email=actor_email)
+    ws_tpls = [d.name for d in sorted((ws / "templates").glob("*")) if d.is_dir()]
+    cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
     shared = [
-        str(t)
-        for t in ws_m.get("default_stack_templates", [])
-        if (up / "templates" / str(t)).is_dir() and (ws / "templates" / str(t)).is_dir()
+        t
+        for t in dict.fromkeys(cand_tpls)
+        if (up / "templates" / t).is_dir() and (ws / "templates" / t).is_dir()
     ]
     drifts: list[dict[str, Any]] = []
     for tpl in shared:

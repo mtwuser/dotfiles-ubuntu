@@ -434,8 +434,11 @@ def apply_fork_to_project(
         bindings = collect_layer_effective_bindings(ldir, m)
         lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
         layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
-        if layer_agents.is_file():
-            dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
+        dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
+        if name == "root" and repo_dir.resolve() == target_project_dir.resolve():
+            if not dry_run:
+                dest_rule.unlink(missing_ok=True)
+        elif layer_agents.is_file():
             copied_files.append(str(dest_rule.relative_to(target_project_dir)))
             if not dry_run:
                 dest_rule.parent.mkdir(parents=True, exist_ok=True)

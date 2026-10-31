@@ -196,8 +196,9 @@ def _enforce_authority_or_exit(target: Path, op: str) -> None:
         sys.exit(2)
 
 if subcmd == "list-templates":
-    node = MCPNodeBase(repo_dir=repo_dir)
-    catalog = discover_templates_catalog(repo_dir, node._discover_mounted_layers())
+    target_dir = Path(rest[0]).resolve() if rest and not rest[0].startswith("-") else repo_dir
+    node = MCPNodeBase(repo_dir=target_dir)
+    catalog = discover_templates_catalog(target_dir, node._discover_mounted_layers())
     print(json.dumps({"count": len(catalog), "templates": catalog}, indent=2))
     sys.exit(0)
 
@@ -333,7 +334,8 @@ if subcmd == "diff-project":
         print("❌ Usage: ./scripts/layer-config.sh diff-project <target-project-dir>", file=sys.stderr)
         sys.exit(1)
     target_dir = Path(rest[0]).resolve()
-    res = diff_project_against_layers(repo_dir, target_dir)
+    base_dir = target_dir if (target_dir / "system" / "mcp-layer.json").is_file() else repo_dir
+    res = diff_project_against_layers(base_dir, target_dir)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
@@ -360,13 +362,13 @@ if subcmd == "promote-from-project":
         elif arg == "--to-template" and i + 1 < len(rest):
             target_template = rest[i + 1]
             i += 2
-        elif arg == "--upstream-dir" and i + 1 < len(rest):
+        elif arg in ("--upstream-dir", "--target-repo") and i + 1 < len(rest):
             upstream_dir = Path(rest[i + 1]).resolve()
             i += 2
         elif arg == "--email" and i + 1 < len(rest):
             actor_email = rest[i + 1]
             i += 2
-        elif arg == "--prepare-pr":
+        elif arg in ("--prepare-pr", "--create-pr"):
             prepare_pr = True
             i += 1
         else:
@@ -591,6 +593,7 @@ if subcmd == "bootstrap-workspace":
     upstream_id = None
     upstream_branch = "master"
     tpls = None
+    own_tpl_name = None
     scaffold_own = True
     i = 1
     while i < len(rest):
@@ -622,6 +625,9 @@ if subcmd == "bootstrap-workspace":
         elif arg == "--templates" and i + 1 < len(rest):
             tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
             i += 2
+        elif arg == "--template-name" and i + 1 < len(rest):
+            own_tpl_name = rest[i + 1]
+            i += 2
         elif arg == "--no-scaffold-own":
             scaffold_own = False
             i += 1
@@ -643,6 +649,7 @@ if subcmd == "bootstrap-workspace":
         upstream_layer_id=upstream_id,
         parent_dir=parent_dir,
         templates=tpls,
+        own_template_name=own_tpl_name,
         scaffold_own_template=scaffold_own,
         dry_run=dry_run,
     )
@@ -652,22 +659,28 @@ if subcmd == "bootstrap-workspace":
 if subcmd == "sync-layer":
     if not rest or rest[0].startswith("--"):
         print(
-            "❌ Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>]",
+            "❌ Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]",
             file=sys.stderr,
         )
         sys.exit(1)
     target_dir = Path(rest[0]).resolve()
     parent_dir = None
+    tpls = None
     i = 1
     while i < len(rest):
         arg = rest[i]
         if arg == "--parent-dir" and i + 1 < len(rest):
             parent_dir = Path(rest[i + 1]).resolve()
             i += 2
+        elif arg == "--templates" and i + 1 < len(rest):
+            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
+            i += 2
         else:
             print(f"❌ Unknown or incomplete sync-layer argument: {arg}", file=sys.stderr)
             sys.exit(1)
-    res = sync_layer_workspace(repo_dir, target_dir, parent_dir=parent_dir, dry_run=dry_run)
+    res = sync_layer_workspace(
+        repo_dir, target_dir, parent_dir=parent_dir, templates=tpls, dry_run=dry_run
+    )
     print(json.dumps(res, indent=2))
     sys.exit(0)
 

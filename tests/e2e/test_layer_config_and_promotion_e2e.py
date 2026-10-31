@@ -437,6 +437,6 @@ def test_e2e_multi_tier_corporate_to_department_to_squad_bootstrap_and_diff(
         "technical-base",
         "dept-eng-platform",
         "squad-cad-core",
-        "layer-50-root",
     ):
         assert f".agents/rules/{r}.md" in squad_boot["files_materialized"]
+    assert ".agents/rules/layer-50-root.md" not in squad_boot["files_materialized"]

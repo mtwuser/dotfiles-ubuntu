@@ -18,6 +18,7 @@ description: restore session state and initialize workspace — first command in
    - If pull fails (conflicts) → notify user: "dotfiles-ubuntu has conflicts. Resolve manually before continuing."
    - Do NOT auto-resolve conflicts in shared config
    - If `~/dotfiles-ubuntu/layers/` has mounted subtrees (`./scripts/layer-subtree.sh list`) or `~/dotfiles-ubuntu/logs/mcp_alerts.jsonl` contains recent `CRITICAL`/`WARN` entries, surface a one-line note in the session header.
+   - If the active workspace contains `system/mcp-layer.json` (corporate, department, squad, or app layer), run `make horizon` (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`) and `make diff` to detect 1-hop upstream/downstream updates or local `.agents/` promotion candidates automatically.
 3. **If not found** → skip silently (user may not use dotfiles on this machine)
 
 > [!NOTE]
