@@ -37,6 +37,7 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
     )
     all_sized_files = sorted(
         [
+            REPO_DIR / "README.md",
             *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
             *list((REPO_DIR / "scripts").glob("*.py")),
             *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
@@ -78,6 +79,8 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
 
     # Assert
     assert len(pkg_modules) == 16
+    assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
+    assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
     assert missing_unit_tests == []
     assert oversized_files == []
     assert untraced_sources == []

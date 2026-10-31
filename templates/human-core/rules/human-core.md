@@ -22,7 +22,7 @@ Verify these mandates before proposing solutions or modifying files in any works
 > *"Always choose the most robust, scalable, and structured approach over a quick patch."*
 
 **Mandate:** Reject superficial workarounds when a scalable, parameterized structure is attainable.
-- **File Size Gate (`< 465` lines)**: Keep every source, test, and navigable `docs/**/*.md` or `corporate/**/*.md` file strictly `< 465` lines (target $\le 400$). Extract cohesive modules or specs before exceeding `465` lines (exempt from `§9.4`).
+- **File Size Gate (`< 465` lines)**: Keep every source, test, root `README.md`, and navigable `docs/**/*.md` or `corporate/**/*.md` file strictly `< 465` lines (target $\le 400$). Extract cohesive modules, human guides (`docs/guides/`), or specs before exceeding `465` lines (exempt from `§9.4`).
 
 #### 3. Verification & Quality Integrity
 > *"Zero unresolved validation, schema, linter, or compliance errors."*
@@ -60,23 +60,28 @@ Verify these mandates before proposing solutions or modifying files in any works
 
 **Mandate:** (1) **Additive Plans** mapping transversal side-effects; (2) **No Phase Compression**; (3) **Execution Block** until user approval; (4) **Zero Scope Creep** (log adjacent observations in `BACKLOG.md`).
 
-#### 10. Documentation Coherence After Structural Changes
-> *"When you move, rename, or delete a file, documentation must reflect current reality."*
+#### 10. Documentation Coherence & Human-Centric Progressive Disclosure
+> *"Structure documentation for human comprehension first (progressive disclosure) and keep every link and tree synchronized."*
 
-**Mandate:** After moving, renaming, creating, or deleting any file/directory: (1) Sync `README.md` trees against `find`/`ls`; (2) Verify doc links (`test -f`); (3) Sweep `.md` files (`grep -rn`) for old paths; (4) Leave zero orphaned references.
+**Mandate:**
+1. **3-Tier Progressive Disclosure (`README.md` $\rightarrow$ `docs/guides/` $\rightarrow$ `docs/architecture/` & `docs/reference/`)**:
+   - **Tier 1 (`README.md`, $\le 400$ lines)**: Executive gateway (Quick-Start paths, repository tree, CLI cheat-sheet, and navigation table to `docs/`).
+   - **Tier 2 (`docs/guides/*.md`, `< 465` lines)**: Step-by-step human operator & team workflow guides.
+   - **Tier 3 (`docs/architecture/*.md` & `docs/reference/*.md`, `< 465` lines)**: Normative `1:1:1` specs (`Specification:`) and technical playbooks.
+2. **Post-Move/Rename Coherence**: Sync `README.md` and `docs/README.md` trees against `find`/`ls`, verify doc links (`test -f`), sweep `.md` files (`grep -rn`), and leave zero orphaned references.
 
 #### 11. `dotfiles-ubuntu` Native Self-Guidance & Scaffolding-First Mandate
 > *"Use the platform's deterministic CLI orchestrators (`layer-config.sh`, `layer-subtree.sh`) instead of ad-hoc manual steps."*
 
 **Mandate:** Operate the `dotfiles-ubuntu` multi-layer architecture natively:
-1. **CLI Over Manual**: Use `./scripts/layer-config.sh` (`bootstrap-workspace`, `sync-layer`, `init-fork`, `scaffold-template`, `apply-project`, `diff-project`, `promote-from-project`, `set-global-profile`, `register-subtree`, `spawn-ephemeral`) and `./scripts/layer-subtree.sh` (`add`, `pull`, `push`, `pull-all`, `sync-upstream`) first.
+1. **CLI Over Manual**: Use `./scripts/layer-config.sh` (`bootstrap-workspace`, `sync-layer`, `init-fork`, `scaffold-template`, `apply-project`, `diff-project`, `promote-from-project`, `set-global-profile`, `register-subtree`, `set-authority`, `check-authority`, `inspect-horizon`, `spawn-ephemeral`) and `./scripts/layer-subtree.sh` (`add`, `pull`, `push`, `pull-all`, `sync-upstream`) first.
 2. **3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`)**:
    - **`human-core`**: Default machine-global baseline (`~/.gemini/config/AGENTS.md`).
    - **`technical-base`** (`templates/technical-base/`): Software engineering, `1:1:1` traceability, refactoring, and 100% AAA testing.
    - **`business-base`** (`templates/business-base/`): Corporate ledger integrity, *Lex Superior* IP/compliance, cross-surface cascade, and functional verification.
    - Switch global profile via `./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> --stow`.
-3. **`antigravity-ide` vs. `antigravity-agents`**: `antigravity-ide` provides a 360° visual/terminal view without leaking agent context; `antigravity-agents` scopes rules per Workspace Root (`<workspace>/.agents/rules/layer-<NN>-<name>.md` by `precedence` `0..100`) and enforces `Non-Workspace File Access` (`allow` on Corporate Root vs. `deny`/`ask` on Department/Team workspaces).
-4. **Workstation Hook Gates (`pre_tool_guard.py`)**: Blocks automated mutating Git commands (`git add`, `git commit`, `git push`, `git reset`, `git rebase`, `git checkout`, `git merge`, `git subtree`), `alembic` migrations, edits to `alembic/versions/*.py`, and non-empty writes (`> 0 bytes`) to Python consumer `src/**/__init__.py` or `tests/**/__init__.py`.
+3. **`antigravity-ide` vs. `antigravity-agents` & Layer Authority**: `antigravity-ide` provides a 360° visual/terminal view; `antigravity-agents` scopes rules per Workspace Root (`.agents/rules/layer-<NN>-<name>.md` by `precedence` `0..100`, `Non-Workspace File Access: allow` on Corporate Root vs. `deny`/`ask` on Department/Squad workspaces). Layer owners (`set-authority` / `check-authority` matching `git config user.email`) govern layer releases; downstream consumers propose upward PRs (`promote-from-project --create-pr`) within a strict 1-hop horizon (`inspect-horizon`).
+4. **Workstation Hook Gates (`pre_tool_guard.py`)**: Blocks automated mutating Git commands (`git add`, `git commit`, `git push`, `git reset`, `git rebase`, `git checkout`, `git merge`, `git subtree`), `alembic` migrations, edits to `alembic/versions/*.py` or `.agents/rules/layer-*.md`, and non-empty writes (`> 0 bytes`) to Python consumer `src/**/__init__.py` or `tests/**/__init__.py`.
 
 #### 12. Model Delegation Discipline (`flash` vs `inherit` vs `pro` & 4-Channel Digest)
 > *"Never spend a heavy model on a mechanical task."*

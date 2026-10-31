@@ -58,6 +58,8 @@ fi
 for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CONTRIBUTING.md SECURITY.md \
            Makefile Dockerfile .dockerignore pyproject.toml requirements.txt requirements-dev.txt \
            docs/README.md \
+           docs/guides/01_ubuntu_system_and_multi_machine_guide.md \
+           docs/guides/02_hierarchical_layers_and_team_workflows.md \
            docs/architecture/01_system_and_stow_engine.md \
            docs/architecture/02_antigravity_governance_and_hooks.md \
            docs/architecture/03_contextual_mcp_and_federation.md \
@@ -638,6 +640,7 @@ for mod in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
 
 all_sized_files = sorted(
     [
+        repo / "README.md",
         *list((repo / "antigravity/.gemini/config/scripts").glob("*.py")),
         *list((repo / "scripts").glob("*.py")),
         *list((repo / "scripts/dotfiles_mcp").glob("*.py")),

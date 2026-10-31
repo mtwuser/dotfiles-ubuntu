@@ -90,7 +90,7 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
 
 
 def check_universal_doc_structure(doc_files: list[str]) -> list[str]:
-    """Enforce universal < 465-line file cap on navigable docs/**/*.md files."""
+    """Enforce universal < 465-line file cap on root README.md and navigable docs/**/*.md files."""
     violations: list[str] = []
     for file_str in doc_files:
         p = Path(file_str)
@@ -100,7 +100,7 @@ def check_universal_doc_structure(doc_files: list[str]) -> list[str]:
         if line_count >= _MAX_PYTHON_FILE_LINES:
             violations.append(
                 f"{file_str}:1 [max-doc-lines] Documentation file has {line_count} lines "
-                f"(must be < {_MAX_PYTHON_FILE_LINES}; split into modular specs)"
+                f"(must be < {_MAX_PYTHON_FILE_LINES}; split into modular guides/specs)"
             )
     return violations
 
@@ -184,13 +184,31 @@ def get_changed_python_files(workspace_path: str) -> list[str]:
 
 
 def get_changed_doc_files(workspace_path: str) -> list[str]:
-    """Get navigable docs/**/*.md files with uncommitted or untracked changes."""
+    """Get root README.md and navigable docs/**/*.md files with uncommitted or untracked changes."""
     git_bin = shutil.which("git") or "git"
     files: set[str] = set()
     for cmd in [
-        [git_bin, "diff", "--name-only", "--diff-filter=ACMR", "--", "docs/"],
-        [git_bin, "diff", "--name-only", "--cached", "--diff-filter=ACMR", "--", "docs/"],
-        [git_bin, "ls-files", "--others", "--exclude-standard", "--", "docs/*.md", "docs/**/*.md"],
+        [git_bin, "diff", "--name-only", "--diff-filter=ACMR", "--", "README.md", "docs/"],
+        [
+            git_bin,
+            "diff",
+            "--name-only",
+            "--cached",
+            "--diff-filter=ACMR",
+            "--",
+            "README.md",
+            "docs/",
+        ],
+        [
+            git_bin,
+            "ls-files",
+            "--others",
+            "--exclude-standard",
+            "--",
+            "README.md",
+            "docs/*.md",
+            "docs/**/*.md",
+        ],
     ]:
         with contextlib.suppress(subprocess.TimeoutExpired, FileNotFoundError):
             result = subprocess.run(  # noqa: S603
@@ -203,7 +221,9 @@ def get_changed_doc_files(workspace_path: str) -> list[str]:
             )
             for raw_line in result.stdout.splitlines():
                 rel_file = raw_line.strip()
-                if rel_file.startswith("docs/") and rel_file.endswith(".md"):
+                if rel_file == "README.md" or (
+                    rel_file.startswith("docs/") and rel_file.endswith(".md")
+                ):
                     full = Path(workspace_path) / rel_file
                     if full.exists():
                         files.add(str(full))

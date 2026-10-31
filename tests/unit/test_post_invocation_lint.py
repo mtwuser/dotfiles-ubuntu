@@ -90,6 +90,8 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    readme_doc = tmp_path / "README.md"
+    readme_doc.write_text("# Root Gateway\n" * 100, encoding="utf-8")
     small_doc = tmp_path / "docs" / "architecture" / "01_spec.md"
     small_doc.parent.mkdir(parents=True)
     small_doc.write_text("# Line\n" * 464, encoding="utf-8")
@@ -98,7 +100,7 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     fake_proc = subprocess.CompletedProcess(
         args=["git"],
         returncode=0,
-        stdout="docs/architecture/01_spec.md\ndocs/architecture/02_big.md\ndocs/missing.md\nREADME.md\n",
+        stdout="docs/architecture/01_spec.md\ndocs/architecture/02_big.md\ndocs/missing.md\nREADME.md\nCHANGELOG.md\n",
         stderr="",
     )
     mock_run = MagicMock(return_value=fake_proc)
@@ -111,7 +113,7 @@ def test_get_changed_doc_files_and_check_universal_doc_structure(
     )
 
     # Assert
-    assert changed_docs == [str(small_doc), str(big_doc)]
+    assert changed_docs == [str(readme_doc), str(small_doc), str(big_doc)]
     assert len(violations) == 1
     assert "[max-doc-lines]" in violations[0]
     assert mock_run.call_args_list[0].args[0][0].endswith("git")
