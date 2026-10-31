@@ -113,27 +113,26 @@ For each candidate, determine the exact target layer and template pack using `.a
 | Only applies to this specific product/application | **C (Stays in Project)**: `<product>/.agents/` |
 
 > [!IMPORTANT]
-> **Never promote stack-specific rules to Layer A.** FastAPI patterns stay in Layer B (framework repo).
-> Django patterns stay in Layer B (Django framework/project repo). Only universal principles (zero-residue, AAA,
-> coverage gates) belong in Layer A.
+> **Strict 1-Hop Horizon & Never Bypass `Root 0`**:
+> - Never promote directly from a child layer (`team` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Layer A`).
+> - Always inspect `make horizon` (`immediate_upstream_id`, `is_oss_community_horizon`, `actor_is_layer_owner`):
+>   - **Internal Corporate Horizon (`is_oss_community_horizon: false`)**: Promote strictly **1 hop upward** (`Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0`) via `make promote SOURCE=<path> [TEMPLATE=<pack>]` (or `./scripts/layer-subtree.sh pull <layer-name>` from `Root 0`).
+>   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-core|technical-base|business-base> TARGET_REPO=~/dotfiles-ubuntu --create-pr`.
 
 ---
 
 ## §3. Extraction Proposal
 
-Generate a structured proposal for the user:
+Generate a structured proposal for the user respecting the 1-hop horizon:
 
 ```markdown
 ## Enrichment Proposal — [date]
 
-### Promote to Layer A (dotfiles-ubuntu)
-- [ ] [rule/skill name]: [what changes] — [why it's universal]
+### Promote 1-Hop Upward (`<immediate_upstream_id>`)
+- [ ] [rule/skill name]: [what changes] — [why it belongs in immediate 1-hop parent (`Root 0` / `dept-*` / `dotfiles-ubuntu`)]
 
-### Promote to Layer B (framework)
-- [ ] [rule/skill name]: [what changes] — [why it's framework-wide]
-
-### Update Layer C from upstream
-- [ ] [project]: [rule/skill] needs sync from [shared version]
+### Update Current Layer from Upstream (`make sync`)
+- [ ] [project]: [rule/skill] needs sync from [1-hop parent version]
 
 ### Contradictions / Drift
 - ⚠️ [description of conflict]
@@ -143,27 +142,36 @@ Generate a structured proposal for the user:
 
 ---
 
-## §4. Apply & Distribute
+## §4. Apply & Distribute (Dual-Regime Push Governance)
 
-After approval:
+After approval, distinguish strictly between **Internal Corporate Repositories** and the **Open-Source Root (`dotfiles-ubuntu`)**:
 
-1. **Apply changes** to the target layer files
-2. **Re-stow** if dotfiles-ubuntu was modified (also links any new shared skill): `cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity`
-3. **Deliver commit blocks** for each modified repo:
+### Regime 1 — Internal Corporate / Departmental / Squad Repos (`is_oss_community_horizon: false`)
+1. **Promote or Sync within the 1-Hop Internal Hierarchy**:
+   - Run `make promote SOURCE=<rel-path> [TEMPLATE=<pack>]` (which creates a contextualized PR when `actor_is_layer_owner: false`, or updates the 1-hop parent template/subtree when authorized).
+2. **Agile Internal Commit & Push**:
+   - For internal corporate, departmental (`dept-*`), and squad (`squad-*`) repositories where the user is the authorized layer owner (`actor_is_layer_owner: true`), deliver standard working commit + push blocks so internal teams and `Root 0` subtrees stay continuously synchronized:
+   ```bash
+   ### [Internal Corporate / Department / Squad repo]
+   cd <REPO_PATH>
+   git add -u
+   git commit -m "chore(governance): [summary of internal layer sync/enrichment]"
+   git push
+   ```
 
-```bash
-### dotfiles-ubuntu
-cd ~/dotfiles-ubuntu
-git add -A
-git commit -m "enrich: [summary of upstream promotions]"
-git push
-
-### [Framework/Project repo]
-cd ~/Projects/[repo]
-git add -A
-git commit -m "chore: sync rules from shared config"
-git push
-```
+### Regime 2 — Open-Source Root (`dotfiles-ubuntu` / `is_oss_community_horizon: true`)
+1. **From External Workspaces (`Root 0` $\rightarrow$ `dotfiles-ubuntu`)**:
+   - **NEVER** mutate `~/dotfiles-ubuntu` directly from an external project; execute `make promote ... TARGET_REPO=~/dotfiles-ubuntu --create-pr` to generate an anonymized Pull Request (`OSS_AGNOSTICISM_VIOLATION` gate enforced).
+2. **Inside `dotfiles-ubuntu` (Direct Maintenance)**:
+   - Run `cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity && make verify` to confirm all 8 verification gates pass.
+   - Log changes under `## [Unreleased]` in `CHANGELOG.md` **without bumping `VERSION`**.
+   - **NEVER include `git push` on working/enrichment commits in `dotfiles-ubuntu`**. Pushing to the public Open-Source remote requires an explicit, conscious version release via `/release` (`skills/release/SKILL.md`):
+   ```bash
+   ### dotfiles-ubuntu (local [Unreleased] commit only — publish via /release)
+   cd ~/dotfiles-ubuntu
+   git add -u
+   git commit -m "enrich: [summary of upstream promotions]"
+   ```
 
 ---
 
@@ -171,6 +179,7 @@ git push
 
 - **Read before writing** — always scan existing content before proposing changes
 - **Never auto-merge** — all promotions require explicit user approval
-- **Preserve project-specific context** — do not strip domain examples when promoting; replace them with universal equivalents
+- **Enforce 1-hop horizon** — `Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `dotfiles-ubuntu` (never skip tiers)
+- **Dual-regime push discipline** — agile `git push` is allowed for authorized owners in internal corporate/departmental repos (`is_oss_community_horizon: false`), whereas `dotfiles-ubuntu` (`is_oss_community_horizon: true`) requires PR-based intake from `Root 0` and local `[Unreleased]` commits (pushing only on explicit `/release`)
 - **One direction per execution** — either promote upstream OR sync downstream, not both simultaneously
-- **Log the enrichment** — update the project's CHANGELOG with `enrich:` prefix entries
+- **Log the enrichment** — update `CHANGELOG.md` under `## [Unreleased]`

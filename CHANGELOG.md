@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Enforced Dual-Regime 1-Hop Promotion, Generic Layer Token Whitelist & Release-Gated Open-Source Push Governance in `/enrich` (`antigravity/.gemini/config/skills/enrich/SKILL.md`, `scripts/dotfiles_mcp/authority_engine.py`)**:
+  - Updated `skills/enrich/SKILL.md` (`§2.3`, `§3`, `§4`, and `Rules`) to enforce the strict 1-hop promotion horizon (`Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `dotfiles-ubuntu`) and distinguish between **Regime 1 (Internal Corporate/Departmental Repos, `is_oss_community_horizon: false`)** — where authorized layer owners use agile `make promote` / subtree sync and `git push` — and **Regime 2 (Open-Source Root `dotfiles-ubuntu`, `is_oss_community_horizon: true`)** — which requires anonymized Pull Requests (`make promote --create-pr`) from `Root 0` and local `[Unreleased]` commits without `git push` until an explicit SemVer `/release` is executed.
+  - Added generic functional domain tokens (`marketing`, `social`, `growth`, `safety`) to `_GENERIC_LAYER_TOKENS` in [`authority_engine.py`](scripts/dotfiles_mcp/authority_engine.py) so `verify_oss_promotion_agnosticism` accurately recognizes generic department names in `business-base.md` as `oss_agnostic: true` when `Root 0` mounts `dept-marketing-social`.
+
 ---
 
 ## [2.0.0] - 2026-10-31
