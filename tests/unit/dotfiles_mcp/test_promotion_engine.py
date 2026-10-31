@@ -446,10 +446,12 @@ class TestPromotionEngine:
         hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
         assert (
             hz_oss["is_oss_community_horizon"],
+            hz_oss["downward_sync_needed"],
             len(hz_oss["upward_promotion_suggestions"]),
-        ) == (
-            True,
-            1,
-        )
+        ) == (True, False, 1)
         assert hz_int["is_oss_community_horizon"] is False
         assert len(hz_int["upward_promotion_suggestions"]) >= 1
+        (oss_dir / "templates/business-base/rules/business-base.md").write_text(
+            "# v3 upstream\n", encoding="utf-8"
+        )
+        assert inspect_layer_horizon(oss_dir, proj_dir)["downward_sync_needed"] is True

@@ -113,29 +113,22 @@ def compare_project_patterns_multilayer(
     layer_b_rules: set[str] = set()
     layer_b_skills: set[str] = set()
     layer_records: list[dict[str, Any]] = []
-
     for lname, ldir, manifest in target_dirs:
         skills_root = ldir / "antigravity/.gemini/config/skills"
         if skills_root.is_dir():
             for sf in skills_root.glob("*/SKILL.md"):
                 layer_a_skills.update((_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name))
-        tpl_root = ldir / "templates"
-        tpl_names: list[str] = []
+        tpl_root, tpl_names = ldir / "templates", []
         if tpl_root.is_dir():
-            for tdir in sorted(tpl_root.iterdir()):
-                if not tdir.is_dir() or tdir.name.startswith("."):
-                    continue
+            for tdir in (d for d in sorted(tpl_root.iterdir()) if d.is_dir() and d.name[:1] != "."):
                 tpl_names.append(tdir.name)
                 layer_b_rules.update(rf.name for rf in (tdir / "rules").glob("*.md"))
                 for sf in (tdir / "skills").glob("*/SKILL.md"):
                     layer_b_skills.update(
                         (_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name)
                     )
-        kw = {
-            t
-            for t in re.split(r"[-_]", f"{lname}-{manifest.get('layer_id', '')}".lower())
-            if len(t) >= 3
-        }
+        raw_id = f"{lname}-{manifest.get('layer_id', '')}".lower()
+        kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= 3}
         for b in collect_layer_effective_bindings(ldir, manifest):
             for k in ("scopes", "traits"):
                 kw.update(str(v).lower() for v in b.get(k, []) if v != "*")
@@ -191,17 +184,13 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     layers_dir = repo_dir / "layers"
     if layers_dir.is_dir():
         search_layers.extend(
-            (s.name, s)
-            for s in sorted(layers_dir.iterdir())
-            if s.is_dir() and not s.name.startswith(".")
+            (s.name, s) for s in sorted(layers_dir.iterdir()) if s.is_dir() and s.name[:1] != "."
         )
     for lname, ldir in search_layers:
         tpl_root = ldir / "templates"
         if not tpl_root.is_dir():
             continue
-        for tdir in sorted(tpl_root.iterdir()):
-            if not tdir.is_dir() or tdir.name.startswith("."):
-                continue
+        for tdir in (d for d in sorted(tpl_root.iterdir()) if d.is_dir() and d.name[:1] != "."):
             tag = f"{lname}:{tdir.name}"
             for rf in sorted((tdir / "rules").glob("*.md")):
                 layer_sources.setdefault(f"rules/{rf.name}", (tag, rf))
@@ -395,13 +384,15 @@ def inspect_layer_horizon(
     actor_email: str | None = None,
 ) -> dict[str, Any]:
     """Inspect 1-hop downward propagation & quiet upward promotion candidates for a workspace."""
-    ws, up = workspace_dir.resolve(), (parent_dir or repo_dir).resolve()
+    ws, up, oss = workspace_dir.resolve(), (parent_dir or repo_dir).resolve(), repo_dir.resolve()
     ws_m, up_m = _load_manifest_dict(ws), _load_manifest_dict(up)
-    up_vf, ws_vf = up / "VERSION", ws / "VERSION"
+    oss_vf, up_vf, ws_vf = oss / "VERSION", up / "VERSION", ws / "VERSION"
+    oss_ver = oss_vf.read_text(encoding="utf-8").strip() if oss_vf.is_file() else None
     up_ver = up_vf.read_text(encoding="utf-8").strip() if up_vf.is_file() else None
     ws_ver = ws_vf.read_text(encoding="utf-8").strip() if ws_vf.is_file() else None
     is_oss = _is_oss_root_manifest(up_m)
     auth_v = verify_layer_operation_authority(ws, operation="release", actor_email=actor_email)
+    up_auth_v = verify_layer_operation_authority(up, operation="release", actor_email=actor_email)
     ws_tpls = [d.name for d in sorted((ws / "templates").glob("*")) if d.is_dir()]
     cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
     shared = [
@@ -415,6 +406,7 @@ def inspect_layer_horizon(
             up_rf = up / "templates" / tpl / "rules" / ws_rf.name
             if not up_rf.is_file() or _sha256_file(ws_rf) != _sha256_file(up_rf):
                 rel_src = f"templates/{tpl}/rules/{ws_rf.name}"
+                up_newer = up_rf.is_file() and up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
                 oss_ok = True
                 try:
                     verify_oss_promotion_agnosticism(ws, ws_rf.read_text(encoding="utf-8"), rel_src)
@@ -428,32 +420,40 @@ def inspect_layer_horizon(
                     {
                         "template": tpl,
                         "rule_file": rel_src,
+                        "drift_direction": "upstream_newer" if up_newer else "workspace_newer",
                         "oss_agnostic": oss_ok,
                         "promote_command": cmd,
                     }
                 )
     local_diff = diff_project_against_layers(ws, ws)
     sync_sfx = f" --parent-dir {up}" if parent_dir is not None else ""
+    up_drifts = [d for d in drifts if d["drift_direction"] == "workspace_newer"]
     return {
         "workspace_dir": str(ws),
         "layer_id": str(ws_m.get("layer_id", ws.name)),
         "layer_role": str(ws_m.get("layer_role", "project")),
         "actor_is_layer_owner": bool(auth_v["allowed"]),
+        "actor_is_upstream_owner": bool(up_auth_v["allowed"]),
         "immediate_upstream_dir": str(up),
         "immediate_upstream_id": str(up_m.get("layer_id", up.name)),
         "immediate_upstream_role": str(up_m.get("layer_role", "unknown")),
         "is_oss_community_horizon": is_oss,
+        "oss_root_version": oss_ver,
         "upstream_version": up_ver,
         "workspace_version": ws_ver,
+        "downward_sync_needed": any(d["drift_direction"] == "upstream_newer" for d in drifts),
         "downward_sync_command": f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}",
         "shared_template_drifts": drifts,
         "upward_promotion_suggestions": (
-            [d for d in drifts if d["oss_agnostic"]]
+            [d for d in up_drifts if d["oss_agnostic"]]
             if is_oss
             else [
-                f"./scripts/layer-config.sh promote-from-project {ws} "
-                f"--source .agents/{rel} --upstream-dir {up} --prepare-pr"
-                for rel in local_diff["novel_in_project"]
+                *(d["promote_command"] for d in up_drifts),
+                *(
+                    f"./scripts/layer-config.sh promote-from-project {ws} "
+                    f"--source .agents/{rel} --upstream-dir {up} --prepare-pr"
+                    for rel in local_diff["novel_in_project"]
+                ),
             ]
         ),
     }

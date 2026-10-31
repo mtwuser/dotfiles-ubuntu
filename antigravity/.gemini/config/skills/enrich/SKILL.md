@@ -46,6 +46,26 @@ Layer A — Universal (dotfiles-ubuntu)
 
 ---
 
+## §0. Pre-Flight Hierarchical Sync & Authority Gate (MANDATORY FIRST STEP)
+
+> [!IMPORTANT]
+> Before evaluating any upward promotion, `/enrich` MUST ensure the active workspace is synchronized with the latest rules from its hierarchical ancestors (`Open Source Layer A` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `Department` $\rightarrow$ `Squad` $\rightarrow$ `Project`).
+
+1. **Run `make horizon` and `make diff`** in the active workspace (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`).
+2. **Inspect Version & Downward Sync Status**:
+   - Check `oss_root_version` (`~/dotfiles-ubuntu/VERSION`), `upstream_version` (`1-hop parent VERSION`), `workspace_version`, and `downward_sync_needed` (`shared_template_drifts` with `drift_direction: "upstream_newer"`).
+   - **If `downward_sync_needed: true`** (the 1-hop parent `Root 0` / `Department` or `Open Source` has a newer version of an inherited template such as `human-core`, `technical-base`, `business-base`, or a corporate/departmental base pack):
+     1. Run **`make sync`** (`downward_sync_command`) FIRST so the workspace absorbs the latest upstream rules into `templates/` and `.agents/`.
+     2. Verify `make diff` reports `0` drift (`modified_in_project: []`).
+     3. Never mistake an `"upstream_newer"` template drift for an upward promotion candidate — doing so would overwrite newer parent rules with stale local copies.
+3. **Inspect Git Authority (`actor_is_layer_owner` & `actor_is_upstream_owner`)**:
+   - Determine the required Git Flow strategy based on `git config user.email` authority:
+     - **`actor_is_layer_owner: true`**: Authorized to commit and push directly (or per departmental branch policy) within the current workspace.
+     - **`actor_is_layer_owner: false`**: Must use a feature branch + Pull Request workflow for local layer changes.
+     - **`actor_is_upstream_owner: false` or `is_oss_community_horizon: true`**: Any 1-hop upward promotion (`make promote`) MUST generate a branch/PR (`--prepare-pr` / `--create-pr`) for upstream owner review rather than pushing directly to the parent repository.
+
+---
+
 ## §1. Inventory Scan
 
 // delegate: flash
