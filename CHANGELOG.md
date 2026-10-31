@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.1.0] - 2026-10-31
 
 ### Changed
 - **Added Bidirectional Horizon Inspection (`child_sync_needed` / `downstream_layer_drifts`) & Automatic Mounted-Child Synchronization in `make horizon` and `make sync` (`scripts/dotfiles_mcp/manifest_helpers.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `antigravity/.gemini/config/skills/sopen/SKILL.md`, `antigravity/.gemini/config/skills/enrich/SKILL.md`)**:
