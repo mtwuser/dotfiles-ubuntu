@@ -71,8 +71,8 @@ src/{context}/
 | Type check | `cd backend && source ./venv/bin/activate && mypy --strict src/` |
 | Lint check | `cd backend && source ./venv/bin/activate && ruff check .` |
 | Auto-format | `cd backend && source ./venv/bin/activate && ruff format .` |
-| Alembic migrate | `cd backend && source ./venv/bin/activate && alembic upgrade head` |
-| Alembic autogen | `cd backend && source ./venv/bin/activate && alembic revision --autogenerate -m "desc"` |
+| Alembic migrate (user-run) | `cd backend && source ./venv/bin/activate && alembic upgrade head` |
+| Alembic autogen (user-run) | `cd backend && source ./venv/bin/activate && alembic revision --autogenerate -m "desc"` |
 
 ---
 

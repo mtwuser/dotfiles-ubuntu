@@ -35,12 +35,12 @@ Every test method MUST contain three separate, explicit comments:
 **NEVER** merge comments into `# Arrange & Act` or `# Act & Assert`.
 **DAMP over DRY**: Each test should be readable top-to-bottom. Use literal values; do not use computed expectations.
 
-## FastAPI Async Test Patterns (`httpx2`)
+## FastAPI Async Test Patterns (`httpx`)
 
 ### AsyncClient + ASGITransport Usage
 ```python
 from unittest.mock import AsyncMock
-from httpx2 import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 
 class TestMyRouter:
@@ -108,5 +108,5 @@ All commands run from project root with venv activated.
 | Domain Ports | Interface contracts | Verify implementations satisfy Protocol |
 | Application Use Cases | Orchestration flow | Mock ports/repositories |
 | Infrastructure Adapters | I/O integration | Imp tests with real DB/services |
-| API Routers | Request/response contracts | `httpx2.AsyncClient` + dependency override |
-| Templates (HTMX) | HTML fragment responses | `httpx2.AsyncClient` (`HX-Request: true`) + assert HTML content |
+| API Routers | Request/response contracts | `httpx.AsyncClient` + dependency override |
+| Templates (HTMX) | HTML fragment responses | `httpx.AsyncClient` (`HX-Request: true`) + assert HTML content |

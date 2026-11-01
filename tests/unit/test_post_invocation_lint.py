@@ -191,7 +191,13 @@ def test_main_returns_empty_when_ruff_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    monkeypatch.setattr("post_invocation_lint._DOTFILES_REPO_DIR", tmp_path)
     monkeypatch.setattr("post_invocation_lint.find_ruff", lambda _ws: None)
+    monkeypatch.setattr(
+        "post_invocation_lint.get_changed_python_files",
+        lambda _ws: [str(tmp_path / "missing.py")],
+    )
+    monkeypatch.setattr("post_invocation_lint.find_venv_python", lambda _ws: None)
     payload = {"workspacePaths": [str(tmp_path)]}
     monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(payload)))
     stdout_buf = io.StringIO()
@@ -208,6 +214,7 @@ def test_main_returns_empty_when_no_changed_files_or_clean_lint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # Arrange
+    monkeypatch.setattr("post_invocation_lint._DOTFILES_REPO_DIR", tmp_path)
     ws_empty = tmp_path / "empty_ws"
     ws_clean = tmp_path / "clean_ws"
     ws_empty.mkdir()

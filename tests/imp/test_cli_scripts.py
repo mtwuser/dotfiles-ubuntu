@@ -16,6 +16,8 @@ CLI_SCRIPTS = [
     REPO_DIR / "scripts" / "layer-subtree.sh",
     REPO_DIR / "scripts" / "layer-config.sh",
     REPO_DIR / "scripts" / "workstation-sync.sh",
+    REPO_DIR / "scripts" / "antigravity-install.sh",
+    REPO_DIR / "scripts" / "audit-global-config.sh",
 ]
 
 

@@ -367,20 +367,11 @@ class TestAuthorityEngine:
             encoding="utf-8",
         )
 
-        # Act & Assert
+        # Act
         verify_oss_promotion_agnosticism(
             corp_dir, "# Universal Rule\nPure universal content.\n", "rules/base.md"
         )
-        with pytest.raises(ValueError, match="OSS_AGNOSTICISM_VIOLATION"):
-            verify_oss_promotion_agnosticism(
-                corp_dir, "# Rule\nMentions zyxwvut and quantum.\n", "rules/base.md"
-            )
         verify_single_hop_upstream(corp_dir, oss_root, actor_email="ceo@zyxwvut.io")
-        with pytest.raises(ValueError, match="CROSS_TIER_PROMOTION_BYPASS"):
-            verify_single_hop_upstream(squad_dir, oss_root, actor_email="ceo@zyxwvut.io")
-        with pytest.raises(ValueError, match="UNAUTHORIZED_OSS_PROMOTION"):
-            verify_single_hop_upstream(corp_dir, oss_root, actor_email="intruder@other.org")
-
         oss_plan = build_upward_promotion_pr_plan(
             corp_dir,
             oss_root,
@@ -404,6 +395,16 @@ class TestAuthorityEngine:
             contributors="CLO, CTO, Principal Architect",
             validation_context="Root 0 + 5 Department layers + Squads",
         )
+
+        # Assert
+        with pytest.raises(ValueError, match="OSS_AGNOSTICISM_VIOLATION"):
+            verify_oss_promotion_agnosticism(
+                corp_dir, "# Rule\nMentions zyxwvut and quantum.\n", "rules/base.md"
+            )
+        with pytest.raises(ValueError, match="CROSS_TIER_PROMOTION_BYPASS"):
+            verify_single_hop_upstream(squad_dir, oss_root, actor_email="ceo@zyxwvut.io")
+        with pytest.raises(ValueError, match="UNAUTHORIZED_OSS_PROMOTION"):
+            verify_single_hop_upstream(corp_dir, oss_root, actor_email="intruder@other.org")
         assert oss_plan["oss_anonymized"] is True
         assert oss_plan["origin_layer_id"] == "enterprise-root-0"
         assert oss_plan["proposer_email"] == "oss-contributor"

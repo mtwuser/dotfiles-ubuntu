@@ -15,28 +15,25 @@ description: extract and enrich shared knowledge — scan project rules/skills f
 Before scanning, the agent MUST understand the 4-layer rule model:
 
 ```
-Layer A — Universal (dotfiles-ubuntu)
+Layer A — Universal Global Baseline (dotfiles-ubuntu)
 │  Rules for ANY developer, ANY project, ANY stack.
 │  Examples: zero-residue, AAA testing, commit discipline, coverage gates.
-│  Location: ~/dotfiles-ubuntu/antigravity/.gemini/config/
+│  Location: ~/dotfiles-ubuntu/antigravity/.gemini/config/ & templates/{human-core,technical-base,business-base}/
 │
-├── Layer B — Framework (reusable core framework)
-│   │  Rules that define a reusable framework's conventions.
-│   │  Examples: hexagonal port/adapter patterns, zone architecture, HTMX conventions.
-│   │  Location: <framework>/.agents/
+├── Layer B — Templates, Frameworks & Mounted Subtree Layers (templates/* & layers/*)
+│   │  Reusable stack starter packs, departmental/domain policy packs, and cross-cutting
+│   │  subtree layers mounted under ~/dotfiles-ubuntu/layers/<layer-name>/ via layer-subtree.sh.
+│   │  Queried on demand via MCP (compare_layer_patterns) and promoted via
+│   │  layer-config.sh promote-from-project or ./scripts/layer-subtree.sh push <layer-name> <branch>.
 │   │
-│   ├── Layer C — Product (projects built on the framework)
-│   │   │  Rules specific to a business domain or team.
-│   │   │  Examples: payment flow rules, healthcare compliance, API naming for X company.
+│   ├── Layer C — Product / Project Workspace (<product>/.agents/)
+│   │   │  Rules and skills specific to a single product repository or squad workspace.
 │   │   │  Location: <product>/.agents/
 │   │   │
-│   │   └── Layer D — Multi-Dimensional Subtree Layers (Department / Team / Sibling Service)
-│   │       Cross-cutting departmental or sibling-service forks mounted under
-│   │       ~/dotfiles-ubuntu/layers/<layer-name>/ via ./scripts/layer-subtree.sh.
-│   │       Queried on demand via MCP (compare_layer_patterns) and promoted via
-│   │       ./scripts/layer-subtree.sh push <layer-name> <target-branch>.
+│   │   └── Layer D — Navigable Repository Documentation (<repo>/docs/ & corporate/)
+│   │       3-tier progressive disclosure (README.md -> docs/guides/ -> docs/architecture/ & reference/).
 │   │
-│   └── (other products using the same framework)
+│   └── (other products using the same template pack or subtree layers)
 │
 └── (other frameworks or standalone projects)
 ```
@@ -127,9 +124,9 @@ For each candidate, determine the exact target layer and template pack using `.a
 | If the pattern... | Target Layer & Day-to-Day Command (`make` or CLI) |
 |---|---|
 | Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Open Source Root)**: `~/dotfiles-ubuntu/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<human-core\|technical-base\|business-base> TARGET_REPO=~/dotfiles-ubuntu`) |
-| Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/Marketing) | **D (Parent Department or Corporate Root 0)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`, or `./scripts/layer-subtree.sh push <layer-name> <branch>` when pushing a mounted subtree) |
+| Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/Marketing) | **B (Parent Department, Corporate Root 0, or Mounted Subtree `layers/*`)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`, or `./scripts/layer-subtree.sh push <layer-name> <branch>` when pushing a mounted subtree) |
 | Applies to any project using a specific stack or template pack (`stack-starter`, `department-pack`, `domain-policy-pack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<layer>/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<pack>`) |
-| Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer D (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `make diff`) |
+| Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer B (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `make diff`) |
 | Only applies to this specific product/application | **C (Stays in Project)**: `<product>/.agents/` |
 
 > [!IMPORTANT]

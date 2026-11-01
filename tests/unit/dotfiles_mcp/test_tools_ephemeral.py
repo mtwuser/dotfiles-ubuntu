@@ -165,7 +165,7 @@ class TestMCPToolsEphemeral:
         )
         server = DotfilesMCPServer(repo_dir=repo, log_dir=repo / "logs")
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValueError, match="Invalid action"):
             server.call_tool("orchestrate_ephemeral_fork", {"action": "invalid"})
         with pytest.raises(ValueError, match="Missing required 'fork_id'"):
@@ -195,6 +195,8 @@ class TestMCPToolsEphemeral:
                 json.dumps({"ephemeral_metadata": {"expires_at_epoch": 9999999999.0}}),
                 encoding="utf-8",
             )
+
+        # Assert
         with pytest.raises(ValueError, match="EPHEMERAL_FORK_LIMIT_REACHED"):
             server.call_tool(
                 "orchestrate_ephemeral_fork", {"action": "spawn", "bot_role": "overflow-bot"}

@@ -168,7 +168,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "type": "string",
                     "enum": list(VALID_AGENT_TIERS),
                     "default": "inherit",
-                    "description": "Calling agent tier per AGENTS.md §13 (flash, inherit, pro).",
+                    "description": "Calling agent tier per AGENTS.md §12 (flash, inherit, pro).",
                 },
                 "environment": {
                     "type": "string",

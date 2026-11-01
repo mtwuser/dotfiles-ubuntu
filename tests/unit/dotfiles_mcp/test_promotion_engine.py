@@ -190,7 +190,10 @@ class TestPromotionEngine:
         (proj_dir / ".agents/rules/layer-05-dept-legal.md").write_text(
             "# Legal v2 modified\n", encoding="utf-8"
         )
-        (proj_dir / ".agents/rules/layer-10-root.md").write_text("# Root v1\n", encoding="utf-8")
+        (proj_dir / ".agents/rules/layer-10-root.md").write_text(
+            '---\ntrigger: always_on\ndescription: "Root v1"\n---\n# Root v1\n',
+            encoding="utf-8",
+        )
         (proj_dir / ".agents/rules/layer-10-dept-sync.md").write_text(
             "# Sync v1\n", encoding="utf-8"
         )

@@ -204,7 +204,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
         if AGENT_TIER_RANK[agent_tier] < AGENT_TIER_RANK[required_tier]:
             msg = (
                 f"Agent tier {agent_tier!r} is insufficient to unfold {target_level!r} "
-                f"(requires {required_tier!r} per AGENTS.md §13 Model Delegation Discipline). "
+                f"(requires {required_tier!r} per AGENTS.md §12 Model Delegation Discipline). "
                 f"[Recovery: Request target_level='L1' or delegate to a {required_tier!r} agent.]"
             )
             self._emit_warning(

@@ -27,7 +27,7 @@ Ephemeral Scoped Forks solve this paradox by keeping the primary orchestrator li
 2. **Case 2 — Cross-Repository / Consumer-Service Context Bridge (`mount_project_rules_from`)**:
    - When validating contract compatibility between a shared core platform (`acme-core-platform`) and a consumer service (`checkout-service`), `spawn` can mount the consumer's `.agents/rules/*.md` into `layers/ephemeral-project-bridge/` inside the ephemeral fork—enabling cross-repo rule weaving and `rcap1` capsule exchange without polluting the permanent `dotfiles-ubuntu` tree.
 3. **Case 3 — Privilege & Scope Sandboxing (`access_mode`, `model_tier`, `target_globs`)**:
-   - Each ephemeral fork locks its `system/mcp-layer.json` to an explicit `model_tier` (`"flash"`, `"inherit"`, `"pro"`), `access_mode` (`"strictly-read-only"`, `"read-and-test-trigger"`, `"read-write-scoped"`), and `target_globs` boundary, preventing a support subagent from drifting outside its assigned surface (`AGENTS.md §13` & `§14.3`).
+   - Each ephemeral fork locks its `system/mcp-layer.json` to an explicit `model_tier` (`"flash"`, `"inherit"`, `"pro"`), `access_mode` (`"strictly-read-only"`, `"read-and-test-trigger"`, `"read-write-scoped"`), and `target_globs` boundary, preventing a support subagent from drifting outside its assigned surface (`AGENTS.md §12` & `§13.3`).
 4. **Case 4 — Canary Governance Dry-Run (`"on_demand"`)**:
    - Before promoting a candidate rule to a Team or Department layer (`promote-from-project`), an engineer or agent can spawn an ephemeral fork with custom `target_globs`/`mount_templates`, run `action="evaluate"` against real `target_path`s to verify precedence weaving (`Lex Superior` / `Lex Specialis`) and token budgets, and immediately `reap` it.
 
@@ -57,12 +57,12 @@ Any `surface_binding` in `system/mcp-layer.json` (or `template.json` `recommende
 |-------|-----------------------------|---------|
 | `bot_role` | `kebab-case` identifier (`KEBAB_ID_RE`) | Specialized role identity for the ephemeral fork (`layer_id: "ephemeral-<bot_role>-<hash>"`) |
 | `trigger` | `"on_surface_match"` \| `"on_high_complexity"` \| `"on_demand"` | Advisory trigger condition reported in `ephemeral_delegation_advisories` |
-| `model_tier` | `"flash"` \| `"inherit"` \| `"pro"` | Target subagent model tier per `AGENTS.md §13` |
+| `model_tier` | `"flash"` \| `"inherit"` \| `"pro"` | Target subagent model tier per `AGENTS.md §12` |
 | `access_mode` | `"strictly-read-only"` \| `"read-and-test-trigger"` \| `"read-write-scoped"` | Operational capability boundary enforced in the subagent brief |
 | `mount_templates` | `list[str]` | Subset of template packs activated in the ephemeral fork's `default_stack_templates` |
 | `resolution` | `"L1"` \| `"L2"` \| `"L3"` | Default context resolution for the bot's authoritative surface |
 | `ttl_seconds` | Integer `10..3600` (default `300`) | Time-to-live before automatic garbage collection (`reap_expired_ephemeral_forks`) |
-| `handback_contract` | `"4-channel-digest+rcap1"` | Enforces `AGENTS.md §13` 4-Channel Executive Digest + sealed `rcap1` capsule |
+| `handback_contract` | `"4-channel-digest+rcap1"` | Enforces `AGENTS.md §12` 4-Channel Executive Digest + sealed `rcap1` capsule |
 
 ---
 

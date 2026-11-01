@@ -9,7 +9,7 @@
 Because this repository is primarily a command-line system engine, dotfile suite, and AI-agent configuration catalog, accessibility focuses on **terminal screen-reader compatibility**, **keyboard-only workflows**, **color-independent status output**, and **semantic documentation structure**:
 
 1. **Color- and Icon-Independent CLI Output**:
-   - Every status message in `bootstrap.sh`, `backup.sh`, `audit.sh`, and `scripts/verify-repo.sh` pairs visual symbols with explicit textual words (`[1/6]`, `skip:`, `create:`, `overwrite:`, ` Unknown option:`, and non-zero POSIX exit codes) so meaning is never conveyed by color or emoji alone.
+   - Every status message in `bootstrap.sh`, `backup.sh`, `audit.sh`, and `scripts/verify-repo.sh` pairs visual symbols with explicit textual words (`[1/8]`, `skip:`, `create:`, `overwrite:`, `Unknown option:`, and non-zero POSIX exit codes) so meaning is never conveyed by color or emoji alone.
 2. **Non-Interactive & Keyboard-Only Execution**:
    - All scripts are 100% operable via standard keyboard input and support deterministic non-interactive flags (`./bootstrap.sh --all`, `./bootstrap.sh --antigravity`, `./bootstrap.sh --stow`, `./audit.sh`, `./scripts/verify-repo.sh`) suitable for assistive technologies and automated readers.
    - Every CLI entrypoint supports `--help` (`-h`) and `--version` (`-v`) with structured plain-text usage summaries.

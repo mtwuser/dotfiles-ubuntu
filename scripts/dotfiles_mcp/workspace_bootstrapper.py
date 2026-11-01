@@ -11,12 +11,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .constants import (
-    AGENTS_MD_MAX_BYTES,
-    KEBAB_ID_RE,
-    ROLE_DEFAULT_PRECEDENCE,
-    VALID_LAYER_ROLES,
-)
+from . import constants as c
 from .fork_configurator import (
     apply_fork_to_project,
     configure_fork_manifest,
@@ -73,10 +68,8 @@ def set_global_agents_profile(
             f"Invalid global profile {profile!r}; must be one of {VALID_GLOBAL_PROFILES}"
         )
 
-    chain = PROFILE_TEMPLATE_CHAIN[profile]
-    sections: list[str] = []
-    source_files: list[str] = []
-    for idx, (tpl_id, rule_filename) in enumerate(chain):
+    sections, source_files = [], []
+    for idx, (tpl_id, rule_filename) in enumerate(PROFILE_TEMPLATE_CHAIN[profile]):
         rule_path = repo_dir / "templates" / tpl_id / "rules" / rule_filename
         if not rule_path.is_file():
             raise ValueError(
@@ -90,22 +83,25 @@ def set_global_agents_profile(
 
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes = len(composed.encode("utf-8"))
-    if composed_bytes > AGENTS_MD_MAX_BYTES:
+    if composed_bytes > c.AGENTS_MD_MAX_BYTES:
         raise ValueError(
             f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds "
-            f"{AGENTS_MD_MAX_BYTES}-byte cap"
+            f"{c.AGENTS_MD_MAX_BYTES}-byte cap"
         )
 
-    target_agents = repo_dir / "antigravity" / ".gemini" / "config" / "AGENTS.md"
-    stow_executed = False
+    target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
     if not dry_run:
         target_agents.parent.mkdir(parents=True, exist_ok=True)
         target_agents.write_text(composed, encoding="utf-8")
         if run_stow:
-            target_home = str(home_dir or Path.home())
-            stow_bin = shutil.which("stow") or "/usr/bin/stow"
             subprocess.run(  # noqa: S603
-                [stow_bin, "-t", target_home, "-R", "antigravity"],
+                [
+                    shutil.which("stow") or "/usr/bin/stow",
+                    "-t",
+                    str(home_dir or Path.home()),
+                    "-R",
+                    "antigravity",
+                ],
                 cwd=repo_dir,
                 check=True,
                 capture_output=True,
@@ -118,8 +114,8 @@ def set_global_agents_profile(
         "source_files": source_files,
         "target_file": str(target_agents.relative_to(repo_dir)),
         "size_bytes": composed_bytes,
-        "budget_max_bytes": AGENTS_MD_MAX_BYTES,
-        "headroom_bytes": AGENTS_MD_MAX_BYTES - composed_bytes,
+        "budget_max_bytes": c.AGENTS_MD_MAX_BYTES,
+        "headroom_bytes": c.AGENTS_MD_MAX_BYTES - composed_bytes,
         "stow_executed": stow_executed,
         "dry_run": dry_run,
     }
@@ -134,7 +130,7 @@ def register_mounted_subtree(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers."""
-    if not KEBAB_ID_RE.match(layer_name):
+    if not c.KEBAB_ID_RE.match(layer_name):
         raise ValueError(f"Invalid layer_name {layer_name!r}")
 
     root_manifest_path = repo_dir / "system" / "mcp-layer.json"
@@ -229,13 +225,13 @@ def bootstrap_layer_workspace(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """One-shot initializer for a corporate, domain-policy, department, or team workspace."""
-    if not KEBAB_ID_RE.match(layer_id):
+    if not c.KEBAB_ID_RE.match(layer_id):
         raise ValueError(f"Invalid layer_id {layer_id!r}")
-    if layer_role not in VALID_LAYER_ROLES:
+    if layer_role not in c.VALID_LAYER_ROLES:
         raise ValueError(f"Invalid layer_role {layer_role!r}")
 
     effective_prec = (
-        precedence if precedence is not None else ROLE_DEFAULT_PRECEDENCE.get(layer_role, 50)
+        precedence if precedence is not None else c.ROLE_DEFAULT_PRECEDENCE.get(layer_role, 50)
     )
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     parent_manifest_path = effective_parent / "system" / "mcp-layer.json"
@@ -269,9 +265,9 @@ def bootstrap_layer_workspace(
     for tpl_name in requested_templates:
         src_tpl = next(
             (
-                root / "templates" / tpl_name
-                for root in search_roots
-                if (root / "templates" / tpl_name).is_dir()
+                r / "templates" / tpl_name
+                for r in search_roots
+                if (r / "templates" / tpl_name).is_dir()
             ),
             None,
         )
@@ -293,12 +289,11 @@ def bootstrap_layer_workspace(
         prune_default_templates=True,
         dry_run=dry_run,
     )
-    own_tpl_id = own_template_name or layer_id
-    all_tpls = list(requested_templates)
+    own_tpl_id, all_tpls = own_template_name or layer_id, list(requested_templates)
     if scaffold_own_template and own_tpl_id not in all_tpls:
         all_tpls.append(own_tpl_id)
     if not dry_run and all_tpls:
-        m_path = target_dir / "system" / "mcp-layer.json"
+        m_path = target_dir / "system/mcp-layer.json"
         m_data = json.loads(m_path.read_text(encoding="utf-8"))
         m_data["default_stack_templates"] = list(all_tpls)
         m_path.write_text(json.dumps(m_data, indent=2) + "\n", encoding="utf-8")
@@ -308,9 +303,8 @@ def bootstrap_layer_workspace(
         if layer_role in ("domain-policy", "corporate")
         else ("department-pack" if layer_role == "department" else "project-overlay")
     )
-    scaffold_res: dict[str, Any] | None = None
-    if scaffold_own_template:
-        scaffold_res = scaffold_template_pack(
+    scaffold_res = (
+        scaffold_template_pack(
             target_dir,
             template_name=own_tpl_id,
             kind=own_kind,
@@ -319,7 +313,9 @@ def bootstrap_layer_workspace(
             rule_filename=f"{own_tpl_id}.md",
             dry_run=dry_run,
         )
-
+        if scaffold_own_template
+        else None
+    )
     baseline_files = {
         "VERSION": "0.1.0\n",
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
@@ -356,12 +352,13 @@ def bootstrap_layer_workspace(
                 dest_file.write_text(content, encoding="utf-8")
 
     tpl_ref_arg = ",".join(all_tpls) if all_tpls else None
-    apply_res: dict[str, Any] = {"applied_template": tpl_ref_arg, "files_materialized": []}
-    if not dry_run:
-        apply_res = apply_fork_to_project(
+    apply_res: dict[str, Any] = (
+        apply_fork_to_project(
             target_dir, target_dir, template_ref=tpl_ref_arg, layers_filter=["all"], dry_run=False
         )
-
+        if not dry_run
+        else {"applied_template": tpl_ref_arg, "files_materialized": []}
+    )
     return {
         "target_dir": str(target_dir),
         "layer_id": layer_id,
@@ -387,12 +384,14 @@ def sync_layer_workspace(
 ) -> dict[str, Any]:
     """Propagate upstream template updates into target_dir/templates/ and refresh .agents/."""
     manifest_path = target_dir / "system" / "mcp-layer.json"
-    if not manifest_path.is_file():
+    if manifest_path.is_file():
+        manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
+    else:
         raise ValueError(f"Missing target layer manifest: {manifest_path}")
-
-    manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    own_layer_id = str(manifest.get("layer_id") or "")
-    own_layer_role = str(manifest.get("layer_role") or "department")
+    own_layer_id, own_layer_role = (
+        str(manifest.get("layer_id") or ""),
+        str(manifest.get("layer_role") or "department"),
+    )
     stack_templates = _merge_unique_strings(
         [str(t) for t in manifest.get("default_stack_templates", [])], templates or []
     )

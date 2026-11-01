@@ -156,7 +156,7 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
   ],
   "baseline_guardrails": [
     "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
+    "AGENTS.md §4 (Atomic Deliverable & Verification Inclusion) & technical-base.md (100% branch coverage & AAA pattern)",
     "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
   ],
   "surface_bindings": [
@@ -171,7 +171,7 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
       "canonical_templates": [],
       "invariants": [
         "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-        "AGENTS.md §2 (Professional Robustness — strongly typed, scalable implementations)",
+        "AGENTS.md §2 (Professional Robustness — strongly typed, scalable implementations, < 465 lines)",
         "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or @deprecated branches)"
       ]
     }
@@ -182,8 +182,8 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
       "access_mode": "read-write-local",
       "requirements_file": "requirements-dev.txt",
       "default_guardrails": [
-        "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)",
-        "AGENTS.md §8 (Mandatory Pre-Commit Hygiene Scan)"
+        "AGENTS.md §4 (Atomic Deliverable & Verification Inclusion)",
+        "AGENTS.md §8 (Mandatory Pre-Commit Hygiene & Zero-Literal Exclusion Gate)"
       ]
     },
     "pre": {
@@ -207,8 +207,8 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
       "when_to_invoke": "Invoke on demand when verifying official Google Cloud, Gemini, Android, Firebase, or Web API specifications.",
       "avoid_when": "Do not invoke when inspecting local repository code, internal domain models, or offline unit tests.",
       "required_guardrails": [
-        "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
-        "AGENTS.md §12 (Generated Output Verification)"
+        "AGENTS.md §5 (Specification Hierarchy & Discrepancy Scans)",
+        "technical-base.md §4 (Generated Output Verification & Package Marker Purity)"
       ]
     }
   ]
@@ -296,7 +296,7 @@ Both `post_invocation_lint.py` (local `PostInvocation` hook) and `scripts/dotfil
 | `SUBTREE_LINEAGE_WARNING` | `WARN` | A mounted `layers/<name>/` subtree is missing `upstream_layer.repository` | Detects orphan subtrees lacking upstream Git lineage. |
 | `TEMPLATE_PACK_MISSING` | `WARN` | An entry in `default_stack_templates` does not exist under `templates/<name>/` | Detects stale or unmounted template pack references in `system/mcp-layer.json` (`init-fork --prune-default-templates` or `scaffold-template`). |
 | `NODE_DRIFT_DETECTED` | `WARN` | `audit_node_drift` detects non-zero exit from `verify-repo.sh` or `audit.sh` | Records repository or OS/Stow drift in `logs/mcp_alerts.jsonl`. |
-| `CAPSULE_CAPABILITY_INSUFFICIENT` | `WARN` | `unfold_context_capsule` called with insufficient `agent_tier` (e.g., `"flash"` requesting `L2`/`L3` or `"inherit"` requesting `L3` in `pro`) | Enforces `AGENTS.md §13` model delegation discipline at the cryptographic MCP boundary. |
+| `CAPSULE_CAPABILITY_INSUFFICIENT` | `WARN` | `unfold_context_capsule` called with insufficient `agent_tier` (e.g., `"flash"` requesting `L2`/`L3` or `"inherit"` requesting `L3` in `pro`) | Enforces `AGENTS.md §12` model delegation discipline at the cryptographic MCP boundary. |
 | `CAPSULE_RESONANCE_DENIED` | `WARN` | Missing `resonance_key` when `header.kr=true`, invalid `resonance_key`, tampered HMAC signature, or mismatched `environment` on `rcap1` capsule | Detects unauthorized, unauthenticated, or cross-environment capsule unfolding attempts. |
 | `CAPSULE_CHAIN_BROKEN` | `WARN` | Malformed `rcap1` envelope, corrupted `zlib` stream, or level-scoped `parent_hash`/section/`L3` SHA-256 content drift mismatch | Guarantees cryptographic chain integrity and level-scoped live drift detection across multi-hop Matryoshka unfolding (`L0->L1`, `L1->L2`, `L2->L3`). |
 | `SURFACE_PRECEDENCE_COLLISION` | `WARN` | Two or more distinct layers match a surface with identical `(precedence, mode)` during `resolve_surface_governance` | Alerts that equal-precedence layers collided on the same surface and were tie-broken via *Lex Specialis* (`specificity_score`), recommending distinct `precedence` (`0..100`) values in `system/mcp-layer.json`. |

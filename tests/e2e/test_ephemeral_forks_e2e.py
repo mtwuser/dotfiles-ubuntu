@@ -394,7 +394,7 @@ def test_e2e_ephemeral_fork_capacity_limit_ttl_expiration_and_symlink_escape(
     (escape_proj / ".agents" / "rules" / "escape.md").symlink_to(outside_secret)
     server = DotfilesMCPServer(repo_dir=REPO_DIR, log_dir=tmp_path / "limit_logs")
 
-    # Act & Assert
+    # Act
     old_env = os.environ.get("DOTFILES_EPHEMERAL_ROOT")
     os.environ["DOTFILES_EPHEMERAL_ROOT"] = str(eph_root)
     try:
@@ -447,6 +447,7 @@ def test_e2e_ephemeral_fork_capacity_limit_ttl_expiration_and_symlink_escape(
         else:
             os.environ["DOTFILES_EPHEMERAL_ROOT"] = old_env
 
+    # Assert
     diag = json.loads(server.read_resource("dotfiles://mcp/diagnostics")["text"])
     assert "EPHEMERAL_FORK_EXPIRED" in diag["alerts_summary"]["by_code"]
     assert "EPHEMERAL_FORK_LIMIT_REACHED" in diag["alerts_summary"]["by_code"]

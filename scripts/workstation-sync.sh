@@ -111,8 +111,16 @@ run_sync() {
     if [ -x "$RUNTIME_DIR/bootstrap.sh" ] && [ ! -L "$HOME/.gemini/config/AGENTS.md" ]; then
       "$RUNTIME_DIR/bootstrap.sh" --antigravity >/dev/null 2>&1 || true
     fi
-    stow -d "$RUNTIME_DIR" -t "$HOME" -R bash git antigravity 2>/dev/null || \
+    for bf in .bashrc .profile .bash_logout; do
+      if [ -f "$HOME/$bf" ] && [ ! -L "$HOME/$bf" ]; then
+        mv "$HOME/$bf" "$HOME/${bf}.backup.$(date +%Y%m%d)" 2>/dev/null || true
+      fi
+    done
+    stow -d "$RUNTIME_DIR" -t "$HOME" -R bash antigravity 2>/dev/null || \
       stow -d "$RUNTIME_DIR" -t "$HOME" -R antigravity 2>/dev/null || true
+    if [ "${DOTFILES_STOW_GIT:-0}" = "1" ] || [ -L "$HOME/.gitconfig" ]; then
+      stow -d "$RUNTIME_DIR" -t "$HOME" -R git 2>/dev/null || true
+    fi
   fi
 
   mkdir -p "$(dirname "$STAMP_FILE")" 2>/dev/null || true

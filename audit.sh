@@ -32,18 +32,14 @@ case "$MODE" in
     ;;
 esac
 
-# --- Colors ---
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-BOLD='\033[1m'
+if [ -n "${NO_COLOR:-}" ]; then
+  RED='' GREEN='' YELLOW='' BLUE='' CYAN='' NC='' BOLD=''
+else
+  RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[1;33m'
+  BLUE='\033[0;34m' CYAN='\033[0;36m' NC='\033[0m' BOLD='\033[1m'
+fi
 
 ISSUES=0
-
-# Load machine-local ignore list (drivers, hardware-specific packages)
 AUDIT_IGNORE=""
 if [ -f "$SCRIPT_DIR/.audit-ignore" ]; then
   AUDIT_IGNORE="$(grep -v '^#' "$SCRIPT_DIR/.audit-ignore" | grep -v '^$' | sort)"
@@ -53,16 +49,11 @@ section() { echo -e "\n${BLUE}=== $1 ===${NC}"; }
 ok()      { echo -e "  ${GREEN}✅${NC} $1"; }
 warn()    { echo -e "  ${YELLOW}⚠️${NC}  $1"; ISSUES=$((ISSUES + 1)); }
 item()    { echo -e "      $1"; }
-confirm() {
-  read -rp "  $1 (y/N): " answer
-  [ "$answer" = "y" ] || [ "$answer" = "Y" ]
-}
+confirm() { read -rp "  $1 (y/N): " answer; [ "$answer" = "y" ] || [ "$answer" = "Y" ]; }
 
 echo -e "${BOLD}🔍 dotfiles-ubuntu audit — $(date +%Y-%m-%d)${NC}"
 
-# -----------------------------------------------
 # 1. Stow Symlinks
-# -----------------------------------------------
 section "Stow Symlinks"
 STOW_OK=0
 STOW_ISSUES=0
@@ -70,25 +61,15 @@ STOW_ISSUES=0
 cd "$SCRIPT_DIR"
 for module_dir in */; do
   module_name="${module_dir%/}"
-  # Skip non-stow directories
-  [ "$module_name" = "system" ] && continue
-  [ "$module_name" = "scripts" ] && continue
-  [ "$module_name" = "templates" ] && continue
-  [ "$module_name" = "docs" ] && continue
-  [ "$module_name" = "layers" ] && continue
-  [ "$module_name" = "logs" ] && continue
-  [ "$module_name" = "tests" ] && continue
-  [ "$module_name" = "venv" ] && continue
-  [ "$module_name" = ".venv" ] && continue
-  [ "$module_name" = "htmlcov" ] && continue
-  [ "$module_name" = ".git" ] && continue
+  case "$module_name" in
+    system|scripts|templates|docs|layers|logs|tests|venv|.venv|htmlcov|.git) continue ;;
+  esac
   [ ! -d "$module_name" ] && continue
 
   while IFS= read -r relpath; do
     [ -z "$relpath" ] && continue
     target="$HOME/$relpath"
     source="$SCRIPT_DIR/$module_name/$relpath"
-
     if [ -e "$target" ] || [ -L "$target" ]; then
       resolved_target="$(readlink -f "$target" 2>/dev/null || echo "BROKEN")"
       resolved_source="$(readlink -f "$source")"
@@ -115,9 +96,7 @@ if [ "$STOW_ISSUES" -eq 0 ]; then
   fi
 fi
 
-# -----------------------------------------------
 # 2. APT Packages
-# -----------------------------------------------
 section "APT Packages"
 if [ -f "$SYSTEM_DIR/packages-manual.txt" ]; then
   CURRENT_APT="$(apt-mark showmanual 2>/dev/null | grep -v '^linux-generic-hwe-' | sort)"
@@ -126,59 +105,44 @@ if [ -f "$SYSTEM_DIR/packages-manual.txt" ]; then
     CURRENT_APT="$(awk 'NR==FNR {ok[$1]=1; next} {base=$1; sub(/:.*/, "", base); if (ok[base]) print $1}' <(echo "$UBUNTU_REMOTE") <(echo "$CURRENT_APT"))"
   fi
   MANIFEST_APT="$(grep -v '^$' "$SYSTEM_DIR/packages-manual.txt" | sort)"
-
   ONLY_SYSTEM="$(comm -23 <(echo "$CURRENT_APT") <(echo "$MANIFEST_APT") || true)"
   ONLY_MANIFEST="$(comm -13 <(echo "$CURRENT_APT") <(echo "$MANIFEST_APT") || true)"
 
-  # Build exclusion list from external/ definitions (these pkgs are managed outside APT manifest)
   EXTERNAL_PKGS=""
   for ext_file in "$SYSTEM_DIR"/external/deb-url/*.sh "$SYSTEM_DIR"/external/script/*.sh "$SYSTEM_DIR"/external/apt-repo/*.sh; do
     [ -f "$ext_file" ] || continue
-    # Collect CHECK value (single package name)
     ext_check="$(grep '^CHECK=' "$ext_file" 2>/dev/null | head -1 | cut -d'"' -f2 || true)"
     [ -n "$ext_check" ] && EXTERNAL_PKGS="$EXTERNAL_PKGS $ext_check"
-    # Collect PACKAGES value (space-separated list, apt-repo only)
     ext_packages="$(grep '^PACKAGES=' "$ext_file" 2>/dev/null | head -1 | cut -d'"' -f2 || true)"
     [ -n "$ext_packages" ] && EXTERNAL_PKGS="$EXTERNAL_PKGS $ext_packages"
-    # Collect repo-setup helper packages (e.g., protonvpn-stable-release from wget URL)
     repo_helpers="$(grep -oP '[a-z0-9][-a-z0-9]*-(?:stable-)?release[_/]' "$ext_file" 2>/dev/null | sed 's|[_/]$||' | sort -u || true)"
     [ -n "$repo_helpers" ] && EXTERNAL_PKGS="$EXTERNAL_PKGS $repo_helpers"
   done
   EXTERNAL_PKGS_SORTED="$(echo "$EXTERNAL_PKGS" | tr ' ' '\n' | grep -v '^$' | sort -u)"
 
-  # Filter out external-managed packages from both diff lists
   if [ -n "$EXTERNAL_PKGS_SORTED" ]; then
     ONLY_SYSTEM="$(comm -23 <(echo "$ONLY_SYSTEM") <(echo "$EXTERNAL_PKGS_SORTED") || true)"
     ONLY_MANIFEST="$(comm -23 <(echo "$ONLY_MANIFEST") <(echo "$EXTERNAL_PKGS_SORTED") || true)"
   fi
-
-  HAS_DRIFT=false
-
   if [ -n "$AUDIT_IGNORE" ]; then
-    # Filter out machine-local ignored packages from both diff lists
     ONLY_SYSTEM="$(comm -23 <(echo "$ONLY_SYSTEM") <(echo "$AUDIT_IGNORE") || true)"
     ONLY_MANIFEST="$(comm -23 <(echo "$ONLY_MANIFEST") <(echo "$AUDIT_IGNORE") || true)"
   fi
 
+  HAS_DRIFT=false
   if [ -n "$ONLY_SYSTEM" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_SYSTEM" | wc -l)
     warn "$COUNT installed but not in manifest (run ./backup.sh to capture):"
-    echo "$ONLY_SYSTEM" | head -20 | while IFS= read -r pkg; do
-      item "${GREEN}+ $pkg${NC}"
-    done
+    echo "$ONLY_SYSTEM" | head -20 | while IFS= read -r pkg; do item "${GREEN}+ $pkg${NC}"; done
     [ "$COUNT" -gt 20 ] && item "... and $((COUNT - 20)) more"
   fi
-
   if [ -n "$ONLY_MANIFEST" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_MANIFEST" | wc -l)
     warn "$COUNT in manifest but not installed:"
-    echo "$ONLY_MANIFEST" | while IFS= read -r pkg; do
-      item "${RED}- $pkg${NC}"
-    done
+    echo "$ONLY_MANIFEST" | while IFS= read -r pkg; do item "${RED}- $pkg${NC}"; done
   fi
-
   if [ "$HAS_DRIFT" = false ]; then
     TOTAL=$(grep -c . <<< "$MANIFEST_APT" || true)
     ok "In sync ($TOTAL packages)"
@@ -187,37 +151,26 @@ else
   warn "packages-manual.txt not found"
 fi
 
-# -----------------------------------------------
 # 3. Snap Packages
-# -----------------------------------------------
 section "Snap Packages"
 if [ -f "$SYSTEM_DIR/snaps.txt" ] && command -v snap &>/dev/null; then
   CURRENT_SNAPS="$(snap list 2>/dev/null | tail -n +2 | awk '$6 !~ /^(base|snapd)$/ && $1 !~ /^(gnome-[0-9]|gtk-common-themes|mesa-[0-9])/ {print $1}' | sort || true)"
   MANIFEST_SNAPS="$(grep -v '^$' "$SYSTEM_DIR/snaps.txt" | sort || true)"
-
   ONLY_SYSTEM="$(comm -23 <(echo "$CURRENT_SNAPS") <(echo "$MANIFEST_SNAPS") | grep -v '^$' || true)"
   ONLY_MANIFEST="$(comm -13 <(echo "$CURRENT_SNAPS") <(echo "$MANIFEST_SNAPS") | grep -v '^$' || true)"
-
   HAS_DRIFT=false
-
   if [ -n "$ONLY_SYSTEM" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_SYSTEM" | wc -l)
     warn "$COUNT installed but not in manifest:"
-    echo "$ONLY_SYSTEM" | while IFS= read -r snap_pkg; do
-      item "${GREEN}+ $snap_pkg${NC}"
-    done
+    echo "$ONLY_SYSTEM" | while IFS= read -r snap_pkg; do item "${GREEN}+ $snap_pkg${NC}"; done
   fi
-
   if [ -n "$ONLY_MANIFEST" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_MANIFEST" | wc -l)
     warn "$COUNT in manifest but not installed:"
-    echo "$ONLY_MANIFEST" | while IFS= read -r snap_pkg; do
-      item "${RED}- $snap_pkg${NC}"
-    done
+    echo "$ONLY_MANIFEST" | while IFS= read -r snap_pkg; do item "${RED}- $snap_pkg${NC}"; done
   fi
-
   if [ "$HAS_DRIFT" = false ]; then
     TOTAL=$(grep -c . <<< "$MANIFEST_SNAPS" || true)
     ok "In sync ($TOTAL snaps)"
@@ -228,9 +181,7 @@ else
   warn "snaps.txt not found"
 fi
 
-# -----------------------------------------------
 # 4. NPM Globals
-# -----------------------------------------------
 section "NPM Globals"
 if ! command -v npm &>/dev/null && [ -s "$HOME/.nvm/nvm.sh" ]; then
   export NVM_DIR="$HOME/.nvm"
@@ -240,30 +191,21 @@ fi
 if [ -f "$SYSTEM_DIR/npm-globals.txt" ] && command -v npm &>/dev/null; then
   CURRENT_NPM="$(npm list -g --depth=0 2>/dev/null | tail -n +2 | sed 's/^[-├└─+` ]*//g' | grep -v '^$' | sort || true)"
   MANIFEST_NPM="$(grep -v '^$' "$SYSTEM_DIR/npm-globals.txt" | sort || true)"
-
   ONLY_SYSTEM="$(comm -23 <(echo "$CURRENT_NPM") <(echo "$MANIFEST_NPM") | grep -v '^$' || true)"
   ONLY_MANIFEST="$(comm -13 <(echo "$CURRENT_NPM") <(echo "$MANIFEST_NPM") | grep -v '^$' || true)"
-
   HAS_DRIFT=false
-
   if [ -n "$ONLY_SYSTEM" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_SYSTEM" | wc -l)
     warn "$COUNT installed but not in manifest:"
-    echo "$ONLY_SYSTEM" | while IFS= read -r pkg; do
-      item "${GREEN}+ $pkg${NC}"
-    done
+    echo "$ONLY_SYSTEM" | while IFS= read -r pkg; do item "${GREEN}+ $pkg${NC}"; done
   fi
-
   if [ -n "$ONLY_MANIFEST" ]; then
     HAS_DRIFT=true
     COUNT=$(echo "$ONLY_MANIFEST" | wc -l)
     warn "$COUNT in manifest but not installed:"
-    echo "$ONLY_MANIFEST" | while IFS= read -r pkg; do
-      item "${RED}- $pkg${NC}"
-    done
+    echo "$ONLY_MANIFEST" | while IFS= read -r pkg; do item "${RED}- $pkg${NC}"; done
   fi
-
   if [ "$HAS_DRIFT" = false ]; then
     TOTAL=$(grep -c . <<< "$MANIFEST_NPM" || true)
     ok "In sync ($TOTAL packages)"
@@ -274,14 +216,11 @@ else
   warn "npm-globals.txt not found"
 fi
 
-# -----------------------------------------------
 # 5. External Packages
-# -----------------------------------------------
 section "External Packages"
 EXT_DIR="$SYSTEM_DIR/external"
 EXT_INSTALLED=0
 EXT_MISSING=0
-
 if [ -d "$EXT_DIR" ]; then
   MISSING_NAMES=()
   UNTRACKED_NAMES=()
@@ -295,13 +234,9 @@ if [ -d "$EXT_DIR" ]; then
     [ -f "$pkg_file" ] || continue
     rel_ext="${pkg_file#"$EXT_DIR"/}"
     IN_MANIFEST=true
-    if [ -f "$SYSTEM_DIR/external.txt" ]; then
-      if ! grep -qxF "$rel_ext" <<< "$MANIFEST_EXT"; then
-        IN_MANIFEST=false
-      fi
+    if [ -f "$SYSTEM_DIR/external.txt" ] && ! grep -qxF "$rel_ext" <<< "$MANIFEST_EXT"; then
+      IN_MANIFEST=false
     fi
-
-    # Reset all variables before sourcing
     NAME="" DESCRIPTION="" CHECK="" CHECK_CMD="" URL="" PACKAGES="" INSTALL_CMD=""
     setup_repo() { :; }
     # shellcheck source=/dev/null
@@ -331,27 +266,18 @@ if [ -d "$EXT_DIR" ]; then
 
   if [ "${#UNTRACKED_NAMES[@]}" -gt 0 ]; then
     warn "${#UNTRACKED_NAMES[@]} external package(s) installed but not in external.txt (run ./backup.sh to capture):"
-    for name in "${UNTRACKED_NAMES[@]}"; do
-      item "${GREEN}+ $name${NC}"
-    done
+    for name in "${UNTRACKED_NAMES[@]}"; do item "${GREEN}+ $name${NC}"; done
   fi
-
   if [ "$EXT_MISSING" -gt 0 ]; then
     warn "$EXT_MISSING external package(s) in external.txt but not installed:"
-    for name in "${MISSING_NAMES[@]}"; do
-      item "${RED}- $name${NC}"
-    done
+    for name in "${MISSING_NAMES[@]}"; do item "${RED}- $name${NC}"; done
     item "💡 Run ${CYAN}./bootstrap.sh --external${NC} to install"
   fi
-
   if [ "${#INACTIVE_REPOS[@]}" -gt 0 ]; then
     warn "${#INACTIVE_REPOS[@]} external APT repo(s) inactive or disabled:"
-    for name in "${INACTIVE_REPOS[@]}"; do
-      item "${YELLOW}! $name (package installed, but APT repository is disabled/missing)${NC}"
-    done
+    for name in "${INACTIVE_REPOS[@]}"; do item "${YELLOW}! $name (package installed, but APT repository is disabled/missing)${NC}"; done
     item "💡 Run ${CYAN}./bootstrap.sh --external${NC} to re-enable APT repositories"
   fi
-
   if [ "${#UNTRACKED_NAMES[@]}" -eq 0 ] && [ "$EXT_MISSING" -eq 0 ] && [ "${#INACTIVE_REPOS[@]}" -eq 0 ]; then
     TOTAL=$((EXT_INSTALLED + EXT_MISSING))
     ok "In sync ($TOTAL external packages active)"
@@ -360,30 +286,39 @@ else
   ok "No external packages defined"
 fi
 
-# -----------------------------------------------
-# 6. Residual Files
-# -----------------------------------------------
+# 6. GNOME Extensions
+section "GNOME Extensions"
+if [ -f "$SYSTEM_DIR/gnome-extensions.txt" ] && command -v gnome-extensions &>/dev/null; then
+  CURRENT_EXT="$(gnome-extensions list --enabled 2>/dev/null | sort || true)"
+  MANIFEST_EXT_GNOME="$(grep -v '^#' "$SYSTEM_DIR/gnome-extensions.txt" | grep -v '^$' | sort || true)"
+  MISSING_EXT_GNOME="$(comm -13 <(echo "$CURRENT_EXT") <(echo "$MANIFEST_EXT_GNOME") | grep -v '^$' || true)"
+  if [ -n "$MISSING_EXT_GNOME" ]; then
+    COUNT=$(echo "$MISSING_EXT_GNOME" | wc -l)
+    warn "$COUNT GNOME extension(s) in manifest but not enabled:"
+    echo "$MISSING_EXT_GNOME" | while IFS= read -r ext_uuid; do item "${RED}- $ext_uuid${NC}"; done
+  else
+    TOTAL=$(grep -c . <<< "$MANIFEST_EXT_GNOME" || true)
+    ok "In sync ($TOTAL extensions enabled)"
+  fi
+else
+  ok "GNOME extensions check skipped or not applicable"
+fi
+
+# 7. Residual Files
 section "Residual Files"
 FOUND_RESIDUALS=false
-
-# 5a. Bootstrap backup files
 BACKUPS="$(find "$HOME" -maxdepth 4 -name '*.backup.*' \
-  -not -path '*/dotfiles-ubuntu/*' \
-  -not -path '*/.git/*' \
-  2>/dev/null || true)"
+  -not -path '*/dotfiles-ubuntu/*' -not -path '*/.git/*' 2>/dev/null || true)"
 
 if [ -n "$BACKUPS" ]; then
   FOUND_RESIDUALS=true
   COUNT=$(echo "$BACKUPS" | wc -l)
   warn "$COUNT backup file(s) from bootstrap:"
-  echo "$BACKUPS" | while IFS= read -r f; do
-    item "${f/#$HOME/\~}"
-  done
-
+  echo "$BACKUPS" | while IFS= read -r f; do item "${f/#$HOME/\~}"; done
   if [ "$MODE" = "--clean" ]; then
     if confirm "Delete $COUNT backup file(s)?"; then
       echo "$BACKUPS" | while IFS= read -r f; do
-        rm -f "$f"
+        rm -rf "$f"
         echo -e "      ${RED}deleted${NC} ${f/#$HOME/\~}"
       done
       ok "Backup files removed"
@@ -393,7 +328,6 @@ if [ -n "$BACKUPS" ]; then
   fi
 fi
 
-# 5b. Orphaned AppImage directories
 if [ -d "$HOME/AppImage" ]; then
   FOUND_RESIDUALS=true
   SIZE="$(du -sh "$HOME/AppImage" 2>/dev/null | cut -f1)"
@@ -412,7 +346,6 @@ if [ -d "$HOME/AppImage" ]; then
         echo -e "      ${RED}deleted${NC} ~/AppImage/$app/"
       fi
     done < <(ls -1 "$HOME/AppImage" 2>/dev/null)
-    # Remove parent directory if empty
     if [ -d "$HOME/AppImage" ] && [ -z "$(ls -A "$HOME/AppImage")" ]; then
       rmdir "$HOME/AppImage"
       ok "Removed empty ~/AppImage/"
@@ -422,51 +355,45 @@ if [ -d "$HOME/AppImage" ]; then
   fi
 fi
 
-if [ "$FOUND_RESIDUALS" = false ]; then
-  ok "No residual files found"
-fi
+[ "$FOUND_RESIDUALS" = false ] && ok "No residual files found"
 
-# -----------------------------------------------
-# 7. Repo Status
-# -----------------------------------------------
+# 8. Repo Status
 section "Repo Status"
 cd "$SCRIPT_DIR"
-
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
   warn "Uncommitted changes:"
-  git status --short | while IFS= read -r line; do
-    item "$line"
-  done
+  git status --short | while IFS= read -r line; do item "$line"; done
 else
   ok "Working tree clean"
 fi
 
-# Check for unpushed commits
 UPSTREAM="$(git rev-parse --abbrev-ref '@{u}' 2>/dev/null || true)"
 if [ -n "$UPSTREAM" ]; then
   UNPUSHED="$(git log --oneline '@{u}..HEAD' 2>/dev/null || true)"
+  BEHIND="$(git log --oneline 'HEAD..@{u}' 2>/dev/null || true)"
   if [ -n "$UNPUSHED" ]; then
     COUNT=$(echo "$UNPUSHED" | wc -l)
     warn "$COUNT unpushed commit(s):"
-    echo "$UNPUSHED" | while IFS= read -r line; do
-      item "$line"
-    done
-  else
+    echo "$UNPUSHED" | while IFS= read -r line; do item "$line"; done
+  fi
+  if [ -n "$BEHIND" ]; then
+    COUNT=$(echo "$BEHIND" | wc -l)
+    warn "$COUNT unpulled commit(s) behind remote:"
+    echo "$BEHIND" | while IFS= read -r line; do item "$line"; done
+  fi
+  if [ -z "$UNPUSHED" ] && [ -z "$BEHIND" ]; then
     ok "In sync with remote"
   fi
 else
   warn "No upstream branch configured"
 fi
 
-# -----------------------------------------------
-# Summary
-# -----------------------------------------------
 echo ""
 if [ "$ISSUES" -eq 0 ]; then
   echo -e "${GREEN}${BOLD}✅ System is clean and in sync.${NC}"
+  exit 0
 else
   echo -e "${YELLOW}${BOLD}⚠️  $ISSUES issue(s) found.${NC}"
-  if [ "$MODE" != "--clean" ]; then
-    echo -e "   Run ${CYAN}./audit.sh --clean${NC} to fix residual files interactively."
-  fi
+  [ "$MODE" != "--clean" ] && echo -e "   Run ${CYAN}./audit.sh --clean${NC} to fix residual files interactively."
+  exit 1
 fi

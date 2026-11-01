@@ -202,7 +202,7 @@ When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` 
 
 ```dockerfile
 # Inside checkout-api/Dockerfile:
-FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:1.6.0 AS governance-layer
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.2.2 AS governance-layer
 
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
@@ -315,7 +315,7 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
     "branch": "main"
   },
   "default_stack_templates": ["fastapi-hexagonal"],
-  "baseline_guardrails": ["AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)"],
+  "baseline_guardrails": ["AGENTS.md §4 (Atomic Deliverable & Verification Inclusion) & technical-base.md (100% branch coverage)"],
   "surface_bindings": [
     {
       "binding_id": "checkout-domain-invariants",

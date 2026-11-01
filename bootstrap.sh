@@ -173,7 +173,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--nvm" ] || [ "$MODE" = "interactive" ]
   if [ -f "$SYSTEM_DIR/nvm-default.txt" ] && confirm "Install NVM and Node.js?"; then
     echo "=== Step 4: NVM + Node ==="
     NODE_VERSION="$(cat "$SYSTEM_DIR/nvm-default.txt")"
-    if [ ! -d "$HOME/.nvm" ]; then
+    if [ ! -s "$HOME/.nvm/nvm.sh" ]; then
       echo "  → Installing NVM..."
       curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
     fi
@@ -205,6 +205,8 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--packages" ] || [ "$MODE" = "interacti
     fi
     if ! command -v npm &>/dev/null; then
       echo "  ⚠️  npm not found (run './bootstrap.sh --nvm' first)"
+    elif [ ! -w "$(npm config get prefix 2>/dev/null || echo /usr)" ]; then
+      echo "  ⚠️  npm global prefix is not user-writable (run './bootstrap.sh --nvm' first so NVM manages npm)"
     else
       while read -r pkg; do
         [ -z "$pkg" ] && continue
@@ -310,6 +312,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--external" ] || [ "$MODE" = "interacti
           if curl -fsSL -o "$TMP_FILE" "$URL"; then
             # Handle .zip containing .deb
             if echo "$URL" | grep -qi '\.zip$'; then
+              command -v unzip &>/dev/null || sudo apt install -y -qq unzip
               unzip -q "$TMP_FILE" -d "$TMP_DIR"
               DEB_FILE="$(find "$TMP_DIR" -name '*.deb' | head -1)"
             else

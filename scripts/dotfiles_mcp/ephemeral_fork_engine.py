@@ -15,18 +15,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import (
-    DEFAULT_EPHEMERAL_TTL_SECONDS,
-    KEBAB_ID_RE,
-    MAX_ACTIVE_EPHEMERAL_FORKS,
-    MAX_EPHEMERAL_TTL_SECONDS,
-    MIN_EPHEMERAL_TTL_SECONDS,
-    ROLE_DEFAULT_PRECEDENCE,
-    VALID_AGENT_TIERS,
-    VALID_ARCHITECTURAL_PLANES,
-    VALID_EPHEMERAL_ACCESS_MODES,
-    VALID_RESOLUTIONS,
-)
+from dotfiles_mcp import constants as c
 
 
 def _is_writable_or_creatable(target: Path) -> bool:
@@ -40,10 +29,9 @@ def default_ephemeral_root(repo_dir: Path, ephemeral_root: Path | None = None) -
     """Return the resolved directory holding active ephemeral forks (with /tmp fallback if ro)."""
     if ephemeral_root is not None:
         return ephemeral_root.resolve()
-    env_override = os.environ.get("DOTFILES_EPHEMERAL_ROOT", "").strip()
-    if env_override:
+    if env_override := os.environ.get("DOTFILES_EPHEMERAL_ROOT", "").strip():
         return Path(env_override).resolve()
-    candidate = (repo_dir.resolve() / "logs" / "ephemeral_forks").resolve()
+    candidate = (repo_dir.resolve() / "logs/ephemeral_forks").resolve()
     if candidate.is_dir() or _is_writable_or_creatable(candidate):
         return candidate
     tmp_fallback = (Path(tempfile.gettempdir()).resolve() / "dotfiles_ephemeral_forks").resolve()
@@ -54,34 +42,28 @@ def extract_ephemeral_advisories(
     resolved_bindings: list[dict[str, Any]], target_path: str
 ) -> list[dict[str, Any]]:
     """Extract Department Bot delegation advisories from matched surface bindings."""
-    advisories: list[dict[str, Any]] = []
-    seen_roles: set[str] = set()
+    advisories, seen_roles = [], set()
     for binding in resolved_bindings:
         policy = binding.get("ephemeral_fork_policy")
-        if not isinstance(policy, dict):
-            continue
-        bot_role = str(policy.get("bot_role", "")).strip()
-        if not bot_role or bot_role in seen_roles:
+        bot_role = str(policy.get("bot_role", "")).strip() if isinstance(policy, dict) else ""
+        if not bot_role or bot_role in seen_roles or not isinstance(policy, dict):
             continue
         seen_roles.add(bot_role)
         call_args = {"action": "evaluate", "bot_role": bot_role, "target_path": target_path or "*"}
         advisories.append(
-            {
-                "bot_role": bot_role,
-                "source_binding_id": str(binding.get("binding_id", "")),
-                "source_layer": str(binding.get("layer", "root")),
-                "trigger": str(policy.get("trigger", "on_surface_match")),
-                "model_tier": str(policy.get("model_tier", "flash")),
-                "access_mode": str(policy.get("access_mode", "strictly-read-only")),
-                "mount_templates": [str(t) for t in policy.get("mount_templates", [])],
-                "resolution": str(policy.get("resolution", "L2")),
-                "ttl_seconds": int(policy.get("ttl_seconds", DEFAULT_EPHEMERAL_TTL_SECONDS)),
-                "handback_contract": str(policy.get("handback_contract", "4-channel-digest+rcap1")),
-                "recommended_mcp_call": {
-                    "tool": "orchestrate_ephemeral_fork",
-                    "arguments": call_args,
-                },
-            }
+            dict(
+                bot_role=bot_role,
+                source_binding_id=str(binding.get("binding_id", "")),
+                source_layer=str(binding.get("layer", "root")),
+                trigger=str(policy.get("trigger", "on_surface_match")),
+                model_tier=str(policy.get("model_tier", "flash")),
+                access_mode=str(policy.get("access_mode", "strictly-read-only")),
+                mount_templates=[str(t) for t in policy.get("mount_templates", [])],
+                resolution=str(policy.get("resolution", "L2")),
+                ttl_seconds=int(policy.get("ttl_seconds", c.DEFAULT_EPHEMERAL_TTL_SECONDS)),
+                handback_contract=str(policy.get("handback_contract", "4-channel-digest+rcap1")),
+                recommended_mcp_call={"tool": "orchestrate_ephemeral_fork", "arguments": call_args},
+            )
         )
     return advisories
 
@@ -93,18 +75,18 @@ def reap_expired_ephemeral_forks(
     root = default_ephemeral_root(repo_dir, ephemeral_root)
     if not root.is_dir():
         return []
-    now = now_epoch if now_epoch is not None else time.time()
-    reaped: list[str] = []
+    now, reaped = now_epoch if now_epoch is not None else time.time(), []
     for child in sorted(root.iterdir()):
         if not child.is_dir():
             continue
-        manifest_path = child / "system" / "mcp-layer.json"
+        manifest_path = child / "system/mcp-layer.json"
         expired = not manifest_path.is_file()
         if not expired:
             try:
                 data = json.loads(manifest_path.read_text(encoding="utf-8"))
-                expires_at = float(data.get("ephemeral_metadata", {}).get("expires_at_epoch", 0.0))
-                expired = now >= expires_at
+                expired = now >= float(
+                    data.get("ephemeral_metadata", {}).get("expires_at_epoch", 0.0)
+                )
             except OSError, ValueError, TypeError, json.JSONDecodeError:
                 expired = True
         if expired:
@@ -142,8 +124,7 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
     proj = project_dir.resolve()
     if not proj.is_dir():
         raise FileNotFoundError(f"mount_project_rules_from directory does not exist: {proj}")
-    rules_dir = proj / ".agents" / "rules"
-    bridged_files: list[str] = []
+    rules_dir, bridged_files = proj / ".agents" / "rules", []
     sections = [f"# Ephemeral Project Bridge ({proj.name})\n"]
     for rf in sorted(rules_dir.glob("*.md")) if rules_dir.is_dir() else []:
         if not rf.resolve().is_relative_to(proj):
@@ -152,32 +133,32 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
             )
         sections.append(f"## Rule: {rf.name}\n\n{rf.read_text(encoding='utf-8').strip()}\n")
         bridged_files.append(f".agents/rules/{rf.name}")
-    wildcard = ["*"]
-    binding = dict(
-        binding_id="ephemeral-project-bridge-rules",
-        description=f"Bridged workspace rules from {proj.name}",
-        mode="authoritative",
-        target_globs=wildcard,
-        architectural_planes=wildcard,
-        scopes=wildcard,
-        traits=wildcard,
-        default_resolution="L2",
-        invariants=[f"Enforce bridged workspace contracts from {proj.name}"],
-        rule_files=["antigravity/.gemini/config/AGENTS.md"],
-        canonical_templates=[],
-    )
-    bridge_manifest: dict[str, Any] = dict(
-        schema_version="1.2",
-        layer_id=f"bridge-{proj.name.lower().replace('_', '-')}",
-        layer_role="team",
-        precedence=20,
-        description=f"Ephemeral cross-project rule bridge from {proj.name}",
-        default_stack_templates=[],
-        baseline_guardrails=[f"Cross-project bridge active from {proj.name}"],
-        surface_bindings=[binding],
-        environments={},
-        federated_mcps=[],
-    )
+    w = ["*"]
+    binding = {
+        "binding_id": "ephemeral-project-bridge-rules",
+        "description": f"Bridged workspace rules from {proj.name}",
+        "mode": "authoritative",
+        "target_globs": w,
+        "architectural_planes": w,
+        "scopes": w,
+        "traits": w,
+        "default_resolution": "L2",
+        "invariants": [f"Enforce bridged workspace contracts from {proj.name}"],
+        "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+        "canonical_templates": [],
+    }
+    bridge_manifest: dict[str, Any] = {
+        "schema_version": "1.2",
+        "layer_id": f"bridge-{proj.name.lower().replace('_', '-')}",
+        "layer_role": "team",
+        "precedence": 20,
+        "description": f"Ephemeral cross-project rule bridge from {proj.name}",
+        "default_stack_templates": [],
+        "baseline_guardrails": [f"Cross-project bridge active from {proj.name}"],
+        "surface_bindings": [binding],
+        "environments": {},
+        "federated_mcps": [],
+    }
     return bridged_files, "\n".join(sections), bridge_manifest
 
 
@@ -194,7 +175,7 @@ def spawn_ephemeral_fork(
     model_tier: str = "flash",
     access_mode: str = "strictly-read-only",
     resolution: str = "L2",
-    ttl_seconds: int = DEFAULT_EPHEMERAL_TTL_SECONDS,
+    ttl_seconds: int = c.DEFAULT_EPHEMERAL_TTL_SECONDS,
     ephemeral_root: Path | None = None,
     now_epoch: float | None = None,
     dry_run: bool = False,
@@ -205,47 +186,58 @@ def spawn_ephemeral_fork(
         list(architectural_planes or ["*"]),
         list(target_globs or ["*"]),
     )
-    if not KEBAB_ID_RE.match(role_clean):
+    if not c.KEBAB_ID_RE.match(role_clean):
         raise ValueError(f"Invalid bot_role {role_clean!r}: must be kebab-case")
-    if model_tier not in VALID_AGENT_TIERS:
-        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {VALID_AGENT_TIERS}")
-    if access_mode not in VALID_EPHEMERAL_ACCESS_MODES:
+    if model_tier not in c.VALID_AGENT_TIERS:
+        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {c.VALID_AGENT_TIERS}")
+    if access_mode not in c.VALID_EPHEMERAL_ACCESS_MODES:
         raise ValueError(f"Invalid access_mode {access_mode!r}")
-    if resolution not in VALID_RESOLUTIONS:
-        raise ValueError(f"Invalid resolution {resolution!r}: must be one of {VALID_RESOLUTIONS}")
-    if not (MIN_EPHEMERAL_TTL_SECONDS <= ttl_seconds <= MAX_EPHEMERAL_TTL_SECONDS):
+    if resolution not in c.VALID_RESOLUTIONS:
+        raise ValueError(f"Invalid resolution {resolution!r}: must be one of {c.VALID_RESOLUTIONS}")
+    if not (c.MIN_EPHEMERAL_TTL_SECONDS <= ttl_seconds <= c.MAX_EPHEMERAL_TTL_SECONDS):
         raise ValueError(f"Invalid ttl_seconds {ttl_seconds}")
     for p in planes:
-        if p != "*" and p not in VALID_ARCHITECTURAL_PLANES:
+        if p != "*" and p not in c.VALID_ARCHITECTURAL_PLANES:
             raise ValueError(f"Invalid architectural_plane {p!r}")
     for kind, items in (("mount_template", mount_templates), ("mount_layer", mount_layers)):
         for item in items or []:
-            if not KEBAB_ID_RE.match(item):
+            if not c.KEBAB_ID_RE.match(item):
                 raise ValueError(f"Invalid {kind} {item!r}: must be kebab-case")
 
     reaped = reap_expired_ephemeral_forks(repo_dir, ephemeral_root, now_epoch=now_epoch)
     root = default_ephemeral_root(repo_dir, ephemeral_root)
     active_dirs = [d for d in root.iterdir() if d.is_dir()] if root.is_dir() else []
-    if len(active_dirs) >= MAX_ACTIVE_EPHEMERAL_FORKS:
+    if len(active_dirs) >= c.MAX_ACTIVE_EPHEMERAL_FORKS:
         raise ValueError(
             f"EPHEMERAL_FORK_LIMIT_REACHED: active ephemeral forks ({len(active_dirs)}) "
-            f"reached maximum capacity ({MAX_ACTIVE_EPHEMERAL_FORKS}). Reap unused forks first."
+            f"reached maximum capacity ({c.MAX_ACTIVE_EPHEMERAL_FORKS}). Reap unused forks first."
         )
 
     created_at = round(now_epoch if now_epoch is not None else time.time(), 3)
-    expires_at = round(created_at + ttl_seconds, 3)
-    seed = f"{role_clean}:{created_at}:{target_globs}:{mount_templates}:{mount_project_rules_from}"
+    expires_at, seed = (
+        round(created_at + ttl_seconds, 3),
+        f"{role_clean}:{created_at}:{target_globs}:{mount_templates}:{mount_project_rules_from}",
+    )
     fork_id = f"eph-{role_clean}-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:8]}"
-    s_raw = f"rcap1-ephemeral:{fork_id}:{created_at}".encode()
-    session_secret = hashlib.sha256(s_raw).hexdigest()[:24]
+    session_secret = hashlib.sha256(f"rcap1-ephemeral:{fork_id}:{created_at}".encode()).hexdigest()[
+        :24
+    ]
     default_tpls = list(base_manifest.get("default_stack_templates", []))
     effective_templates = list(mount_templates) if mount_templates is not None else default_tpls
-    canonical_tpls = [
-        f"templates/{t}/rules/coding.md"
+    tpl_rules = [
+        f"templates/{t}/rules/{rf.name}"
         for t in effective_templates
-        if (repo_dir / f"templates/{t}/rules/coding.md").is_file()
+        for rf in sorted((repo_dir / "templates" / t / "rules").glob("*.md"))
     ]
-    rule_files = ["antigravity/.gemini/config/AGENTS.md", *canonical_tpls]
+    tpl_assets = [
+        f"templates/{t}/assets/{af.name}"
+        for t in effective_templates
+        for af in sorted((repo_dir / "templates" / t / "assets").glob("*.md"))
+    ]
+    canonical_tpls, rule_files = (
+        tpl_assets or tpl_rules,
+        ["antigravity/.gemini/config/AGENTS.md", *tpl_rules],
+    )
 
     parent_layers_dir = repo_dir / "layers"
     selected_layers = [
@@ -256,26 +248,28 @@ def spawn_ephemeral_fork(
         and (mount_layers is None or c.name in mount_layers)
     ]
     parent_id = str(base_manifest.get("layer_id", "dotfiles-ubuntu-default"))
-    eph_meta: dict[str, Any] = dict(
-        fork_id=fork_id,
-        bot_role=role_clean,
-        parent_layer_id=parent_id,
-        model_tier=model_tier,
-        access_mode=access_mode,
-        resolution=resolution,
-        target_globs=globs,
-        architectural_planes=planes,
-        mount_layers_filter=mount_layers,
-        created_at_epoch=created_at,
-        expires_at_epoch=expires_at,
-        ttl_seconds=ttl_seconds,
-        session_resonance_key=session_secret,
-        handback_contract="4-channel-digest+rcap1",
+    eph_meta: dict[str, Any] = {
+        "fork_id": fork_id,
+        "bot_role": role_clean,
+        "parent_layer_id": parent_id,
+        "model_tier": model_tier,
+        "access_mode": access_mode,
+        "resolution": resolution,
+        "target_globs": globs,
+        "architectural_planes": planes,
+        "mount_layers_filter": mount_layers,
+        "created_at_epoch": created_at,
+        "expires_at_epoch": expires_at,
+        "ttl_seconds": ttl_seconds,
+        "session_resonance_key": session_secret,
+        "handback_contract": "4-channel-digest+rcap1",
+    }
+    bridged_files, bridge_md, bridge_manifest = (
+        _prepare_project_bridge(mount_project_rules_from)
+        if mount_project_rules_from is not None
+        else ([], "", {})
     )
     if mount_project_rules_from is not None:
-        bridged_files, bridge_md, bridge_manifest = _prepare_project_bridge(
-            mount_project_rules_from
-        )
         selected_layers.append("ephemeral-project-bridge")
         eph_meta.update(
             bridge_layer_id=str(bridge_manifest.get("layer_id", "")),
@@ -283,77 +277,78 @@ def spawn_ephemeral_fork(
             bridge_manifest=bridge_manifest,
             bridged_project_files=bridged_files,
         )
-    else:
-        bridged_files, bridge_md, bridge_manifest = [], "", {}
-
-    binding = dict(
-        binding_id=f"{role_clean}-ephemeral-authority",
-        description=f"Authoritative scoped binding for {role_clean}",
-        mode="authoritative",
-        target_globs=globs,
-        architectural_planes=planes,
-        scopes=["*"],
-        traits=["*"],
-        default_resolution=resolution,
-        invariants=[
+    binding = {
+        "binding_id": f"{role_clean}-ephemeral-authority",
+        "description": f"Authoritative scoped binding for {role_clean}",
+        "mode": "authoritative",
+        "target_globs": globs,
+        "architectural_planes": planes,
+        "scopes": ["*"],
+        "traits": ["*"],
+        "default_resolution": resolution,
+        "invariants": [
             f"Operate strictly within {access_mode} mode and {globs} surface boundary",
-            "Return output using the 4-Channel Executive Digest contract (AGENTS.md §13)",
+            "Return output using the 4-Channel Executive Digest contract (AGENTS.md §12)",
         ],
-        rule_files=rule_files,
-        canonical_templates=canonical_tpls,
-    )
-    ephemeral_manifest: dict[str, Any] = dict(
-        schema_version="1.2",
-        layer_id=fork_id,
-        layer_role="ephemeral-bot",
-        precedence=ROLE_DEFAULT_PRECEDENCE["ephemeral-bot"],
-        description=f"Ephemeral Department Bot ({role_clean}) scoped to {globs}",
-        upstream_layer=dict(
-            layer_id=parent_id, repository="local-ephemeral-overlay", branch="ephemeral"
-        ),
-        mounted_layers_dir="layers",
-        mounted_layers=selected_layers,
-        default_stack_templates=effective_templates,
-        baseline_guardrails=[
+        "rule_files": rule_files,
+        "canonical_templates": canonical_tpls,
+    }
+    ephemeral_manifest: dict[str, Any] = {
+        "schema_version": "1.2",
+        "layer_id": fork_id,
+        "layer_role": "ephemeral-bot",
+        "precedence": c.ROLE_DEFAULT_PRECEDENCE["ephemeral-bot"],
+        "description": f"Ephemeral Department Bot ({role_clean}) scoped to {globs}",
+        "upstream_layer": {
+            "layer_id": parent_id,
+            "repository": "local-ephemeral-overlay",
+            "branch": "ephemeral",
+        },
+        "mounted_layers_dir": "layers",
+        "mounted_layers": selected_layers,
+        "default_stack_templates": effective_templates,
+        "baseline_guardrails": [
             f"Ephemeral Bot Role: {role_clean} (tier={model_tier}, access={access_mode})",
-            "AGENTS.md §13 (Return compact 4-Channel Executive Digest + rcap1 capsule)",
+            "AGENTS.md §12 (Return compact 4-Channel Executive Digest + rcap1 capsule)",
             *list(base_manifest.get("baseline_guardrails", [])),
         ],
-        surface_bindings=[binding],
-        environments=dict(base_manifest.get("environments", {})),
-        federated_mcps=[],
-        ephemeral_metadata=eph_meta,
-    )
+        "surface_bindings": [binding],
+        "environments": dict(base_manifest.get("environments", {})),
+        "federated_mcps": [],
+        "ephemeral_metadata": eph_meta,
+    }
 
     fork_dir = root / fork_id
     if not dry_run:
         for subdir in ("system", "layers", "logs"):
             (fork_dir / subdir).mkdir(parents=True, exist_ok=True)
-        for shared_item in ("antigravity", "docs", "templates", "VERSION"):
-            if (repo_dir / shared_item).exists() and not (fork_dir / shared_item).exists():
-                _copy_zero_copy(repo_dir / shared_item, fork_dir / shared_item)
+        for item in ("antigravity", "docs", "templates", "VERSION"):
+            if (repo_dir / item).exists() and not (fork_dir / item).exists():
+                _copy_zero_copy(repo_dir / item, fork_dir / item)
         for lname in selected_layers:
             if lname != "ephemeral-project-bridge":
                 _copy_zero_copy(parent_layers_dir / lname, fork_dir / "layers" / lname)
         if bridge_manifest:
             b_layer = fork_dir / "layers" / "ephemeral-project-bridge"
-            (b_layer / "antigravity" / ".gemini" / "config").mkdir(parents=True, exist_ok=True)
-            (b_layer / "system").mkdir(parents=True, exist_ok=True)
-            (b_layer / "antigravity" / ".gemini" / "config" / "AGENTS.md").write_text(
+            for b_sub in ("antigravity/.gemini/config", "system"):
+                (b_layer / b_sub).mkdir(parents=True, exist_ok=True)
+            (b_layer / "antigravity/.gemini/config/AGENTS.md").write_text(
                 bridge_md, encoding="utf-8"
             )
-            (b_layer / "system" / "mcp-layer.json").write_text(
+            (b_layer / "system/mcp-layer.json").write_text(
                 json.dumps(bridge_manifest, indent=2) + "\n", encoding="utf-8"
             )
-        (fork_dir / "system" / "mcp-layer.json").write_text(
+        (fork_dir / "system/mcp-layer.json").write_text(
             json.dumps(ephemeral_manifest, indent=2) + "\n", encoding="utf-8"
         )
-
-    res = dict(eph_meta, dry_run=dry_run, fork_dir=str(fork_dir))
-    res.update(
-        bridged_project_files=bridged_files, reaped_expired=reaped, manifest=ephemeral_manifest
-    )
-    return res
+    return {
+        **eph_meta,
+        "dry_run": dry_run,
+        "fork_dir": str(fork_dir),
+        "bridged_project_files": bridged_files,
+        "reaped_expired": reaped,
+        "manifest": ephemeral_manifest,
+    }
 
 
 def inspect_ephemeral_forks(
@@ -364,16 +359,17 @@ def inspect_ephemeral_forks(
 ) -> dict[str, Any]:
     """List active ephemeral forks or inspect a specific fork_id after TTL cleanup."""
     reaped = reap_expired_ephemeral_forks(repo_dir, ephemeral_root, now_epoch=now_epoch)
-    root = default_ephemeral_root(repo_dir, ephemeral_root)
-    now = now_epoch if now_epoch is not None else time.time()
-    forks: list[dict[str, Any]] = []
+    root, now, forks = (
+        default_ephemeral_root(repo_dir, ephemeral_root),
+        now_epoch if now_epoch is not None else time.time(),
+        [],
+    )
     for child in sorted(root.iterdir()) if root.is_dir() else []:
-        m_path = child / "system" / "mcp-layer.json"
+        m_path = child / "system/mcp-layer.json"
         if not m_path.is_file() or (fork_id and child.name != fork_id):
             continue
         data = json.loads(m_path.read_text(encoding="utf-8"))
         meta = data.get("ephemeral_metadata", {})
-        rem_ttl = max(0.0, round(float(meta.get("expires_at_epoch", 0.0)) - now, 1))
         forks.append(
             {
                 "fork_id": child.name,
@@ -381,7 +377,9 @@ def inspect_ephemeral_forks(
                 "bot_role": str(meta.get("bot_role", "")),
                 "model_tier": str(meta.get("model_tier", "flash")),
                 "access_mode": str(meta.get("access_mode", "strictly-read-only")),
-                "remaining_ttl_seconds": rem_ttl,
+                "remaining_ttl_seconds": max(
+                    0.0, round(float(meta.get("expires_at_epoch", 0.0)) - now, 1)
+                ),
                 "default_stack_templates": list(data.get("default_stack_templates", [])),
             }
         )
@@ -398,8 +396,7 @@ def reap_ephemeral_fork(
     repo_dir: Path, fork_id: str, ephemeral_root: Path | None = None, dry_run: bool = False
 ) -> dict[str, Any]:
     """Explicitly reap one ephemeral fork by fork_id or 'all' active ephemeral forks."""
-    root = default_ephemeral_root(repo_dir, ephemeral_root)
-    reaped: list[str] = []
+    root, reaped = default_ephemeral_root(repo_dir, ephemeral_root), []
     if fork_id == "all":
         for child in sorted(root.iterdir()) if root.is_dir() else []:
             if child.is_dir():
@@ -408,16 +405,15 @@ def reap_ephemeral_fork(
                     _ensure_dirs_writable(child)
                     shutil.rmtree(child, ignore_errors=True)
         return {"dry_run": dry_run, "reaped_forks": reaped}
-    if not KEBAB_ID_RE.match(fork_id):
+    if not c.KEBAB_ID_RE.match(fork_id):
         raise ValueError(f"Invalid fork_id {fork_id!r}: must be kebab-case or 'all'")
     target = (root / fork_id).resolve()
     if not target.is_relative_to(root) or not target.is_dir():
         raise FileNotFoundError(f"Ephemeral fork {fork_id!r} not found under {root}")
-    reaped.append(fork_id)
     if not dry_run:
         _ensure_dirs_writable(target)
         shutil.rmtree(target, ignore_errors=True)
-    return {"dry_run": dry_run, "reaped_forks": reaped}
+    return {"dry_run": dry_run, "reaped_forks": [fork_id]}
 
 
 def build_subagent_invocation_brief(
@@ -429,14 +425,14 @@ def build_subagent_invocation_brief(
     """Build a deterministic Antigravity invoke_subagent brief with 4-Channel digest contract."""
     meta = manifest.get("ephemeral_metadata", {})
     bot_role = str(meta.get("bot_role", manifest.get("layer_id", "ephemeral-bot")))
-    model_tier, access_mode = (
+    model_tier, access_mode, invariants = (
         str(meta.get("model_tier", "flash")),
         str(meta.get("access_mode", "strictly-read-only")),
+        list(surface_projection.get("effective_invariants", [])),
     )
-    invariants = list(surface_projection.get("effective_invariants", []))
     channels = [
         "1. Domain State",
-        "2. Affected Port / Contract",
+        "2. Affected Surface",
         "3. Invariants & Constraints",
         "4. Actionable Delta",
     ]
@@ -444,20 +440,20 @@ def build_subagent_invocation_brief(
         f"You are operating as Ephemeral Department Bot '{bot_role}' "
         f"(access_mode={access_mode}, model_tier={model_tier}).",
         f"Target Surface: {target_path or '*'}\nEnforced Invariants:",
-        *[f"- {inv}" for inv in invariants[:8]],
-        "Return ONLY a compact 4-Channel Executive Digest (AGENTS.md §13):",
-        *[f"  {ch}" for ch in channels],
+        *(f"- {inv}" for inv in invariants[:8]),
+        "Return ONLY a compact 4-Channel Executive Digest (AGENTS.md §12):",
+        *(f"  {ch}" for ch in channels),
         *([f"Sealed Context Capsule (rcap1): {capsule_token[:48]}..."] if capsule_token else []),
     ]
-    return dict(
-        subagent_type="research" if access_mode == "strictly-read-only" else "self",
-        model_tier=model_tier,
-        role=f"Department Bot ({bot_role})",
-        access_mode=access_mode,
-        target_path=target_path or "*",
-        effective_invariants=invariants,
-        canonical_templates=list(surface_projection.get("canonical_templates", [])),
-        handback_channels=channels,
-        capsule_token=capsule_token,
-        prompt="\n".join(prompt_lines),
-    )
+    return {
+        "subagent_type": "research" if access_mode == "strictly-read-only" else "self",
+        "model_tier": model_tier,
+        "role": f"Department Bot ({bot_role})",
+        "access_mode": access_mode,
+        "target_path": target_path or "*",
+        "effective_invariants": invariants,
+        "canonical_templates": list(surface_projection.get("canonical_templates", [])),
+        "handback_channels": channels,
+        "capsule_token": capsule_token,
+        "prompt": "\n".join(prompt_lines),
+    }

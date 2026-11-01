@@ -126,7 +126,7 @@ Application behavior is configured via `app-manifest.yaml`, NOT hardcoded condit
 ```yaml
 # app-manifest.yaml
 project:
-  name: my_app
+  name: {project_slug}
   scale: medium
 domain:
   bounded_contexts:

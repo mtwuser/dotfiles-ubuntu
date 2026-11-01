@@ -81,7 +81,7 @@ Verify these mandates before proposing solutions or modifying files in any works
    - **`business-base`** (`templates/business-base/`): Corporate ledger integrity, *Lex Superior* IP/compliance, cross-surface cascade, and functional verification.
    - Switch global profile via `./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> --stow`.
 3. **`antigravity-ide` vs. `antigravity-agents` & Layer Authority**: `antigravity-ide` provides a 360° visual/terminal view; `antigravity-agents` scopes rules per Workspace Root (`.agents/rules/layer-<NN>-<name>.md` by `precedence` `0..100`, `Non-Workspace File Access: allow` on Corporate Root vs. `deny`/`ask` on Department/Squad). Layer owners (`set-authority` / `check-authority` matching `git config user.email`) govern releases; consumers propose upward PRs (`promote-from-project --create-pr`) within a 1-hop horizon (`inspect-horizon`).
-4. **Workstation Hook Gates (`pre_tool_guard.py`)**: Blocks automated mutating Git commands (`git add`, `git commit`, `git push`, `git reset`, `git rebase`, `git checkout`, `git merge`, `git subtree`), `alembic` migrations, edits to `alembic/versions/*.py` or `.agents/rules/layer-*.md`, and non-empty writes (`> 0 bytes`) to `src/**/__init__.py` or `tests/**/__init__.py`.
+4. **Workstation Hook Gates (`pre_tool_guard.py`)**: Blocks automated mutating Git commands (`git add`, `git commit`, `git push`, `git reset --hard`, `git clean -f`, `git subtree`), `alembic` migrations, edits to `alembic/versions/*.py` or `.agents/rules/layer-*.md`, and non-empty writes (`> 0 bytes`) to `src/**/__init__.py` or `tests/**/__init__.py`.
 
 #### 12. Model Delegation Discipline (`flash` vs `inherit` vs `pro` & 4-Channel Digest)
 > *"Never spend a heavy model on a mechanical task."*
@@ -105,9 +105,9 @@ Verify these mandates before proposing solutions or modifying files in any works
 2. **ONE single commit per repo** using Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`).
 3. **Independent repos**: Deliver a separate commit block per modified repo (`cd <REPO_PATH> && git add ... && git commit -m "..."`).
 4. **Task tracking sync is MANDATORY** before delivering any commit block (`skills/continue/SKILL.md`).
-5. **Force-tracked `.gitignore` files**: Use `git add -u` (plus `git add -f <new_file>`) so tracked governance files (`WORKTASK.md`, `BACKLOG.md`, `CHANGELOG.md`, `ROADMAP.md`) are never left unstaged.
+5. **Force-tracked `.gitignore` files**: Use `git add -u` (plus `git add -f <new_file>`) so tracked governance files (`WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md`, `ROADMAP.md`) are never left unstaged.
 6. **Working Commits vs. Releases (`[Unreleased]` Standard)**: During active iteration, **NEVER** bump `VERSION`/`pyproject.toml`/`README.md` badges, **NEVER** append `(vX.Y.Z)` to commit messages, and **NEVER** chain `git push` by default. Log under `## [Unreleased]` in `CHANGELOG.md` and only cut/push a release via `/release` (`skills/release/SKILL.md`).
 
 ### Priority Chain & Global Config Persistence
-- **Priority Chain**: (1) `WORKTASK.md` $\rightarrow$ (2) `ROADMAP.md` / `BACKLOG.md` $\rightarrow$ (3) `roadmaps/`. Never suggest ad-hoc work from memory.
+- **Priority Chain**: (1) `WORKTASK.md` $\rightarrow$ (2) `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` $\rightarrow$ (3) `roadmaps/`. Never suggest ad-hoc work from memory.
 - **Global Config Persistence (`dotfiles-ubuntu`)**: Edit `~/dotfiles-ubuntu/antigravity/.gemini/config/` or `~/dotfiles-ubuntu/templates/<profile>/` first, then run `cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity`.

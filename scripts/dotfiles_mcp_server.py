@@ -28,340 +28,180 @@ def _require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def _rpc(
+    server: DotfilesMCPServer, req_id: int, method: str, params: dict[str, object]
+) -> dict[str, object]:
+    return (
+        server.handle_request({"jsonrpc": "2.0", "id": req_id, "method": method, "params": params})
+        or {}
+    )
+
+
+def _call_tool_rpc(
+    server: DotfilesMCPServer, req_id: int, name: str, **arguments: object
+) -> dict[str, object]:
+    return _rpc(server, req_id, "tools/call", {"name": name, "arguments": arguments})
+
+
 def run_self_test(server: DotfilesMCPServer) -> int:
     """Execute deterministic in-process verification of all MCP capabilities."""
     print(f"═══ dotfiles-ubuntu MCP Server Self-Test (v{_read_version()}) ═══")
 
     # 1. Initialize
-    init_resp = server.handle_request(
-        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}}
-    )
-    _require(bool(init_resp and "result" in init_resp), "initialize failed")
+    init_resp = _rpc(server, 1, "initialize", {})
+    _require("result" in init_resp, "initialize failed")
     print("  ✅ initialize handshake ok")
 
     # 2. Resources list & read all 9 resources
-    res_list = (
-        server.handle_request({"jsonrpc": "2.0", "id": 2, "method": "resources/list", "params": {}})
-        or {}
-    )
+    res_list = _rpc(server, 2, "resources/list", {})
     _require(
-        bool(res_list and len(res_list["result"]["resources"]) == 9),
+        bool("result" in res_list and len(res_list["result"]["resources"]) == 9),  # type: ignore[index]
         "Expected 9 resources",
     )
-    for res in res_list["result"]["resources"]:
+    for res in res_list["result"]["resources"]:  # type: ignore[index]
         uri = res["uri"]
-        read_resp = (
-            server.handle_request(
-                {
-                    "jsonrpc": "2.0",
-                    "id": 3,
-                    "method": "resources/read",
-                    "params": {"uri": uri},
-                }
-            )
-            or {}
-        )
-        _require(bool(read_resp and "result" in read_resp), f"Failed reading {uri}")
-        text = read_resp["result"]["contents"][0]["text"]
+        read_resp = _rpc(server, 3, "resources/read", {"uri": uri})
+        _require("result" in read_resp, f"Failed reading {uri}")
+        text = read_resp["result"]["contents"][0]["text"]  # type: ignore[index]
         _require(len(text) > 0, f"Empty resource payload for {uri}")
     print("  ✅ resources/list & resources/read verified across all 9 resources")
 
     # 3. Tools list & call
-    tools_list = server.handle_request(
-        {"jsonrpc": "2.0", "id": 4, "method": "tools/list", "params": {}}
-    )
+    tools_list = _rpc(server, 4, "tools/list", {})
     _require(
-        bool(tools_list and len(tools_list["result"]["tools"]) == 9),
+        bool("result" in tools_list and len(tools_list["result"]["tools"]) == 9),  # type: ignore[index]
         "Expected 9 tools",
     )
 
-    overview = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 5,
-            "method": "tools/call",
-            "params": {"name": "get_layer_overview", "arguments": {}},
-        }
-    )
-    _require(
-        bool(overview and not overview["result"]["isError"]),
-        "get_layer_overview failed",
-    )
+    overview = _call_tool_rpc(server, 5, "get_layer_overview")
+    _require(not overview["result"]["isError"], "get_layer_overview failed")  # type: ignore[index]
 
-    doc_read = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 6,
-            "method": "tools/call",
-            "params": {
-                "name": "read_layer_document",
-                "arguments": {"relative_path": "docs/README.md"},
-            },
-        }
-    )
+    doc_read = _call_tool_rpc(server, 6, "read_layer_document", relative_path="docs/README.md")
     _require(
-        bool(doc_read and "Documentation Index" in doc_read["result"]["content"][0]["text"]),
+        "Documentation Index" in doc_read["result"]["content"][0]["text"],  # type: ignore[index]
         "read_layer_document failed",
     )
 
-    query_res = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 7,
-            "method": "tools/call",
-            "params": {
-                "name": "query_governance_rules",
-                "arguments": {"query": "AAA", "scope": "global", "resolution": "L0"},
-            },
-        }
+    query_res = _call_tool_rpc(
+        server, 7, "query_governance_rules", query="AAA", scope="global", resolution="L0"
     )
-    _require(
-        bool(query_res and not query_res["result"]["isError"]),
-        "query_governance_rules failed",
-    )
+    _require(not query_res["result"]["isError"], "query_governance_rules failed")  # type: ignore[index]
     query_payload = json.loads(query_res["result"]["content"][0]["text"])  # type: ignore[index]
     first_capsule = query_payload["matches"][0]["capsule_token"]
-    unfold_l1 = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 71,
-            "method": "tools/call",
-            "params": {
-                "name": "unfold_context_capsule",
-                "arguments": {
-                    "capsule_token": first_capsule,
-                    "target_level": "L1",
-                    "agent_tier": "flash",
-                },
-            },
-        }
+    unfold_l1 = _call_tool_rpc(
+        server,
+        71,
+        "unfold_context_capsule",
+        capsule_token=first_capsule,
+        target_level="L1",
+        agent_tier="flash",
     )
-    _require(
-        bool(unfold_l1 and not unfold_l1["result"]["isError"]),
-        "unfold_context_capsule (L0->L1) failed",
-    )
+    _require(not unfold_l1["result"]["isError"], "unfold_context_capsule (L0->L1) failed")  # type: ignore[index]
     l1_payload = json.loads(unfold_l1["result"]["content"][0]["text"])  # type: ignore[index]
-    unfold_l3 = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 72,
-            "method": "tools/call",
-            "params": {
-                "name": "unfold_context_capsule",
-                "arguments": {
-                    "capsule_token": l1_payload["next_capsule_token"],
-                    "target_level": "L3",
-                    "agent_tier": "inherit",
-                },
-            },
-        }
+    unfold_l3 = _call_tool_rpc(
+        server,
+        72,
+        "unfold_context_capsule",
+        capsule_token=l1_payload["next_capsule_token"],
+        target_level="L3",
+        agent_tier="inherit",
     )
-    _require(
-        bool(unfold_l3 and not unfold_l3["result"]["isError"]),
-        "unfold_context_capsule (L1->L3) failed",
-    )
+    _require(not unfold_l3["result"]["isError"], "unfold_context_capsule (L1->L3) failed")  # type: ignore[index]
 
-    fed_res = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 8,
-            "method": "tools/call",
-            "params": {"name": "discover_federated_mcps", "arguments": {}},
-        }
-    )
-    _require(
-        bool(fed_res and not fed_res["result"]["isError"]),
-        "discover_federated_mcps failed",
-    )
+    fed_res = _call_tool_rpc(server, 8, "discover_federated_mcps")
+    _require(not fed_res["result"]["isError"], "discover_federated_mcps failed")  # type: ignore[index]
 
-    cmp_res = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 9,
-            "method": "tools/call",
-            "params": {
-                "name": "compare_layer_patterns",
-                "arguments": {
-                    "project_rules": ["coding.md", "custom-domain.md"],
-                    "project_skills": ["sopen", "custom-skill"],
-                },
-            },
-        }
+    cmp_res = _call_tool_rpc(
+        server,
+        9,
+        "compare_layer_patterns",
+        project_rules=["coding.md", "custom-domain.md"],
+        project_skills=["sopen", "custom-skill"],
     )
-    _require(
-        bool(cmp_res and not cmp_res["result"]["isError"]),
-        "compare_layer_patterns failed",
-    )
+    _require(not cmp_res["result"]["isError"], "compare_layer_patterns failed")  # type: ignore[index]
 
-    surf_res = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 91,
-            "method": "tools/call",
-            "params": {
-                "name": "resolve_surface_governance",
-                "arguments": {"target_path": "src/checkout/service.py"},
-            },
-        }
+    surf_res = _call_tool_rpc(
+        server, 91, "resolve_surface_governance", target_path="src/checkout/service.py"
     )
-    _require(
-        bool(surf_res and not surf_res["result"]["isError"]),
-        "resolve_surface_governance failed",
-    )
+    _require(not surf_res["result"]["isError"], "resolve_surface_governance failed")  # type: ignore[index]
     surf_payload = json.loads(surf_res["result"]["content"][0]["text"])  # type: ignore[index]
     _require(
         len(surf_payload.get("resolved_bindings", [])) >= 2,
         "resolve_surface_governance did not match expected baseline bindings",
     )
-    eph_spawn = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 92,
-            "method": "tools/call",
-            "params": {
-                "name": "orchestrate_ephemeral_fork",
-                "arguments": {
-                    "action": "spawn",
-                    "bot_role": "dept-hexagonal-architect",
-                    "target_globs": ["src/**"],
-                },
-            },
-        }
+    eph_spawn = _call_tool_rpc(
+        server,
+        92,
+        "orchestrate_ephemeral_fork",
+        action="spawn",
+        bot_role="dept-hexagonal-architect",
+        target_globs=["src/**"],
     )
-    _require(bool(eph_spawn and not eph_spawn["result"]["isError"]), "ephemeral spawn failed")
+    _require(not eph_spawn["result"]["isError"], "ephemeral spawn failed")  # type: ignore[index]
     eph_fid = json.loads(eph_spawn["result"]["content"][0]["text"])["fork_id"]  # type: ignore[index]
-    eph_insp = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 93,
-            "method": "tools/call",
-            "params": {
-                "name": "orchestrate_ephemeral_fork",
-                "arguments": {"action": "inspect", "fork_id": eph_fid},
-            },
-        }
+    eph_insp = _call_tool_rpc(
+        server, 93, "orchestrate_ephemeral_fork", action="inspect", fork_id=eph_fid
     )
-    _require(bool(eph_insp and not eph_insp["result"]["isError"]), "ephemeral inspect failed")
-    eph_eval = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 94,
-            "method": "tools/call",
-            "params": {
-                "name": "orchestrate_ephemeral_fork",
-                "arguments": {
-                    "action": "evaluate",
-                    "fork_id": eph_fid,
-                    "target_path": "src/checkout/service.py",
-                    "one_shot": False,
-                },
-            },
-        }
+    _require(not eph_insp["result"]["isError"], "ephemeral inspect failed")  # type: ignore[index]
+    eph_eval = _call_tool_rpc(
+        server,
+        94,
+        "orchestrate_ephemeral_fork",
+        action="evaluate",
+        fork_id=eph_fid,
+        target_path="src/checkout/service.py",
+        one_shot=False,
     )
-    _require(bool(eph_eval and not eph_eval["result"]["isError"]), "ephemeral evaluate failed")
+    _require(not eph_eval["result"]["isError"], "ephemeral evaluate failed")  # type: ignore[index]
     eph_payload = json.loads(eph_eval["result"]["content"][0]["text"])  # type: ignore[index]
-    eph_unfold = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 95,
-            "method": "tools/call",
-            "params": {
-                "name": "unfold_context_capsule",
-                "arguments": {
-                    "capsule_token": eph_payload["ephemeral_capsule"],
-                    "target_level": "L3",
-                    "agent_tier": "inherit",
-                    "resonance_key": eph_payload["session_resonance_key"],
-                },
-            },
-        }
+    eph_unfold = _call_tool_rpc(
+        server,
+        95,
+        "unfold_context_capsule",
+        capsule_token=eph_payload["ephemeral_capsule"],
+        target_level="L3",
+        agent_tier="inherit",
+        resonance_key=eph_payload["session_resonance_key"],
     )
     _require(
-        bool(eph_unfold and not eph_unfold["result"]["isError"]),
+        not eph_unfold["result"]["isError"],  # type: ignore[index]
         "parent unfold of ephemeral capsule failed",
     )
-    eph_reap = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 96,
-            "method": "tools/call",
-            "params": {
-                "name": "orchestrate_ephemeral_fork",
-                "arguments": {"action": "reap", "fork_id": eph_fid},
-            },
-        }
+    eph_reap = _call_tool_rpc(
+        server, 96, "orchestrate_ephemeral_fork", action="reap", fork_id=eph_fid
     )
-    _require(bool(eph_reap and not eph_reap["result"]["isError"]), "ephemeral reap failed")
-    eph_revoked = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 97,
-            "method": "tools/call",
-            "params": {
-                "name": "unfold_context_capsule",
-                "arguments": {
-                    "capsule_token": eph_payload["ephemeral_capsule"],
-                    "target_level": "L2",
-                    "agent_tier": "inherit",
-                    "resonance_key": eph_payload["session_resonance_key"],
-                },
-            },
-        }
+    _require(not eph_reap["result"]["isError"], "ephemeral reap failed")  # type: ignore[index]
+    eph_revoked = _call_tool_rpc(
+        server,
+        97,
+        "unfold_context_capsule",
+        capsule_token=eph_payload["ephemeral_capsule"],
+        target_level="L2",
+        agent_tier="inherit",
+        resonance_key=eph_payload["session_resonance_key"],
     )
-    _require(
-        bool(eph_revoked and "error" in eph_revoked),
-        "Reaped ephemeral fork capsule must be rejected",
-    )
+    _require("error" in eph_revoked, "Reaped ephemeral fork capsule must be rejected")
 
     # 4. Path-containment security gate verification
-    traversal_attempt = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 10,
-            "method": "tools/call",
-            "params": {
-                "name": "read_layer_document",
-                "arguments": {"relative_path": "../../../etc/passwd"},
-            },
-        }
+    traversal_attempt = _call_tool_rpc(
+        server, 10, "read_layer_document", relative_path="../../../etc/passwd"
     )
-    _require(
-        bool(traversal_attempt and "error" in traversal_attempt),
-        "Path traversal must be rejected",
-    )
-    diag_after = server.handle_request(
-        {
-            "jsonrpc": "2.0",
-            "id": 101,
-            "method": "resources/read",
-            "params": {"uri": "dotfiles://mcp/diagnostics"},
-        }
-    )
-    _require(
-        bool(diag_after and "result" in diag_after),
-        "Failed reading dotfiles://mcp/diagnostics after tools",
-    )
+    _require("error" in traversal_attempt, "Path traversal must be rejected")
+    diag_after = _rpc(server, 101, "resources/read", {"uri": "dotfiles://mcp/diagnostics"})
+    _require("result" in diag_after, "Failed reading dotfiles://mcp/diagnostics after tools")
     print("  ✅ tools/list, tools/call & path-containment security gate verified")
 
     # 5. Prompts list & get
-    prompts_list = (
-        server.handle_request({"jsonrpc": "2.0", "id": 11, "method": "prompts/list", "params": {}})
-        or {}
-    )
+    prompts_list = _rpc(server, 11, "prompts/list", {})
     _require(
-        bool(prompts_list and len(prompts_list["result"]["prompts"]) == 3),
+        bool("result" in prompts_list and len(prompts_list["result"]["prompts"]) == 3),  # type: ignore[index]
         "Expected 3 prompts",
     )
-    for pr in prompts_list["result"]["prompts"]:
-        p_resp = server.handle_request(
-            {
-                "jsonrpc": "2.0",
-                "id": 12,
-                "method": "prompts/get",
-                "params": {"name": pr["name"], "arguments": {"workflow_goal": "test"}},
-            }
+    for pr in prompts_list["result"]["prompts"]:  # type: ignore[index]
+        p_resp = _rpc(
+            server, 12, "prompts/get", {"name": pr["name"], "arguments": {"workflow_goal": "test"}}
         )
-        _require(bool(p_resp and "result" in p_resp), f"Failed prompt {pr['name']}")
+        _require("result" in p_resp, f"Failed prompt {pr['name']}")
     print("  ✅ prompts/list & prompts/get verified across all 3 prompts")
     print("🎉 MCP server self-test passed (0 errors)!")
     return 0

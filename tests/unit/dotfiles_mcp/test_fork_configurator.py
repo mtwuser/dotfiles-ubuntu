@@ -381,6 +381,14 @@ class TestForkConfigurator:
         assert real_res["participating_layers"] == ["dept-legal", "root", "dept-nometa"]
         assert (project_dir / ".agents/rules/layer-05-dept-legal.md").is_file()
         assert (project_dir / ".agents/rules/layer-40-root.md").is_file()
+        assert (fork_dir / "antigravity/.gemini/config/AGENTS.md").read_text(
+            encoding="utf-8"
+        ) == "# Root Team Rules\n"
+        assert (
+            (project_dir / ".agents/rules/layer-40-root.md")
+            .read_text(encoding="utf-8")
+            .startswith("---\n")
+        )
         assert (project_dir / ".agents/LAYER_LINEAGE.md").is_file()
         assert (project_dir / "WORKTASK.md").is_file()
         assert second_res["applied_template"] == "gdpr-pack"

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **Non-Mutating Source `AGENTS.md` Projection & Normalized Frontmatter Diffing (`scripts/dotfiles_mcp/fork_configurator.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `tests/unit/dotfiles_mcp/test_fork_configurator.py`, `tests/unit/dotfiles_mcp/test_promotion_engine.py`)**:
+  - Updated [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) so template and layer rule files (such as `antigravity/.gemini/config/AGENTS.md`) are copied into `<project_dir>/.agents/rules/` first before normalizing `trigger: always_on` YAML frontmatter on the materialized destination file—preventing in-place mutation of the source `AGENTS.md` file.
+  - Updated [`diff_project_against_layers`](scripts/dotfiles_mcp/promotion_engine.py) so materialized `.agents/rules/layer-<NN>-*.md` files with normalized frontmatter compare `in_sync` against un-frontmattered upstream `AGENTS.md` sources.
+- **Polymorphic Template Rule & Asset Discovery in Ephemeral Scoped Forks (`scripts/dotfiles_mcp/ephemeral_fork_engine.py`)**:
+  - Replaced hardcoded `templates/{t}/rules/coding.md` and `templates/{t}/assets/WORKTASK.md` paths in [`spawn_ephemeral_fork`](scripts/dotfiles_mcp/ephemeral_fork_engine.py) with dynamic discovery of `templates/{t}/rules/*.md` and `templates/{t}/assets/*.md` across all template packs (`human-core`, `technical-base`, `business-base`, `fastapi-hexagonal`).
+- **Python 3.14 Native Target Alignment (`pyproject.toml`)**:
+  - Aligned `requires-python = ">=3.14"`, `target-version = "py314"` (`[tool.ruff]`), and `Programming Language :: Python :: 3.14` classifier in [`pyproject.toml`](pyproject.toml) with Ubuntu 26.04 LTS (*Resolute Raccoon*) and `Dockerfile` (`FROM ubuntu:26.04`).
+- **POSIX Exit Code, GNOME Extension Drift, Remote Behind-Branch Check & `< 465`-Line Compaction Across All Bash Scripts (`audit.sh`, `bootstrap.sh`, `scripts/workstation-sync.sh`, `scripts/layer-config.sh`, `scripts/verify-repo.sh`, `bash/.bashrc`, `tests/imp/test_cli_scripts.py`, `tests/imp/test_repo_parity_gates.py`)**:
+  - Updated [`audit.sh`](audit.sh) to exit `1` when `ISSUES > 0`, added GNOME extension manifest drift inspection (`system/gnome-extensions.txt`) and `HEAD..@{u}` unpulled commit checks, fixed `--clean` backup directory removal (`rm -rf`), added `NO_COLOR` support, and compacted the script below 400 lines.
+  - Guarded NVM installation (`[ ! -s "$HOME/.nvm/nvm.sh" ]`), non-writable system `npm` global prefixes, and `.zip` `.deb` extraction (`unzip`) in [`bootstrap.sh`](bootstrap.sh); added automatic `~/.bashrc`/`~/.profile` collision backup and conditional `git` stowing in [`scripts/workstation-sync.sh`](scripts/workstation-sync.sh); and guarded `${force_color_prompt:-}` / `${color_prompt:-}` in [`bash/.bashrc`](bash/.bashrc).
+  - Compacted [`scripts/layer-config.sh`](scripts/layer-config.sh) (733 $\rightarrow$ 449 lines) and [`scripts/verify-repo.sh`](scripts/verify-repo.sh) (700 $\rightarrow$ 439 lines) below the `< 465`-line modularity gate, documented all 16 subcommands in `layer-config.sh --help`, wired `shellcheck` into `verify-repo.sh` `[2/8]`, and extended the `< 465`-line size gate in `verify-repo.sh` and [`test_repo_parity_gates.py`](tests/imp/test_repo_parity_gates.py) to cover all `.sh` and `templates/**/*.md` files.
+- **Lifecycle Hook Hardening & Per-Function AAA Test Enforcement (`antigravity/.gemini/config/scripts/pre_tool_guard.py`, `antigravity/.gemini/config/scripts/post_invocation_lint.py`, `tests/`)**:
+  - Updated [`post_invocation_lint.py`](antigravity/.gemini/config/scripts/post_invocation_lint.py) to validate explicit `# Arrange`, `# Act`, and `# Assert` comments per `def test_*` function (rejecting merged `# Act & Assert`), include `corporate/**/*.md` in `get_changed_doc_files`, and run structural/token-budget checks even when `ruff` is absent.
+  - Split merged `# Act & Assert` comments into explicit 3-step AAA blocks across [`test_authority_engine.py`](tests/unit/dotfiles_mcp/test_authority_engine.py), [`test_ephemeral_fork_engine.py`](tests/unit/dotfiles_mcp/test_ephemeral_fork_engine.py), [`test_tools_ephemeral.py`](tests/unit/dotfiles_mcp/test_tools_ephemeral.py), and [`test_ephemeral_forks_e2e.py`](tests/e2e/test_ephemeral_forks_e2e.py).
+- **Single-Language English & Cross-Document Normative Synchronization (`templates/`, `docs/`, `antigravity/.gemini/config/`)**:
+  - Cleaned residual Spanish terms and domain-specific industrial literals in [`templates/business-base/rules/business-base.md`](templates/business-base/rules/business-base.md), fixed `httpx2` $\rightarrow$ `httpx` and `name: {project_slug}` in [`templates/fastapi-hexagonal/`](templates/fastapi-hexagonal/rules/testing.md), unified `Layer A..D` and `WORKROAD.md` / `ROADMAP.md` nomenclature across [`skills/enrich/SKILL.md`](antigravity/.gemini/config/skills/enrich/SKILL.md) and [`AGENTS.md`](antigravity/.gemini/config/AGENTS.md), and synchronized `AGENTS.md §1..13` citations across [`system/mcp-layer.json`](system/mcp-layer.json), [`scripts/dotfiles_mcp/`](scripts/dotfiles_mcp/catalogs.py), and [`docs/architecture/02..05`](docs/architecture/03_contextual_mcp_and_federation.md).
+
+---
+
 ## [2.2.2] - 2026-10-31
 
 ### Fixed

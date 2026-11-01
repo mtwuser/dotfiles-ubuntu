@@ -1,22 +1,6 @@
 #!/usr/bin/env bash
 # layer-config.sh — Fork parameterization, polymorphic template scaffolding,
 # and static project projection (Without MCP <-> With MCP bridge).
-#
-# Subcommands:
-#   list-templates                                List discovered template packs in Root and layers/*
-#   init-fork --id <id> [--role <role>] [...]     Parameterize system/mcp-layer.json (v1.2) for a fork
-#   scaffold-template <name> [--kind <kind>]      Create a polymorphic template pack in templates/<name>/
-#   apply-project <target-dir> [--template <ref>] Materialize template + 0..N layer rules into <target-dir>/.agents/
-#   diff-project <target-dir>                     Compare SHA-256 digests between project and fork layers/templates
-#   promote-from-project <target-dir> --source .. Promote matured project rule/skill/asset into fork layer/template
-#   spawn-ephemeral --role <bot-role> [...]       Materialize a zero-copy TTL-bounded ephemeral Department Bot fork
-#   inspect-ephemeral [--id <fork-id>]            Inspect active ephemeral forks (after automatic TTL reaping)
-#   reap-ephemeral --id <fork-id|all>             Destroy a specific ephemeral fork or all active ephemeral forks
-#
-# Flags:
-#   -n, --dry-run   Preview operations without writing files
-#   -h, --help      Show usage information
-#   -v, --version   Show version string
 
 set -euo pipefail
 export LC_ALL=C
@@ -24,89 +8,55 @@ export LC_ALL=C
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="${DOTFILES_REPO_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 VERSION_STR="$({ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown")"
-
 DRY_RUN=false
 
 usage() {
   cat <<EOF
 Usage: ./scripts/layer-config.sh [--dry-run] <command> [args...]
 
-Parameterize fork identity (system/mcp-layer.json), scaffold polymorphic template
-packs (templates/<name>/), and project multi-layer governance into target projects.
-
 Commands:
-  list-templates
+  list-templates [<target-dir>]
       List all template packs discovered across templates/* and layers/*/templates/*.
-
   init-fork --id <layer-id> [--role <role>] [--precedence <0..100>] [--upstream-url <url>]
             [--upstream-id <id>] [--upstream-branch <branch>] [--description <text>]
             [--prune-default-templates]
-      Configure system/mcp-layer.json (schema v1.2) for this fork's organizational purpose
-      (corporate, domain-policy, department, team, service-node, environment-cluster, workstation).
-
+      Configure system/mcp-layer.json (schema v1.2) for this fork's organizational purpose.
   scaffold-template <template-name> [--kind <kind>] [--description <text>]
                     [--rule-file <filename.md>] [--register-binding]
-      Scaffold templates/<template-name>/ (kind: stack-starter, domain-policy-pack,
-      department-pack, or project-overlay) and optionally register its surface_binding.
-
+      Scaffold templates/<template-name>/ and optionally register its surface_binding.
   apply-project <target-project-dir> [--template <[layer:]name>] [--layers <all|csv>]
-      Materialize the selected template pack plus 0..N participating layers ordered by
-      precedence (0..100) into <target-project-dir>/.agents/ and generate LAYER_LINEAGE.md.
-
+      Materialize template pack + 0..N participating layers into <target-project-dir>/.agents/.
   diff-project <target-project-dir>
-      Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates
-      to detect in_sync, modified_in_project, and novel_in_project files.
-
+      Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates.
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
-                       [--to-template <template-name>] [--upstream-dir <dir>] [--prepare-pr]
-                       [--email <proposer-email>] [--org <name>] [--contributors <list>]
-                       [--context <text>]
-      Promote a matured rule, skill, or asset from <target-project-dir> into the target
-      fork layer or template pack (enforcing AGENTS.md budget and SKILL.md frontmatter gates)
-      and optionally generate a child-layer-contextualized Pull Request plan (--prepare-pr).
-
+                       [--to-template <template-name>] [--upstream-dir|--target-repo <dir>]
+                       [--prepare-pr|--create-pr] [--email <proposer-email>] [--org <name>]
+                       [--contributors <list>] [--context <text>]
+      Promote a matured rule, skill, or asset from <target-project-dir> into the target layer.
   set-authority [<target-dir>] --owner-role <role> [--emails <csv>] [--contact <text>]
-      Configure layer_authority (owner_role, authorized_emails, escalation_contact) in
-      <target-dir>/system/mcp-layer.json to govern owner vs. consumer operations.
-
+      Configure layer_authority in <target-dir>/system/mcp-layer.json.
   check-authority [<target-dir>] --op <operation> [--email <email>] [--file <rel-path>]
-      Verify whether the caller's git user.email (or --email) may execute <operation> on
-      <target-dir> (and optional --file), returning constructive promotion guidance on denial.
-
+      Verify whether the caller's git user.email (or --email) may execute <operation>.
   inspect-horizon [<target-dir>] [--parent-dir <dir>] [--email <email>]
-      Inspect 1-hop downward propagation status and quiet, role-scoped upward promotion
-      candidates (including OSS-agnostic Root 0 -> Open Source suggestions).
-
+      Inspect 1-hop downward propagation status and upward promotion candidates.
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
-      Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork under logs/ephemeral_forks/.
-
+      Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork.
   inspect-ephemeral [--id <fork-id>]
-      List active ephemeral forks (after automatic TTL garbage collection) or inspect one fork.
-
+      List active ephemeral forks (after automatic TTL reaping) or inspect one fork.
   reap-ephemeral --id <fork-id|all>
       Destroy a specific ephemeral fork or all active ephemeral forks ('--id all').
-
   set-global-profile <human-core|technical|business|full> [--stow]
-      Compose antigravity/.gemini/config/AGENTS.md from modular base templates and
-      optionally re-stow into ~/.gemini/config/AGENTS.md.
-
+      Compose antigravity/.gemini/config/AGENTS.md from modular base templates.
   register-subtree <layer-name> <repo-url> [branch]
-      Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers
-      sorted by precedence (0..100).
-
+      Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers.
   bootstrap-workspace <target-dir> --id <layer-id> [--role <role>] [--precedence <0..100>]
                       [--parent-dir <dir>] [--upstream-url <url>] [--upstream-id <id>]
                       [--upstream-branch <branch>] [--description <text>] [--templates <csv>]
-                      [--no-scaffold-own]
-      One-shot workspace initializer: inherits parent templates/lineage (when --parent-dir is
-      passed or repo is a non-workstation layer), copies base templates, configures
-      system/mcp-layer.json, scaffolds templates/<layer-id>/, creates baseline governance
-      files, and runs apply-project.
-
-  sync-layer <target-dir> [--parent-dir <dir>]
-      Propagate upstream template pack improvements (from --parent-dir and repo_dir) into
-      <target-dir>/templates/ and re-materialize <target-dir>/.agents/ in one step.
+                      [--template-name <name>] [--no-scaffold-own]
+      One-shot workspace initializer: inherits templates/lineage and runs apply-project.
+  sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]
+      Propagate upstream template pack improvements and re-materialize <target-dir>/.agents/.
 
 Options:
   -n, --dry-run   Preview changes in JSON output without modifying files on disk
@@ -117,32 +67,17 @@ EOF
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    -v|--version)
-      echo "dotfiles-ubuntu layer-config v$VERSION_STR"
-      exit 0
-      ;;
-    -n|--dry-run)
-      DRY_RUN=true
-      shift
-      ;;
-    -*)
-      echo "❌ Unknown option: $1" >&2
-      usage >&2
-      exit 1
-      ;;
-    *)
-      break
-      ;;
+    -h|--help) usage; exit 0 ;;
+    -v|--version) echo "dotfiles-ubuntu layer-config v$VERSION_STR"; exit 0 ;;
+    -n|--dry-run) DRY_RUN=true; shift ;;
+    -*) echo "❌ Unknown option: $1" >&2; usage >&2; exit 1 ;;
+    *) break ;;
   esac
 done
 
 SUBCOMMAND="${1:-}"
 if [ -z "$SUBCOMMAND" ]; then
-  echo "❌ Missing subcommand (expected: list-templates, init-fork, scaffold-template, apply-project, diff-project, promote-from-project, spawn-ephemeral, inspect-ephemeral, or reap-ephemeral)." >&2
+  echo "❌ Missing subcommand (see './scripts/layer-config.sh --help' for all 16 subcommands)." >&2
   usage >&2
   exit 1
 fi
@@ -160,33 +95,17 @@ subcmd = sys.argv[4]
 rest = sys.argv[5:]
 
 sys.path.insert(0, str(script_dir))
-from dotfiles_mcp.authority_engine import (  # noqa: E402
-    configure_layer_authority,
-    verify_layer_operation_authority,
-)
-from dotfiles_mcp.fork_configurator import (  # noqa: E402
-    apply_fork_to_project,
-    configure_fork_manifest,
-    discover_templates_catalog,
-    scaffold_template_pack,
-)
+from dotfiles_mcp.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
+from dotfiles_mcp.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
+from dotfiles_mcp.fork_configurator import apply_fork_to_project, configure_fork_manifest, discover_templates_catalog, scaffold_template_pack  # noqa: E402
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
-from dotfiles_mcp.promotion_engine import (  # noqa: E402
-    diff_project_against_layers,
-    inspect_layer_horizon,
-    promote_project_asset_to_layer,
-)
-from dotfiles_mcp.ephemeral_fork_engine import (  # noqa: E402
-    inspect_ephemeral_forks,
-    reap_ephemeral_fork,
-    spawn_ephemeral_fork,
-)
-from dotfiles_mcp.workspace_bootstrapper import (  # noqa: E402
-    bootstrap_layer_workspace,
-    register_mounted_subtree,
-    set_global_agents_profile,
-    sync_layer_workspace,
-)
+from dotfiles_mcp.promotion_engine import diff_project_against_layers, inspect_layer_horizon, promote_project_asset_to_layer  # noqa: E402
+from dotfiles_mcp.workspace_bootstrapper import bootstrap_layer_workspace, register_mounted_subtree, set_global_agents_profile, sync_layer_workspace  # noqa: E402
+
+
+def _die(msg: str, code: int = 1) -> None:
+    print(f"❌ {msg}", file=sys.stderr)
+    sys.exit(code)
 
 
 def _enforce_authority_or_exit(target: Path, op: str) -> None:
@@ -196,6 +115,40 @@ def _enforce_authority_or_exit(target: Path, op: str) -> None:
         print(json.dumps(verdict, indent=2))
         sys.exit(2)
 
+
+def _parse_opts(
+    args: list[str],
+    value_flags: dict[str, str],
+    bool_flags: dict[str, str] | None = None,
+) -> dict[str, object]:
+    out: dict[str, object] = {}
+    bflags = bool_flags or {}
+    i = 0
+    while i < len(args):
+        arg = args[i]
+        if arg in value_flags and i + 1 < len(args):
+            out[value_flags[arg]] = args[i + 1]
+            i += 2
+        elif arg in bflags:
+            out[bflags[arg]] = True
+            i += 1
+        else:
+            _die(f"Unknown or incomplete {subcmd} argument: {arg}")
+    return out
+
+
+def _csv(val: object) -> list[str] | None:
+    return [x.strip() for x in str(val).split(",") if x.strip()] if val else None
+
+
+def _opt_str(opts: dict[str, object], key: str) -> str | None:
+    return str(opts[key]) if key in opts else None
+
+
+def _opt_path(opts: dict[str, object], key: str) -> Path | None:
+    return Path(str(opts[key])).resolve() if key in opts else None
+
+
 if subcmd == "list-templates":
     target_dir = Path(rest[0]).resolve() if rest and not rest[0].startswith("-") else repo_dir
     node = MCPNodeBase(repo_dir=target_dir)
@@ -204,58 +157,24 @@ if subcmd == "list-templates":
     sys.exit(0)
 
 if subcmd == "init-fork":
-    layer_id = ""
-    layer_role = "team"
-    precedence = None
-    description = None
-    upstream_url = None
-    upstream_id = None
-    upstream_branch = None
-    prune_default = False
-    i = 0
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--id" and i + 1 < len(rest):
-            layer_id = rest[i + 1]
-            i += 2
-        elif arg == "--role" and i + 1 < len(rest):
-            layer_role = rest[i + 1]
-            i += 2
-        elif arg == "--precedence" and i + 1 < len(rest):
-            precedence = int(rest[i + 1])
-            i += 2
-        elif arg == "--description" and i + 1 < len(rest):
-            description = rest[i + 1]
-            i += 2
-        elif arg == "--upstream-url" and i + 1 < len(rest):
-            upstream_url = rest[i + 1]
-            i += 2
-        elif arg == "--upstream-id" and i + 1 < len(rest):
-            upstream_id = rest[i + 1]
-            i += 2
-        elif arg == "--upstream-branch" and i + 1 < len(rest):
-            upstream_branch = rest[i + 1]
-            i += 2
-        elif arg == "--prune-default-templates":
-            prune_default = True
-            i += 1
-        else:
-            print(f"❌ Unknown or incomplete init-fork argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not layer_id:
-        print("❌ Missing required --id <layer-id> for init-fork.", file=sys.stderr)
-        sys.exit(1)
+    opts = _parse_opts(
+        rest,
+        {"--id": "id", "--role": "role", "--precedence": "prec", "--description": "desc", "--upstream-url": "up_url", "--upstream-id": "up_id", "--upstream-branch": "up_branch"},
+        {"--prune-default-templates": "prune"},
+    )
+    if not opts.get("id"):
+        _die("Missing required --id <layer-id> for init-fork.")
     _enforce_authority_or_exit(repo_dir, "init-fork")
     manifest = configure_fork_manifest(
         repo_dir,
-        layer_id=layer_id,
-        layer_role=layer_role,
-        precedence=precedence,
-        description=description,
-        upstream_url=upstream_url,
-        upstream_id=upstream_id,
-        upstream_branch=upstream_branch,
-        prune_default_templates=prune_default,
+        layer_id=str(opts["id"]),
+        layer_role=str(opts.get("role", "team")),
+        precedence=int(str(opts["prec"])) if "prec" in opts else None,
+        description=_opt_str(opts, "desc"),
+        upstream_url=_opt_str(opts, "up_url"),
+        upstream_id=_opt_str(opts, "up_id"),
+        upstream_branch=_opt_str(opts, "up_branch"),
+        prune_default_templates=bool(opts.get("prune", False)),
         dry_run=dry_run,
     )
     print(json.dumps({"dry_run": dry_run, "manifest": manifest}, indent=2))
@@ -263,39 +182,16 @@ if subcmd == "init-fork":
 
 if subcmd == "scaffold-template":
     if not rest or rest[0].startswith("-"):
-        print("❌ Usage: ./scripts/layer-config.sh scaffold-template <template-name> [options]", file=sys.stderr)
-        sys.exit(1)
-    tpl_name = rest[0]
-    kind = "stack-starter"
-    description = None
-    rule_filename = None
-    register_binding = False
-    i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--kind" and i + 1 < len(rest):
-            kind = rest[i + 1]
-            i += 2
-        elif arg == "--description" and i + 1 < len(rest):
-            description = rest[i + 1]
-            i += 2
-        elif arg == "--rule-file" and i + 1 < len(rest):
-            rule_filename = rest[i + 1]
-            i += 2
-        elif arg == "--register-binding":
-            register_binding = True
-            i += 1
-        else:
-            print(f"❌ Unknown or incomplete scaffold-template argument: {arg}", file=sys.stderr)
-            sys.exit(1)
+        _die("Usage: ./scripts/layer-config.sh scaffold-template <template-name> [options]")
+    opts = _parse_opts(rest[1:], {"--kind": "kind", "--description": "desc", "--rule-file": "rule"}, {"--register-binding": "bind"})
     _enforce_authority_or_exit(repo_dir, "scaffold-template")
     res = scaffold_template_pack(
         repo_dir,
-        template_name=tpl_name,
-        kind=kind,
-        description=description,
-        register_binding=register_binding,
-        rule_filename=rule_filename,
+        template_name=rest[0],
+        kind=str(opts.get("kind", "stack-starter")),
+        description=_opt_str(opts, "desc"),
+        register_binding=bool(opts.get("bind", False)),
+        rule_filename=_opt_str(opts, "rule"),
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
@@ -303,370 +199,139 @@ if subcmd == "scaffold-template":
 
 if subcmd == "apply-project":
     if not rest or rest[0].startswith("-"):
-        print("❌ Usage: ./scripts/layer-config.sh apply-project <target-project-dir> [options]", file=sys.stderr)
-        sys.exit(1)
-    target_dir = Path(rest[0]).resolve()
-    template_ref = None
-    layers_filter = None
-    i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--template" and i + 1 < len(rest):
-            template_ref = rest[i + 1]
-            i += 2
-        elif arg == "--layers" and i + 1 < len(rest):
-            layers_filter = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete apply-project argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    res = apply_fork_to_project(
-        repo_dir,
-        target_dir,
-        template_ref=template_ref,
-        layers_filter=layers_filter,
-        dry_run=dry_run,
-    )
+        _die("Usage: ./scripts/layer-config.sh apply-project <target-project-dir> [options]")
+    opts = _parse_opts(rest[1:], {"--template": "tpl", "--layers": "layers"})
+    res = apply_fork_to_project(repo_dir, Path(rest[0]).resolve(), template_ref=_opt_str(opts, "tpl"), layers_filter=_csv(opts.get("layers")), dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "diff-project":
     if not rest or rest[0].startswith("-"):
-        print("❌ Usage: ./scripts/layer-config.sh diff-project <target-project-dir>", file=sys.stderr)
-        sys.exit(1)
+        _die("Usage: ./scripts/layer-config.sh diff-project <target-project-dir>")
     target_dir = Path(rest[0]).resolve()
     base_dir = target_dir if (target_dir / "system" / "mcp-layer.json").is_file() else repo_dir
-    res = diff_project_against_layers(base_dir, target_dir)
-    print(json.dumps(res, indent=2))
+    print(json.dumps(diff_project_against_layers(base_dir, target_dir), indent=2))
     sys.exit(0)
 
 if subcmd == "promote-from-project":
     if not rest or rest[0].startswith("-"):
-        print("❌ Usage: ./scripts/layer-config.sh promote-from-project <target-project-dir> --source <rel-path> [options]", file=sys.stderr)
-        sys.exit(1)
-    target_dir = Path(rest[0]).resolve()
-    source_rel = ""
-    target_layer = "root"
-    target_template = None
-    upstream_dir = None
-    prepare_pr = False
-    actor_email = None
-    contributing_org = None
-    contributors = None
-    validation_context = None
-    i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--source" and i + 1 < len(rest):
-            source_rel = rest[i + 1]
-            i += 2
-        elif arg == "--to-layer" and i + 1 < len(rest):
-            target_layer = rest[i + 1]
-            i += 2
-        elif arg == "--to-template" and i + 1 < len(rest):
-            target_template = rest[i + 1]
-            i += 2
-        elif arg in ("--upstream-dir", "--target-repo") and i + 1 < len(rest):
-            upstream_dir = Path(rest[i + 1]).resolve()
-            i += 2
-        elif arg == "--email" and i + 1 < len(rest):
-            actor_email = rest[i + 1]
-            i += 2
-        elif arg == "--org" and i + 1 < len(rest):
-            contributing_org = rest[i + 1]
-            i += 2
-        elif arg == "--contributors" and i + 1 < len(rest):
-            contributors = rest[i + 1]
-            i += 2
-        elif arg == "--context" and i + 1 < len(rest):
-            validation_context = rest[i + 1]
-            i += 2
-        elif arg in ("--prepare-pr", "--create-pr"):
-            prepare_pr = True
-            i += 1
-        else:
-            print(f"❌ Unknown or incomplete promote-from-project argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not source_rel:
-        print("❌ Missing required --source <rel-path> for promote-from-project.", file=sys.stderr)
-        sys.exit(1)
+        _die("Usage: ./scripts/layer-config.sh promote-from-project <target-project-dir> --source <rel-path> [options]")
+    opts = _parse_opts(
+        rest[1:],
+        {"--source": "src", "--to-layer": "layer", "--to-template": "tpl", "--upstream-dir": "up_dir", "--target-repo": "up_dir", "--email": "email", "--org": "org", "--contributors": "contrib", "--context": "ctx"},
+        {"--prepare-pr": "pr", "--create-pr": "pr"},
+    )
+    if not opts.get("src"):
+        _die("Missing required --source <rel-path> for promote-from-project.")
     res = promote_project_asset_to_layer(
         repo_dir,
-        target_dir,
-        source_rel_path=source_rel,
-        target_layer=target_layer,
-        target_template=target_template,
-        upstream_dir=upstream_dir,
-        prepare_pr=prepare_pr,
-        actor_email=actor_email,
-        contributing_org=contributing_org,
-        contributors=contributors,
-        validation_context=validation_context,
+        Path(rest[0]).resolve(),
+        source_rel_path=str(opts["src"]),
+        target_layer=str(opts.get("layer", "root")),
+        target_template=_opt_str(opts, "tpl"),
+        upstream_dir=_opt_path(opts, "up_dir"),
+        prepare_pr=bool(opts.get("pr", False)),
+        actor_email=_opt_str(opts, "email"),
+        contributing_org=_opt_str(opts, "org"),
+        contributors=_opt_str(opts, "contrib"),
+        validation_context=_opt_str(opts, "ctx"),
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "spawn-ephemeral":
-    bot_role = ""
-    tpls = None
-    layers_f = None
-    globs = None
-    bridge_dir = None
-    tier = "flash"
-    ttl = 300
-    i = 0
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--role" and i + 1 < len(rest):
-            bot_role = rest[i + 1]
-            i += 2
-        elif arg == "--templates" and i + 1 < len(rest):
-            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        elif arg == "--layers" and i + 1 < len(rest):
-            layers_f = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        elif arg == "--globs" and i + 1 < len(rest):
-            globs = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        elif arg == "--project-bridge" and i + 1 < len(rest):
-            bridge_dir = Path(rest[i + 1]).resolve()
-            i += 2
-        elif arg == "--tier" and i + 1 < len(rest):
-            tier = rest[i + 1]
-            i += 2
-        elif arg == "--ttl" and i + 1 < len(rest):
-            ttl = int(rest[i + 1])
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete spawn-ephemeral argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not bot_role:
-        print("❌ Missing required --role <bot-role> for spawn-ephemeral.", file=sys.stderr)
-        sys.exit(1)
+    opts = _parse_opts(rest, {"--role": "role", "--templates": "tpls", "--layers": "layers", "--globs": "globs", "--project-bridge": "bridge", "--tier": "tier", "--ttl": "ttl"})
+    if not opts.get("role"):
+        _die("Missing required --role <bot-role> for spawn-ephemeral.")
     node = MCPNodeBase(repo_dir=repo_dir)
     res = spawn_ephemeral_fork(
         repo_dir,
         node._load_layer_manifest(),
-        bot_role=bot_role,
-        target_globs=globs,
-        mount_templates=tpls,
-        mount_layers=layers_f,
-        mount_project_rules_from=bridge_dir,
-        model_tier=tier,
-        ttl_seconds=ttl,
+        bot_role=str(opts["role"]),
+        target_globs=_csv(opts.get("globs")),
+        mount_templates=_csv(opts.get("tpls")),
+        mount_layers=_csv(opts.get("layers")),
+        mount_project_rules_from=_opt_path(opts, "bridge"),
+        model_tier=str(opts.get("tier", "flash")),
+        ttl_seconds=int(str(opts.get("ttl", 300))),
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "inspect-ephemeral":
-    fork_id = None
-    i = 0
-    while i < len(rest):
-        if rest[i] == "--id" and i + 1 < len(rest):
-            fork_id = rest[i + 1]
-            i += 2
-        else:
-            print(f"❌ Unknown inspect-ephemeral argument: {rest[i]}", file=sys.stderr)
-            sys.exit(1)
-    res = inspect_ephemeral_forks(repo_dir, fork_id=fork_id)
-    print(json.dumps(res, indent=2))
+    opts = _parse_opts(rest, {"--id": "id"})
+    print(json.dumps(inspect_ephemeral_forks(repo_dir, fork_id=_opt_str(opts, "id")), indent=2))
     sys.exit(0)
 
 if subcmd == "reap-ephemeral":
-    fork_id = ""
-    i = 0
-    while i < len(rest):
-        if rest[i] == "--id" and i + 1 < len(rest):
-            fork_id = rest[i + 1]
-            i += 2
-        else:
-            print(f"❌ Unknown reap-ephemeral argument: {rest[i]}", file=sys.stderr)
-            sys.exit(1)
-    if not fork_id:
-        print("❌ Missing required --id <fork-id|all> for reap-ephemeral.", file=sys.stderr)
-        sys.exit(1)
-    res = reap_ephemeral_fork(repo_dir, fork_id=fork_id, dry_run=dry_run)
-    print(json.dumps(res, indent=2))
+    opts = _parse_opts(rest, {"--id": "id"})
+    if not opts.get("id"):
+        _die("Missing required --id <fork-id|all> for reap-ephemeral.")
+    print(json.dumps(reap_ephemeral_fork(repo_dir, fork_id=str(opts["id"]), dry_run=dry_run), indent=2))
     sys.exit(0)
 
 if subcmd == "set-global-profile":
     if not rest:
-        print(
-            "❌ Usage: ./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> [--stow]",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    profile = rest[0]
-    run_stow = "--stow" in rest[1:]
-    res = set_global_agents_profile(repo_dir, profile, run_stow=run_stow, dry_run=dry_run)
-    print(json.dumps(res, indent=2))
+        _die("Usage: ./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> [--stow]")
+    print(json.dumps(set_global_agents_profile(repo_dir, rest[0], run_stow="--stow" in rest[1:], dry_run=dry_run), indent=2))
     sys.exit(0)
 
 if subcmd == "register-subtree":
     if len(rest) < 2:
-        print(
-            "❌ Usage: ./scripts/layer-config.sh register-subtree <layer-name> <repo-url> [branch]",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+        _die("Usage: ./scripts/layer-config.sh register-subtree <layer-name> <repo-url> [branch]")
     _enforce_authority_or_exit(repo_dir, "register-subtree")
     branch = rest[2] if len(rest) >= 3 else "master"
-    res = register_mounted_subtree(repo_dir, rest[0], rest[1], branch, dry_run=dry_run)
-    print(json.dumps(res, indent=2))
+    print(json.dumps(register_mounted_subtree(repo_dir, rest[0], rest[1], branch, dry_run=dry_run), indent=2))
     sys.exit(0)
 
 if subcmd == "set-authority":
-    target_dir = repo_dir
-    owner_role = ""
-    emails: list[str] = []
-    contact = None
-    i = 0
-    if rest and not rest[0].startswith("--"):
-        target_dir = Path(rest[0]).resolve()
-        i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--owner-role" and i + 1 < len(rest):
-            owner_role = rest[i + 1]
-            i += 2
-        elif arg == "--emails" and i + 1 < len(rest):
-            emails = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        elif arg == "--contact" and i + 1 < len(rest):
-            contact = rest[i + 1]
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete set-authority argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not owner_role:
-        print("❌ Missing required --owner-role <role> for set-authority.", file=sys.stderr)
-        sys.exit(1)
-    res = configure_layer_authority(
-        target_dir,
-        owner_role=owner_role,
-        authorized_emails=emails,
-        escalation_contact=contact,
-        dry_run=dry_run,
-    )
+    has_pos = bool(rest and not rest[0].startswith("--"))
+    target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
+    opts = _parse_opts(rest[1:] if has_pos else rest, {"--owner-role": "role", "--emails": "emails", "--contact": "contact"})
+    if not opts.get("role"):
+        _die("Missing required --owner-role <role> for set-authority.")
+    res = configure_layer_authority(target_dir, owner_role=str(opts["role"]), authorized_emails=_csv(opts.get("emails")) or [], escalation_contact=_opt_str(opts, "contact"), dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "check-authority":
-    target_dir = repo_dir
-    op = ""
-    actor_email = None
-    target_rel_path = None
-    i = 0
-    if rest and not rest[0].startswith("--"):
-        target_dir = Path(rest[0]).resolve()
-        i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--op" and i + 1 < len(rest):
-            op = rest[i + 1]
-            i += 2
-        elif arg == "--email" and i + 1 < len(rest):
-            actor_email = rest[i + 1]
-            i += 2
-        elif arg == "--file" and i + 1 < len(rest):
-            target_rel_path = rest[i + 1]
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete check-authority argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not op:
-        print("❌ Missing required --op <operation> for check-authority.", file=sys.stderr)
-        sys.exit(1)
-    verdict = verify_layer_operation_authority(
-        target_dir,
-        operation=op,
-        actor_email=actor_email,
-        target_rel_path=target_rel_path,
-    )
+    has_pos = bool(rest and not rest[0].startswith("--"))
+    target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
+    opts = _parse_opts(rest[1:] if has_pos else rest, {"--op": "op", "--email": "email", "--file": "file"})
+    if not opts.get("op"):
+        _die("Missing required --op <operation> for check-authority.")
+    verdict = verify_layer_operation_authority(target_dir, operation=str(opts["op"]), actor_email=_opt_str(opts, "email"), target_rel_path=_opt_str(opts, "file"))
     print(json.dumps(verdict, indent=2))
     if not verdict["allowed"]:
-        print(f"❌ {verdict['remediation']}", file=sys.stderr)
-        sys.exit(2)
+        _die(str(verdict["remediation"]), code=2)
     sys.exit(0)
 
 if subcmd == "bootstrap-workspace":
     if not rest or rest[0].startswith("--"):
-        print(
-            "❌ Usage: ./scripts/layer-config.sh bootstrap-workspace <target-dir> --id <layer-id> [...]",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    target_dir = Path(rest[0]).resolve()
-    layer_id = ""
-    layer_role = "department"
-    precedence = None
-    description = None
-    parent_dir = None
-    upstream_url = None
-    upstream_id = None
-    upstream_branch = "master"
-    tpls = None
-    own_tpl_name = None
-    scaffold_own = True
-    i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--id" and i + 1 < len(rest):
-            layer_id = rest[i + 1]
-            i += 2
-        elif arg == "--role" and i + 1 < len(rest):
-            layer_role = rest[i + 1]
-            i += 2
-        elif arg == "--precedence" and i + 1 < len(rest):
-            precedence = int(rest[i + 1])
-            i += 2
-        elif arg == "--description" and i + 1 < len(rest):
-            description = rest[i + 1]
-            i += 2
-        elif arg == "--parent-dir" and i + 1 < len(rest):
-            parent_dir = Path(rest[i + 1]).resolve()
-            i += 2
-        elif arg == "--upstream-url" and i + 1 < len(rest):
-            upstream_url = rest[i + 1]
-            i += 2
-        elif arg == "--upstream-id" and i + 1 < len(rest):
-            upstream_id = rest[i + 1]
-            i += 2
-        elif arg == "--upstream-branch" and i + 1 < len(rest):
-            upstream_branch = rest[i + 1]
-            i += 2
-        elif arg == "--templates" and i + 1 < len(rest):
-            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        elif arg == "--template-name" and i + 1 < len(rest):
-            own_tpl_name = rest[i + 1]
-            i += 2
-        elif arg == "--no-scaffold-own":
-            scaffold_own = False
-            i += 1
-        else:
-            print(f"❌ Unknown or incomplete bootstrap-workspace argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    if not layer_id:
-        print("❌ Missing required --id <layer-id> for bootstrap-workspace.", file=sys.stderr)
-        sys.exit(1)
+        _die("Usage: ./scripts/layer-config.sh bootstrap-workspace <target-dir> --id <layer-id> [...]")
+    opts = _parse_opts(
+        rest[1:],
+        {"--id": "id", "--role": "role", "--precedence": "prec", "--description": "desc", "--parent-dir": "parent", "--upstream-url": "up_url", "--upstream-id": "up_id", "--upstream-branch": "up_branch", "--templates": "tpls", "--template-name": "tpl_name"},
+        {"--no-scaffold-own": "no_own"},
+    )
+    if not opts.get("id"):
+        _die("Missing required --id <layer-id> for bootstrap-workspace.")
     res = bootstrap_layer_workspace(
         repo_dir,
-        target_dir,
-        layer_id=layer_id,
-        layer_role=layer_role,
-        precedence=precedence,
-        description=description,
-        upstream_repo=upstream_url,
-        upstream_branch=upstream_branch,
-        upstream_layer_id=upstream_id,
-        parent_dir=parent_dir,
-        templates=tpls,
-        own_template_name=own_tpl_name,
-        scaffold_own_template=scaffold_own,
+        Path(rest[0]).resolve(),
+        layer_id=str(opts["id"]),
+        layer_role=str(opts.get("role", "department")),
+        precedence=int(str(opts["prec"])) if "prec" in opts else None,
+        description=_opt_str(opts, "desc"),
+        upstream_repo=_opt_str(opts, "up_url"),
+        upstream_branch=str(opts.get("up_branch", "master")),
+        upstream_layer_id=_opt_str(opts, "up_id"),
+        parent_dir=_opt_path(opts, "parent"),
+        templates=_csv(opts.get("tpls")),
+        own_template_name=_opt_str(opts, "tpl_name"),
+        scaffold_own_template=not bool(opts.get("no_own", False)),
         dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
@@ -674,60 +339,18 @@ if subcmd == "bootstrap-workspace":
 
 if subcmd == "sync-layer":
     if not rest or rest[0].startswith("--"):
-        print(
-            "❌ Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    target_dir = Path(rest[0]).resolve()
-    parent_dir = None
-    tpls = None
-    i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--parent-dir" and i + 1 < len(rest):
-            parent_dir = Path(rest[i + 1]).resolve()
-            i += 2
-        elif arg == "--templates" and i + 1 < len(rest):
-            tpls = [x.strip() for x in rest[i + 1].split(",") if x.strip()]
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete sync-layer argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    res = sync_layer_workspace(
-        repo_dir, target_dir, parent_dir=parent_dir, templates=tpls, dry_run=dry_run
-    )
+        _die("Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]")
+    opts = _parse_opts(rest[1:], {"--parent-dir": "parent", "--templates": "tpls"})
+    res = sync_layer_workspace(repo_dir, Path(rest[0]).resolve(), parent_dir=_opt_path(opts, "parent"), templates=_csv(opts.get("tpls")), dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "inspect-horizon":
-    target_dir = repo_dir
-    parent_dir = None
-    actor_email = None
-    i = 0
-    if rest and not rest[0].startswith("--"):
-        target_dir = Path(rest[0]).resolve()
-        i = 1
-    while i < len(rest):
-        arg = rest[i]
-        if arg == "--parent-dir" and i + 1 < len(rest):
-            parent_dir = Path(rest[i + 1]).resolve()
-            i += 2
-        elif arg == "--email" and i + 1 < len(rest):
-            actor_email = rest[i + 1]
-            i += 2
-        else:
-            print(f"❌ Unknown or incomplete inspect-horizon argument: {arg}", file=sys.stderr)
-            sys.exit(1)
-    res = inspect_layer_horizon(
-        repo_dir,
-        target_dir,
-        parent_dir=parent_dir,
-        actor_email=actor_email,
-    )
-    print(json.dumps(res, indent=2))
+    has_pos = bool(rest and not rest[0].startswith("--"))
+    target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
+    opts = _parse_opts(rest[1:] if has_pos else rest, {"--parent-dir": "parent", "--email": "email"})
+    print(json.dumps(inspect_layer_horizon(repo_dir, target_dir, parent_dir=_opt_path(opts, "parent"), actor_email=_opt_str(opts, "email")), indent=2))
     sys.exit(0)
 
-print(f"❌ Unknown subcommand: {subcmd}", file=sys.stderr)
-sys.exit(1)
+_die(f"Unknown subcommand: {subcmd}")
 PYEOF

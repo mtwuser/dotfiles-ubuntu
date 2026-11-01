@@ -16,8 +16,8 @@
   ],
   "baseline_guardrails": [
     "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-    "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & 1:1:1 Source-Test-Spec traceability)",
-    "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage & AAA pattern)",
+    "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
+    "AGENTS.md §3 & §4 (Verification Integrity & Atomic Deliverable Inclusion — 100% branch coverage & AAA pattern)",
     "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
   ],
   "surface_bindings": [
@@ -32,8 +32,8 @@
       "default_resolution": "L1",
       "invariants": [
         "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-        "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & 1:1:1 Source-Test-Spec traceability)",
-        "AGENTS.md §3 (Strict Linter & Typing Integrity — zero compiler or linter warnings)",
+        "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
+        "AGENTS.md §3 & technical-base.md (Verification Integrity & Strict Linter/Typing — zero warnings)",
         "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or deprecated branches)"
       ],
       "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
@@ -146,8 +146,8 @@
       "when_to_invoke": "Invoke on demand when verifying official Google Cloud, Gemini, Android, Firebase, or Web API specifications.",
       "avoid_when": "Do not invoke when inspecting local repository code, internal domain models, or offline unit tests.",
       "required_guardrails": [
-        "AGENTS.md §5 (Documentation Hierarchy & Discrepancy Scans)",
-        "AGENTS.md §12 (Generated Output Verification)"
+        "AGENTS.md §5 (Specification Hierarchy & Discrepancy Scans)",
+        "technical-base.md §4 (Generated Output Verification)"
       ]
     }
   ]

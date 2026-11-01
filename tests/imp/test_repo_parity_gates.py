@@ -38,11 +38,14 @@ def test_one_to_one_unit_test_mapping_and_file_size_discipline() -> None:
     all_sized_files = sorted(
         [
             REPO_DIR / "README.md",
+            *list(REPO_DIR.glob("*.sh")),
+            *list((REPO_DIR / "scripts").glob("*.sh")),
             *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
             *list((REPO_DIR / "scripts").glob("*.py")),
             *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
             *list((REPO_DIR / "tests").rglob("*.py")),
             *list((REPO_DIR / "docs").rglob("*.md")),
+            *list((REPO_DIR / "templates").rglob("*.md")),
         ]
     )
     spec_re = re.compile(

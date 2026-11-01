@@ -12,6 +12,7 @@ agent resolves them in the same turn.
 
 import contextlib
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -23,6 +24,7 @@ _AGENTS_MD_MAX_BYTES = 18000
 _TOTAL_RULES_BUDGET_MAX_BYTES = 80000
 _MAX_PYTHON_FILE_LINES = 465
 _DOTFILES_REPO_DIR = Path(__file__).resolve().parents[4]
+_TEST_FN_SPLIT_RE = re.compile(r"(?m)^(?=def test_|async def test_)")
 
 
 def resolve_effective_workspaces(
@@ -67,8 +69,15 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
                     "tests/**/__init__.py must remain 0 bytes"
                 )
         elif p.name.startswith("test_") and "def test_" in text:
+            blocks = [
+                b
+                for b in _TEST_FN_SPLIT_RE.split(text)
+                if b.startswith(("def test_", "async def test_"))
+            ]
             missing_aaa = [
-                marker for marker in ("# Arrange", "# Act", "# Assert") if marker not in text
+                marker
+                for marker in ("# Arrange", "# Act", "# Assert")
+                if any(not re.search(rf"(?m)^\s*{re.escape(marker)}\b(?!\s*&)", b) for b in blocks)
             ]
             if missing_aaa:
                 violations.append(
@@ -184,11 +193,20 @@ def get_changed_python_files(workspace_path: str) -> list[str]:
 
 
 def get_changed_doc_files(workspace_path: str) -> list[str]:
-    """Get root README.md and navigable docs/**/*.md files with uncommitted or untracked changes."""
+    """Get root README.md and navigable docs/corporate/**/*.md files with uncommitted changes."""
     git_bin = shutil.which("git") or "git"
     files: set[str] = set()
     for cmd in [
-        [git_bin, "diff", "--name-only", "--diff-filter=ACMR", "--", "README.md", "docs/"],
+        [
+            git_bin,
+            "diff",
+            "--name-only",
+            "--diff-filter=ACMR",
+            "--",
+            "README.md",
+            "docs/",
+            "corporate/",
+        ],
         [
             git_bin,
             "diff",
@@ -198,6 +216,7 @@ def get_changed_doc_files(workspace_path: str) -> list[str]:
             "--",
             "README.md",
             "docs/",
+            "corporate/",
         ],
         [
             git_bin,
@@ -208,6 +227,8 @@ def get_changed_doc_files(workspace_path: str) -> list[str]:
             "README.md",
             "docs/*.md",
             "docs/**/*.md",
+            "corporate/*.md",
+            "corporate/**/*.md",
         ],
     ]:
         with contextlib.suppress(subprocess.TimeoutExpired, FileNotFoundError):
@@ -222,7 +243,7 @@ def get_changed_doc_files(workspace_path: str) -> list[str]:
             for raw_line in result.stdout.splitlines():
                 rel_file = raw_line.strip()
                 if rel_file == "README.md" or (
-                    rel_file.startswith("docs/") and rel_file.endswith(".md")
+                    rel_file.startswith(("docs/", "corporate/")) and rel_file.endswith(".md")
                 ):
                     full = Path(workspace_path) / rel_file
                     if full.exists():
@@ -277,10 +298,6 @@ def main() -> None:
         return
 
     ruff = find_ruff(workspace_paths)
-    if ruff is None:
-        json.dump({}, sys.stdout)
-        return
-
     all_lines: list[str] = check_rules_token_budget(workspace_paths)
     for ws in workspace_paths:
         all_lines.extend(check_universal_doc_structure(get_changed_doc_files(ws)))
@@ -289,17 +306,18 @@ def main() -> None:
             continue
         all_lines.extend(check_universal_python_structure(ws_files))
         ws_ruff = find_ruff([ws, *workspace_paths]) or ruff
-        with contextlib.suppress(subprocess.TimeoutExpired):
-            result = subprocess.run(  # noqa: S603
-                [ws_ruff, "check", "--no-fix", "--output-format=concise", *ws_files],
-                check=False,
-                capture_output=True,
-                text=True,
-                cwd=ws,
-                timeout=10,
-            )
-            if result.returncode != 0 and result.stdout.strip():
-                all_lines.extend(result.stdout.strip().splitlines())
+        if ws_ruff is not None:
+            with contextlib.suppress(subprocess.TimeoutExpired):
+                result = subprocess.run(  # noqa: S603
+                    [ws_ruff, "check", "--no-fix", "--output-format=concise", *ws_files],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    cwd=ws,
+                    timeout=10,
+                )
+                if result.returncode != 0 and result.stdout.strip():
+                    all_lines.extend(result.stdout.strip().splitlines())
 
         venv_py = find_venv_python([ws, *workspace_paths])
         if venv_py is not None:

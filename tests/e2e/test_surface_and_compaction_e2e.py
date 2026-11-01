@@ -45,16 +45,17 @@ def _create_node_fixture(
         f"# Documentation Index — {layer_id}\n## Overview\nNode docs for {layer_id}.\n",
         encoding="utf-8",
     )
+    up = {
+        "layer_id": "mtwuser/dotfiles-ubuntu",
+        "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
+        "branch": "master",
+    }
     manifest = {
         "schema_version": "1.2",
         "layer_id": layer_id,
         "layer_role": layer_role,
         "description": f"E2E node {layer_id}",
-        "upstream_layer": {
-            "layer_id": "mtwuser/dotfiles-ubuntu",
-            "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
-            "branch": "master",
-        },
+        "upstream_layer": up,
         **(manifest_extra or {}),
     }
     (base_dir / "system/mcp-layer.json").write_text(
@@ -176,35 +177,22 @@ class TestSurfaceAndCompactionE2E:
             environment="pre",
             resonance_key="mesh-key-42",
         )
-        l0_capsule = q_l0_payload["matches"][0]["capsule_token"]  # type: ignore[index]
-
+        l0_cap = q_l0_payload["matches"][0]["capsule_token"]  # type: ignore[index]
+        common = {"capsule_token": l0_cap, "environment": "pre", "resonance_key": "mesh-key-42"}
         step2_resp = _run_mcp_stdio_batch(
             hub_dir,
             hub_logs,
             [
                 _rpc_tool(
-                    2,
-                    "unfold_context_capsule",
-                    capsule_token=l0_capsule,
-                    target_level="L1",
-                    agent_tier="flash",
-                    environment="pre",
-                    resonance_key="mesh-key-42",
+                    2, "unfold_context_capsule", target_level="L1", agent_tier="flash", **common
                 ),
                 _rpc_tool(
-                    3,
-                    "unfold_context_capsule",
-                    capsule_token=l0_capsule,
-                    target_level="L2",
-                    agent_tier="flash",
-                    environment="pre",
-                    resonance_key="mesh-key-42",
+                    3, "unfold_context_capsule", target_level="L2", agent_tier="flash", **common
                 ),
             ],
         )
         l1_unfolded = json.loads(step2_resp[0]["result"]["content"][0]["text"])  # type: ignore[index]
         flash_blocked = step2_resp[1]
-
         l3_unfolded = _call_stdio_tool(
             hub_dir,
             hub_logs,

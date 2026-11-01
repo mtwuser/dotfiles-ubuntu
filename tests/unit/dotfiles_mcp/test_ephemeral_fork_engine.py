@@ -167,7 +167,7 @@ class TestEphemeralForkEngine:
                 encoding="utf-8",
             )
 
-        # Act & Assert
+        # Act
         with pytest.raises(ValueError, match="Invalid bot_role"):
             spawn_ephemeral_fork(repo, {}, bot_role="BAD_ROLE")
         with pytest.raises(ValueError, match="Invalid model_tier"):
@@ -189,8 +189,12 @@ class TestEphemeralForkEngine:
         with pytest.raises(ValueError, match="EPHEMERAL_FORK_LIMIT_REACHED"):
             spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", now_epoch=100.0)
 
-        reap_ephemeral_fork(repo, "all", dry_run=True)
-        reap_ephemeral_fork(repo, "all", dry_run=False)
+        reap_dry_all = reap_ephemeral_fork(repo, "all", dry_run=True)
+        reap_real_all = reap_ephemeral_fork(repo, "all", dry_run=False)
+
+        # Assert
+        assert len(reap_dry_all["reaped_forks"]) == 16
+        assert len(reap_real_all["reaped_forks"]) == 16
         with pytest.raises(FileNotFoundError, match="mount_project_rules_from"):
             spawn_ephemeral_fork(
                 repo,

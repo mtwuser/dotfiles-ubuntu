@@ -64,18 +64,18 @@ def _inspect_single_template_dir(
         if assets_dir.is_dir()
         else []
     )
-    return {
-        "template_name": tpl_dir.name,
-        "source_layer": source_layer,
-        "kind": str(meta.get("kind", "stack-starter")),
-        "target_role": str(meta.get("target_role", "team")),
-        "description": str(meta.get("description", f"Template pack {tpl_dir.name}")),
-        "rules": rules,
-        "skills": skills,
-        "governance_files": gov,
-        "assets": assets,
-        "recommended_surface_bindings": list(meta.get("recommended_surface_bindings", [])),
-    }
+    return dict(
+        template_name=tpl_dir.name,
+        source_layer=source_layer,
+        kind=str(meta.get("kind", "stack-starter")),
+        target_role=str(meta.get("target_role", "team")),
+        description=str(meta.get("description", f"Template pack {tpl_dir.name}")),
+        rules=rules,
+        skills=skills,
+        governance_files=gov,
+        assets=assets,
+        recommended_surface_bindings=list(meta.get("recommended_surface_bindings", [])),
+    )
 
 
 def discover_templates_catalog(
@@ -124,34 +124,36 @@ def configure_fork_manifest(
         raise ValueError(f"Invalid precedence {eff_precedence}: must be between 0 and 100")
 
     manifest_path = repo_dir / "system" / "mcp-layer.json"
-    manifest: dict[str, Any] = {
-        "schema_version": "1.2",
-        "layer_id": layer_id,
-        "layer_role": layer_role,
-        "precedence": eff_precedence,
-        "description": description or f"Configured {layer_role} layer ({layer_id})",
-        "upstream_layer": {
-            "layer_id": "mtwuser/dotfiles-ubuntu",
-            "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
-            "branch": "master",
-        },
-        "mounted_layers_dir": "layers",
-        "mounted_layers": [],
-        "default_stack_templates": discover_layer_template_names(repo_dir),
-        "baseline_guardrails": [],
-        "surface_bindings": [],
-        "environments": {},
-        "federated_mcps": [],
-    }
+    manifest: dict[str, Any] = dict(
+        schema_version="1.2",
+        layer_id=layer_id,
+        layer_role=layer_role,
+        precedence=eff_precedence,
+        description=description or f"Configured {layer_role} layer ({layer_id})",
+        upstream_layer=dict(
+            layer_id="mtwuser/dotfiles-ubuntu",
+            repository="https://github.com/mtwuser/dotfiles-ubuntu.git",
+            branch="master",
+        ),
+        mounted_layers_dir="layers",
+        mounted_layers=[],
+        default_stack_templates=discover_layer_template_names(repo_dir),
+        baseline_guardrails=[],
+        surface_bindings=[],
+        environments={},
+        federated_mcps=[],
+    )
     if manifest_path.is_file():
         loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
         if isinstance(loaded, dict):
             manifest.update(loaded)
 
-    manifest["schema_version"] = "1.2"
-    manifest["layer_id"] = layer_id
-    manifest["layer_role"] = layer_role
-    manifest["precedence"] = eff_precedence
+    manifest.update(
+        schema_version="1.2",
+        layer_id=layer_id,
+        layer_role=layer_role,
+        precedence=eff_precedence,
+    )
     if description is not None:
         manifest["description"] = description
 
@@ -295,13 +297,13 @@ def scaffold_template_pack(
                     manifest["surface_bindings"] = bindings
                 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    return {
-        "template_id": template_name,
-        "kind": kind,
-        "files_created": sorted(files_to_write.keys()),
-        "binding_registered": register_binding,
-        "dry_run": dry_run,
-    }
+    return dict(
+        template_id=template_name,
+        kind=kind,
+        files_created=sorted(files_to_write.keys()),
+        binding_registered=register_binding,
+        dry_run=dry_run,
+    )
 
 
 def apply_fork_to_project(
@@ -386,11 +388,11 @@ def apply_fork_to_project(
                     dest = dest_sub / rel
                     copied_files.append(str(dest.relative_to(target_project_dir)))
                     if not dry_run:
-                        if sub_name == "rules" and src_file.suffix == ".md":
-                            _ensure_rule_file_frontmatter(src_file)
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         dest.unlink(missing_ok=True)
                         shutil.copy2(src_file, dest)
+                        if sub_name == "rules" and dest.suffix == ".md":
+                            _ensure_rule_file_frontmatter(dest)
                         dest.chmod(0o644)
         gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
@@ -426,10 +428,11 @@ def apply_fork_to_project(
         "|---:|---|---|---|---:|",
     ]
     for name, ldir, m in candidate_layers:
-        prec = int(m.get("precedence", 50))
-        lid = str(m.get("layer_id", name))
-        role = str(m.get("layer_role", "department"))
-        bindings = collect_layer_effective_bindings(ldir, m)
+        prec, lid = int(m.get("precedence", 50)), str(m.get("layer_id", name))
+        role, bindings = (
+            str(m.get("layer_role", "department")),
+            collect_layer_effective_bindings(ldir, m),
+        )
         lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
         layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
         dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
@@ -439,10 +442,10 @@ def apply_fork_to_project(
         elif layer_agents.is_file():
             copied_files.append(str(dest_rule.relative_to(target_project_dir)))
             if not dry_run:
-                _ensure_rule_file_frontmatter(layer_agents)
                 dest_rule.parent.mkdir(parents=True, exist_ok=True)
                 dest_rule.unlink(missing_ok=True)
                 shutil.copy2(layer_agents, dest_rule)
+                _ensure_rule_file_frontmatter(dest_rule)
                 dest_rule.chmod(0o644)
 
     lineage_dest = agents_dir / "LAYER_LINEAGE.md"
@@ -451,10 +454,10 @@ def apply_fork_to_project(
         lineage_dest.parent.mkdir(parents=True, exist_ok=True)
         lineage_dest.write_text("\n".join(lineage_lines) + "\n", encoding="utf-8")
 
-    return {
-        "target_project_dir": str(target_project_dir),
-        "applied_template": resolved_tpl_name or None,
-        "participating_layers": [name for name, _d, _m in candidate_layers],
-        "files_materialized": copied_files,
-        "dry_run": dry_run,
-    }
+    return dict(
+        target_project_dir=str(target_project_dir),
+        applied_template=resolved_tpl_name or None,
+        participating_layers=[name for name, _d, _m in candidate_layers],
+        files_materialized=copied_files,
+        dry_run=dry_run,
+    )

@@ -9,7 +9,8 @@ Hard-blocks (zero prompt tokens, 100% deterministic):
    ``dd``, or inline ``python -c``).
 2. Manual creation/editing of migration files under ``alembic/versions/*.py``
    (via file tools or ``run_command`` shell writes).
-3. Automatic execution of mutating git commands (``git add``, ``git commit``,
+3. Direct edits to materialized upstream layer rules (``.agents/rules/layer-<NN>-*.md``).
+4. Automatic execution of mutating git commands (``git add``, ``git commit``,
    ``git push``, ``git reset --hard``, ``git clean -f``,
    ``git subtree add|pull|push|merge``) or manual ``alembic revision/upgrade/downgrade``.
 """
