@@ -393,6 +393,8 @@ class TestAuthorityEngine:
         assert len(rule_staged["staged_proposals"]) == 2  # type: ignore[arg-type]
         assert len(rule_forced["updated_paths"]) == 4  # type: ignore[arg-type]
         assert "Delivered to `dept-legal`" in (corp_dir / "WORKROAD.md").read_text("utf-8")
+        assert "## Outbound Delegations" in (corp_dir / "WORKTASK.md").read_text("utf-8")
+        assert live_res["ticket_id"] == "CORP-ROOT-DEPT-LEGAL-01"
         for bad_kw, err_pat in (
             ({"child_layer": "Bad Name", "directive": "x"}, "must be kebab-case"),
             ({"child_layer": "dept-legal", "directive": "  "}, "directive must be a non-empty"),

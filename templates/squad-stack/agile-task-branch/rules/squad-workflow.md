@@ -22,19 +22,22 @@ description: "Human-agent squad collaboration, task-tag claiming, and Git task-b
 
 1. **Task Onboarding (`make task TASK=<id-or-text>`)**:
    - Start every task by running `./scripts/layer-config.sh start-task . --task "<id-or-text>"` (or `make task TASK="<id-or-text>"`).
-   - This marks the item `[/]` in `WORKTASK.md`, records the active task and branch in `.agents/SESSION.md`, and outputs the canonical branch command (`git checkout -b task/<id>-<slug>`).
-2. **Traceable Task Tags (`[DEPT-YYYY-NNN]` / `[SQUAD-NNN]`)**:
-   - Preserve parent delegation tags (`[P0 · Delegated from <dept> ...]`) and task IDs (`[LEGAL-2026-004]`, `[TECH-042]`) in `WORKTASK.md`, `CHANGELOG.md` (`## [Unreleased]`), and PR descriptions.
-3. **1-Hop Escalation & Upward Delivery (`make promote`)**:
+   - This marks the item `[/]` in `WORKTASK.md`, records the active ticket ID, origin layer, and branch in `.agents/SESSION.md`, and outputs the canonical ticket-linked feature branch command (`git checkout -b feature/<TICKET-ID>-<slug>`).
+2. **Reciprocal Task Completion (`make complete TASK=<id>`)**:
+   - When a task is verified (`dev -> tst -> pre -> pro`), run `./scripts/layer-config.sh complete-task . --task "<id>" --deliverable "<path>"` (or `make complete TASK="<id>" DELIVERABLE="<path>"`).
+   - This marks the task `[x]` in the squad tracker and updates the parent layer's `WORKTASK.md` (`## Outbound Delegations` $\rightarrow$ `stage: completed (pro)`) or stages a non-destructive completion receipt + PR plan (`feature/<TICKET-ID>-completed`).
+3. **Traceable Task Tags (`[DEPT-YYYY-NNN]` / `[SQUAD-NNN]`)**:
+   - Preserve parent delegation tags (`[P0 · <TICKET-ID> · Delegated from <dept> ...]`) and ticket IDs (`[LEGAL-2026-004]`, `[TECH-042]`) in `WORKTASK.md`, `CHANGELOG.md` (`## [Unreleased]`), and PR descriptions.
+4. **1-Hop Escalation & Upward Delivery (`make promote`)**:
    - Never mutate inherited department or corporate rules (`layer-NN-*.md`) in place.
    - Propose rule improvements, roadmap updates, or blocker escalations 1-hop upward via `./scripts/layer-config.sh promote-from-project . --source <rel-path> --create-pr` (`make promote SOURCE=<rel-path>`).
-4. **Inter-Department & Cross-Squad Consultation**:
+5. **Inter-Department & Cross-Squad Consultation**:
    - When a task requires verifying another department's policy or another squad's contract, use a read-only ephemeral consultation (`orchestrate_ephemeral_fork` with `access_mode="strictly-read-only"`) rather than copying foreign repositories into the workspace.
 
 ---
 
 ## Verification & Sign-Off Gates
 
-- [ ] Active task is marked `[/]` during execution and `[x]` in `WORKTASK.md` before delivering the commit block.
-- [ ] `.agents/SESSION.md` reflects the active task branch (`task/<id>-<slug>`) and latest checkpoint.
+- [ ] Active task is marked `[/]` during execution and `[x]` in `WORKTASK.md` (`make complete`) before delivering the commit block.
+- [ ] `.agents/SESSION.md` reflects the active task branch (`feature/<TICKET-ID>-<slug>`) and latest checkpoint.
 - [ ] `make diff` (`layer-config.sh diff-project`) reports zero unintended drift against inherited layer templates.

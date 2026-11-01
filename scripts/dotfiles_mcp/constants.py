@@ -30,6 +30,7 @@ DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
     "env/pro",
 )
 DEFAULT_PROCESS_BRANCH_PREFIXES: dict[str, str] = {
+    "feature": "feature/",
     "task": "task/",
     "analysis": "analysis/",
     "validate": "validate/",
@@ -37,12 +38,13 @@ DEFAULT_PROCESS_BRANCH_PREFIXES: dict[str, str] = {
     "directive": "directive/",
 }
 DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
-    "dev": "task/*",
+    "dev": "feature/*",
     "tst": "env/tst",
     "pre": "env/pre",
     "pro": "main",
 }
 VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
+VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "validator", "member")
 TEMPLATE_STACK_GROUP_DIRS = (
     "business-stack",
     "squad-stack",
@@ -230,6 +232,7 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "check-authority",
     "inspect-horizon",
     "start-task",
+    "complete-task",
     "compare-upstream",
     "consult-layer",
     "check-env-promotion",
@@ -240,6 +243,7 @@ OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "scaffold-template",
     "register-subtree",
     "set-authority",
+    "manage-roster",
     "configure-git-policy",
     "delegate-to-child",
     "release",

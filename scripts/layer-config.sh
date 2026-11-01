@@ -41,16 +41,23 @@ Commands:
       Inspect 1-hop downward propagation status and upward promotion candidates.
   status [<target-dir>] [--parent-dir <dir>]
       Return a single-call consolidated status digest (session, git, priority, horizon & diff).
-  start-task [<target-dir>] --task <id-or-text> [--tracker <WORKTASK.md|BACKLOG.md|WORKROAD.md>]
-      Claim a task item, mark it [/], update .agents/SESSION.md, and emit git branch metadata.
+  start-task [<target-dir>] --task <id-or-text> [--tracker <tracker>] [--ticket <id>] [--prefix <pfx>]
+      Claim a task item, mark it [/], update .agents/SESSION.md, and emit feature/<TICKET>-<slug>.
+  complete-task [<target-dir>] --task <id-or-text> [--deliverable <path>] [--summary <text>]
+                [--tracker <tracker>] [--parent-dir <dir>] [--email <email>] [--create-pr]
+      Mark a task [x] and report reciprocal completion upward to the parent layer's WORKTASK.md.
   compare-upstream [<target-dir>] [--parent-dir <dir>] [--template <name>] [--apply-safe]
       Compare rule sections between upstream (parent/OSS) and local workspace templates.
   consult-layer [<target-dir>] --layer <layer-or-template> --query <text> [--path <rel-path>]
                 [--tier <flash|inherit|pro>]
       Run a zero-residue, one-shot read-only ephemeral consultation against a layer or template.
   delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>]
-                    [--priority <P0|P1|P2>] [--surface|--tracker <surface>] [--email <email>] [--force]
+                    [--ticket <id>] [--priority <P0|P1|P2>] [--surface|--tracker <surface>]
+                    [--email <email>] [--force]
       Delegate a 1-hop downward directive or governance artifact into a child layer surface.
+  manage-roster [<target-dir>] [--add <email>] [--remove <email>] [--role <owner|validator|member>]
+                [--no-codeowners]
+      Inspect or update the layer roster (owners, validators, members) and .github/CODEOWNERS.
   configure-git-policy [<target-dir>] [--protected <csv>] [--no-codeowners] [--no-require-pr]
       Configure Git branch protection, process stages, env promotion branches, and CODEOWNERS.
   check-env-promotion [<target-dir>] --to-env <dev|tst|pre|pro> [--branch <branch>] [--email <email>]
@@ -116,10 +123,10 @@ sys.path.insert(0, str(script_dir))
 from dotfiles_mcp.authority_engine import configure_layer_authority, delegate_directive_to_child, verify_layer_operation_authority  # noqa: E402
 from dotfiles_mcp.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
 from dotfiles_mcp.fork_configurator import apply_fork_to_project, configure_fork_manifest, discover_templates_catalog, scaffold_template_pack  # noqa: E402
-from dotfiles_mcp.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, record_governance_decision  # noqa: E402
+from dotfiles_mcp.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, manage_layer_roster, record_governance_decision  # noqa: E402
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
 from dotfiles_mcp.promotion_engine import diff_project_against_layers, inspect_layer_horizon, promote_project_asset_to_layer  # noqa: E402
-from dotfiles_mcp.workflow_engine import compare_upstream_templates, consult_layer_ephemeral, start_task_workflow  # noqa: E402
+from dotfiles_mcp.workflow_engine import compare_upstream_templates, complete_task_workflow, consult_layer_ephemeral, start_task_workflow  # noqa: E402
 from dotfiles_mcp.workspace_bootstrapper import bootstrap_layer_workspace, inspect_workspace_status, register_mounted_subtree, set_global_agents_profile, sync_layer_workspace  # noqa: E402
 
 
@@ -169,18 +176,14 @@ def _opt_path(opts: dict[str, object], key: str) -> Path | None:
     return Path(str(opts[key])).resolve() if key in opts else None
 
 
-def _pos_opts(
-    args: list[str], value_flags: dict[str, str], bool_flags: dict[str, str] | None = None
-) -> tuple[Path, dict[str, object]]:
+def _pos_opts(args: list[str], value_flags: dict[str, str], bool_flags: dict[str, str] | None = None) -> tuple[Path, dict[str, object]]:
     has_pos = bool(args and not args[0].startswith("--"))
-    tdir = Path(args[0]).resolve() if has_pos else repo_dir
-    return tdir, _parse_opts(args[1:] if has_pos else args, value_flags, bool_flags)
+    return (Path(args[0]).resolve() if has_pos else repo_dir), _parse_opts(args[1:] if has_pos else args, value_flags, bool_flags)
 
 
 if subcmd == "list-templates":
     target_dir = Path(rest[0]).resolve() if rest and not rest[0].startswith("-") else repo_dir
-    node = MCPNodeBase(repo_dir=target_dir)
-    catalog = discover_templates_catalog(target_dir, node._discover_mounted_layers())
+    catalog = discover_templates_catalog(target_dir, MCPNodeBase(repo_dir=target_dir)._discover_mounted_layers())
     print(json.dumps({"count": len(catalog), "templates": catalog}, indent=2))
     sys.exit(0)
 
@@ -219,8 +222,7 @@ if subcmd == "apply-project":
     if not rest or rest[0].startswith("-"):
         _die("Usage: ./scripts/layer-config.sh apply-project <target-project-dir> [options]")
     opts = _parse_opts(rest[1:], {"--template": "tpl", "--layers": "layers"})
-    res = apply_fork_to_project(repo_dir, Path(rest[0]).resolve(), template_ref=_opt_str(opts, "tpl"), layers_filter=_csv(opts.get("layers")), dry_run=dry_run)
-    print(json.dumps(res, indent=2))
+    print(json.dumps(apply_fork_to_project(repo_dir, Path(rest[0]).resolve(), template_ref=_opt_str(opts, "tpl"), layers_filter=_csv(opts.get("layers")), dry_run=dry_run), indent=2))
     sys.exit(0)
 
 if subcmd == "diff-project":
@@ -256,9 +258,8 @@ if subcmd == "spawn-ephemeral":
     opts = _parse_opts(rest, {"--role": "role", "--templates": "tpls", "--layers": "layers", "--globs": "globs", "--project-bridge": "bridge", "--tier": "tier", "--ttl": "ttl"})
     if not opts.get("role"):
         _die("Missing required --role <bot-role> for spawn-ephemeral.")
-    node = MCPNodeBase(repo_dir=repo_dir)
     res = spawn_ephemeral_fork(
-        repo_dir, node._load_layer_manifest(), bot_role=str(opts["role"]),
+        repo_dir, MCPNodeBase(repo_dir=repo_dir)._load_layer_manifest(), bot_role=str(opts["role"]),
         target_globs=_csv(opts.get("globs")), mount_templates=_csv(opts.get("tpls")),
         mount_layers=_csv(opts.get("layers")), mount_project_rules_from=_opt_path(opts, "bridge"),
         model_tier=str(opts.get("tier", "flash")), ttl_seconds=int(str(opts.get("ttl", 300))), dry_run=dry_run,
@@ -350,10 +351,31 @@ if subcmd == "status":
     sys.exit(0)
 
 if subcmd == "start-task":
-    target_dir, opts = _pos_opts(rest, {"--task": "task", "--tracker": "trk"})
+    target_dir, opts = _pos_opts(rest, {"--task": "task", "--tracker": "trk", "--ticket": "tkt", "--prefix": "pfx"})
     if not opts.get("task"):
-        _die("Usage: ./scripts/layer-config.sh start-task [<target-dir>] --task <id-or-text> [--tracker WORKTASK.md]")
-    print(json.dumps(start_task_workflow(target_dir, task_query=str(opts["task"]), tracker=str(opts.get("trk", "WORKTASK.md")), dry_run=dry_run), indent=2))
+        _die("Usage: ./scripts/layer-config.sh start-task [<target-dir>] --task <id-or-text> [--tracker WORKTASK.md] [--ticket <id>] [--prefix feature]")
+    res = start_task_workflow(
+        target_dir, task_query=str(opts["task"]), tracker=str(opts.get("trk", "WORKTASK.md")),
+        ticket_id=_opt_str(opts, "tkt"), branch_prefix=str(opts.get("pfx", "feature")), dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "complete-task":
+    target_dir, opts = _pos_opts(
+        rest,
+        {"--task": "task", "--deliverable": "deliv", "--summary": "sum", "--tracker": "trk", "--parent-dir": "parent", "--email": "email"},
+        {"--create-pr": "pr"},
+    )
+    if not opts.get("task"):
+        _die("Usage: ./scripts/layer-config.sh complete-task [<target-dir>] --task <id-or-text> [--deliverable <path>] [--parent-dir <dir>]")
+    res = complete_task_workflow(
+        target_dir, task_query=str(opts["task"]), deliverable=str(opts.get("deliv", "")),
+        summary=str(opts.get("sum", "")), tracker=str(opts.get("trk", "WORKTASK.md")),
+        parent_dir=_opt_path(opts, "parent"), actor_email=_opt_str(opts, "email"),
+        create_pr=bool(opts.get("pr", False)), dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd in ("compare-upstream", "upstream-diff"):
@@ -379,16 +401,26 @@ if subcmd == "consult-layer":
 if subcmd in ("delegate-to-child", "deliver-to-child"):
     target_dir, opts = _pos_opts(
         rest,
-        {"--to-child": "child", "--task": "task", "--source": "src", "--priority": "prio", "--tracker": "trk", "--surface": "trk", "--email": "email"},
+        {"--to-child": "child", "--task": "task", "--source": "src", "--ticket": "tkt", "--priority": "prio", "--tracker": "trk", "--surface": "trk", "--email": "email"},
         {"--force": "force"},
     )
     if not opts.get("child") or (not opts.get("task") and not opts.get("src")):
-        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>] [--surface <surface>] [--priority P0|P1|P2]")
+        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>] [--ticket <id>] [--surface <surface>] [--priority P0|P1|P2]")
     res = delegate_directive_to_child(
         target_dir, child_layer=str(opts["child"]), directive=str(opts.get("task", "")),
-        source_rel_path=_opt_str(opts, "src"), priority=str(opts.get("prio", "P1")),
-        tracker=str(opts.get("trk", "WORKTASK.md")), actor_email=_opt_str(opts, "email"),
-        force_overwrite=bool(opts.get("force", False)), dry_run=dry_run,
+        source_rel_path=_opt_str(opts, "src"), ticket_id=_opt_str(opts, "tkt"),
+        priority=str(opts.get("prio", "P1")), tracker=str(opts.get("trk", "WORKTASK.md")),
+        actor_email=_opt_str(opts, "email"), force_overwrite=bool(opts.get("force", False)), dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
+    sys.exit(0)
+
+if subcmd == "manage-roster":
+    target_dir, opts = _pos_opts(rest, {"--add": "add", "--remove": "rem", "--role": "role", "--title": "title", "--squad": "squad"})
+    res = manage_layer_roster(
+        target_dir, add_email=_opt_str(opts, "add"), remove_email=_opt_str(opts, "rem"),
+        member_role=str(opts.get("role", "member")), title=str(opts.get("title", "")),
+        squad=str(opts.get("squad", "")), dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
     sys.exit(0)

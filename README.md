@@ -176,15 +176,17 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
 ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
 
-# Layer owner vs. consumer authority gates, 1-hop horizon radar, task-branch onboarding & upward promotion:
+# Layer owner vs. consumer authority gates, roster, 1-hop horizon, feature/<TICKET-ID>-slug & completion:
 ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
+./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
 ./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
-./scripts/layer-config.sh check-env-promotion <your-project> --to-env pre --email "clo@acme.com"
+./scripts/layer-config.sh check-env-promotion <your-project> --to-env pre --email "qa@acme.com"
 ./scripts/layer-config.sh record-decision <your-project> --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
 ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
 ./scripts/layer-config.sh start-task <your-project> --task "LEGAL-2026-004"
+./scripts/layer-config.sh complete-task <your-project> --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
 ./scripts/layer-config.sh diff-project <your-project>
 ./scripts/layer-config.sh promote-from-project <your-project> --source .agents/rules/rule.md --create-pr
 

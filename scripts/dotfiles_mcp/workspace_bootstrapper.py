@@ -31,15 +31,16 @@ from .manifest_helpers import (
 from .promotion_engine import diff_project_against_layers, inspect_layer_horizon
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
+_HC, _TB, _BB = (
+    ("human-core", "human-core.md"),
+    ("technical-base", "technical-base.md"),
+    ("business-base", "business-base.md"),
+)
 PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
-    "human-core": (("human-core", "human-core.md"),),
-    "technical": (("human-core", "human-core.md"), ("technical-base", "technical-base.md")),
-    "business": (("human-core", "human-core.md"), ("business-base", "business-base.md")),
-    "full": (
-        ("human-core", "human-core.md"),
-        ("technical-base", "technical-base.md"),
-        ("business-base", "business-base.md"),
-    ),
+    "human-core": (_HC,),
+    "technical": (_HC, _TB),
+    "business": (_HC, _BB),
+    "full": (_HC, _TB, _BB),
 }
 
 
@@ -52,8 +53,7 @@ def _strip_frontmatter(markdown_text: str) -> str:
 
 def _strip_secondary_header(markdown_text: str) -> str:
     """Strip frontmatter, top H1, and introductory blockquote for secondary profiles."""
-    lines = _strip_frontmatter(markdown_text).splitlines()
-    idx = 0
+    lines, idx = _strip_frontmatter(markdown_text).splitlines(), 0
     while idx < len(lines) and (
         lines[idx].startswith(("# ", ">")) or not lines[idx].strip() or lines[idx].strip() == "---"
     ):
@@ -84,9 +84,8 @@ def set_global_agents_profile(
         sections.append(sec)
 
     composed = "\n\n---\n\n".join(sections) + "\n"
-    composed_bytes = len(composed.encode("utf-8"))
-    if composed_bytes > c.AGENTS_MD_MAX_BYTES:
-        cap = c.AGENTS_MD_MAX_BYTES
+    composed_bytes, cap = len(composed.encode("utf-8")), c.AGENTS_MD_MAX_BYTES
+    if composed_bytes > cap:
         raise ValueError(f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds {cap}-byte cap")
     target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
     if not dry_run:
@@ -98,10 +97,9 @@ def set_global_agents_profile(
             subprocess.run(cmd, cwd=repo_dir, check=True, capture_output=True, text=True)  # noqa: S603
             stow_executed = True
 
-    headroom = c.AGENTS_MD_MAX_BYTES - composed_bytes
     res: dict[str, Any] = {"profile": profile, "source_files": source_files, "dry_run": dry_run}
     res.update(target_file=str(target_agents.relative_to(repo_dir)), size_bytes=composed_bytes)
-    res.update(budget_max_bytes=c.AGENTS_MD_MAX_BYTES, headroom_bytes=headroom)
+    res.update(budget_max_bytes=cap, headroom_bytes=cap - composed_bytes)
     res["stow_executed"] = stow_executed
     return res
 
@@ -118,10 +116,8 @@ def register_mounted_subtree(
     root_manifest: dict[str, Any] = json.loads(root_manifest_path.read_text(encoding="utf-8"))
     sub_p = repo_dir / "layers" / layer_name / "system" / "mcp-layer.json"
     sub_m: dict[str, Any] = json.loads(sub_p.read_text(encoding="utf-8")) if sub_p.is_file() else {}
-    sub_id, sub_role = (
-        str(sub_m.get("layer_id") or layer_name),
-        str(sub_m.get("layer_role") or "department"),
-    )
+    sub_id = str(sub_m.get("layer_id") or layer_name)
+    sub_role = str(sub_m.get("layer_role") or "department")
     entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role}
     entry.update(precedence=int(sub_m.get("precedence", 30)), repository=repo_url, branch=branch)
     raw_layers = root_manifest.get("mounted_layers", [])
@@ -141,8 +137,10 @@ def _render_layer_makefile(
     parent_val = (
         str(effective_parent.resolve()) if effective_parent.resolve() != repo_dir.resolve() else ""
     )
-    cli = "$(DOTFILES_DIR)/scripts/layer-config.sh"
-    dev_repo = "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))"
+    cli, dev_repo = (
+        "$(DOTFILES_DIR)/scripts/layer-config.sh",
+        "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))",
+    )
     contrib_cfg = (
         f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
         f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
@@ -153,24 +151,30 @@ def _render_layer_makefile(
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status task consult horizon sync upstream-diff diff authority env-gate "
-        "promote delegate mcp-test\n"
+        ".PHONY: help status task complete consult horizon sync upstream-diff diff authority "
+        "roster env-gate promote delegate mcp-test\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
         '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
-        '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & branch command"\n'
+        '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & feature/<ID>-slug"\n'
+        '\t@echo "  make complete TASK=<id>           Complete task & send upward receipt"\n'
         '\t@echo "  make consult LAYER=<id> QUERY=... Ephemeral read-only layer consultation"\n'
         '\t@echo "  make horizon                      Inspect 1-hop upstream/downstream horizon"\n'
         '\t@echo "  make sync                         Sync inherited templates & .agents/ rules"\n'
         '\t@echo "  make upstream-diff                Section diff against upstream templates"\n'
         '\t@echo "  make diff                         Verify zero drift against templates/"\n'
         '\t@echo "  make authority                    Verify release authority (git user.email)"\n'
+        '\t@echo "  make roster [ADD=...] [ROLE=...]  Inspect or update layer roster"\n'
         '\t@echo "  make env-gate ENV=<tst|pre|pro>   Verify environment promotion gate"\n'
         '\t@echo "  make promote SOURCE=<rel-path>    Promote rule/skill 1-hop upward"\n'
         '\t@echo "  make delegate CHILD=<id> TASK=... Delegate a 1-hop directive to a child"\n'
         '\t@echo "  make mcp-test                     Verify layer templates & topology"\n\n'
         f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n"
         'task:\n\t@test -n "$(TASK)" || (echo "Usage: make task TASK=<id>" && exit 1)\n'
-        f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" $(if $(TRACKER),--tracker $(TRACKER),)\n'
+        f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" $(if $(TRACKER),--tracker $(TRACKER),) '
+        "$(if $(TICKET),--ticket $(TICKET),)\n"
+        'complete:\n\t@test -n "$(TASK)" || (echo "Usage: make complete TASK=<id>" && exit 1)\n'
+        f'\t@{cli} complete-task $(CURDIR) --task "$(TASK)" $(PARENT_FLAG) '
+        '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",)\n'
         'consult:\n\t@test -n "$(LAYER)" && test -n "$(QUERY)" || '
         '(echo "Usage: make consult LAYER=<id> QUERY=..." && exit 1)\n'
         f'\t@{cli} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
@@ -180,6 +184,9 @@ def _render_layer_makefile(
         f"upstream-diff:\n\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)\n"
         f"diff:\n\t@{cli} diff-project $(CURDIR)\n"
         f"authority:\n\t@{cli} check-authority $(CURDIR) --op release\n"
+        f"roster:\n\t@{cli} manage-roster $(CURDIR) "
+        "$(if $(ADD),--add $(ADD),) $(if $(REMOVE),--remove $(REMOVE),) "
+        "$(if $(ROLE),--role $(ROLE),)\n"
         f"env-gate:\n\t@{cli} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)\n"
         'promote:\n\t@test -n "$(SOURCE)" || '
         '(echo "Usage: make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>]" && exit 1)\n'
@@ -190,7 +197,8 @@ def _render_layer_makefile(
         '(echo "Usage: make delegate CHILD=<id> [TASK=...] [SOURCE=...] [SURFACE=...]" && exit 1)\n'
         f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
         '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
-        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),)\n"
+        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),) "
+        "$(if $(TICKET),--ticket $(TICKET),)\n"
         f"mcp-test:\n\t@{cli} list-templates $(CURDIR)\n"
     )
 
@@ -206,11 +214,8 @@ def _sync_templates_from_roots(
     dry_run: bool = False,
 ) -> list[str]:
     """Copy or refresh template packs from effective_parent and repo_dir into target_dir."""
-    roots = (
-        [effective_parent, repo_dir]
-        if effective_parent.resolve() != repo_dir.resolve()
-        else [repo_dir]
-    )
+    same_root = effective_parent.resolve() == repo_dir.resolve()
+    roots = [repo_dir] if same_root else [effective_parent, repo_dir]
     copied: list[str] = []
     for tpl_name in tpl_names:
         if tpl_name == skip_id:
@@ -271,9 +276,8 @@ def bootstrap_layer_workspace(
                     cmd, cwd=effective_parent, check=False, capture_output=True, text=True
                 )
                 upstream_repo = proc.stdout.strip() or None
-            inherited_templates = _merge_unique_strings(
-                [str(pt) for pt in parent_manifest.get("default_stack_templates", [])]
-            )
+            def_tpls = [str(pt) for pt in parent_manifest.get("default_stack_templates", [])]
+            inherited_templates = _merge_unique_strings(def_tpls)
     requested_templates = _merge_unique_strings(inherited_templates, templates or [])
     copied_templates = _sync_templates_from_roots(
         target_dir, effective_parent, repo_dir, requested_templates, dry_run=dry_run
@@ -293,15 +297,29 @@ def bootstrap_layer_workspace(
         m_data["default_stack_templates"] = list(all_tpls)
         m_path.write_text(json.dumps(m_data, indent=2) + "\n", encoding="utf-8")
 
+    is_pol = layer_role in ("domain-policy", "corporate")
     own_kind = (
         "domain-policy-pack"
-        if layer_role in ("domain-policy", "corporate")
+        if is_pol
         else ("department-pack" if layer_role == "department" else "project-overlay")
     )
     scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run}
     scaf_kw.update(description=description or f"{layer_id} ({layer_role}) governance pack")
     scaf_kw.update(register_binding=True, rule_filename=f"{own_tpl_id}.md")
     scaffold_res = scaffold_template_pack(target_dir, **scaf_kw) if scaffold_own_template else None
+    ag_rule = (
+        f"---\ntrigger: always_on\n"
+        f'description: "Layer governance rules for {layer_id} ({layer_role})."\n---\n\n'
+        f"# {layer_id} Layer Rules (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
+        f"> Governed by `system/mcp-layer.json` (`layer_id: {layer_id}`).\n\n"
+        f"## Scope & Surface Target\n"
+        f"- Governs `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`).\n\n"
+        f"## Normative Invariants\n"
+        f"- Respect *Lex Superior* (`0..100`) and `templates/{own_tpl_id}/` contracts.\n\n"
+        "## Verification & Sign-Off Gates\n"
+        "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
+    )
+    chg_hdr = f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
     baseline_files = {
         "VERSION": "0.1.0\n",
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
@@ -310,26 +328,12 @@ def bootstrap_layer_workspace(
         "README.md": _render_layer_onboarding_readme(
             layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
         ),
-        "CHANGELOG.md": (
-            f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
-            f"## [0.1.0]\n- Initial layer bootstrap.\n"
-        ),
+        "CHANGELOG.md": f"{chg_hdr}## [0.1.0]\n- Initial layer bootstrap.\n",
         "WORKTASK.md": (
             f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v0.1.0`).\n"
             "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
         ),
-        "antigravity/.gemini/config/AGENTS.md": (
-            f"---\ntrigger: always_on\n"
-            f'description: "Layer governance rules for {layer_id} ({layer_role})."\n---\n\n'
-            f"# {layer_id} Layer Rules (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
-            f"> Governed by `system/mcp-layer.json` (`layer_id: {layer_id}`).\n\n"
-            f"## Scope & Surface Target\n"
-            f"- Governs `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`).\n\n"
-            f"## Normative Invariants\n"
-            f"- Respect *Lex Superior* (`0..100`) and `templates/{own_tpl_id}/` contracts.\n\n"
-            "## Verification & Sign-Off Gates\n"
-            "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
-        ),
+        "antigravity/.gemini/config/AGENTS.md": ag_rule,
     }
     created_baseline: list[str] = []
     for rel_path, content in baseline_files.items():
@@ -341,12 +345,13 @@ def bootstrap_layer_workspace(
                 dest_file.write_text(content, encoding="utf-8")
 
     tpl_ref_arg = ",".join(all_tpls) if all_tpls else None
+    empty_apply: dict[str, Any] = {"applied_template": tpl_ref_arg, "files_materialized": []}
     apply_res: dict[str, Any] = (
         apply_fork_to_project(
             target_dir, target_dir, template_ref=tpl_ref_arg, layers_filter=["all"], dry_run=False
         )
         if not dry_run
-        else {"applied_template": tpl_ref_arg, "files_materialized": []}
+        else empty_apply
     )
     scaf_id = scaffold_res["template_id"] if scaffold_res else None
     out: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run}
@@ -370,38 +375,37 @@ def sync_layer_workspace(
     if not manifest_path.is_file():
         raise ValueError(f"Missing target layer manifest: {manifest_path}")
     manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    own_layer_id = str(manifest.get("layer_id") or "")
-    own_layer_role = str(manifest.get("layer_role") or "department")
-    stack_templates = _merge_unique_strings(
-        [str(t) for t in manifest.get("default_stack_templates", [])], templates or []
+    own_id, own_role = (
+        str(manifest.get("layer_id") or ""),
+        str(manifest.get("layer_role") or "department"),
     )
+    def_tpls = [str(t) for t in manifest.get("default_stack_templates", [])]
+    stack_templates = _merge_unique_strings(def_tpls, templates or [])
     if not dry_run and templates:
         manifest["default_stack_templates"] = list(stack_templates)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
     existing_tpls = [name for name, _p in _iter_layer_template_dirs(target_dir)]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
-    effective_parent = parent_dir if parent_dir is not None else repo_dir
-    sync_kw: dict[str, Any] = {"skip_id": own_layer_id, "check_newer": True, "dry_run": dry_run}
+    eff_parent = parent_dir if parent_dir is not None else repo_dir
+    sync_kw: dict[str, Any] = {"skip_id": own_id, "check_newer": True, "dry_run": dry_run}
     synced_templates = _sync_templates_from_roots(
-        target_dir, effective_parent, repo_dir, candidate_tpls, **sync_kw
+        target_dir, eff_parent, repo_dir, candidate_tpls, **sync_kw
     )
     synced_children = _sync_mounted_children_into_parent(
         target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
     )
     makefile_path = target_dir / "Makefile"
     if not dry_run and not makefile_path.exists():
-        makefile_path.write_text(
-            _render_layer_makefile(own_layer_id, own_layer_role, effective_parent, repo_dir),
-            encoding="utf-8",
-        )
+        mk_txt = _render_layer_makefile(own_id, own_role, eff_parent, repo_dir)
+        makefile_path.write_text(mk_txt, encoding="utf-8")
     tpl_ref = ",".join(stack_templates) if stack_templates else None
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
     )
-    res: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": own_layer_id}
+    res: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": own_id, "dry_run": dry_run}
     res.update(synced_templates=synced_templates, synced_mounted_layers=synced_children)
-    res.update(applied_template=apply_res.get("applied_template"), dry_run=dry_run)
+    res.update(applied_template=apply_res.get("applied_template"))
     res["files_materialized"] = apply_res.get("files_materialized", [])
     res["participating_layers"] = apply_res.get("participating_layers", [])
     return res
@@ -437,10 +441,8 @@ def inspect_workspace_status(
         )
         return proc.stdout.splitlines()
 
-    g_stat, g_log = (
-        _git_lines("status", "--short", "--branch"),
-        _git_lines("log", "--oneline", "-5"),
-    )
+    g_stat = _git_lines("status", "--short", "--branch")
+    g_log = _git_lines("log", "--oneline", "-5")
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:35]), "\n".join(trk_txt.splitlines()[:35])
     last_cid = uuid_m.group(0) if uuid_m else None
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}

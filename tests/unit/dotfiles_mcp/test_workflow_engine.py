@@ -10,6 +10,7 @@ from dotfiles_mcp.workflow_engine import (
     _derive_branch_slug,
     _parse_markdown_sections_map,
     compare_upstream_templates,
+    complete_task_workflow,
     consult_layer_ephemeral,
     start_task_workflow,
 )
@@ -22,17 +23,18 @@ class TestWorkflowEngine:
         """Derive kebab-case branch slugs from decorated or empty task strings."""
         # Arrange
         delegated = (
-            "**[P0 · Delegated from `dept-legal` (`department`, `precedence: 25`)]**: "
-            "[LEGAL-2026-004] Audit GDPR"
+            "**[P0 · LEGAL-2026-004 · Delegated from `dept-legal` (`department`)]**: Audit GDPR"
         )
         punct_only = "*** ``` ~~~"
 
         # Act
-        slug_delegated = _derive_branch_slug(delegated)
+        slug_delegated = _derive_branch_slug(delegated, strip_ticket="LEGAL-2026-004")
+        slug_raw = _derive_branch_slug(delegated)
         slug_empty = _derive_branch_slug(punct_only)
 
         # Assert
-        assert slug_delegated == "p0-legal-2026-004-audit-gdpr"
+        assert slug_delegated == "audit-gdpr"
+        assert slug_raw == "p0-legal-2026-004-audit-gdpr"
         assert slug_empty == "work-item"
 
     def test_start_task_workflow_claims_task_updates_session_and_validates(
@@ -48,11 +50,11 @@ class TestWorkflowEngine:
         (ws / "WORKTASK.md").write_text(
             "# Active Work Tasks — squad-web\n\n"
             "- [x] Initial bootstrap\n"
-            "- [ ] **[P0 · Delegated from `dept-tech` (`department`)]**: "
-            "[TECH-042] Build OAuth2 login\n"
+            "- [ ] **[P0 · TECH-042 · Delegated from `dept-tech` (`department`)]**: "
+            "Build OAuth2 login\n"
             "  - [ ] Add PKCE verifier\n"
             "  - [ ] Write unit tests\n\n"
-            "- [ ] [TECH-043] Follow-up task\n",
+            "- [ ] Follow up local refactor\n",
             encoding="utf-8",
         )
 
@@ -60,22 +62,23 @@ class TestWorkflowEngine:
         dry_res = start_task_workflow(ws, task_query="TECH-042", dry_run=True)
         dry_session_exists = (ws / ".agents/SESSION.md").exists()
         live_res = start_task_workflow(ws, task_query="TECH-042", dry_run=False)
-        second_res = start_task_workflow(ws, task_query="TECH-043", dry_run=False)
+        second_res = start_task_workflow(ws, task_query="local refactor", dry_run=False)
 
         # Assert
         assert dry_res["dry_run"] is True and dry_session_exists is False
         assert live_res["layer_id"] == "squad-web" and live_res["layer_role"] == "squad"
-        assert live_res["branch_name"] == "task/p0-tech-042-build-oauth2-login"
+        assert live_res["ticket_id"] == "TECH-042" and live_res["origin_layer_id"] == "dept-tech"
+        assert live_res["branch_name"] == "feature/TECH-042-build-oauth2-login"
         assert (
-            live_res["git_branch_command"] == "git checkout -b task/p0-tech-042-build-oauth2-login"
+            live_res["git_branch_command"] == "git checkout -b feature/TECH-042-build-oauth2-login"
         )
         assert live_res["subtasks"] == ["- [ ] Add PKCE verifier", "- [ ] Write unit tests"]
         wt_text = (ws / "WORKTASK.md").read_text(encoding="utf-8")
-        assert "- [/] **[P0" in wt_text and "- [/] [TECH-043]" in wt_text
+        assert "- [/] **[P0" in wt_text and "- [/] Follow up local refactor" in wt_text
         session_text = (ws / ".agents/SESSION.md").read_text(encoding="utf-8")
         assert session_text.count("## Active Task") == 1
-        assert "task/tech-043-follow-up-task" in session_text
-        assert second_res["task_status"] == "in_progress"
+        assert "feature/follow-up-local-refactor" in session_text
+        assert second_res["task_status"] == "in_progress" and second_res["ticket_id"] == ""
         for bad_kw, err_pat in (
             ({"task_query": "   "}, "task_query must be a non-empty"),
             ({"task_query": "x", "tracker": "INVALID.md"}, "Invalid tracker"),
@@ -84,6 +87,85 @@ class TestWorkflowEngine:
         ):
             with pytest.raises(ValueError, match=err_pat):
                 start_task_workflow(ws, **bad_kw)  # type: ignore[arg-type]
+
+    def test_complete_task_workflow_updates_parent_and_stages_receipt(self, tmp_path: Path) -> None:
+        """Complete a child task [x], update parent Outbound Delegations, or stage receipt."""
+        # Arrange
+        parent_dir, ws = tmp_path / "dept-tech", tmp_path / "squad-web"
+        for d, lid, role in ((parent_dir, "dept-tech", "department"), (ws, "squad-web", "squad")):
+            (d / "system").mkdir(parents=True)
+            (d / "system/mcp-layer.json").write_text(
+                f'{{"layer_id":"{lid}","layer_role":"{role}",'
+                f'"upstream_layer":{{"layer_id":"dept-tech"}},'
+                f'"layer_authority":{{"owner_role":"CTO","authorized_emails":["cto@acme.com"]}}}}',
+                encoding="utf-8",
+            )
+        (parent_dir / "WORKTASK.md").write_text(
+            "# Tasks — dept-tech\n\n## Outbound Delegations\n"
+            "- [/] **[TECH-042 -> `squad-web` (`WORKTASK.md`, stage: `delegated`)]**: "
+            "Build OAuth2 login\n",
+            encoding="utf-8",
+        )
+        (ws / "WORKTASK.md").write_text(
+            "# Active Work Tasks — squad-web\n"
+            "- [/] **[P0 · TECH-042 · Delegated from `dept-tech` (`department`)]**: "
+            "Build OAuth2 login\n"
+            "- [/] **[P1 · TECH-043]**: Add PKCE tests\n",
+            encoding="utf-8",
+        )
+
+        # Act
+        dry_res = complete_task_workflow(
+            ws,
+            task_query="TECH-042",
+            deliverable="src/auth.py",
+            parent_dir=parent_dir,
+            actor_email="cto@acme.com",
+            dry_run=True,
+        )
+        auth_res = complete_task_workflow(
+            ws,
+            task_query="TECH-042",
+            deliverable="src/auth.py",
+            parent_dir=parent_dir,
+            actor_email="cto@acme.com",
+        )
+        append_res = complete_task_workflow(
+            ws,
+            task_query="TECH-043",
+            parent_dir=parent_dir,
+            actor_email="cto@acme.com",
+        )
+        staged_res = complete_task_workflow(
+            ws,
+            task_query="TECH-042",
+            actor_email="dev@acme.com",
+            create_pr=True,
+        )
+        no_parent_res = complete_task_workflow(
+            ws, task_query="TECH-042", parent_dir=tmp_path / "missing-parent"
+        )
+
+        # Assert
+        assert dry_res["dry_run"] is True and auth_res["parent_tracker_updated"] is True
+        assert append_res["parent_tracker_updated"] is True
+        assert no_parent_res["parent_tracker_updated"] is False
+        parent_txt = (parent_dir / "WORKTASK.md").read_text(encoding="utf-8")
+        assert (
+            "- [x] **[TECH-042 -> `squad-web` (`WORKTASK.md`, stage: `completed (pro)`)]**"
+            in parent_txt
+        )
+        assert "TECH-043 -> `squad-web`" in parent_txt
+        assert staged_res["staged_completion_receipt"] is not None
+        assert Path(str(staged_res["staged_completion_receipt"])).is_file()
+        for bad_kw, err_pat in (
+            ({"task_query": " "}, "task_query must be a non-empty"),
+            ({"task_query": "x", "tracker": "BAD.md"}, "Invalid tracker"),
+            ({"task_query": "x", "tracker": "BACKLOG.md"}, "Tracker file not found"),
+            ({"task_query": "MISSING-999"}, "No task matching"),
+        ):
+            with pytest.raises(ValueError, match=err_pat):
+                complete_task_workflow(ws, **bad_kw)  # type: ignore[arg-type]
 
     def test_parse_markdown_sections_map_and_compare_upstream_templates(
         self, tmp_path: Path

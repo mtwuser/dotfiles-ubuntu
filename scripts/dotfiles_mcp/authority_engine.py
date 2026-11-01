@@ -92,31 +92,18 @@ def _detect_inherited_upstream_asset(
     while rel.startswith("./"):
         rel = rel[2:]
     own_id, parts = str(manifest.get("layer_id", target_dir.name)), Path(rel).parts
-    if (
-        len(parts) == 3
-        and parts[:2] == (".agents", "rules")
-        and (m_rule := MATERIALIZED_RULE_RE.match(parts[2]))
-    ):
+    is_ag_rule = len(parts) == 3 and parts[:2] == (".agents", "rules")
+    if is_ag_rule and (m_rule := MATERIALIZED_RULE_RE.match(parts[2])):
         return True, f"layer:{m_rule.group(2)}"
-    inherited_tpls = [
-        str(t) for t in manifest.get("default_stack_templates", []) if str(t) != own_id
-    ]
-    if len(parts) >= 2 and parts[0] == "templates" and parts[1] in inherited_tpls:
+    inh_tpls = [str(t) for t in manifest.get("default_stack_templates", []) if str(t) != own_id]
+    if len(parts) >= 2 and parts[0] == "templates" and parts[1] in inh_tpls:
         return True, parts[1]
-    for tpl_name in inherited_tpls:
-        tpl_dir = target_dir / "templates" / tpl_name
-        is_r = (
-            len(parts) == 3
-            and parts[:2] == (".agents", "rules")
-            and (tpl_dir / "rules" / parts[2]).is_file()
-        )
-        is_s = (
-            len(parts) == 4
-            and parts[:2] == (".agents", "skills")
-            and parts[3] == "SKILL.md"
-            and (tpl_dir / "skills" / parts[2] / "SKILL.md").is_file()
-        )
-        if is_r or is_s:
+    is_ag_skill = len(parts) == 4 and parts[:2] == (".agents", "skills") and parts[3] == "SKILL.md"
+    for tpl_name in inh_tpls:
+        tdir = target_dir / "templates" / tpl_name
+        if (is_ag_rule and (tdir / "rules" / parts[2]).is_file()) or (
+            is_ag_skill and (tdir / "skills" / parts[2] / "SKILL.md").is_file()
+        ):
             return True, tpl_name
     return False, ""
 
@@ -364,6 +351,7 @@ def delegate_directive_to_child(
     child_layer: str,
     directive: str = "",
     source_rel_path: str | None = None,
+    ticket_id: str | None = None,
     priority: str = "P1",
     tracker: str = "WORKTASK.md",
     actor_email: str | None = None,
@@ -378,7 +366,7 @@ def delegate_directive_to_child(
         raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
     if tracker not in VALID_DELEGATION_SURFACES:
         raise ValueError(
-            f"Invalid tracker/surface {tracker!r}: must be one of {VALID_DELEGATION_SURFACES}"
+            f"Invalid tracker/surface {tracker!r}: must be in {VALID_DELEGATION_SURFACES}"
         )
     ws, src_file, src_body = workspace_dir.resolve(), None, ""
     if source_rel_path:
@@ -401,8 +389,12 @@ def delegate_directive_to_child(
     pid, prole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "corporate"))
     pprec = int(m.get("precedence", 10))
     eff_text = clean_dir or f"Delivered `{src_file.name if src_file else tracker}`"
+    t_match = re.search(r"\b([A-Z]{2,12}-[A-Z0-9-]{2,20})\b", eff_text)
+    eff_ticket = (ticket_id or "").strip().upper() or (
+        t_match.group(1) if t_match else f"{pid.upper()}-{clean_child.upper()}-01"
+    )
     entry = (
-        f"- [ ] **[{priority} · Delegated from `{pid}` (`{prole}`, "
+        f"- [ ] **[{priority} · {eff_ticket} · Delegated from `{pid}` (`{prole}`, "
         f"`precedence: {pprec}`)]**: {eff_text}"
     )
     fname, updated, staged = src_file.name if src_file is not None else "delegated-item.md", [], []
@@ -445,11 +437,24 @@ def delegate_directive_to_child(
                 if entry not in cur:
                     sep = "" if cur.endswith("\n") else "\n"
                     tfile.write_text(f"{cur}{sep}{blk}\n", encoding="utf-8")
+    p_wt = ws / "WORKTASK.md"
+    p_entry = (
+        f"- [/] **[{eff_ticket} -> `{clean_child}` (`{tracker}`, stage: `delegated`)]**: {eff_text}"
+    )
+    if not dry_run:
+        p_cur = (
+            p_wt.read_text(encoding="utf-8") if p_wt.is_file() else f"# Active Work Tasks — {pid}\n"
+        )
+        p_hdr = "## Outbound Delegations"
+        p_base = p_cur.rstrip() if p_hdr in p_cur else f"{p_cur.rstrip()}\n\n{p_hdr}"
+        if p_entry not in p_base:
+            p_wt.write_text(f"{p_base}\n{p_entry}\n", encoding="utf-8")
     if src_file is not None and src_file.name in VALID_DELEGATION_SURFACES[:5]:
         note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
         if not dry_run and note not in src_body:
             src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
     out: dict[str, Any] = {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run}
-    out.update(child_layer=clean_child, priority=priority, tracker=tracker)
-    out.update(delegated_entry=entry, updated_paths=updated, staged_proposals=staged)
+    out.update(child_layer=clean_child, ticket_id=eff_ticket, priority=priority, tracker=tracker)
+    out.update(delegated_entry=entry, parent_ledger_entry=p_entry, updated_paths=updated)
+    out["staged_proposals"] = staged
     return out

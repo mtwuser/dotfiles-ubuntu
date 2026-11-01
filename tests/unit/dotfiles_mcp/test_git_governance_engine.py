@@ -14,6 +14,7 @@ from dotfiles_mcp.git_governance_engine import (
     configure_git_governance_policy,
     evaluate_environment_promotion,
     inspect_git_governance_state,
+    manage_layer_roster,
     record_governance_decision,
     record_governance_event,
     stage_non_destructive_proposal,
@@ -93,12 +94,14 @@ class TestGitGovernanceEngine:
     def test_configure_and_inspect_git_governance_policy(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Configure branch protection + CODEOWNERS and inspect branch stages and environments."""
+        """Configure branch protection + CODEOWNERS, manage roster, and inspect branch stages."""
         # Arrange
         ws = tmp_path / "squad-shm"
         ws.mkdir(parents=True)
         with pytest.raises(ValueError, match="Missing layer manifest"):
             configure_git_governance_policy(ws)
+        with pytest.raises(ValueError, match="Missing layer manifest"):
+            manage_layer_roster(ws)
         (ws / "system").mkdir(parents=True)
         (ws / "system/mcp-layer.json").write_text(
             json.dumps(
@@ -113,13 +116,23 @@ class TestGitGovernanceEngine:
         # Act
         dry_cfg = configure_git_governance_policy(ws, sync_codeowners=False, dry_run=True)
         no_co_cfg = configure_git_governance_policy(ws, sync_codeowners=False, dry_run=False)
+        r_noop = manage_layer_roster(ws)
         cfg_res = configure_git_governance_policy(ws, sync_codeowners=True)
+        r_dry = manage_layer_roster(
+            ws, add_email="qa@acme.com", member_role="validator", dry_run=True
+        )
+        r_val = manage_layer_roster(ws, add_email="qa@acme.com", member_role="validator")
+        r_own = manage_layer_roster(
+            ws, add_email="arch@acme.com", member_role="owner", title="CTO", squad="core"
+        )
+        r_mem = manage_layer_roster(ws, add_email="dev@acme.com", member_role="member")
+        r_rem = manage_layer_roster(ws, remove_email="dev@acme.com")
         st_fallback = inspect_git_governance_state(ws)
         (ws / ".git").mkdir()
 
         def fake_run(cmd: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
             assert "rev-parse" in cmd
-            return subprocess.CompletedProcess(cmd, 0, stdout="task/01-sensor\n", stderr="")
+            return subprocess.CompletedProcess(cmd, 0, stdout="feature/SHM-01-sensor\n", stderr="")
 
         monkeypatch.setattr(subprocess, "run", fake_run)
         st_git = inspect_git_governance_state(ws)
@@ -133,12 +146,19 @@ class TestGitGovernanceEngine:
             content="# Rule",
             operation="promote-from-project",
         )
-        st_with_prop = inspect_git_governance_state(ws, current_branch="custom/feature")
+        st_with_prop = inspect_git_governance_state(ws, current_branch="custom/branch")
 
         # Assert
         assert dry_cfg["dry_run"] is True and no_co_cfg["codeowners_file"] is None
+        assert r_noop["roster"]["owners"] == []
         assert cfg_res["codeowners_owners"] == "lead@acme.com"
-        assert (ws / ".github/CODEOWNERS").is_file()
+        assert r_dry["dry_run"] is True and r_val["validator_emails"] == ["qa@acme.com"]
+        assert "arch@acme.com" in r_own["authorized_emails"]
+        assert len(r_mem["roster"]["members"]) == 1
+        assert r_rem["roster"]["members"] == []
+        assert "/WORKVALI.md" in (ws / ".github/CODEOWNERS").read_text(encoding="utf-8")
+        with pytest.raises(ValueError, match="Invalid member_role"):
+            manage_layer_roster(ws, add_email="x@acme.com", member_role="admin")
         assert (
             st_fallback["current_branch"],
             st_fallback["is_protected_branch"],
@@ -149,7 +169,7 @@ class TestGitGovernanceEngine:
             st_git["current_branch"],
             st_git["active_process_stage"],
             st_git["active_environment"],
-        ) == ("task/01-sensor", "task", "dev")
+        ) == ("feature/SHM-01-sensor", "feature", "dev")
         assert st_tst["active_environment"] == "tst"
         assert st_pre["active_environment"] == "pre"
         assert st_pro["active_environment"] == "pro" and st_pro["is_protected_branch"] is False
@@ -165,7 +185,11 @@ class TestGitGovernanceEngine:
             json.dumps(
                 {
                     "layer_id": "corp-root",
-                    "layer_authority": {"authorized_emails": ["ceo@acme.com"]},
+                    "layer_role": "corporate",
+                    "layer_authority": {
+                        "authorized_emails": ["ceo@acme.com"],
+                        "validator_emails": ["qa@acme.com"],
+                    },
                 }
             ),
             encoding="utf-8",
@@ -178,9 +202,11 @@ class TestGitGovernanceEngine:
         tst_fail = evaluate_environment_promotion(ws, target_env="tst")
         (ws / "WORKTASK.md").write_text("- [x] **[P0]**: Fix blocker", encoding="utf-8")
         tst_ok = evaluate_environment_promotion(ws, target_env="tst")
-        pre_fail = evaluate_environment_promotion(ws, target_env="pre")
+        pre_fail = evaluate_environment_promotion(
+            ws, target_env="pre", actor_email="intruder@acme.com"
+        )
         (ws / "WORKVALI.md").write_text("- [x] Verify E2E suite\n", encoding="utf-8")
-        pre_ok = evaluate_environment_promotion(ws, target_env="pre")
+        pre_ok = evaluate_environment_promotion(ws, target_env="pre", actor_email="qa@acme.com")
         pro_fail = evaluate_environment_promotion(ws, target_env="pro", actor_email="dev@acme.com")
         (ws / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
         pro_ok = evaluate_environment_promotion(ws, target_env="pro", actor_email="ceo@acme.com")
@@ -218,8 +244,8 @@ class TestGitGovernanceEngine:
         assert dev_ok["allowed"] is True and dev_ok["git_promotion_command"] == ""
         assert tst_fail["allowed"] is False and "OPEN_P0_WORKTASKS" in tst_fail["failed_gates"][0]
         assert tst_ok["allowed"] is True and tst_ok["required_branch"] == "env/tst"
-        assert pre_fail["allowed"] is False and len(pre_fail["failed_gates"]) == 1
-        assert pre_ok["allowed"] is True and pre_ok["required_branch"] == "env/pre"
+        assert pre_fail["allowed"] is False and len(pre_fail["failed_gates"]) == 2
+        assert pre_ok["allowed"] is True and "WORKVALI.md" in pre_ok["phase_semantics"]
         assert pro_fail["allowed"] is False and len(pro_fail["failed_gates"]) == 2
         assert pro_ok["allowed"] is True and pro_ok["required_branch"] == "main"
         assert dec_dry["dry_run"] is True and dec_app["status"] == "approved"
