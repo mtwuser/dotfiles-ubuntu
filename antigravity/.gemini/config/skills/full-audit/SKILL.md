@@ -27,13 +27,13 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 // delegate: flash
 
-1. **Discover Stack & Toolchain**:
-   - Inspect project manifests (`pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `Dockerfile`, CI workflows) to determine target language versions, linters, type-checkers, and test runners.
+1. **Discover Stack, Workspace Mode & Toolchain**:
+   - Run `make status` (or `./scripts/layer-config.sh status`) and inspect project manifests (`system/mcp-layer.json`, `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `Dockerfile`, CI workflows) to determine `workspace_mode` (`"business"`, `"technical"`, or `"hybrid"`), target language versions, linters, type-checkers, and test runners.
 2. **Classify Active Rules by Scope**:
-   - Read `.agents/rules/*.md`, `.agents/LAYER_LINEAGE.md`, and `docs/architecture/*.md`.
-   - Separate **generic inherited rules** (`technical-base`, `business-base`) from **stack-specific rules** and **repository-local specs**; flag any leak where repository-local counts or single-stack literals contaminate a generic rule or skill.
+   - Read `.agents/rules/*.md`, `.agents/LAYER_LINEAGE.md`, and `docs/architecture/*.md` (or `corporate/**/*.md`).
+   - Separate **generic inherited rules** (`technical-base`, `business-base`) from **stack-specific rules** (`business-stack/*`, `tech-stack/*`) and **repository-local specs**; flag any leak where repository-local counts or single-stack literals contaminate a generic rule or skill.
 3. **Establish Baseline Health**:
-   - Run the repository's non-mutating diagnostic/verification command (`make verify`, `make doctor`, or equivalent) to record baseline status.
+   - Run the repository's non-mutating diagnostic/verification command (`make verify`, `make doctor`, `make diff`, or equivalent) to record baseline status.
 
 ---
 
@@ -76,9 +76,11 @@ Record all findings in a structured table (`[P1-01]`, `[P1-02]`, ...) with sever
 
 ---
 
-## Phase 2 — Pass 2: Pragmatic Technical Architecture & Stack Exploitation
+## Phase 2 — Pass 2: Pragmatic Technical Architecture (`technical`) OR Ledger & Topology Consolidation (`business`)
 
-Once conceptual and normative requirements from Pass 1 are aligned, audit their **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
+Once conceptual and normative requirements from Pass 1 are aligned, audit their implementation according to `workspace_mode`:
+- **In `business` mode (`Root 0` / `Department` / `business-base`)**: Audit (1) **Single Source of Truth (SSoT) Ledger Consolidation** (`corporate/` tables vs. prose duplication), (2) **Cross-Departmental Precedence (`5..35`) & Surface Binding Coverage**, (3) **Cross-Surface Cascade (`surfaces/{web,forms,print}/`) & `< 465`-Line Modularity**, and (4) **IP Firewall & Crisis Escalation SLAs (`P0/P1/P2`)**.
+- **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**, audit the **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
 
 1. **Idiomatic Stack Exploitation**:
    - Evaluate whether the implementation leverages modern language features (e.g., native generic syntax, pattern matching, strict protocols/interfaces, zero-copy/stdlib primitives) rather than verbose boilerplate.
@@ -93,9 +95,10 @@ Record all technical improvements in a structured table (`[P2-01]`, `[P2-02]`, .
 
 ---
 
-## Phase 3 — Pass 3: `1:1:1` (`Spec <-> Source <-> Test`) Human-Agent Comprehension Symbiosis
+## Phase 3 — Pass 3: `1:1:1` Symbiosis (`Spec <-> Source <-> Test` in `technical` mode; `Policy <-> Ledger <-> Sign-Off Gate` in `business` mode)
 
-Audit the alignment between **Normative Specifications**, **Executable Source Modules**, and **Unit Test Suites** so tests serve as self-documenting executable specifications for both **Agent** and **Human**:
+- **In `business` mode (`Root 0` / `Department`)**: Verify that every normative policy and corporate ledger (`corporate/**/*.md`, `templates/**/rules/*.md`, `docs/**/*.md`) maintains `1:1:1` alignment between (1) **Traceable Artifact & Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`)**, (2) **Three-Part Functional Verification Structure** (`# Scope & Surface Target`, `# Normative Invariants`, `# Verification & Sign-Off Gates`), and (3) **Zero-Drift Layer Sync (`make diff` & `make horizon`)**.
+- **In `technical` or `hybrid` mode**, audit the alignment between **Normative Specifications**, **Executable Source Modules**, and **Unit Test Suites** so tests serve as self-documenting executable specifications for both **Agent** and **Human**:
 
 1. **Level 1 — Bidirectional `1:1:1` Specification Table (`docs/architecture/<spec>.md`)**:
    - Every executable source module declares `Specification: docs/architecture/<spec>.md`.

@@ -56,7 +56,7 @@ Not every pair of dimensions produces a useful intersection. Before formalizing:
 
 After any architectural change that affects terminology, structure, or core mechanisms, execute this **5-Dimension Sweep** in order before resuming code implementation:
 
-1. **Tier 3A Normative Specifications (`docs/architecture/*.md`)**: Update the authoritative specs first (`< 465` lines), including `1:1:1` (`Spec <-> Source <-> Unit Test`) traceability tables, code snippets, imports, directory trees, and glossary appendices.
+1. **Tier 3A Normative Specifications (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & `templates/**/rules/*.md` in `business` mode)**: Update the authoritative specs first (`< 465` lines), including `1:1:1` (`Spec <-> Source <-> Unit Test`) traceability tables in `technical` mode or Three-Part Functional Verification Structure (`# Scope & Surface Target`, `# Normative Invariants`, `# Verification & Sign-Off Gates`) and `[DEPT]-[TYPE]-[YYYY]-[NNN]` ledger IDs in `business` mode.
 2. **Tier 2 Human Guides & Tier 3B Reference Docs (`docs/guides/*.md`, `docs/reference/*.md`, `docs/README.md`)**: Align step-by-step operator workflows, conceptual playbooks, and domain indexes so zero contradictions exist with normative specs.
 3. **Diagrams (`docs/diagrams/*.mmd` or inline Mermaid)**: Verify that diagram node labels, edges, and filenames match canonical terminology and are written in 100% pure English.
 4. **Tier 1 Root Gateway, Templates & Agent Rules (`README.md`, `templates/**`, `.agents/rules/`)**: Synchronize root entry points, directory trees, CLI cheat-sheets, and agent rules.

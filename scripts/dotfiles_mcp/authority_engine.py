@@ -1,10 +1,6 @@
-"""Role & identity authority enforcement and upward PR promotion planner.
+"""Role & identity authority enforcement, 1-hop delegation, and upward PR promotion planner.
 
 Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
-Enforces asymmetric layer capabilities (Layer Owner vs. Downstream Consumer),
-git user.email authority matching, inherited upstream rule immutability with
-constructive remediation guidance, and child-layer-contextualized Pull Request
-plans for upward promotions.
 """
 
 from __future__ import annotations
@@ -25,6 +21,7 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     OWNER_RESTRICTED_OPS,
 )
+from dotfiles_mcp.manifest_helpers import _resolve_mounted_child_dir
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -33,13 +30,8 @@ def resolve_git_user_email(target_dir: Path) -> str:
     if env_email:
         return env_email
     try:
-        res = subprocess.run(  # noqa: S603
-            ["git", "-C", str(target_dir), "config", "user.email"],  # noqa: S607
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
+        cmd = ["git", "-C", str(target_dir), "config", "user.email"]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=False)  # noqa: S603
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
     except OSError:
@@ -79,20 +71,19 @@ def configure_layer_authority(
         if escalation_contact and escalation_contact.strip()
         else f"{cleaned_role} ({layer_id})" + (f" <{cleaned_emails[0]}>" if cleaned_emails else "")
     )
-    authority_block: dict[str, Any] = {
-        "owner_role": cleaned_role,
-        "authorized_emails": cleaned_emails,
-        "escalation_contact": contact,
-        "consumer_allowed_ops": list(CONSUMER_ALLOWED_OPS),
-        "owner_restricted_ops": list(OWNER_RESTRICTED_OPS),
-    }
-    manifest["layer_authority"] = authority_block
+    auth_blk: dict[str, Any] = {"owner_role": cleaned_role, "authorized_emails": cleaned_emails}
+    auth_blk.update(
+        escalation_contact=contact,
+        consumer_allowed_ops=list(CONSUMER_ALLOWED_OPS),
+        owner_restricted_ops=list(OWNER_RESTRICTED_OPS),
+    )
+    manifest["layer_authority"] = auth_blk
     if not dry_run:
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return {
         "target_dir": str(target_dir),
         "layer_id": layer_id,
-        "layer_authority": authority_block,
+        "layer_authority": auth_blk,
         "dry_run": dry_run,
     }
 
@@ -161,37 +152,28 @@ def verify_layer_operation_authority(
             target_dir, manifest, target_rel_path
         )
         if is_inherited:
-            return {
-                "allowed": False,
-                "reason_code": "INHERITED_UPSTREAM_ASSET_IMMUTABLE",
-                "operation": operation,
-                "layer_id": layer_id,
-                "actor_email": eff_email,
-                "target_rel_path": target_rel_path,
-                "origin_source": origin_ref,
-                "remediation": (
-                    f"Blocked: '{target_rel_path}' is an inherited upstream asset "
-                    f"(origin: '{origin_ref}', upstream layer: '{upstream_id}'). "
-                    f"Downstream workspaces must not mutate or publish upstream rules directly. "
-                    f"Process to follow: (1) Author or adapt the rule in your own layer template "
-                    f"('templates/{layer_id}/') or local '.agents/rules/'; "
-                    f"(2) Run './scripts/layer-config.sh promote-from-project {target_dir} "
-                    f"--source {target_rel_path} --to-layer {upstream_id} --create-pr' "
-                    f"to generate an upward Pull Request from your layer context; "
-                    f"(3) Coordinate with the upstream owner ({escalation_contact}) for review."
-                ),
-            }
+            rem = (
+                f"Blocked: '{target_rel_path}' is an inherited upstream asset "
+                f"(origin: '{origin_ref}', upstream layer: '{upstream_id}'). "
+                f"Downstream workspaces must not mutate or publish upstream rules directly. "
+                f"Process to follow: (1) Author or adapt the rule in your own layer template "
+                f"('templates/{layer_id}/') or local '.agents/rules/'; "
+                f"(2) Run './scripts/layer-config.sh promote-from-project {target_dir} "
+                f"--source {target_rel_path} --to-layer {upstream_id} --create-pr' "
+                f"to generate an upward Pull Request from your layer context; "
+                f"(3) Coordinate with the upstream owner ({escalation_contact}) for review."
+            )
+            res: dict[str, Any] = {"allowed": False, "operation": operation, "layer_id": layer_id}
+            res.update(reason_code="INHERITED_UPSTREAM_ASSET_IMMUTABLE", actor_email=eff_email)
+            res.update(target_rel_path=target_rel_path, origin_source=origin_ref, remediation=rem)
+            return res
 
     if operation in CONSUMER_ALLOWED_OPS:
-        return {
-            "allowed": True,
-            "reason_code": "CONSUMER_OPERATION_ALLOWED",
-            "operation": operation,
-            "layer_id": layer_id,
-            "actor_email": eff_email,
-            "owner_role": owner_role,
-            "remediation": None,
-        }
+        res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "operation": operation}
+        res.update(
+            layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None
+        )
+        return res
 
     if authorized_emails:
         email_lower = eff_email.lower()
@@ -199,37 +181,26 @@ def verify_layer_operation_authority(
             email_lower and any(fnmatchcase(email_lower, pat.lower()) for pat in authorized_emails)
         )
         if not matched:
-            return {
-                "allowed": False,
-                "reason_code": "UNAUTHORIZED_ACTOR_EMAIL",
-                "operation": operation,
-                "layer_id": layer_id,
-                "actor_email": eff_email,
-                "owner_role": owner_role,
-                "authorized_emails": authorized_emails,
-                "escalation_contact": escalation_contact,
-                "remediation": (
-                    f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
-                    f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
-                    f"authorized: {', '.join(authorized_emails)}). "
-                    f"Process to follow: (1) Keep changes in your own squad/project workspace; "
-                    f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
-                    f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
-                    f"to open a Pull Request from your layer context; "
-                    f"(3) Contact {escalation_contact} to review and publish upstream, "
-                    f"then inherit via './scripts/layer-config.sh sync-layer'."
-                ),
-            }
+            rem = (
+                f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
+                f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
+                f"authorized: {', '.join(authorized_emails)}). "
+                f"Process to follow: (1) Keep changes in your own squad/project workspace; "
+                f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
+                f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
+                f"to open a Pull Request from your layer context; "
+                f"(3) Contact {escalation_contact} to review and publish upstream, "
+                f"then inherit via './scripts/layer-config.sh sync-layer'."
+            )
+            res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
+            res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
+            res.update(owner_role=owner_role, authorized_emails=authorized_emails)
+            res.update(escalation_contact=escalation_contact, remediation=rem)
+            return res
 
-    return {
-        "allowed": True,
-        "reason_code": "OWNER_AUTHORIZED",
-        "operation": operation,
-        "layer_id": layer_id,
-        "actor_email": eff_email,
-        "owner_role": owner_role,
-        "remediation": None,
-    }
+    res = {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation}
+    res.update(layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None)
+    return res
 
 
 def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
@@ -343,13 +314,10 @@ def build_upward_promotion_pr_plan(
     escalation_contact = str(
         target_auth.get("escalation_contact", f"{owner_role} ({target_layer_id})")
     )
-    proposer_email = (
-        "oss-contributor"
-        if oss_anonymized
-        else (
-            actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
-        )
+    raw_email = (
+        actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
     )
+    proposer_email = "oss-contributor" if oss_anonymized else raw_email
     eff_org = (contributing_org or "").strip() or (
         "Anonymous Organization (default)" if oss_anonymized else source_layer_id
     )
@@ -390,8 +358,7 @@ def build_upward_promotion_pr_plan(
         f"- **Source Path**: `{source_rel}` -> **Destination**: `{dest_rel}`\n"
         f"- **SHA-256 Digest**: `{sha256}`\n\n"
         f"### Community Attribution & Real-World Validation (Optional)\n"
-        f"| Field | Value (Edit or leave anonymous) |\n"
-        f"| :--- | :--- |\n"
+        f"| Field | Value (Edit or leave anonymous) |\n| :--- | :--- |\n"
         f"| **Contributing Organization / Company** | `{eff_org}` |\n"
         f"| **Contributors / Roles Involved** | `{eff_contributors}` |\n"
         f"| **Real-World Validation Topology** | `{eff_context}` |\n"
@@ -405,37 +372,83 @@ def build_upward_promotion_pr_plan(
         f"- [x] Preserves `< 465` line file gate and `18,000`-byte `AGENTS.md` token budget.\n\n"
         f"### Post-Merge Downstream Inheritance\n"
         f"Once reviewed and merged by `{owner_role}`, downstream workspaces inherit "
-        f"this update via:\n"
-        f"```bash\n"
+        f"this update via:\n```bash\n"
         f"./scripts/layer-config.sh sync-layer <downstream-workspace> "
-        f"--parent-dir {target_repo_dir}\n"
-        f"```\n"
+        f"--parent-dir {target_repo_dir}\n```\n"
     )
-    return {
-        "origin_layer_id": source_layer_id,
-        "origin_layer_role": source_layer_role,
-        "proposer_email": proposer_email,
-        "contributing_org": eff_org,
-        "contributors": eff_contributors,
-        "validation_context": eff_context,
-        "target_layer_id": target_layer_id,
-        "target_owner_role": owner_role,
-        "reviewer_contact": escalation_contact,
-        "oss_anonymized": oss_anonymized,
-        "branch_name": branch_name,
-        "commit_message": commit_msg,
-        "pr_title": pr_title,
-        "pr_body": pr_body,
-        "git_pr_commands": [
-            f"cd {target_repo_dir} && git checkout -b {branch_name}",
-            (
-                f"cd {target_repo_dir} && git add {dest_rel} "
-                f"&& git commit -m {json.dumps(commit_msg)}"
-            ),
-            f"cd {target_repo_dir} && git push -u origin {branch_name}",
-            (
-                f"cd {target_repo_dir} && gh pr create "
-                f"--title {json.dumps(pr_title)} --body {json.dumps(pr_body)}"
-            ),
-        ],
-    }
+    cmds = [
+        f"cd {target_repo_dir} && git checkout -b {branch_name}",
+        f"cd {target_repo_dir} && git add {dest_rel} && git commit -m {json.dumps(commit_msg)}",
+        f"cd {target_repo_dir} && git push -u origin {branch_name}",
+        (
+            f"cd {target_repo_dir} && gh pr create "
+            f"--title {json.dumps(pr_title)} --body {json.dumps(pr_body)}"
+        ),
+    ]
+    out: dict[str, Any] = {"origin_layer_id": source_layer_id, "proposer_email": proposer_email}
+    out.update(origin_layer_role=source_layer_role, contributing_org=eff_org)
+    out.update(contributors=eff_contributors, validation_context=eff_context)
+    out.update(target_layer_id=target_layer_id, target_owner_role=owner_role)
+    out.update(reviewer_contact=escalation_contact, oss_anonymized=oss_anonymized)
+    out.update(branch_name=branch_name, commit_message=commit_msg, pr_title=pr_title)
+    out.update(pr_body=pr_body, git_pr_commands=cmds)
+    return out
+
+
+def delegate_directive_to_child(
+    workspace_dir: Path,
+    *,
+    child_layer: str,
+    directive: str,
+    priority: str = "P1",
+    tracker: str = "WORKTASK.md",
+    actor_email: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Delegate a 1-hop downward directive from <workspace_dir> into <child_layer>/<tracker>."""
+    clean_child, clean_dir = child_layer.strip(), directive.strip()
+    if not KEBAB_ID_RE.match(clean_child):
+        raise ValueError(f"Invalid child_layer {child_layer!r}: must be kebab-case")
+    if not clean_dir:
+        raise ValueError("directive must be a non-empty string")
+    if priority not in ("P0", "P1", "P2"):
+        raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
+    if tracker not in ("WORKTASK.md", "BACKLOG.md", "WORKROAD.md"):
+        raise ValueError(
+            f"Invalid tracker {tracker!r}: must be WORKTASK.md, BACKLOG.md, or WORKROAD.md"
+        )
+    ws = workspace_dir.resolve()
+    verdict = verify_layer_operation_authority(
+        ws, operation="delegate-to-child", actor_email=actor_email
+    )
+    if not verdict["allowed"]:
+        raise ValueError(f"DELEGATION_AUTHORITY_DENIED: {verdict['remediation']}")
+    sib_dir = _resolve_mounted_child_dir(ws, clean_child)
+    mnt_dir = ws / "layers" / clean_child
+    targets = [d for d in (sib_dir, mnt_dir if mnt_dir.is_dir() else None) if d is not None]
+    if not targets:
+        raise ValueError(f"Target 1-hop child layer not found: {clean_child!r}")
+    m = _load_manifest_dict(ws)
+    pid = str(m.get("layer_id", ws.name))
+    prole, pprec = str(m.get("layer_role", "corporate")), int(m.get("precedence", 10))
+    entry = (
+        f"- [ ] **[{priority} · Delegated from `{pid}` (`{prole}`, "
+        f"`precedence: {pprec}`)]**: {clean_dir}"
+    )
+    updated: list[str] = []
+    for tdir in targets:
+        tfile = tdir / tracker
+        updated.append(str(tfile))
+        if not dry_run:
+            cur = (
+                tfile.read_text(encoding="utf-8")
+                if tfile.is_file()
+                else f"# Active Work Tasks — {clean_child}\n\n"
+            )
+            if entry not in cur:
+                sep = "" if cur.endswith("\n") else "\n"
+                tfile.write_text(f"{cur}{sep}{entry}\n", encoding="utf-8")
+    out: dict[str, Any] = {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run}
+    out.update(child_layer=clean_child, priority=priority, tracker=tracker)
+    out.update(delegated_entry=entry, updated_paths=updated)
+    return out

@@ -1,6 +1,6 @@
 ---
 name: governance
-description: "Use when promoting work between tiers (roadmaps → active → done), writing CHANGELOG entries, or extracting architectural knowledge from raw conversation files."
+description: "Use when promoting work between tiers (roadmaps → active → done), delegating 1-hop downward directives to child layers, writing CHANGELOG entries, or extracting architectural knowledge from raw conversation files."
 ---
 
 # Governance Skill
@@ -16,7 +16,9 @@ Work flows strictly from left to right:
 
 #### 1. Future Roadmap (`roadmaps/`) → Active Roadmap (`WORKROAD.md` / `ROADMAP.md`)
 - Select the next roadmap by priority number.
-- Execute **deep-analysis** before promotion (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`): audit existing specs, tests, and code, detect already-implemented items, and identify synergies.
+- Execute **deep-analysis** before promotion according to the active `workspace_mode` (`make status` / `.agents/rules/*.md`):
+  - **Technical / Hybrid Mode (`technical-base` / `tech-stack/*`)**: `1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code` (audit specs, tests, and code).
+  - **Business Mode (`business-base` / `business-stack/*` / `Root 0` / `Department`)**: `1. Normative Policies & Lex Superior (0..100) -> 2. Corporate Ledgers (corporate/) & Traceable IDs ([DEPT]-[TYPE]-[YYYY]-[NNN]) -> 3. Cross-Surface Contracts & Sign-Off Gates` (audit corporate ledgers, policies, and downstream department/squad impact).
 - Enrich the roadmap with your findings, then promote its phase checklist to `WORKROAD.md`.
 
 #### 2. Active Roadmap / Backlog (`WORKROAD.md` / `BACKLOG.md`) → Active Tasks (`WORKTASK.md`)
@@ -66,3 +68,28 @@ Always write for the **USER** (or downstream adopter), not internal scratch note
 #### Stage 3 — Raw Source Decommissioning (Zero-Residue)
 - Once 100% of the extracted insights are verified in `docs/reference/` and `docs/architecture/`, **delete the temporary raw conversation file** so no unindexed chat dumps remain in the repository.
 - Alternatively, when processing massive multi-file queues incrementally across multiple turns, apply **Destructive Queue Ingestion** (popping synthesized line ranges from the source file after each checkpoint until the file reaches `0 bytes` and is removed).
+
+---
+
+## Part 3 — 1-Hop Downward Directive & Task Delegation (`Root 0 -> Department -> Squad`)
+
+> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, or `Department` (`department`) workspaces when an executive or domain decision requires a concrete action, policy alignment, or deliverable from an immediate 1-hop child layer (`layers/<child-id>` or sibling checkout).
+
+### Delegation Mechanics (`make delegate` / `delegate-to-child`)
+
+1. **Enforce the 1-Hop Horizon**:
+   - `Root 0` (`corporate`) delegates exclusively to its immediate child `Department` / `domain-policy` layers.
+   - `Department` (`department`) delegates exclusively to its immediate child `Squad` layers.
+   - Never bypass an intermediate layer to inject tasks 2 hops down.
+2. **Execute Deterministic CLI Delegation**:
+   - From a layer workspace with a generated `Makefile`:
+     ```bash
+     make delegate CHILD=<child-layer-id> TASK="<clear actionable directive>" [PRIORITY=P0|P1|P2]
+     ```
+   - Or directly via `layer-config.sh`:
+     ```bash
+     ./scripts/layer-config.sh delegate-to-child [<workspace-dir>] --to-child <child-layer-id> --task "<directive>" [--priority P0|P1|P2] [--tracker WORKTASK.md|BACKLOG.md|WORKROAD.md]
+     ```
+3. **Traceable Attribution & Sync**:
+   - The command verifies caller authority (`verify_layer_operation_authority` for `delegate-to-child`) and appends a traceable entry (`- [ ] **[P1 · Delegated from '<parent-id>' ('<role>', 'precedence: <N>')]**: <directive>`) to the child layer's tracker.
+   - When the child layer opens its next session (`/sopen`), `make status` surfaces the delegated directive immediately in `priority_state`.

@@ -9,15 +9,20 @@ description: audit code structure, quality, and testing alignment against projec
 
 ---
 
-## Scopes
+## Scopes & Mode Selection (`workspace_mode`)
+
+Check `workspace_mode` from `make status` (or `.agents/rules/*.md`):
+- **`technical` / `hybrid` mode (`technical-base` / `tech-stack/*`)**: Execute §1–§5 below (plus §6 when `hybrid`).
+- **`business` mode (`business-base` / `business-stack/*` / `Root 0` / `Department`)**: Skip code/unit-test checks (§1–§4) and execute **§6 Business & Normative Governance Audit (`corporate/`, `templates/`, `docs/`, `surfaces/`)** plus **§5 Zero-Residue Scan**.
 
 | Scope | What it audits |
 |-------|---------------|
-| `/review <module>` | Full module audit: architecture, services, models, tests, coverage |
-| `/review <module>/tests` | Test-only audit: classification, file mapping, coverage, patterns |
-| `/review <module>/services` | Service layer audit: boundaries, dead code, naming, dependencies |
-| `/review imports` | Cross-module import direction audit (full project) |
-| `/review residue` | Zero-residue scan: shims, deprecated markers, backward compat aliases |
+| `/review <module>` | Full module audit (Technical §1–§5) or Corporate/Department pack audit (Business §6) |
+| `/review <module>/tests` | Test-only audit: classification, file mapping, coverage, patterns (Technical §2) |
+| `/review <module>/services` | Service layer audit: boundaries, dead code, naming, dependencies (Technical §3) |
+| `/review corporate` | Business & normative ledger audit: *Lex Superior*, SSoT ledgers, Traceable IDs, 3-part verification, IP firewall (Business §6) |
+| `/review imports` | Cross-module import direction audit (Technical §4) |
+| `/review residue` | Zero-residue scan: shims, deprecated markers, backward compat aliases (§5) |
 
 ---
 
@@ -175,6 +180,19 @@ grep -rn "= .*  # noqa.*alias\|# shim\|# transitional" . | grep -v node_modules/
 - [ ] **No deprecated markers** — code is deleted or moved atomically
 - [ ] **No backward-compat aliases** — `OldName = NewName` not allowed
 - [ ] **No re-export shims** — moved code is imported from its new location
+
+---
+
+## 6. Business & Normative Governance Audit (`/review corporate` or `workspace_mode == "business"`)
+
+When operating in `Root 0` (`corporate`), `domain-policy`, or `Department` (`business-base` / `business-stack/*`) workspaces, audit normative documents, corporate ledgers, and template packs against `.agents/rules/business-base.md`:
+
+- [ ] **1. Lex Superior (`0..100`) & Cross-Departmental Precedence (`5..35`)** — lower-tier packs (`department` `30`, `squad` `50`) never weaken or contradict higher-authority invariants (`domain-policy` `5`, `corporate` `10`); Legal/Compliance (`5..15`) > Finance/Supply (`20..25`) > Brand/Design (`30`) > Growth/Marketing (`35`).
+- [ ] **2. Single Source of Truth (SSoT) Ledgers & Quantitative Precision** — every financial, operational, pricing, or SLA figure resides in ONE canonical ledger table under `corporate/` or `docs/` with explicit ISO 4217 currency and SI/time units; downstream docs link to the ledger instead of duplicating numbers in prose.
+- [ ] **3. Traceable Artifact & Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`)** — every normative policy, contract, pricing table, and sign-off gate carries a unique stable identifier.
+- [ ] **4. Three-Part Functional Verification Structure** — every normative document in `corporate/**/*.md`, `templates/**/rules/*.md`, and `docs/**/*.md` contains: (1) `# Scope & Surface Target`, (2) `# Normative Invariants`, and (3) `# Verification & Sign-Off Gates` (with `- [ ]` checklists).
+- [ ] **5. IP & Confidentiality Firewall & Crisis Escalation SLAs (`P0/P1/P2`)** — zero restricted formulas, supplier margins, or internal codenames leaked into public/external surfaces; crisis response playbooks define explicit `P0`/`P1`/`P2` SLAs and named owner roles.
+- [ ] **6. Cross-Surface Cascade & Modularity (`< 465` Lines)** — changes in `corporate/` cascade across `surfaces/web/`, `surfaces/forms/`, and `surfaces/print/`, and every `.md` file stays strictly `< 465` lines (`make diff` reports zero drift).
 
 ---
 

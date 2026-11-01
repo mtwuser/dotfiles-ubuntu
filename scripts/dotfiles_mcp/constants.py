@@ -212,6 +212,7 @@ OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "scaffold-template",
     "register-subtree",
     "set-authority",
+    "delegate-to-child",
     "release",
     "commit-layer",
     "push-layer",

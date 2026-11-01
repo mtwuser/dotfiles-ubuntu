@@ -169,7 +169,7 @@ def _render_layer_makefile(
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status horizon sync diff authority promote mcp-test\n\n"
+        ".PHONY: help status horizon sync diff authority promote delegate mcp-test\n\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
         '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
         '\t@echo "  make horizon                      Inspect 1-hop upstream/downstream horizon"\n'
@@ -177,6 +177,7 @@ def _render_layer_makefile(
         '\t@echo "  make diff                         Verify zero drift against templates/"\n'
         '\t@echo "  make authority                    Verify release authority (git user.email)"\n'
         '\t@echo "  make promote SOURCE=<rel-path>    Promote rule/skill 1-hop upward"\n'
+        '\t@echo "  make delegate CHILD=<id> TASK=... Delegate a 1-hop directive to a child"\n'
         '\t@echo "  make mcp-test                     Verify layer templates & topology"\n\n'
         f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n\n"
         f"horizon:\n\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)\n\n"
@@ -188,6 +189,10 @@ def _render_layer_makefile(
         f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
         "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
         "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)\n\n"
+        'delegate:\n\t@test -n "$(CHILD)" -a -n "$(TASK)" || '
+        '(echo "Usage: make delegate CHILD=<layer-id> TASK=\\"<directive>\\"" && exit 1)\n'
+        f'\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)" '
+        "$(if $(PRIORITY),--priority $(PRIORITY),)\n\n"
         f"mcp-test:\n\t@{cli} list-templates $(CURDIR)\n"
     )
 
@@ -396,13 +401,9 @@ def sync_layer_workspace(
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
     )
-    res: dict[str, Any] = {
-        "target_dir": str(target_dir),
-        "layer_id": own_layer_id,
-        "dry_run": dry_run,
-    }
+    res: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": own_layer_id}
     res.update(synced_templates=synced_templates, synced_mounted_layers=synced_children)
-    res.update(applied_template=apply_res.get("applied_template"))
+    res.update(applied_template=apply_res.get("applied_template"), dry_run=dry_run)
     res["files_materialized"] = apply_res.get("files_materialized", [])
     res["participating_layers"] = apply_res.get("participating_layers", [])
     return res
@@ -412,13 +413,14 @@ def inspect_workspace_status(
     repo_dir: Path, target_dir: Path, *, parent_dir: Path | None = None
 ) -> dict[str, Any]:
     """Return a single-call consolidated status digest for /sopen and day-to-day layer ops."""
-    ws = target_dir.resolve()
-    m_path = ws / "system" / "mcp-layer.json"
+    ws, m_path = target_dir.resolve(), target_dir.resolve() / "system" / "mcp-layer.json"
     is_layer = m_path.is_file()
     m: dict[str, Any] = json.loads(m_path.read_text(encoding="utf-8")) if is_layer else {}
     role, lid = str(m.get("layer_role", "project")), str(m.get("layer_id", ws.name))
-    prec = int(m.get("precedence", 80))
-    tpls = [str(x) for x in m.get("default_stack_templates", [])]
+    prec, tpls = (
+        int(m.get("precedence", 80)),
+        [str(x) for x in m.get("default_stack_templates", [])],
+    )
     rules = [p.name for p in sorted((ws / ".agents/rules").glob("*.md"))]
     has_tech = bool({"technical-base.md", "coding.md"} & set(rules) or "technical-base" in tpls)
     has_biz = bool("business-base.md" in rules or "business-base" in tpls or role == "corporate")
@@ -439,10 +441,8 @@ def inspect_workspace_status(
         )
         return proc.stdout.splitlines()
 
-    g_stat, g_log = (
-        _git_lines("status", "--short", "--branch"),
-        _git_lines("log", "--oneline", "-5"),
-    )
+    g_stat = _git_lines("status", "--short", "--branch")
+    g_log = _git_lines("log", "--oneline", "-5")
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:35]), "\n".join(trk_txt.splitlines()[:35])
     last_cid = uuid_m.group(0) if uuid_m else None
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}

@@ -29,23 +29,25 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
   - `post_invocation_lint.py` (`PostInvocation`) — Enforces `< 465` lines on modified `.py`, `README.md`, and `docs/**/*.md` files, AAA test comments, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18 KB` `AGENTS.md` / `80 KB` workspace cap).
   - `stop_verify_tests.py` (`Stop`) — Runs affected unit tests before concluding a task.
 
-### 1.2 Global Slash Commands & Procedural Skills (`~/.gemini/config/skills/`)
+### 1.2 Global Slash Commands (`~/.gemini/config/skills/`) vs. Technical-Pack Skills (`templates/technical-base/skills/`)
 
-| Skill / Command | Type | When to Use & Key Actions |
+The 10 universal lifecycle, governance, and audit skills live in `$HOME/.gemini/config/skills/` and adapt automatically to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`), while the 3 software-engineering-specific skills (`testing`, `refactoring`, `validation`) live in `templates/technical-base/skills/` and are projected into `.agents/skills/` only on technical workspaces:
+
+| Skill / Command | Scope | When to Use & Key Actions |
 |-----------------|------|---------------------------|
-| `/sopen` | Slash Command | Start of every session: pulls `~/dotfiles-ubuntu`, runs `inspect-horizon` (1-hop upstream/downstream check), and restores context (`brain/` $\rightarrow$ `.agents/SESSION.md` $\rightarrow$ `WORKTASK.md`). |
-| `/continue` | Slash Command | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
-| `/sclose` | Slash Command | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
-| `/release` | Slash Command | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
-| `/priority` | Slash Command | Audits `WORKTASK.md` $\rightarrow$ `ROADMAP.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` to pick the next task. |
-| `/review` | Slash Command | Audits code structure, Clean Code, hexagonal boundaries, and AAA test coverage. |
-| `/full-audit` | Slash Command | Executes a 2-pass, 4-perspective exhaustive repository audit (Pass 1 Conceptual/Normative Alignment $\rightarrow$ Pass 2 Pragmatic Technical, `1:1:1` Human-Agent Test Comprehension & Stack Currency) with `WORKTASK.md` / `WORKROAD.md` overflow crystallization. |
-| `/enrich` | Slash Command | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`, including anonymized `Root 0 -> OSS` PR plans). |
-| `architecture-review` | Procedural | Multi-dimensional specification reviews, orthogonal classification unification, and naming coherence. |
-| `governance` | Procedural | One-way work lifecycle transitions and clean-room knowledge extraction. |
-| `refactoring` | Procedural | Safe decomposition of files approaching the `< 465`-line gate (`<= 400` target) with `1:1:1` parity. |
-| `testing` | Procedural | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% branch coverage audits. |
-| `validation` | Procedural | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
+| `/sopen` | Global (`human-core`) | Start of every session: runs `make status` (`./scripts/layer-config.sh status`) in a single `< 0.2s` call (`session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`) and skips `brain/` scanning when `last_conversation_id` is `null`. |
+| `/continue` | Global (`human-core`) | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
+| `/sclose` | Global (`human-core`) | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
+| `/release` | Global (`human-core`) | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
+| `/priority` | Global (Dual Mode) | Audits `WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` using `1:1:1` specs/tests in `technical` mode or *Lex Superior* / SSoT ledgers (`corporate/`) in `business` mode. |
+| `/review` | Global (Dual Mode) | Audits code/services/tests (§1–§5) in `technical` mode or corporate ledgers, *Lex Superior*, Traceable IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`), and 3-part functional verification (§6) in `business` mode. |
+| `/full-audit` | Global (Dual Mode) | Executes a multi-pass, 4-perspective + 5-persona audit adapting Pass 2 and Pass 3 to `workspace_mode` (`Spec <-> Source <-> Test` vs. `Policy <-> Ledger <-> Sign-Off Gate`). |
+| `/enrich` | Global (`human-core`) | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`). |
+| `architecture-review` | Global (Dual Mode) | Multi-dimensional specification reviews (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & policy packs in `business` mode). |
+| `governance` | Global (Dual Mode) | One-way work lifecycle transitions, 1-hop downward directive delegation (`make delegate` / `delegate-to-child`), and clean-room knowledge extraction. |
+| `refactoring` | `technical-base` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target) with `1:1:1` parity. |
+| `testing` | `technical-base` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% branch coverage audits. |
+| `validation` | `technical-base` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
 
 > **`/learn` (built-in Antigravity command) vs. `/enrich` (`dotfiles-ubuntu`)**:
 > `/learn` captures a lesson from the current chat into the active workspace's `.agents/`. `/enrich` evaluates matured rules across workspaces and promotes them upward (`Squad/App -> Department -> Corporate Root 0 -> Open Source`) via `layer-config.sh promote-from-project`.
@@ -204,15 +206,18 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
 
 Nobody needs to memorize long `layer-config.sh` invocations for daily operations. Every layer workspace initialized or synced via `bootstrap-workspace` / `sync-layer` provides two built-in ergonomic channels:
 
-1. **In Chat (`/sopen` & `/enrich` Slash Workflows)**:
-   - **`/sopen`**: Automatically inspects the workspace's 1-hop horizon (`make horizon`) and rule drift (`make diff`) at session start.
+1. **In Chat (`/sopen`, `/governance`, & `/enrich` Slash Workflows)**:
+   - **`/sopen`**: Runs `make status` (`./scripts/layer-config.sh status`) to obtain the workspace's session state, git state, 1-hop horizon, and rule drift in a single `< 0.2s` JSON call.
+   - **`/governance` (1-Hop Downward Delegation)**: Delegates an executive or departmental directive 1-hop downward (`Root 0 -> Department` or `Department -> Squad`) via `make delegate CHILD=<layer-id> TASK="<directive>" [PRIORITY=P0|P1|P2]`.
    - **`/enrich`**: Classifies local `.agents/` rules against the 1-hop parent layer, runs `make promote` (upward) or `make sync` (downward) after user approval, and prepares commit/PR blocks.
 2. **In Terminal (Role-Specialized `Makefile` in Every Layer Workspace)**:
+   - `make status` — Returns the consolidated `< 0.2s` JSON digest (`workspace_mode`, `session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`).
    - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
    - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
    - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
    - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr`.
+   - `make delegate CHILD=<layer-id> TASK="<directive>" [PRIORITY=P0|P1|P2]` — Appends a traceable 1-hop downward directive into the child layer's `WORKTASK.md`.
    - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
 
 ---

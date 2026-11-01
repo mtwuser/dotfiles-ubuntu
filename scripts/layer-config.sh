@@ -41,6 +41,9 @@ Commands:
       Inspect 1-hop downward propagation status and upward promotion candidates.
   status [<target-dir>] [--parent-dir <dir>]
       Return a single-call consolidated status digest (session, git, priority, horizon & diff).
+  delegate-to-child [<target-dir>] --to-child <layer> --task <text> [--priority <P0|P1|P2>]
+                    [--tracker <WORKTASK.md|BACKLOG.md|WORKROAD.md>] [--email <email>]
+      Delegate a 1-hop downward directive into a child layer's task tracker.
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
       Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork.
@@ -97,7 +100,7 @@ subcmd = sys.argv[4]
 rest = [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
 
 sys.path.insert(0, str(script_dir))
-from dotfiles_mcp.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
+from dotfiles_mcp.authority_engine import configure_layer_authority, delegate_directive_to_child, verify_layer_operation_authority  # noqa: E402
 from dotfiles_mcp.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
 from dotfiles_mcp.fork_configurator import apply_fork_to_project, configure_fork_manifest, discover_templates_catalog, scaffold_template_pack  # noqa: E402
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
@@ -359,6 +362,27 @@ if subcmd == "status":
     target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
     opts = _parse_opts(rest[1:] if has_pos else rest, {"--parent-dir": "parent"})
     print(json.dumps(inspect_workspace_status(repo_dir, target_dir, parent_dir=_opt_path(opts, "parent")), indent=2))
+    sys.exit(0)
+
+if subcmd == "delegate-to-child":
+    has_pos = bool(rest and not rest[0].startswith("--"))
+    target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
+    opts = _parse_opts(
+        rest[1:] if has_pos else rest,
+        {"--to-child": "child", "--task": "task", "--priority": "prio", "--tracker": "trk", "--email": "email"},
+    )
+    if not opts.get("child") or not opts.get("task"):
+        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> --task <text> [--priority P0|P1|P2]")
+    res = delegate_directive_to_child(
+        target_dir,
+        child_layer=str(opts["child"]),
+        directive=str(opts["task"]),
+        priority=str(opts.get("prio", "P1")),
+        tracker=str(opts.get("trk", "WORKTASK.md")),
+        actor_email=_opt_str(opts, "email"),
+        dry_run=dry_run,
+    )
+    print(json.dumps(res, indent=2))
     sys.exit(0)
 
 _die(f"Unknown subcommand: {subcmd}")
