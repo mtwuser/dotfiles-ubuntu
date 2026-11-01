@@ -213,6 +213,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
 2. **In Terminal (Role-Specialized `Makefile` in Every Layer Workspace)**:
    - `make status` — Returns the consolidated `< 0.2s` JSON digest (`workspace_mode`, `session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`).
    - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task`), and outputs `git checkout -b task/<id>-<slug>`.
+   - `make consult LAYER=<id> QUERY="<question>"` — Spawns a one-shot `strictly-read-only` ephemeral consultation against `<id>`, returns a 4-Channel Executive Digest + `rcap1` capsules, and auto-reaps with zero residue.
    - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
    - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - `make upstream-diff` — Compares rule sections (`#`/`##`) between the upstream parent/Open Source and local templates (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).

@@ -210,6 +210,7 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "inspect-horizon",
     "start-task",
     "compare-upstream",
+    "consult-layer",
 )
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",

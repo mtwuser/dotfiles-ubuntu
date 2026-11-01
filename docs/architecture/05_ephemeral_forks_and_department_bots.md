@@ -90,6 +90,7 @@ sequenceDiagram
    - Every invocation of `orchestrate_ephemeral_fork` first executes `reap_expired_ephemeral_forks`, deleting any fork whose `expires_at_epoch <= time.time()` and emitting `EPHEMERAL_FORK_EXPIRED` when a targeted `fork_id` has expired.
    - Active ephemeral forks are capped at `MAX_ACTIVE_EPHEMERAL_FORKS = 16` (emitting `EPHEMERAL_FORK_LIMIT_REACHED` if exceeded).
 3. **CLI Parity (`scripts/layer-config.sh`)**:
+   - `consult-layer [<target-dir>] --layer <layer-or-template> --query <text> [--path <rel-path>] [--tier <flash|inherit|pro>]` (`make consult LAYER=<id> QUERY="..."` — one-shot `strictly-read-only` inter-layer consultation returning a 4-Channel Digest + `rcap1` capsules and auto-reaping immediately)
    - `spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>] [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]`
    - `inspect-ephemeral [--id <fork-id>]`
    - `reap-ephemeral --id <fork-id|all>`

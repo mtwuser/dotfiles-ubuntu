@@ -184,7 +184,8 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 ./scripts/layer-config.sh diff-project <your-project>
 ./scripts/layer-config.sh promote-from-project <your-project> --source .agents/rules/rule.md --create-pr
 
-# Ephemeral Department Bot forks (TTL-bounded zero-copy sandboxes):
+# Ephemeral Department Bot forks (TTL-bounded zero-copy sandboxes & 1-shot consultations):
+./scripts/layer-config.sh consult-layer <your-project> --layer dept-legal --query "GDPR retention"
 ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
 ./scripts/layer-config.sh inspect-ephemeral
 ./scripts/layer-config.sh reap-ephemeral --id all

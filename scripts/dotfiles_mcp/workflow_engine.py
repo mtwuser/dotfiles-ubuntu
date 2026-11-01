@@ -1,4 +1,4 @@
-"""Task-branch workflow onboarding and section-level upstream template reconciliation.
+"""Task-branch workflow onboarding, upstream template diffing, and ephemeral consultation.
 
 Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 """
@@ -10,7 +10,14 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.manifest_helpers import _iter_layer_template_dirs, _resolve_template_dir
+from dotfiles_mcp.constants import KEBAB_ID_RE, VALID_AGENT_TIERS
+from dotfiles_mcp.ephemeral_fork_engine import reap_ephemeral_fork, spawn_ephemeral_fork
+from dotfiles_mcp.manifest_helpers import (
+    _iter_layer_template_dirs,
+    _resolve_mounted_child_dir,
+    _resolve_template_dir,
+)
+from dotfiles_mcp.tools_surface import SurfaceToolsMixin
 
 VALID_TASK_TRACKERS: tuple[str, ...] = (
     "WORKTASK.md",
@@ -294,4 +301,132 @@ def compare_upstream_templates(
         "safe_applied_files": safe_applied,
         "summary": summary,
         "file_comparisons": file_comparisons,
+    }
+
+
+def consult_layer_ephemeral(
+    repo_dir: Path,
+    workspace_dir: Path,
+    *,
+    target_layer: str,
+    query: str,
+    target_path: str = "corporate/policy.md",
+    model_tier: str = "flash",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Run a zero-residue, one-shot strictly-read-only ephemeral consultation against a layer."""
+    clean_layer = target_layer.strip()
+    if not KEBAB_ID_RE.match(clean_layer):
+        raise ValueError(f"Invalid target_layer {target_layer!r}")
+    clean_q = query.strip()
+    if not clean_q:
+        raise ValueError("query must be a non-empty string")
+    clean_tier = model_tier.strip().lower() or "flash"
+    if clean_tier not in VALID_AGENT_TIERS:
+        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {VALID_AGENT_TIERS}")
+    clean_path = target_path.strip() or "corporate/policy.md"
+
+    ws, root = workspace_dir.resolve(), repo_dir.resolve()
+    layer_cands = [
+        ws / "layers" / clean_layer,
+        root / "layers" / clean_layer,
+        _resolve_mounted_child_dir(ws, clean_layer),
+        _resolve_mounted_child_dir(root, clean_layer),
+        root if clean_layer == "root" else None,
+    ]
+    eval_root = next(
+        (
+            c.resolve()
+            for c in layer_cands
+            if c is not None and (c / "system/mcp-layer.json").is_file()
+        ),
+        None,
+    )
+    mount_tpls: list[str] | None = None
+    if eval_root is None:
+        tpl_host = next(
+            (
+                h
+                for h in (ws, root)
+                if _resolve_template_dir(h, clean_layer) and (h / "system/mcp-layer.json").is_file()
+            ),
+            None,
+        )
+        if tpl_host is not None:
+            eval_root, mount_tpls = tpl_host, [clean_layer]
+    if eval_root is None:
+        raise ValueError(f"Target layer or template not found: {clean_layer!r}")
+
+    base_manifest = json.loads((eval_root / "system/mcp-layer.json").read_text(encoding="utf-8"))
+    spawned = spawn_ephemeral_fork(
+        eval_root,
+        base_manifest,
+        bot_role=f"consult-{clean_layer}",
+        mount_templates=mount_tpls,
+        model_tier=clean_tier,
+        access_mode="strictly-read-only",
+        resolution="L2",
+        dry_run=dry_run,
+    )
+    fork_dir = Path(str(spawned["fork_dir"]))
+    node = SurfaceToolsMixin(repo_dir=fork_dir if not dry_run else eval_root, log_dir=None)
+    q_resp = node._tool_query_governance_rules(
+        {"query": clean_q, "resolution": "L1", "layer": "root"}
+    )
+    q_payload = json.loads(q_resp["content"][0]["text"])
+    s_resp = node._tool_resolve_surface_governance(
+        {
+            "target_path": clean_path,
+            "resolution_override": "L2",
+            "resonance_key": str(spawned.get("session_resonance_key", "")),
+            "include_capsules": True,
+        }
+    )
+    s_payload = json.loads(s_resp["content"][0]["text"])
+    if not dry_run:
+        reap_ephemeral_fork(eval_root, fork_id=str(spawned["fork_id"]))
+
+    q_matches = [
+        {
+            "section": str(m.get("section", "")),
+            "file": str(m.get("file", "")),
+            "excerpt": str(m.get("excerpt", "")),
+            "capsule_token": str(m.get("capsule_token") or ""),
+        }
+        for m in q_payload.get("matches", [])[:5]
+    ]
+    caps = [m["capsule_token"] for m in q_matches if m["capsule_token"]]
+    digest = {
+        "channel_1_domain_state": {
+            "target_layer": clean_layer,
+            "layer_id": str(base_manifest.get("layer_id", eval_root.name)),
+            "layer_role": str(base_manifest.get("layer_role", "department")),
+            "precedence": int(base_manifest.get("precedence", 30)),
+            "access_mode": "strictly-read-only",
+        },
+        "channel_2_affected_surface": {
+            "target_path": clean_path,
+            "inferred_plane": str(s_payload.get("inferred_plane", "domain")),
+            "matched_bindings_count": len(s_payload.get("resolved_bindings", [])),
+        },
+        "channel_3_invariants_and_constraints": q_matches,
+        "channel_4_actionable_delta": {
+            "handback_contract": "4-channel-digest+rcap1",
+            "match_count": int(q_payload.get("match_count", 0)),
+            "capsule_tokens": caps,
+        },
+    }
+    return {
+        "workspace_dir": str(ws),
+        "target_layer": clean_layer,
+        "resolved_target_dir": str(eval_root),
+        "ephemeral_fork_id": str(spawned["fork_id"]),
+        "access_mode": "strictly-read-only",
+        "model_tier": clean_tier,
+        "query": clean_q,
+        "target_path": clean_path,
+        "auto_reaped": True,
+        "dry_run": dry_run,
+        "capsule_matches": q_matches,
+        "four_channel_digest": digest,
     }

@@ -10,6 +10,7 @@ from dotfiles_mcp.workflow_engine import (
     _derive_branch_slug,
     _parse_markdown_sections_map,
     compare_upstream_templates,
+    consult_layer_ephemeral,
     start_task_workflow,
 )
 
@@ -159,3 +160,64 @@ class TestWorkflowEngine:
         assert by_file["mixed.md"]["recommended_action"] == "review_diverged_sections"
         assert by_file["add-only.md"]["recommended_action"] == "adopt_upstream_sections"
         assert by_file["loc-sec.md"]["recommended_action"] == "keep_local_or_promote"
+
+    def test_consult_layer_ephemeral_evaluates_and_auto_reaps(self, tmp_path: Path) -> None:
+        """Spawn a one-shot strictly-read-only consultation fork, query rules, and auto-reap."""
+        # Arrange
+        root_dir, ws_dir = tmp_path / "root-repo", tmp_path / "workspace"
+        dept_dir = ws_dir / "layers" / "dept-legal"
+        for d, lid, role in (
+            (root_dir, "oss-root", "workstation"),
+            (ws_dir, "corp-root", "corporate"),
+            (dept_dir, "dept-legal", "department"),
+        ):
+            (d / "system").mkdir(parents=True)
+            (d / "system/mcp-layer.json").write_text(
+                f'{{"layer_id":"{lid}","layer_role":"{role}","precedence":25,'
+                f'"default_stack_templates":["business-base"],'
+                f'"surface_bindings":[{{"binding_id":"legal-b","target_globs":["**"],'
+                f'"rule_files":["templates/business-base/rules/legal.md"]}}]}}',
+                encoding="utf-8",
+            )
+            (d / "templates/business-base/rules").mkdir(parents=True)
+            (d / "templates/business-base/rules/legal.md").write_text(
+                "# Legal Compliance\n\n## GDPR Retention\nAll PII must expire within 90 days.\n",
+                encoding="utf-8",
+            )
+
+        # Act
+        dry_res = consult_layer_ephemeral(
+            root_dir, ws_dir, target_layer="dept-legal", query="GDPR", dry_run=True
+        )
+        live_res = consult_layer_ephemeral(
+            root_dir,
+            ws_dir,
+            target_layer="business-base",
+            query="GDPR",
+            target_path="corporate/policy.md",
+            model_tier="flash",
+            dry_run=False,
+        )
+
+        # Assert
+        assert dry_res["dry_run"] is True and dry_res["auto_reaped"] is True
+        assert dry_res["target_layer"] == "dept-legal"
+        assert live_res["access_mode"] == "strictly-read-only"
+        assert live_res["auto_reaped"] is True
+        assert not Path(live_res["ephemeral_fork_id"]).exists()
+        assert len(live_res["capsule_matches"]) == 1
+        digest = live_res["four_channel_digest"]
+        assert digest["channel_1_domain_state"]["access_mode"] == "strictly-read-only"
+        assert digest["channel_4_actionable_delta"]["handback_contract"] == "4-channel-digest+rcap1"
+        assert len(digest["channel_4_actionable_delta"]["capsule_tokens"]) == 1
+        for bad_kw, err_pat in (
+            ({"target_layer": "INVALID_ID", "query": "GDPR"}, "Invalid target_layer"),
+            ({"target_layer": "dept-legal", "query": "   "}, "query must be a non-empty"),
+            (
+                {"target_layer": "dept-legal", "query": "GDPR", "model_tier": "ultra"},
+                "Invalid model_tier",
+            ),
+            ({"target_layer": "unknown-layer", "query": "GDPR"}, "Target layer or template"),
+        ):
+            with pytest.raises(ValueError, match=err_pat):
+                consult_layer_ephemeral(root_dir, ws_dir, **bad_kw)  # type: ignore[arg-type]

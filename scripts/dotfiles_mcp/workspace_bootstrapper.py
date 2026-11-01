@@ -159,11 +159,12 @@ def _render_layer_makefile(
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status task horizon sync upstream-diff diff authority promote delegate "
-        "mcp-test\n"
+        ".PHONY: help status task consult horizon sync upstream-diff diff authority promote "
+        "delegate mcp-test\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
         '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
         '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & branch command"\n'
+        '\t@echo "  make consult LAYER=<id> QUERY=... Ephemeral read-only layer consultation"\n'
         '\t@echo "  make horizon                      Inspect 1-hop upstream/downstream horizon"\n'
         '\t@echo "  make sync                         Sync inherited templates & .agents/ rules"\n'
         '\t@echo "  make upstream-diff                Section diff against upstream templates"\n'
@@ -175,6 +176,10 @@ def _render_layer_makefile(
         f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n"
         'task:\n\t@test -n "$(TASK)" || (echo "Usage: make task TASK=<id>" && exit 1)\n'
         f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" $(if $(TRACKER),--tracker $(TRACKER),)\n'
+        'consult:\n\t@test -n "$(LAYER)" && test -n "$(QUERY)" || '
+        '(echo "Usage: make consult LAYER=<id> QUERY=..." && exit 1)\n'
+        f'\t@{cli} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
+        "$(if $(PATH_ARG),--path $(PATH_ARG),)\n"
         f"horizon:\n\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)\n"
         f"sync:\n\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)\n"
         f"upstream-diff:\n\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)\n"
