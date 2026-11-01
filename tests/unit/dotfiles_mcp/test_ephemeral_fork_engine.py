@@ -1,4 +1,7 @@
-"""Unit tests for dotfiles_mcp/ephemeral_fork_engine.py."""
+"""Unit tests for dotfiles_mcp/ephemeral_fork_engine.py.
+
+Specification: docs/architecture/05_ephemeral_forks_and_department_bots.md
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
-"""Unit tests for scripts/dotfiles_mcp_server.py CLI entrypoint."""
+"""Unit tests for scripts/dotfiles_mcp_server.py CLI entrypoint.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

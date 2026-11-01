@@ -1,4 +1,7 @@
-"""Unit tests for dotfiles_mcp/resources.py."""
+"""Unit tests for dotfiles_mcp/resources.py.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

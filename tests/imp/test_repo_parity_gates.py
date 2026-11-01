@@ -395,7 +395,12 @@ class TestRepoParityGates:
             test_classes = [
                 s for s in tree.body if isinstance(s, ast.ClassDef) and s.name.startswith("Test")
             ]
-            if top_tests or len(test_classes) != 1:
+            mod_doc = ast.get_docstring(tree) or ""
+            if (
+                top_tests
+                or len(test_classes) != 1
+                or "Specification: docs/architecture/" not in mod_doc
+            ):
                 structure_violations.append(
                     f"{rel_tp}: classes={[c.name for c in test_classes]}, top_tests={top_tests}"
                 )

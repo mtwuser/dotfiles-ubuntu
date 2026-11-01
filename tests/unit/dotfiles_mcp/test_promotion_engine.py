@@ -1,4 +1,7 @@
-"""Unit tests for dotfiles_mcp/promotion_engine.py (TestPromotionEngine)."""
+"""Unit tests for dotfiles_mcp/promotion_engine.py (TestPromotionEngine).
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

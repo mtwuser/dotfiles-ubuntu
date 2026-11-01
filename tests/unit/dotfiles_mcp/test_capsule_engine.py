@@ -1,4 +1,7 @@
-"""Unit tests for dotfiles_mcp/capsule_engine.py."""
+"""Unit tests for dotfiles_mcp/capsule_engine.py.
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 

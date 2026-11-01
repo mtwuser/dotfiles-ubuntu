@@ -1,4 +1,7 @@
-"""End-to-end tests for chained multi-node MCP federation and git subtree orchestration."""
+"""End-to-end tests for chained multi-node MCP federation and git subtree orchestration.
+
+Specification: docs/architecture/03_contextual_mcp_and_federation.md
+"""
 
 from __future__ import annotations
 

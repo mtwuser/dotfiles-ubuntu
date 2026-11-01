@@ -1,4 +1,7 @@
-"""End-to-end tests for rcap1 resonant compaction and multi-layer surface governance weaving."""
+"""End-to-end tests for rcap1 resonant compaction and multi-layer surface governance weaving.
+
+Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+"""
 
 from __future__ import annotations
 
