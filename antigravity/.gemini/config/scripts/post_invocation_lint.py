@@ -10,6 +10,7 @@ If issues are found, injects an ephemeral message and forces continuation so the
 agent resolves them in the same turn.
 """
 
+import ast
 import contextlib
 import json
 import re
@@ -24,7 +25,22 @@ _AGENTS_MD_MAX_BYTES = 18000
 _TOTAL_RULES_BUDGET_MAX_BYTES = 80000
 _MAX_PYTHON_FILE_LINES = 465
 _DOTFILES_REPO_DIR = Path(__file__).resolve().parents[4]
-_TEST_FN_SPLIT_RE = re.compile(r"(?m)^(?=def test_|async def test_)")
+_VENV_DIRS = ("venv", ".venv", "backend/venv", "backend/.venv")
+
+
+def _extract_test_blocks(text: str) -> list[str]:
+    """Extract source blocks for every test_* function or class method via AST."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return [text]
+    lines = text.splitlines()
+    return [
+        "\n".join(lines[node.lineno - 1 : node.end_lineno])
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    ]
 
 
 def resolve_effective_workspaces(
@@ -69,11 +85,7 @@ def check_universal_python_structure(py_files: list[str]) -> list[str]:
                     "tests/**/__init__.py must remain 0 bytes"
                 )
         elif p.name.startswith("test_") and "def test_" in text:
-            blocks = [
-                b
-                for b in _TEST_FN_SPLIT_RE.split(text)
-                if b.startswith(("def test_", "async def test_"))
-            ]
+            blocks = _extract_test_blocks(text)
             missing_aaa = [
                 marker
                 for marker in ("# Arrange", "# Act", "# Assert")
@@ -148,7 +160,7 @@ def check_rules_token_budget(
 def find_ruff(workspace_paths: list[str]) -> str | None:
     """Find ruff: check venv/.venv in each workspace, then fall back to PATH."""
     for ws in workspace_paths:
-        for venv_dir in ("venv", ".venv"):
+        for venv_dir in _VENV_DIRS:
             venv_ruff = Path(ws) / venv_dir / "bin" / "ruff"
             if venv_ruff.exists():
                 return str(venv_ruff)
@@ -158,7 +170,7 @@ def find_ruff(workspace_paths: list[str]) -> str | None:
 def find_venv_python(workspace_paths: list[str]) -> str | None:
     """Find the first venv/.venv Python interpreter across workspaces."""
     for ws in workspace_paths:
-        for venv_dir in ("venv", ".venv"):
+        for venv_dir in _VENV_DIRS:
             venv_py = Path(ws) / venv_dir / "bin" / "python"
             if venv_py.exists():
                 return str(venv_py)

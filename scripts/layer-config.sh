@@ -30,7 +30,7 @@ Commands:
       Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates.
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
                        [--to-template <template-name>] [--upstream-dir|--target-repo <dir>]
-                       [--prepare-pr|--create-pr] [--email <proposer-email>] [--org <name>]
+                       [--create-pr] [--email <proposer-email>] [--org <name>]
                        [--contributors <list>] [--context <text>]
       Promote a matured rule, skill, or asset from <target-project-dir> into the target layer.
   set-authority [<target-dir>] --owner-role <role> [--emails <csv>] [--contact <text>]
@@ -219,7 +219,7 @@ if subcmd == "promote-from-project":
     opts = _parse_opts(
         rest[1:],
         {"--source": "src", "--to-layer": "layer", "--to-template": "tpl", "--upstream-dir": "up_dir", "--target-repo": "up_dir", "--email": "email", "--org": "org", "--contributors": "contrib", "--context": "ctx"},
-        {"--prepare-pr": "pr", "--create-pr": "pr"},
+        {"--create-pr": "pr"},
     )
     if not opts.get("src"):
         _die("Missing required --source <rel-path> for promote-from-project.")

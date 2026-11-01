@@ -36,7 +36,10 @@
         "AGENTS.md §3 & technical-base.md (Verification Integrity & Strict Linter/Typing — zero warnings)",
         "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or deprecated branches)"
       ],
-      "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+      "rule_files": [
+        "antigravity/.gemini/config/AGENTS.md",
+        "templates/technical-base/rules/technical-base.md"
+      ],
       "canonical_templates": []
     },
     {

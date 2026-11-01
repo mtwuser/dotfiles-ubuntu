@@ -13,9 +13,9 @@ description: restore session state and initialize workspace — first command in
 
 // delegate: flash
 1. **Locate `dotfiles-ubuntu`** — check if `~/dotfiles-ubuntu/` exists (or resolve from workspace metadata)
-2. **If found** — run `cd ~/dotfiles-ubuntu && git pull --ff-only`
-   - If pull succeeds → config is up to date from other machines
-   - If pull fails (conflicts) → notify user: "dotfiles-ubuntu has conflicts. Resolve manually before continuing."
+2. **If found** — run `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync` (or `cd ~/dotfiles-ubuntu && git pull --ff-only` if `workstation-sync.sh` is absent)
+   - `workstation-sync.sh --sync` fast-forwards `~/dotfiles-ubuntu`, re-stows `antigravity/.gemini/config/` into `$HOME`, and re-locks the `$HOME` appliance in read-only mode
+   - If sync fails (conflicts) → notify user: "dotfiles-ubuntu has conflicts. Resolve manually before continuing."
    - Do NOT auto-resolve conflicts in shared config
    - If `~/dotfiles-ubuntu/layers/` has mounted subtrees (`./scripts/layer-subtree.sh list`) or `~/dotfiles-ubuntu/logs/mcp_alerts.jsonl` contains recent `CRITICAL`/`WARN` entries, surface a one-line note in the session header.
    - If the active workspace contains `system/mcp-layer.json` (corporate, department, squad, or app layer), run `make horizon` (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`) and `make diff` to detect 1-hop upstream (`shared_template_drifts`), 1-hop downstream mounted child updates (`child_sync_needed` / `downstream_layer_drifts`), or local `.agents/` promotion candidates automatically. If `downward_sync_needed: true` (or `child_sync_needed: true`) or `modified_in_project` is non-empty, recommend or run `make sync` so the workspace absorbs both parent templates and mounted child layers (`layers/*`) into `.agents/`.

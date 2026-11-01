@@ -86,18 +86,18 @@ Follow commit rules in `/continue` (`skills/continue/SKILL.md` §3) — provide 
 
 ## 3.5. Global Config Sync (Post-Commits)
 
-If any shared rules, skills, or system config in `dotfiles-ubuntu` were modified during this session, run `cd ~/dotfiles-ubuntu && make verify` first to confirm all 8 verification gates pass, log changes under `## [Unreleased]` in `CHANGELOG.md` without bumping `VERSION`, and include a local commit block (do NOT append `git push` or `(vX.Y.Z)` unless explicitly requested via `/release`):
+If any shared rules, skills, or system config in the `dotfiles-ubuntu` maintainer clone (`DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>` or `~/dotfiles-ubuntu`) were modified during this session, run `make verify` first to confirm all verification gates pass, log changes under `## [Unreleased]` in `CHANGELOG.md` without bumping `VERSION`, and include a local commit block (do NOT append `git push` or `(vX.Y.Z)` unless explicitly requested via `/release`):
 
 ```bash
 ### dotfiles-ubuntu
-cd ~/dotfiles-ubuntu
+cd "${DOTFILES_DEV_REPO_DIR:-~/dotfiles-ubuntu}"
 git add -A
 git commit -m "<summary of config changes>"
 ```
 
 > [!NOTE]
 > Only include this commit block if files in `dotfiles-ubuntu` were actually edited.
-> Check agent memory for file writes to paths containing `dotfiles-ubuntu`.
+> When `~/dotfiles-ubuntu` in `$HOME` is installed in read-only appliance mode, synchronize it after publishing via `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync`.
 > If no changes → skip silently.
 
 ---

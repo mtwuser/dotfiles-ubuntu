@@ -176,7 +176,7 @@ def verify_layer_operation_authority(
                     f"Process to follow: (1) Author or adapt the rule in your own layer template "
                     f"('templates/{layer_id}/') or local '.agents/rules/'; "
                     f"(2) Run './scripts/layer-config.sh promote-from-project {target_dir} "
-                    f"--source {target_rel_path} --to-layer {upstream_id} --prepare-pr' "
+                    f"--source {target_rel_path} --to-layer {upstream_id} --create-pr' "
                     f"to generate an upward Pull Request from your layer context; "
                     f"(3) Coordinate with the upstream owner ({escalation_contact}) for review."
                 ),
@@ -214,7 +214,7 @@ def verify_layer_operation_authority(
                     f"authorized: {', '.join(authorized_emails)}). "
                     f"Process to follow: (1) Keep changes in your own squad/project workspace; "
                     f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
-                    f"--source .agents/rules/<file>.md --to-layer {layer_id} --prepare-pr' "
+                    f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
                     f"to open a Pull Request from your layer context; "
                     f"(3) Contact {escalation_contact} to review and publish upstream, "
                     f"then inherit via './scripts/layer-config.sh sync-layer'."

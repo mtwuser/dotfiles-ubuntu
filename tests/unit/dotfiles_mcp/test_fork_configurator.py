@@ -301,6 +301,9 @@ class TestForkConfigurator:
         )
         (fork_dir / "templates/web-starter/rules/subdir").mkdir(parents=True)
         (fork_dir / "templates/web-starter/assets/subdir").mkdir(parents=True)
+        (fork_dir / "templates/web-starter/governance/SESSION.md").write_text(
+            "# Session Log\n", encoding="utf-8"
+        )
         (fork_dir / "antigravity/.gemini/config").mkdir(parents=True)
         (fork_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
             "# Root Team Rules\n", encoding="utf-8"
@@ -390,6 +393,8 @@ class TestForkConfigurator:
             .startswith("---\n")
         )
         assert (project_dir / ".agents/LAYER_LINEAGE.md").is_file()
+        assert (project_dir / ".agents/SESSION.md").is_file()
+        assert not (project_dir / "SESSION.md").exists()
         assert (project_dir / "WORKTASK.md").is_file()
         assert second_res["applied_template"] == "gdpr-pack"
         assert by_name_res["applied_template"] == "web-starter"

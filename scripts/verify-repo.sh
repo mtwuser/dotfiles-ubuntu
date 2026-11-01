@@ -367,6 +367,17 @@ for p in all_sized_files:
     lines = len(p.read_text(encoding="utf-8").splitlines())
     if lines >= 465:
         sys.exit(f"{p.relative_to(repo)}: {lines} lines (exceeds 465-line cap)")
+
+import ast
+for tp in sorted((repo / "tests").rglob("test_*.py")):
+    tree = ast.parse(tp.read_text(encoding="utf-8"), filename=str(tp))
+    top_tests = [s.name for s in tree.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name.startswith("test_")]
+    test_classes = [s for s in tree.body if isinstance(s, ast.ClassDef) and s.name.startswith("Test")]
+    if top_tests or len(test_classes) != 1:
+        sys.exit(f"{tp.relative_to(repo)}: must define 1 Test* class and 0 top-level test_* functions")
+    for item in test_classes[0].body:
+        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)) and item.name.startswith("test_") and not ast.get_docstring(item):
+            sys.exit(f"{tp.relative_to(repo)}:{item.lineno}: missing docstring on {item.name}")
 PYEOF
   then
     pass "1:1:1 unit test & spec mapping and < 465-line file size discipline verified across all Python, Bash, docs/, and templates/ files"

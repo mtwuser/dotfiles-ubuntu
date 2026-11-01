@@ -9,17 +9,25 @@
       "binding_id": "hexagonal-and-presentation-architecture",
       "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
       "mode": "transversal",
-      "target_globs": ["src/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
-      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure"],
+      "target_globs": ["src/**", "tests/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
+      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure", "testing"],
       "scopes": ["*"],
       "traits": ["*"],
       "default_resolution": "L1",
       "invariants": [
         "Domain never imports from Infrastructure or Application",
-        "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes"
+        "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes",
+        "1:1:1 Source <-> Unit Test (Test<Module>) <-> Specification traceability with 100% branch coverage"
       ],
-      "rule_files": ["templates/fastapi-hexagonal/rules/coding.md"],
-      "canonical_templates": ["templates/fastapi-hexagonal/rules/coding.md"]
+      "rule_files": [
+        "templates/fastapi-hexagonal/rules/coding.md",
+        "templates/fastapi-hexagonal/rules/testing.md",
+        "templates/fastapi-hexagonal/rules/environment.md"
+      ],
+      "canonical_templates": [
+        "templates/fastapi-hexagonal/rules/coding.md",
+        "templates/fastapi-hexagonal/rules/testing.md"
+      ]
     }
   ]
 }

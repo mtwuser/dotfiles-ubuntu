@@ -75,7 +75,7 @@ _MATERIALIZED_LAYER_RULE_MSG = (
     "Never edit materialized upstream layer rules (.agents/rules/layer-<NN>-*.md) directly. "
     "Author local rules in your own layer or promote changes upward via "
     "'./scripts/layer-config.sh promote-from-project <dir> --source .agents/rules/<file>.md "
-    "--to-layer <layer-id> --prepare-pr' and coordinate with the layer owner."
+    "--to-layer <layer-id> --create-pr' and coordinate with the layer owner."
 )
 _MATERIALIZED_LAYER_RULE_RE = re.compile(r"(?:^|/)\.agents/rules/layer-\d{2}-[a-z0-9-]+\.md$")
 

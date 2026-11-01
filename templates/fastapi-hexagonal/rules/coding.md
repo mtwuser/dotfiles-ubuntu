@@ -16,7 +16,7 @@ src/{context}/
 │   ├── __init__.py
 │   ├── models.py                    # Pydantic domain entities
 │   ├── enums.py                     # StrEnum definitions
-│   ├── types.py                     # TypeAlias, TypeVar
+│   ├── types.py                     # Python 3.14 PEP 695 type aliases & [T] generics
 │   ├── constants.py                 # Pure constants
 │   ├── exceptions.py                # Domain-specific exceptions
 │   ├── ports.py                     # Abstract interfaces (Protocol/ABC)

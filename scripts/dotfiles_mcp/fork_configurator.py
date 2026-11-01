@@ -246,8 +246,7 @@ def scaffold_template_pack(
         f"templates/{template_name}/rules/{effective_rule}": (
             f"---\ntrigger: always_on\n"
             f'description: "Governance rules and invariants for {template_name} ({kind})."\n'
-            f"---\n\n# {template_name} Governance Rules ({kind})\n\n"
-            f"## Scope & Surface Target\n"
+            f"---\n\n# {template_name} Governance Rules ({kind})\n\n## Scope & Surface Target\n"
             f"- **Template Pack**: `templates/{template_name}/` (`{kind}`).\n\n"
             f"## Normative Invariants\n"
             f'> *"Enforce {template_name} invariants consistently across matching surfaces"*\n\n'
@@ -261,7 +260,7 @@ def scaffold_template_pack(
             f"---\n\n# {template_name} Guide\n\n"
             f"1. Review `templates/{template_name}/rules/{effective_rule}`.\n"
             f"2. Verify invariants via `./scripts/layer-config.sh diff-project` "
-            f"and promote via `promote-from-project --prepare-pr`.\n"
+            f"and promote via `promote-from-project --create-pr`.\n"
         ),
     }
     if kind in ("stack-starter", "project-overlay"):
@@ -397,11 +396,15 @@ def apply_fork_to_project(
         gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
             for gfile in [*sorted(gov_src.glob("*.md")), *sorted(gov_src.glob("Makefile"))]:
-                dest_g = target_project_dir / gfile.name
+                dest_g = (
+                    agents_dir / "SESSION.md"
+                    if gfile.name == "SESSION.md"
+                    else target_project_dir / gfile.name
+                )
                 if not dest_g.exists():
-                    copied_files.append(gfile.name)
+                    copied_files.append(str(dest_g.relative_to(target_project_dir)))
                     if not dry_run:
-                        target_project_dir.mkdir(parents=True, exist_ok=True)
+                        dest_g.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(gfile, dest_g)
                         dest_g.chmod(0o644)
         assets_src = tpl_dir / "assets"
@@ -418,21 +421,16 @@ def apply_fork_to_project(
                     dest_a.chmod(0o644)
 
     lineage_lines = [
-        "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)",
-        "",
-        f"- **Applied Template Pack**: `{resolved_tpl_name or 'none'}`",
-        "",
-        "## Participating Layers (Ordered by Precedence `0..100`)",
-        "",
+        "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
+        f"- **Applied Template Pack**: `{resolved_tpl_name or 'none'}`\n",
+        "## Participating Layers (Ordered by Precedence `0..100`)\n",
         "| Precedence | Layer | Layer ID | Role | Surface Bindings |",
         "|---:|---|---|---|---:|",
     ]
     for name, ldir, m in candidate_layers:
         prec, lid = int(m.get("precedence", 50)), str(m.get("layer_id", name))
-        role, bindings = (
-            str(m.get("layer_role", "department")),
-            collect_layer_effective_bindings(ldir, m),
-        )
+        role = str(m.get("layer_role", "department"))
+        bindings = collect_layer_effective_bindings(ldir, m)
         lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
         layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
         dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"

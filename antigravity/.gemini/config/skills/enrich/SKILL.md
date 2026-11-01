@@ -59,7 +59,7 @@ Layer A — Universal Global Baseline (dotfiles-ubuntu)
    - Determine the required Git Flow strategy based on `git config user.email` authority:
      - **`actor_is_layer_owner: true`**: Authorized to commit and push directly (or per departmental branch policy) within the current workspace.
      - **`actor_is_layer_owner: false`**: Must use a feature branch + Pull Request workflow for local layer changes.
-     - **`actor_is_upstream_owner: false` or `is_oss_community_horizon: true`**: Any 1-hop upward promotion (`make promote`) MUST generate a branch/PR (`--prepare-pr` / `--create-pr`) for upstream owner review rather than pushing directly to the parent repository.
+     - **`actor_is_upstream_owner: false` or `is_oss_community_horizon: true`**: Any 1-hop upward promotion (`make promote`) MUST generate a branch/PR (`--create-pr`) for upstream owner review rather than pushing directly to the parent repository.
 
 ---
 
@@ -123,7 +123,7 @@ For each candidate, determine the exact target layer and template pack using `.a
 
 | If the pattern... | Target Layer & Day-to-Day Command (`make` or CLI) |
 |---|---|
-| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Open Source Root)**: `~/dotfiles-ubuntu/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<human-core\|technical-base\|business-base> TARGET_REPO=~/dotfiles-ubuntu`) |
+| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Open Source Root)**: `~/dotfiles-ubuntu/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<human-core\|technical-base\|business-base>`) |
 | Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/Marketing) | **B (Parent Department, Corporate Root 0, or Mounted Subtree `layers/*`)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`, or `./scripts/layer-subtree.sh push <layer-name> <branch>` when pushing a mounted subtree) |
 | Applies to any project using a specific stack or template pack (`stack-starter`, `department-pack`, `domain-policy-pack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<layer>/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<pack>`) |
 | Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer B (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `make diff`) |
@@ -134,7 +134,7 @@ For each candidate, determine the exact target layer and template pack using `.a
 > - Never promote directly from a child layer (`team` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Layer A`).
 > - Always inspect `make horizon` (`immediate_upstream_id`, `is_oss_community_horizon`, `actor_is_layer_owner`):
 >   - **Internal Corporate Horizon (`is_oss_community_horizon: false`)**: Promote strictly **1 hop upward** (`Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0`) via `make promote SOURCE=<path> [TEMPLATE=<pack>]` (or `./scripts/layer-subtree.sh pull <layer-name>` from `Root 0`).
->   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-core|technical-base|business-base> TARGET_REPO=~/dotfiles-ubuntu --create-pr`.
+>   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-core|technical-base|business-base>` (or `~/dotfiles-ubuntu/scripts/layer-config.sh promote-from-project . --source <path> --to-layer dotfiles-ubuntu --template <pack> --create-pr`).
 
 ---
 
@@ -178,14 +178,14 @@ After approval, distinguish strictly between **Internal Corporate Repositories**
 
 ### Regime 2 — Open-Source Root (`dotfiles-ubuntu` / `is_oss_community_horizon: true`)
 1. **From External Workspaces (`Root 0` $\rightarrow$ `dotfiles-ubuntu`)**:
-   - **NEVER** mutate `~/dotfiles-ubuntu` directly from an external project; execute `make promote ... TARGET_REPO=~/dotfiles-ubuntu --create-pr` to generate an anonymized Pull Request (`OSS_AGNOSTICISM_VIOLATION` gate enforced).
+   - **NEVER** mutate `~/dotfiles-ubuntu` directly from an external project; execute `make promote SOURCE=<path> TEMPLATE=<pack>` (which passes `--create-pr` automatically via the generated `Makefile`) to generate an anonymized Pull Request (`OSS_AGNOSTICISM_VIOLATION` gate enforced).
 2. **Inside `dotfiles-ubuntu` (Direct Maintenance)**:
-   - Run `cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity && make verify` to confirm all 8 verification gates pass.
+   - Run `make verify` to confirm all verification gates pass (and sync the `$HOME` appliance via `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync` after release).
    - Log changes under `## [Unreleased]` in `CHANGELOG.md` **without bumping `VERSION`**.
    - **NEVER include `git push` on working/enrichment commits in `dotfiles-ubuntu`**. Pushing to the public Open-Source remote requires an explicit, conscious version release via `/release` (`skills/release/SKILL.md`):
    ```bash
    ### dotfiles-ubuntu (local [Unreleased] commit only — publish via /release)
-   cd ~/dotfiles-ubuntu
+   cd "${DOTFILES_DEV_REPO_DIR:-~/dotfiles-ubuntu}"
    git add -u
    git commit -m "enrich: [summary of upstream promotions]"
    ```

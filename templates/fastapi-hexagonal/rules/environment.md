@@ -7,18 +7,20 @@ description: Project paths, workspace structure, and command execution for {PROJ
 ## Workspace Layout
 
 ```
-{PROJECT_PATH}/              ← Root repo (governance + docs)
-├── backend/                           ← Backend (FastAPI, hexagonal)
-│   └── venv/                          ← Python virtualenv
-├── frontend/                          ← Frontend assets (HTMX, islands)
-├── docs/                              ← Architecture docs
+{PROJECT_PATH}/                        ← Project root (governance + hexagonal contexts)
+├── src/{context}/                     ← Hexagonal bounded contexts (domain, application, infrastructure)
+├── tests/                             ← Global test suites (or src/{context}/tests/{unit,imp}/)
+├── venv/                              ← Python >= 3.14 virtualenv (or backend/venv/ in multi-repo setups)
+├── docs/                              ← 3-tier documentation (guides/, architecture/, reference/)
 ├── roadmaps/                          ← Domain roadmaps
-├── .agents/                           ← Rules + skills
-├── WORKTASK.md / WORKROAD.md / CHANGELOG.md
+├── .agents/                           ← Workspace rules, skills, LAYER_LINEAGE.md, SESSION.md
+├── Makefile                           ← Standard verification & layer-sync targets (make verify, make test-unit)
+├── WORKTASK.md / WORKROAD.md / WORKVALI.md / BACKLOG.md / CHANGELOG.md
 └── .gitignore
 ```
 
-The repos (root, backend, frontend) will be **independent nested repos** once scaffolded. Currently only root exists.
+> [!NOTE]
+> If your project splits `backend/` and `frontend/` into nested subdirectories or sub-repos, place the virtualenv at `{PROJECT_PATH}/backend/venv` (supported automatically by workstation lifecycle hooks).
 
 ## Tech Stack
 
@@ -34,23 +36,23 @@ The repos (root, backend, frontend) will be **independent nested repos** once sc
 ## Virtual Environment
 
 - **Python requirement**: Python >= 3.14
-- **Path**: `./venv/bin/activate` (relative to `backend/`)
-- **Absolute**: `{PROJECT_PATH}/backend/venv/bin/activate`
-- **ALWAYS activate before ANY backend command**:
+- **Path**: `./venv/bin/activate` (or `./backend/venv/bin/activate` in nested `backend/` layouts)
+- **Absolute**: `{PROJECT_PATH}/venv/bin/activate`
+- **ALWAYS activate before ANY Python/FastAPI command**:
   ```bash
-  cd {PROJECT_PATH}/backend && source ./venv/bin/activate && <command>
+  cd {PROJECT_PATH} && source ./venv/bin/activate && <command>
   ```
 - Never use system Python. Never use `python3` without activating venv first.
 
-## Backend Commands (once scaffolded)
+## Project & Backend Commands
 
-All backend commands MUST run from `backend/` with venv activated:
+All commands run from the project root (or `backend/` if using a nested `backend/` directory) with venv activated:
 
 | Action | Command |
 |--------|---------|
 | Run dev server | `source ./venv/bin/activate && uvicorn main:app --reload` |
-| Run tests | `source ./venv/bin/activate && python -m pytest --tb=short -q` |
-| Run app tests | `source ./venv/bin/activate && python -m pytest {context}/tests/ --tb=short -q` |
+| Run unit tests | `source ./venv/bin/activate && make test-unit` |
+| Run context tests | `source ./venv/bin/activate && python -m pytest src/{context}/tests/ --tb=short -q` |
 | Coverage all | `source ./venv/bin/activate && make test-all` |
 | Type check | `source ./venv/bin/activate && mypy --strict src/` |
 | Lint check | `source ./venv/bin/activate && ruff check .` |

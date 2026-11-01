@@ -132,7 +132,9 @@ class UnfoldToolsMixin(CompactionToolsMixin):
             raise CapsuleError(msg)
 
         explicit_key = (
-            str(args["resonance_key"]).strip() if args.get("resonance_key") is not None else ""
+            str(args["resonance_key"]).strip()
+            if args.get("resonance_key") is not None
+            else str((eph_meta or {}).get("session_resonance_key") or "").strip()
         )
         env_key = os.environ.get("DOTFILES_RESONANCE_KEY", "").strip()
         if header.get("kr") is True and not (explicit_key or env_key):

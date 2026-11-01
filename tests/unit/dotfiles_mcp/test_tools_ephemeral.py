@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestMCPToolsEphemeral:
+class TestEphemeralToolsMixin:
     """Verify orchestrate_ephemeral_fork across spawn, inspect, evaluate, and reap actions."""
 
     def test_orchestrate_ephemeral_fork_spawn_inspect_evaluate_and_reap(

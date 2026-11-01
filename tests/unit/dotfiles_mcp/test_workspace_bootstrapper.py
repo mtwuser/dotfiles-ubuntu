@@ -21,6 +21,7 @@ class TestWorkspaceBootstrapper:
     """1:1 unit test suite for workspace_bootstrapper.py."""
 
     def test_set_global_agents_profile_supports_all_profiles_and_stow(self, tmp_path: Path) -> None:
+        """Compose human-core, technical, business, and full profiles cleanly."""
         # Arrange
         for tpl_id, fname, body in (
             (
@@ -73,6 +74,7 @@ class TestWorkspaceBootstrapper:
     def test_set_global_agents_profile_validates_inputs_and_exact_budget_boundary(
         self, tmp_path: Path
     ) -> None:
+        """Accept exact 18,000-byte AGENTS.md cap and reject 18,001 bytes or invalid profiles."""
         # Arrange
         rdir = tmp_path / "templates" / "human-core" / "rules"
         rdir.mkdir(parents=True)
@@ -94,6 +96,7 @@ class TestWorkspaceBootstrapper:
             set_global_agents_profile(tmp_path, "technical")
 
     def test_register_mounted_subtree_upserts_and_sorts_by_precedence(self, tmp_path: Path) -> None:
+        """Upsert mounted_layers entries in system/mcp-layer.json sorted by ascending precedence."""
         # Arrange
         sys_dir = tmp_path / "system"
         sys_dir.mkdir(parents=True)
@@ -155,6 +158,7 @@ class TestWorkspaceBootstrapper:
     def test_bootstrap_layer_workspace_initializes_department_and_respects_existing_files(
         self, tmp_path: Path
     ) -> None:
+        """Bootstrap and sync hierarchical corporate, department, and squad layer workspaces."""
         # Arrange
         repo_dir = tmp_path / "platform"
         bdir = repo_dir / "templates" / "business-base" / "rules"

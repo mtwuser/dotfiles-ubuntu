@@ -65,14 +65,14 @@ src/{context}/
 
 | Action | Command |
 |--------|---------|
-| Run backend dev | `cd backend && source ./venv/bin/activate && uvicorn main:app --reload` |
-| Run tests | `cd backend && source ./venv/bin/activate && python -m pytest --tb=short -q` |
-| Run coverage | `cd backend && source ./venv/bin/activate && make test-all` |
-| Type check | `cd backend && source ./venv/bin/activate && mypy --strict src/` |
-| Lint check | `cd backend && source ./venv/bin/activate && ruff check .` |
-| Auto-format | `cd backend && source ./venv/bin/activate && ruff format .` |
-| Alembic migrate (user-run) | `cd backend && source ./venv/bin/activate && alembic upgrade head` |
-| Alembic autogen (user-run) | `cd backend && source ./venv/bin/activate && alembic revision --autogenerate -m "desc"` |
+| Run backend dev | `source ./venv/bin/activate && uvicorn main:app --reload` |
+| Run unit tests | `source ./venv/bin/activate && make test-unit` |
+| Run coverage | `source ./venv/bin/activate && make test-all` |
+| Type check | `source ./venv/bin/activate && mypy --strict src/` |
+| Lint check | `source ./venv/bin/activate && ruff check .` |
+| Auto-format | `source ./venv/bin/activate && ruff format .` |
+| Alembic migrate (user-run) | `source ./venv/bin/activate && alembic upgrade head` |
+| Alembic autogen (user-run) | `source ./venv/bin/activate && alembic revision --autogenerate -m "desc"` |
 
 ---
 

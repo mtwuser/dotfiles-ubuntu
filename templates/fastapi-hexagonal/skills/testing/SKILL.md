@@ -8,8 +8,8 @@ description: Guide for writing tests following hexagonal patterns with FastAPI
 
 1. **AAA Pattern**: Every test method MUST contain three separate, explicit comments: `# Arrange`, `# Act`, and `# Assert` (never merge into `# Arrange & Act` or `# Act & Assert`)
 2. **DAMP over DRY**: Tests are readable top-to-bottom with literal values
-3. **1:1 File Mapping & Decommissioning (`orphan-test-file`)**: Every source file with **executable logic** (`service.py`, `router.py`, `repository.py`, `tasks.py`, or `models.py` with custom methods/properties) has one test file. Never create artificial `test_models.py` for declarative Pydantic fields or `test_dependencies.py` for 1-line getters already covered by router tests. When deleting a source module or feature, delete or consolidate its unit test file (`orphan-test-file`) in the same changeset.
-4. **One Class per File**: `Test{SourceClassName}` — no suffixes (`Expanded`, `Coverage`, `Extended`)
+3. **`1:1:1` File & Spec Mapping & Decommissioning (`orphan-test-file`)**: Every source file with **executable logic** (`service.py`, `router.py`, `repository.py`, `tasks.py`, or `models.py` with custom methods/properties) has one test file linked via `Specification: docs/architecture/<spec>.md`. Never create artificial `test_models.py` for declarative Pydantic fields or `test_dependencies.py` for 1-line getters already covered by router tests. When deleting a source module or feature, delete or consolidate its unit test file (`orphan-test-file`) in the same changeset.
+4. **One Class per File & Human-Agent `1:1:1` Comprehension**: `Test{SourceClassName}` — no suffixes (`Expanded`, `Coverage`, `Extended`). Pair every `test_<subject>_<scenario>_<expected>` method with a 1-line invariant docstring stating *why*.
 5. **Anti-Characterization Trap**: Never write tests that lock in broken behavior (e.g. an HTMX endpoint returning JSON or a missing ID returning HTTP 200 `{"error": ...}`). Fix the production bug first.
 
 ## Hexagonal Architecture Test Strategy
@@ -19,7 +19,10 @@ Domain services have ZERO I/O — they are pure functions/methods.
 
 ```python
 class TestPriceCalculator:
-    def test_applies_discount_to_base_price(self):
+    """Unit tests for PriceCalculator domain service."""
+
+    def test_applies_discount_to_base_price(self) -> None:
+        """Verify apply_discount() subtracts the percentage discount from the base price."""
         # Arrange
         calculator = PriceCalculator()
         base_price = Decimal("100.00")
@@ -39,7 +42,10 @@ Use cases orchestrate domain + infrastructure. Mock the ports.
 
 ```python
 class TestCreateOrderUseCase:
-    def test_creates_order_and_persists(self):
+    """Unit tests for CreateOrderUseCase application orchestrator."""
+
+    def test_creates_order_and_persists(self) -> None:
+        """Verify execute() persists the new order via OrderRepository and returns created status."""
         # Arrange
         mock_repo = MagicMock(spec=OrderRepository)
         mock_repo.save.return_value = None
@@ -77,11 +83,11 @@ class TestSQLAlchemyOrderRepository:
         assert retrieved.quantity == 2
 ```
 
-### API Router (FastAPI + `httpx2.AsyncClient`)
-Use `httpx2.AsyncClient` with `ASGITransport` and `app.dependency_overrides`.
+### API Router (FastAPI + `httpx.AsyncClient`)
+Use `httpx.AsyncClient` with `ASGITransport` and `app.dependency_overrides`.
 
 ```python
-from httpx2 import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient
 
 
 class TestOrderRouter:

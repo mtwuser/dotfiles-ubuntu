@@ -42,7 +42,7 @@ def main() -> None:
     ruff_bin: str | None = None
 
     for ws in workspace_paths:
-        for venv_dir in ("venv", ".venv"):
+        for venv_dir in ("venv", ".venv", "backend/venv", "backend/.venv"):
             candidate = Path(ws) / venv_dir / "bin" / "ruff"
             if candidate.exists():
                 ruff_bin = str(candidate)

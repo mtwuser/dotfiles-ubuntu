@@ -32,7 +32,7 @@ cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/{WORKTASK,WORKROAD,W
 | `rules/coding.md` | Hexagonal DDD, `0-byte` `__init__.py` purity, Zone Architecture (Z1–Z4), Async Continuum, SOLID |
 | `rules/environment.md` | Workspace layout template with placeholders |
 | `rules/governance.md` | 4-Phase Work Lifecycle, Mode Discipline, Cognitive & Agent Governance (`trigger: model_decision`) |
-| `rules/testing.md` | Explicit 3-comment AAA (`# Arrange`, `# Act`, `# Assert`), `httpx2` async test patterns, logic-only 1:1 mapping |
+| `rules/testing.md` | Explicit 3-comment AAA (`# Arrange`, `# Act`, `# Assert`), `httpx` async test patterns, Human-Agent `1:1:1` comprehension symbiosis |
 | `skills/database/SKILL.md` | Zero-touch Alembic migration policy (`name: fastapi-database`) |
 | `skills/frontend/SKILL.md` | HTMX + Islands conventions Z1–Z4 (`name: fastapi-frontend`) |
 | `skills/testing/SKILL.md` | FastAPI testing patterns per hexagonal layer (`name: fastapi-testing`) |

@@ -48,7 +48,7 @@ flowchart LR
 | **Transport Mechanism** | Local POSIX symlinks (`stow -t ~`) + `stdin`/`stdout` hooks | Model Context Protocol (JSON-RPC 2.0 over `stdio`, `docker run -i --rm`, `docker exec -i`, or `ssh`) |
 | **Control Flow** | **Deterministic Push / Intercept** (mandatory on every turn/tool call) | **Contextual Pull / Introspection** (queried on demand by the agent) |
 | **Primary Responsibility** | Enforce coding rules, block dangerous commands (`pre_tool_guard.py`), auto-format, and run unit tests locally | Expose container/server drift, resolve cross-layer rules & `docs/`, and federate downstream MCP servers across services |
-| **Dependency Footprint** | GNU Stow + Bash + Python 3.14 stdlib | Python >= 3.10 stdlib only (**zero external pip packages**, compatible with Python 3.10–3.14+ across containers, CI, and Ubuntu 26.04) |
+| **Dependency Footprint** | GNU Stow + Bash + Python 3.14 stdlib | Python 3.14 stdlib only (**zero external pip packages** across workstations, containers, CI, and Ubuntu 26.04 LTS) |
 
 ---
 
@@ -58,8 +58,8 @@ To preserve the simplicity, security, and reliability of `dotfiles-ubuntu`, the 
 
 1. **100% Optional & Zero-Impact on Traditional Dotfiles Usage**:
    - Users who only use `bootstrap.sh`, `backup.sh`, and `audit.sh` never need to configure or run the MCP server. Nothing runs as a background daemon unless explicitly invoked by an MCP client over `stdio`.
-2. **Zero External Dependencies & Modular Package Architecture (Pure Python Standard Library, Python >= 3.10)**:
-   - `scripts/dotfiles_mcp_server.py` (thin CLI entrypoint) and the 18-module package `scripts/dotfiles_mcp/` (`constants.py`, `catalogs.py`, `manifest_helpers.py`, `surface_weaver.py`, `capsule_engine.py`, `fork_configurator.py`, `workspace_bootstrapper.py`, `authority_engine.py`, `promotion_engine.py`, `ephemeral_fork_engine.py`, `node_base.py`, `resources.py`, `tools_federation.py`, `tools_compaction.py`, `tools_unfold.py`, `tools_surface.py`, `tools_ephemeral.py`, `server.py` — every file `< 465` lines with a `0-byte` `__init__.py`) MUST use only the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `argparse`, `zlib`, `hashlib`, `hmac`, `base64`, `shutil`, `time`, `secrets`) with `from __future__ import annotations`. It must never require `pip install mcp`, `fastapi`, or a virtual environment, ensuring it runs out of the box on any Ubuntu container, CI runner, or remote server where `python3` (3.10 through 3.14+) is present.
+2. **Zero External Dependencies & Modular Package Architecture (Pure Python 3.14 Standard Library)**:
+   - `scripts/dotfiles_mcp_server.py` (thin CLI entrypoint) and the 18-module package `scripts/dotfiles_mcp/` (`constants.py`, `catalogs.py`, `manifest_helpers.py`, `surface_weaver.py`, `capsule_engine.py`, `fork_configurator.py`, `workspace_bootstrapper.py`, `authority_engine.py`, `promotion_engine.py`, `ephemeral_fork_engine.py`, `node_base.py`, `resources.py`, `tools_federation.py`, `tools_compaction.py`, `tools_unfold.py`, `tools_surface.py`, `tools_ephemeral.py`, `server.py` — every file `< 465` lines with a `0-byte` `__init__.py`) MUST use only the Python 3.14 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `argparse`, `zlib`, `hashlib`, `hmac`, `base64`, `shutil`, `time`, `secrets`) with `from __future__ import annotations`. It must never require `pip install mcp`, `fastapi`, or a virtual environment, ensuring it runs out of the box on any Ubuntu 26.04 LTS workstation, container, CI runner, or server.
 
 ### 2.1. `1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability Matrix (Core Protocol & Federation)
 
@@ -71,7 +71,7 @@ To preserve the simplicity, security, and reliability of `dotfiles-ubuntu`, the 
 | **Node Security, Manifests & Warnings** | [`node_base.py`](../../scripts/dotfiles_mcp/node_base.py) | [`test_node_base.py`](../../tests/unit/dotfiles_mcp/test_node_base.py) (`TestMCPNodeBase`) | **Arch 03 §2, §4, §6**: `MCPNodeBase`, `_load_layer_manifest`, `_discover_mounted_layers`, `_resolve_safe_path`, `_emit_warning` |
 | **MCP Resources & Telemetry** | [`resources.py`](../../scripts/dotfiles_mcp/resources.py) | [`test_resources.py`](../../tests/unit/dotfiles_mcp/test_resources.py) (`TestResourcesMixin`) | **Arch 03 §3.1, §6.3**: `ResourcesMixin`, `list_resources`, `read_resource` (`9` URIs), `_read_diagnostics_resource` |
 | **Node Audit & Federation Tools** | [`tools_federation.py`](../../scripts/dotfiles_mcp/tools_federation.py) | [`test_tools_federation.py`](../../tests/unit/dotfiles_mcp/test_tools_federation.py) (`TestFederationToolsMixin`) | **Arch 03 §3.2, §5, §6.1**: `FederationToolsMixin` (`get_layer_overview`, `audit_node_drift`, `read_layer_document`, `discover_federated_mcps`, `compare_layer_patterns`) |
-| **JSON-RPC 2.0 Dispatcher & `stdio` Loop** | [`server.py`](../../scripts/dotfiles_mcp/server.py) | [`test_server.py`](../../tests/unit/dotfiles_mcp/test_server.py) (`TestDotfilesMCPServerDispatcher`) | **Arch 03 §3, §6.3**: `DotfilesMCPServer`, `handle_request`, `run_stdio_loop` (`Content-Length` & newline framing) |
+| **JSON-RPC 2.0 Dispatcher & `stdio` Loop** | [`server.py`](../../scripts/dotfiles_mcp/server.py) | [`test_server.py`](../../tests/unit/dotfiles_mcp/test_server.py) (`TestDotfilesMCPServer`) | **Arch 03 §3, §6.3**: `DotfilesMCPServer`, `handle_request`, `run_stdio_loop` (`Content-Length` & newline framing) |
 | **Compaction (`rcap1`), Surface (`0..N`), Authority & Promotion Engines** | `capsule_engine.py`, `tools_compaction.py`, `tools_unfold.py`, `surface_weaver.py`, `tools_surface.py`, `fork_configurator.py`, `workspace_bootstrapper.py`, `authority_engine.py`, `promotion_engine.py` | `test_capsule_engine.py`, `test_tools_compaction.py`, `test_tools_unfold.py`, `test_surface_weaver.py`, `test_tools_surface.py`, `test_fork_configurator.py`, `test_workspace_bootstrapper.py`, `test_authority_engine.py`, `test_promotion_engine.py` | **See [`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md) §§1–4** |
 | **Ephemeral Scoped Forks & Department Bots** | `ephemeral_fork_engine.py`, `tools_ephemeral.py` | `test_ephemeral_fork_engine.py`, `test_tools_ephemeral.py` | **See [`05_ephemeral_forks_and_department_bots.md`](05_ephemeral_forks_and_department_bots.md) §§1–6** |
 3. **Strictly Read-Only & Deterministic Execution (No Arbitrary Shell)**:
@@ -167,7 +167,10 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
       "scopes": ["*"],
       "traits": [],
       "mode": "transversal",
-      "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
+      "rule_files": [
+        "antigravity/.gemini/config/AGENTS.md",
+        "templates/technical-base/rules/technical-base.md"
+      ],
       "canonical_templates": [],
       "invariants": [
         "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",

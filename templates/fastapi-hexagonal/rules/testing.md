@@ -16,13 +16,13 @@ trigger: model_decision
 ## Architecture Invariants — MANDATORY
 
 - **1:1:1 File & Spec Mapping & Decommissioning (`orphan-test-file`)**: Every production file with **executable logic** (`service.py`, `router.py`, `repository.py`, `tasks.py`, or `models.py` with custom methods/properties/validators) MUST have a corresponding `test_<file>.py` and a bidirectional `Specification: docs/architecture/<spec>.md` pointer (`< 465` lines per file). Do NOT create artificial `test_models.py` for purely declarative Pydantic models/DTOs or `test_dependencies.py` for 1-line singleton getters already covered by router tests. Conversely, every `tests/unit/**/test_<name>.py` file MUST map to an existing source module in `src/` — when decommissioning a module or feature, purge or consolidate its test file in the same changeset.
-- **One Class**: Each test file contains ONE test class named `Test{SourceClassName}`. NEVER append suffixes like `Coverage`, `Expanded`, `Extended`.
+- **One Class & Human-Agent `1:1:1` Comprehension Symbiosis**: Each test file contains ONE test class named `Test{SourceClassName}` linked via `Specification: docs/architecture/<spec>.md` in the module docstring. NEVER append suffixes like `Coverage`, `Expanded`, `Extended`. Every test method pairs a natural-language behavioral name (`test_<subject>_<scenario>_<expected>`) with a **1-line invariant docstring** stating *why* and explicit `# Arrange`, `# Act`, `# Assert` comments.
 - **DB Guards**: NEVER use database fixtures or markers inside `tests/unit/`. Unit tests are pure.
-- **Service Constructors**: Every service constructor in tests MUST inject mocked dependencies unless specifically testing that sub-dependency.
+- **Service Constructors**: Every service constructor in tests MUST inject mocked dependencies (`MagicMock(spec=...)` / `AsyncMock(spec=...)`) unless specifically testing that sub-dependency.
 - **Patch Targets**: Patch where the object is **looked up at runtime**. When a module uses `from source import func`, patch at `consumer.func`. When it uses `import source` and calls `source.func`, patch at `source.func`.
-- **100% Coverage Gate**: Coverage must remain at 100% (statement + branch) before and after any task. Unit + Imp combined = 100%.
+- **100% Coverage Gate & Boundary Cut-Points (`N` vs `N ± 1`)**: Coverage must remain at 100% (statement + branch) in isolated unit runs (`tests/unit/`) and across `unit + imp`, asserting exact boundary cut-points (`N` vs `N ± 1`).
 - **Deprecation-Free Gate**: Tests MUST pass with `-W error::DeprecationWarning`.
-- **Anti-Characterization Trap**: Never write tests that rubber-stamp broken behavior (e.g., an HTMX endpoint returning JSON instead of a partial, or a missing resource returning HTTP 200 `{"error": ...}` instead of raising `NotFoundError` → 404). Cross-check caller/template contracts first and fix the production bug before writing the test.
+- **Anti-Characterization Trap (HTMX & Pydantic Contracts)**: Never write tests that rubber-stamp broken behavior (e.g., an HTMX `hx-get`/`hx-post`/`hx-target` endpoint returning JSON instead of an HTML partial, or a missing resource returning HTTP 200 `{"error": ...}` instead of raising `NotFoundError` → 404). Cross-check caller/template contracts and public `BaseSettings`/schema defaults first, and fix the production bug before writing the test.
 - **Speed**: No single unit test may exceed 1 second.
 
 ## AAA Pattern — MANDATORY

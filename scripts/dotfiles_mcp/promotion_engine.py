@@ -414,7 +414,7 @@ def inspect_layer_horizon(
                     oss_ok = False
                 cmd = (
                     f"./scripts/layer-config.sh promote-from-project {ws} --source {rel_src} "
-                    f"--to-template {tpl} --upstream-dir {contrib_dir} --prepare-pr"
+                    f"--to-template {tpl} --upstream-dir {contrib_dir} --create-pr"
                 )
                 drifts.append(
                     {
@@ -432,7 +432,7 @@ def inspect_layer_horizon(
     need_sync = any(d["drift_direction"] == "upstream_newer" for d in drifts) or bool(child_drifts)
     novel_cmds = [
         f"./scripts/layer-config.sh promote-from-project {ws} "
-        f"--source .agents/{rel} --upstream-dir {contrib_dir} --prepare-pr"
+        f"--source .agents/{rel} --upstream-dir {contrib_dir} --create-pr"
         for rel in local_diff["novel_in_project"]
     ]
     return dict(

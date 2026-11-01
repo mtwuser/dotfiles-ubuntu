@@ -77,7 +77,7 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
                     },
                     "serverInfo": {
                         "name": "dotfiles-ubuntu-mcp",
-                        "version": _read_version(),
+                        "version": _read_version(self.repo_dir),
                     },
                 }
             elif method == "ping":

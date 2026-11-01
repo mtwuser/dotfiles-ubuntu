@@ -267,6 +267,7 @@ class TestManifestHelpers:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Normalize missing trigger: always_on frontmatter and resolve oss_contrib_dir."""
         # Arrange
         plain_h1 = tmp_path / "custom-rule.md"
         plain_h1.write_text('# Custom "Dept" Rule\n\nBody.\n', encoding="utf-8")

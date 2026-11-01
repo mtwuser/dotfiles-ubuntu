@@ -10,8 +10,8 @@ This document specifies the **3rd Orthogonal Governance Dimension** of `dotfiles
 
 | Source Module (`< 465` lines) | `1:1` Unit Test (`< 465` lines) | Primary Responsibility |
 |-------------------------------|---------------------------------|------------------------|
-| [`scripts/dotfiles_mcp/ephemeral_fork_engine.py`](../../scripts/dotfiles_mcp/ephemeral_fork_engine.py) | [`tests/unit/dotfiles_mcp/test_ephemeral_fork_engine.py`](../../tests/unit/dotfiles_mcp/test_ephemeral_fork_engine.py) | Zero-copy ephemeral fork materialization (`spawn_ephemeral_fork`), cross-project rule bridging (`mount_project_rules_from`), advisory extraction (`extract_ephemeral_advisories`), 4-Channel subagent brief generation (`build_subagent_invocation_brief`), and TTL garbage collection (`reap_expired_ephemeral_forks`, `reap_ephemeral_fork`) |
-| [`scripts/dotfiles_mcp/tools_ephemeral.py`](../../scripts/dotfiles_mcp/tools_ephemeral.py) | [`tests/unit/dotfiles_mcp/test_tools_ephemeral.py`](../../tests/unit/dotfiles_mcp/test_tools_ephemeral.py) | MCP Tool #9 (`orchestrate_ephemeral_fork`: actions `"spawn"`, `"inspect"`, `"evaluate"`, `"reap"`), live scoped evaluation with `rcap1` capsule minting, and structured alert emission (`EPHEMERAL_FORK_LIMIT_REACHED`, `EPHEMERAL_FORK_EXPIRED`) |
+| [`scripts/dotfiles_mcp/ephemeral_fork_engine.py`](../../scripts/dotfiles_mcp/ephemeral_fork_engine.py) | [`tests/unit/dotfiles_mcp/test_ephemeral_fork_engine.py`](../../tests/unit/dotfiles_mcp/test_ephemeral_fork_engine.py) (`TestEphemeralForkEngine`) | Zero-copy ephemeral fork materialization (`spawn_ephemeral_fork`), cross-project rule bridging (`mount_project_rules_from`), advisory extraction (`extract_ephemeral_advisories`), 4-Channel subagent brief generation (`build_subagent_invocation_brief`), and TTL garbage collection (`reap_expired_ephemeral_forks`, `reap_ephemeral_fork`) |
+| [`scripts/dotfiles_mcp/tools_ephemeral.py`](../../scripts/dotfiles_mcp/tools_ephemeral.py) | [`tests/unit/dotfiles_mcp/test_tools_ephemeral.py`](../../tests/unit/dotfiles_mcp/test_tools_ephemeral.py) (`TestEphemeralToolsMixin`) | MCP Tool #9 (`orchestrate_ephemeral_fork`: actions `"spawn"`, `"inspect"`, `"evaluate"`, `"reap"`), live scoped evaluation with `rcap1` capsule minting, and structured alert emission (`EPHEMERAL_FORK_LIMIT_REACHED`, `EPHEMERAL_FORK_EXPIRED`) |
 
 ---
 
@@ -55,12 +55,12 @@ Any `surface_binding` in `system/mcp-layer.json` (or `template.json` `recommende
 
 | Field | Allowed Values / Constraint | Purpose |
 |-------|-----------------------------|---------|
-| `bot_role` | `kebab-case` identifier (`KEBAB_ID_RE`) | Specialized role identity for the ephemeral fork (`layer_id: "ephemeral-<bot_role>-<hash>"`) |
+| `bot_role` | `kebab-case` identifier (`KEBAB_ID_RE`) | Specialized role identity for the ephemeral fork (`fork_id` / `layer_id`: `"eph-<bot_role>-<hash>"`) |
 | `trigger` | `"on_surface_match"` \| `"on_high_complexity"` \| `"on_demand"` | Advisory trigger condition reported in `ephemeral_delegation_advisories` |
 | `model_tier` | `"flash"` \| `"inherit"` \| `"pro"` | Target subagent model tier per `AGENTS.md §12` |
 | `access_mode` | `"strictly-read-only"` \| `"read-and-test-trigger"` \| `"read-write-scoped"` | Operational capability boundary enforced in the subagent brief |
 | `mount_templates` | `list[str]` | Subset of template packs activated in the ephemeral fork's `default_stack_templates` |
-| `resolution` | `"L1"` \| `"L2"` \| `"L3"` | Default context resolution for the bot's authoritative surface |
+| `resolution` | `"L0"` \| `"L1"` \| `"L2"` | Default context resolution for the bot's authoritative surface |
 | `ttl_seconds` | Integer `10..3600` (default `300`) | Time-to-live before automatic garbage collection (`reap_expired_ephemeral_forks`) |
 | `handback_contract` | `"4-channel-digest+rcap1"` | Enforces `AGENTS.md §12` 4-Channel Executive Digest + sealed `rcap1` capsule |
 

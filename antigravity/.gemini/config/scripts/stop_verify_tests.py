@@ -38,7 +38,7 @@ def resolve_effective_workspaces(
 def find_venv(workspace_paths: list[str]) -> Path | None:
     """Find the first venv/.venv with pytest available."""
     for ws in workspace_paths:
-        for venv_dir in ("venv", ".venv"):
+        for venv_dir in ("venv", ".venv", "backend/venv", "backend/.venv"):
             venv_python = Path(ws) / venv_dir / "bin" / "python"
             if venv_python.exists():
                 return venv_python

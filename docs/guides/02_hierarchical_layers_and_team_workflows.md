@@ -39,6 +39,7 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
 | `/release` | Slash Command | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
 | `/priority` | Slash Command | Audits `WORKTASK.md` $\rightarrow$ `ROADMAP.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` to pick the next task. |
 | `/review` | Slash Command | Audits code structure, Clean Code, hexagonal boundaries, and AAA test coverage. |
+| `/full-audit` | Slash Command | Executes a 2-pass, 4-perspective exhaustive repository audit (Pass 1 Conceptual/Normative Alignment $\rightarrow$ Pass 2 Pragmatic Technical, `1:1:1` Human-Agent Test Comprehension & Stack Currency) with `WORKTASK.md` / `WORKROAD.md` overflow crystallization. |
 | `/enrich` | Slash Command | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`, including anonymized `Root 0 -> OSS` PR plans). |
 | `architecture-review` | Procedural | Multi-dimensional specification reviews, orthogonal classification unification, and naming coherence. |
 | `governance` | Procedural | One-way work lifecycle transitions and clean-room knowledge extraction. |

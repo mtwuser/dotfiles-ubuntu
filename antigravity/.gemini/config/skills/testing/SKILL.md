@@ -39,16 +39,24 @@ factory = FactoryService(external_service=mock())
 - When code moves between modules, ALL patch targets in tests must be updated.
 - **No Blind Boundary/Subprocess Mocks (`lambda *_a, **_k`)**: Never stub `subprocess.run`, HTTP clients, or external I/O boundaries with argument-ignoring lambdas (`lambda *_a, **_k: fake_proc`). Always capture and assert the invoked command/arguments (`mock_run.call_args`, `assert_called_once_with`) so corrupted CLI flags or missing `--no-fix` / `-x` arguments fail the unit test immediately.
 
-### Test Naming Convention
+### Test Naming Convention & Human-Agent `1:1:1` Comprehension Symbiosis
 
-Test files: `test_{source_file}.py` (or equivalent for your stack).
-Test classes: `Test{SourceClassName}` — ONE class per test file. NEVER append suffixes like `Coverage`, `Expanded`, `Extended`.
-Test methods: `test_<method>_<scenario>_<expected>`.
+Test files: `test_{source_file}.py` (or `<source>.test.ts`, `<source>_test.go`, `<Source>Test.java` for your stack).
+Test suites/classes: `Test{SourceClassName}` — **ONE** suite/class per test file (`0` top-level `def test_*` functions in class-based suites). NEVER append suffixes like `Coverage`, `Expanded`, `Extended`.
+Test methods: `test_<subject>_<scenario>_<expected>`.
+
+Every `1:1:1` unit test must serve **both** the **Human** (who reads the `pytest -v` / test runner output or `docs/architecture/` spec table in natural language without opening the source file) and the **Agent** (which parses AST/symbols to map invariants to lines/branches):
+1. **Spec Layer (`docs/architecture/<spec>.md`)**: Maps `Source Module` $\leftrightarrow$ `1:1 Unit Test File (TestClass)` $\leftrightarrow$ `Verified Functional & Security Invariants`.
+2. **Suite/Class Layer (`class Test<Module>`)**: Declares a module-level docstring with `Specification: docs/architecture/<spec>.md` and encapsulates all tests for that module in one class.
+3. **Method Layer (`test_<subject>_<scenario>_<expected>`)**:
+   - **Natural-Language Behavioral Name**: Reads as an executable sentence (`subject` + `condition/scenario` + `expected outcome`).
+   - **1-Line Domain Invariant Docstring**: States *why* the invariant exists (not just *what* function is called), eliminating the need for explanatory inline prose comments inside the test body.
+   - **AAA Body (`# Arrange`, `# Act`, `# Assert`)**: Uses DAMP literal values and exact boundary cut-points (`N` vs `N ± 1`).
 
 ### Anti-Characterization Trap & Bipolar Guard Verification — CRITICAL
 
 When adding tests to close coverage gaps or testing security/lifecycle guards:
-1. **Cross-check the caller/template contract**: Before writing a router or service test, check the HTML template (`hx-post`, `hx-get`, `hx-target`) and project rules. If an HTMX endpoint returns JSON or a missing ID returns `200 {"error": ...}`, **fix the production code first** — never write a test that locks in the bug.
+1. **Cross-check the caller/API/UI contract**: Before writing a controller, router, or service test, check the caller contract (API schema, CLI contract, UI template, and project rules). If an endpoint or handler violates its declared contract (e.g., returning `200 {"error": ...}` instead of an error status or wrong content type), **fix the production code first** — never write a test that locks in the bug.
 2. **Never mutate existing test scenarios for branch coverage**: If a loop branch requires multiple items to execute, add a new test method (`test_<method>_second_item`) instead of altering an existing single-item test.
 3. **Bipolar Guard Verification (Negative-First, Positive-Second)**: Any test for a security gate, lifecycle hook (`PreToolUse`, `PostToolUse`, `Stop`), schema validator, or drift auditor that only asserts the passing ("allow"/"stop") state is vulnerable to silent early-return/short-circuit bugs (e.g., mismatched JSON keys returning a default pass). Every guard test MUST execute **both poles**:
    - **Negative Pole First**: Feed a deliberate violation (failing test, syntax error, forbidden command, expired token) and assert the guard blocks or flags it (`"deny"`, `"continue"`, or specific error code).
