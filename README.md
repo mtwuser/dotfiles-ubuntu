@@ -218,7 +218,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 - **`post_invocation_lint.py` (`PostInvocation`)** — Enforces `< 465` lines on modified `.py`, root `README.md`, and `docs/**/*.md` files, AAA test markers, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18,000`-byte `AGENTS.md` cap & `80,000`-byte workspace cap) with `force_continue`.
 - **`stop_verify_tests.py` (`Stop`)** — Runs affected unit tests before concluding a task.
 
-### 2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 16 Subcommands)
+### 2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 25 Subcommands)
 
 ```bash
 # Template discovery, fork parameterization & static project projection:
@@ -227,13 +227,14 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ./scripts/layer-config.sh scaffold-template brand-design-system --kind department-pack --register-binding
 ./scripts/layer-config.sh apply-project <your-project> --template fastapi-hexagonal --layers all
 
-# Global profile composition, subtree mounting & hierarchical workspace bootstrap/sync:
+# Global profile composition, subtree mounting & hierarchical workspace bootstrap/sync/status:
 ./scripts/layer-config.sh set-global-profile human-core --stow
 ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
 ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
+./scripts/layer-config.sh status <your-project>
 
-# Layer owner vs. consumer authority gates, roster, 1-hop horizon, feature/<TICKET-ID>-slug & completion:
+# Layer owner vs. consumer authority gates, roster, 1-hop horizon, delegation, feature/<TICKET-ID>-slug & completion:
 ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
 ./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
@@ -242,6 +243,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ./scripts/layer-config.sh record-decision <your-project> --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
 ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
+./scripts/layer-config.sh delegate-to-child /path/to/corporate-root --to-child dept-legal --task "Publish GDPR policy" --ticket LEGAL-2026-004
 ./scripts/layer-config.sh start-task <your-project> --task "LEGAL-2026-004"
 ./scripts/layer-config.sh complete-task <your-project> --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
 ./scripts/layer-config.sh diff-project <your-project>

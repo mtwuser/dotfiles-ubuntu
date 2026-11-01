@@ -109,7 +109,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `antigravity/` | **Stow Module** | `~/.gemini/config/*`, `~/.local/share/applications/*` | Uses `prepare_antigravity_dirs()` to enforce tree unfolding |
 | `system/` | Non-Stow | — | Declarative package & GNOME manifests + `external/` catalog |
 | `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `workstation-sync.sh`, `dotfiles_mcp_server.py`, `layer-config.sh`, `layer-subtree.sh`, `verify-repo.sh` |
-| `templates/` | Non-Stow | — | Polymorphic template packs (`human-core/`, `technical-base/`, `business-base/`, `fastapi-hexagonal/`) |
+| `templates/` | Non-Stow | — | Polymorphic template packs (`human-core/`, `technical-base/`, `business-base/`, `business-stack/`, `squad-stack/agile-task-branch/`, `tech-stack/fastapi-hexagonal/`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
 | `layers/` | Non-Stow (Optional) | — | Mounted `git subtree` context forks (`layers/<name>/` managed via `scripts/layer-subtree.sh` & queried via MCP) |
 | `logs/` | Non-Stow (Ignored) | — | Structured JSONL audit & alert logs generated in MCP mode (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |

@@ -242,8 +242,8 @@ for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
         if code not in arch_mcp:
             sys.exit(f"Warning-to-doc drift: '{code}'")
 
-for cli_sub in ("init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project", "promote-from-project", "spawn-ephemeral", "inspect-ephemeral", "reap-ephemeral", "set-global-profile", "register-subtree", "bootstrap-workspace", "sync-layer", "set-authority", "check-authority", "inspect-horizon"):
-    if cli_sub not in readme_md or cli_sub not in ext_guide:
+for cli_sub in ("init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project", "promote-from-project", "spawn-ephemeral", "inspect-ephemeral", "reap-ephemeral", "set-global-profile", "register-subtree", "bootstrap-workspace", "sync-layer", "set-authority", "check-authority", "inspect-horizon", "status", "start-task", "complete-task", "compare-upstream", "consult-layer", "delegate-to-child", "manage-roster", "configure-git-policy", "check-env-promotion", "record-decision"):
+    if cli_sub not in readme_md or cli_sub not in ext_guide or cli_sub not in arch_mcp:
         sys.exit(f"CLI-to-doc drift: '{cli_sub}'")
 
 if "(v1.1)" in (repo / "docs/README.md").read_text(encoding="utf-8"):

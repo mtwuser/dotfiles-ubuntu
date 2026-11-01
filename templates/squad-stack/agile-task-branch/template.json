@@ -4,7 +4,7 @@
   "kind": "squad-stack",
   "stack_group": "squad-stack",
   "target_role": "squad",
-  "description": "Human-agent squad collaboration pack: task-tag claiming (make task), isolated Git task branches (task/<id>-<slug>), and upward PR delivery",
+  "description": "Human-agent squad collaboration pack: task-tag claiming (make task), isolated Git feature branches (feature/<TICKET-ID>-<slug>), and upward PR delivery",
   "recommended_surface_bindings": [
     {
       "binding_id": "agile-task-branch-collaboration",
@@ -17,7 +17,7 @@
       "default_resolution": "L1",
       "invariants": [
         "Claim tasks via make task TASK=<id> (layer-config.sh start-task) before editing domain or code files",
-        "Isolate work on a dedicated task/<id>-<slug> branch mapped 1:1 to a WORKTASK.md item",
+        "Isolate work on a dedicated feature/<TICKET-ID>-<slug> branch mapped 1:1 to a WORKTASK.md item",
         "Escalate cross-squad or department policy changes upward via make promote (--create-pr)"
       ],
       "rule_files": [

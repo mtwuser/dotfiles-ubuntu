@@ -16,6 +16,7 @@ help:
 	@echo "  make workstation-setup  Configure local workstation runtime (readonly mode, human-core, boot auto-sync)"
 	@echo "  make workstation-sync   Pull latest fast-forward release, apply global profile, and re-stow"
 	@echo "  make workstation-status Show local workstation configuration and runtime status JSON"
+	@echo "  make status             Show consolidated workspace status digest (./scripts/layer-config.sh status)"
 	@echo "  make install-runtime    Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"

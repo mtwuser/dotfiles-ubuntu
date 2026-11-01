@@ -33,7 +33,7 @@ Because this repository is primarily a command-line system engine, dotfile suite
 ## 3. Known Limitations
 
 - **Third-Party External Packages (`system/external/`)**: Optional external desktop applications installed via `system/external/` recipes (such as third-party `.deb` packages or vendor binaries) maintain their own user interface accessibility independently of `dotfiles-ubuntu`.
-- **ASCII Architecture Diagrams in `README.md`**: Directory trees and layer diagrams in `README.md` use box-drawing characters (`├──`, `└──`). Every diagram is immediately accompanied by a structured Markdown table or bulleted explanation conveying the same structural information for screen-reader users.
+- **ASCII Trees & Mermaid Diagrams in `README.md` and `docs/`**: Directory trees (`├──`, `└──`) and Mermaid flowcharts/sequence diagrams (`flowchart TD`, `flowchart LR`, `sequenceDiagram`) in `README.md` and `docs/` are always paired with structured Markdown tables (`Navigation & Progressive Disclosure`, `Value-Added Efficiency Metrics`, `Bounded operating_state × mcp_operating_mode Matrix`) or bulleted explanations conveying identical structural information for screen-reader users.
 
 ---
 

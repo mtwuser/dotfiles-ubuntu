@@ -100,9 +100,9 @@ To prevent silent drift between what the lifecycle hooks enforce in Python and w
 
 ---
 
-## 4. Global Skills Catalog (`antigravity/.gemini/config/skills/`)
+## 4. Global (`antigravity/.gemini/config/skills/`) & Technical-Base (`templates/technical-base/skills/`) Skills Catalog
 
-Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/8]`).
+Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` (10 universal lifecycle, governance, and dual-mode audit skills) or `templates/technical-base/skills/<name>/SKILL.md` (3 software-engineering skills) and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/8]`).
 
 ### 4.1. Interactive Slash-Command Skills (`/<name>`)
 
@@ -131,13 +131,14 @@ Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` and m
 
 ## 5. Layer 2 Polymorphic Template Packs (`templates/`)
 
-`templates/` provides composable foundational governance pillars (`kind: "core-base"`) and grouped stack starter packs (`templates/business-stack/*` and `templates/tech-stack/*`):
+`templates/` provides composable foundational governance pillars (`kind: "core-base"`) and grouped stack starter packs (`templates/business-stack/*`, `templates/squad-stack/*`, and `templates/tech-stack/*`):
 1. **3-Tier Base Governance Pillars (`human-core`, `technical-base`, `business-base`)**:
    - **`templates/human-core/`**: Universal cognitive rigor (`§1–10`), `dotfiles-ubuntu` native self-guidance (`§11`), `antigravity-ide` vs. `antigravity-agents` isolation, model delegation (`§12`), single-language purity (`§13`), and `[Unreleased]` commit discipline. Default machine-global `AGENTS.md` baseline (with the 10 universal global skills in `antigravity/.gemini/config/skills/`).
-   - **`templates/technical-base/`**: Software engineering rigor (`ruff`/`mypy --strict`), `1:1:1` Source-Test-Spec traceability (`Specification:`), `0-byte` `__init__.py` purity, Refactoring & Decommissioning (3-Step Test Pruning Audit + Dynamic Agnosticism Checks), Testing Universal (AAA, `100%` branch coverage, `N vs N ± 1` boundary cut-points), and the 3 software engineering skills (`skills/testing/`, `skills/refactoring/`, `skills/validation/`).
+   - **`templates/technical-base/`**: Software engineering rigor (`ruff`/`mypy --strict`, C-backed floor-version stdlib primitives, Rule 6 constants & data symmetry), `1:1:1` Source-Test-Spec traceability (`Specification:`), `0-byte` `__init__.py` purity, Refactoring & Decommissioning (5-Stage Evolution Ladder, `O(1)` file prefixes, Bifurcated Age Review, 3-Step Test Pruning Audit), Testing Universal (AAA, `100%` branch coverage, `N vs N ± 1` boundary cut-points), and the 3 software engineering skills (`skills/testing/`, `skills/refactoring/`, `skills/validation/`).
    - **`templates/business-base/`**: Enterprise & normative governance, Single Source of Truth Ledger (`corporate/`), Cross-Departmental Precedence Matrix (`5..35`), *Lex Superior* IP/confidentiality firewall & Crisis Escalation SLAs (`P0/P1/P2`), Traceable Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`), Three-Part Functional Verification Structure, and AI Agent Capability Matrix by Organizational Role.
-2. **Grouped Stack Taxonomy (`templates/business-stack/*` & `templates/tech-stack/fastapi-hexagonal/`)**:
+2. **Grouped Stack Taxonomy (`templates/business-stack/*`, `templates/squad-stack/agile-task-branch/`, & `templates/tech-stack/fastapi-hexagonal/`)**:
    - **`templates/business-stack/`**: Category directory for department/squad business stack templates (`kind: "business-stack"`, auto-inheriting `business-base`).
+   - **`templates/squad-stack/agile-task-branch/`**: Human-agent squad collaboration pack (`kind: "squad-stack"`, `rules/squad-workflow.md`) standardizing `make task` (`feature/<TICKET-ID>-<slug>`), `make complete`, `make consult`, and 1-hop PR escalation.
    - **`templates/tech-stack/fastapi-hexagonal/`**: Ready-to-copy Layer 2/3 configuration for Python FastAPI + Hexagonal DDD + HTMX projects (`kind: "tech-stack"`, auto-inheriting `technical-base`):
    - **`rules/`**: `coding.md` (always-on), `environment.md` (always-on), `governance.md` (`trigger: model_decision`), `testing.md` (`trigger: model_decision`, including `orphan-test-file` decommissioning).
    - **`skills/`**: `start/SKILL.md` (`/start`), `testing/SKILL.md` (`fastapi-testing`), `frontend/SKILL.md` (`fastapi-frontend`), `database/SKILL.md` (`fastapi-database`).

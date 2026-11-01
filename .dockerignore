@@ -17,6 +17,7 @@ htmlcov/
 tests/
 
 # Runtime logs & machine-local backups/secrets
+.agents/
 logs/
 *.backup.*
 **/*.backup.*

@@ -102,7 +102,7 @@ done
 
 SUBCOMMAND="${1:-}"
 if [ -z "$SUBCOMMAND" ]; then
-  echo "❌ Missing subcommand (see './scripts/layer-config.sh --help' for all 16 subcommands)." >&2
+  echo "❌ Missing subcommand (see './scripts/layer-config.sh --help' for all 25 subcommands)." >&2
   usage >&2
   exit 1
 fi
@@ -113,11 +113,9 @@ import json
 from pathlib import Path
 import sys
 
-script_dir = Path(sys.argv[1]).resolve()
-repo_dir = Path(sys.argv[2]).resolve()
+script_dir, repo_dir = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
 dry_run = sys.argv[3].lower() == "true" or "--dry-run" in sys.argv[5:] or "-n" in sys.argv[5:]
-subcmd = sys.argv[4]
-rest = [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
+subcmd, rest = sys.argv[4], [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
 
 sys.path.insert(0, str(script_dir))
 from dotfiles_mcp.authority_engine import configure_layer_authority, delegate_directive_to_child, verify_layer_operation_authority  # noqa: E402
@@ -143,22 +141,15 @@ def _enforce_authority_or_exit(target: Path, op: str) -> None:
         sys.exit(2)
 
 
-def _parse_opts(
-    args: list[str],
-    value_flags: dict[str, str],
-    bool_flags: dict[str, str] | None = None,
-) -> dict[str, object]:
+def _parse_opts(args: list[str], value_flags: dict[str, str], bool_flags: dict[str, str] | None = None) -> dict[str, object]:
     out: dict[str, object] = {}
-    bflags = bool_flags or {}
-    i = 0
+    bflags, i = bool_flags or {}, 0
     while i < len(args):
         arg = args[i]
         if arg in value_flags and i + 1 < len(args):
-            out[value_flags[arg]] = args[i + 1]
-            i += 2
+            out[value_flags[arg]], i = args[i + 1], i + 2
         elif arg in bflags:
-            out[bflags[arg]] = True
-            i += 1
+            out[bflags[arg]], i = True, i + 1
         else:
             _die(f"Unknown or incomplete {subcmd} argument: {arg}")
     return out

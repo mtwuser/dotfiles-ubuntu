@@ -86,7 +86,7 @@ class TestRepoParityGates:
             m = spec_re.search(src.read_text(encoding="utf-8"))
             if not m or src.name not in (REPO_DIR / m.group(1)).read_text(encoding="utf-8"):
                 untraced_sources.append(str(src.relative_to(REPO_DIR)))
-        template_rules = sorted((REPO_DIR / "templates").glob("*/rules/*.md"))
+        template_rules = sorted((REPO_DIR / "templates").rglob("rules/*.md"))
         missing_rule_frontmatter = [
             str(rf.relative_to(REPO_DIR))
             for rf in template_rules
@@ -96,6 +96,7 @@ class TestRepoParityGates:
 
         # Assert
         assert len(pkg_modules) == 18
+        assert len(template_rules) == 8
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
         assert missing_unit_tests == []
@@ -225,8 +226,18 @@ class TestRepoParityGates:
             "set-authority",
             "check-authority",
             "inspect-horizon",
+            "status",
+            "start-task",
+            "complete-task",
+            "compare-upstream",
+            "consult-layer",
+            "delegate-to-child",
+            "manage-roster",
+            "configure-git-policy",
+            "check-env-promotion",
+            "record-decision",
         ):
-            assert sub in readme_md and sub in ext_guide
+            assert sub in readme_md and sub in ext_guide and sub in arch_mcp
 
     def test_single_language_english_purity_across_repository_files(self) -> None:
         """Verify 100% pure technical English across all repository docs, rules, and code."""

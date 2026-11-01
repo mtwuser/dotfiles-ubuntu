@@ -35,25 +35,26 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
 
 > **Important**: Adding a recipe to `system/external/*/*.sh` makes it available in the catalog without forcing it onto other users' machines. A machine only installs or audits recipes listed in `system/external.txt` (which `./backup.sh` populates automatically based on what is installed locally).
 
-### B. Adding or Updating an Antigravity Skill (`antigravity/.gemini/config/skills/`)
+### B. Adding or Updating an Antigravity Skill (`antigravity/.gemini/config/skills/` or `templates/technical-base/skills/`)
 
-1. Create `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`.
+1. Universal lifecycle, governance, and dual-mode audit skills (`sopen`, `sclose`, `continue`, `release`, `enrich`, `priority`, `review`, `full-audit`, `architecture-review`, `governance`) live in `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`, while software-engineering-specific skills (`testing`, `refactoring`, `validation`) live in `templates/technical-base/skills/<skill-name>/SKILL.md`.
 2. Include valid YAML frontmatter at the top of `SKILL.md`:
    - `name:` **MUST** be `kebab-case` (lowercase letters, digits, and hyphens only, e.g., `name: architecture-review`).
    - `description:` A concise 1–2 sentence trigger description explaining *when* the agent should activate the skill.
 3. Keep `SKILL.md` under **500 lines**. If a skill needs large reference tables or templates, place them in subdirectories (`references/`, `examples/`, `scripts/`) inside the skill folder.
-4. Re-stow after creating a new skill directory:
+4. Re-stow after creating or modifying a global skill directory:
    ```bash
    cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity
    ```
 
 ### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`), the Contextual MCP Package (`scripts/dotfiles_mcp/` & `scripts/dotfiles_mcp_server.py`), or Layer/Subtree/Docker Tooling (`scripts/layer-config.sh`, `scripts/layer-subtree.sh`, `Dockerfile`)
 
-All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/*.py` must:
-- Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`).
-- Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), stay strictly **`< 465` lines**, and pass `mypy --strict` and `ruff check` with 0 errors.
+All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/*.py` (`20` modules) must:
+- Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`) and prefer C-backed floor-version stdlib primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`).
+- Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), follow the self-indexing file-prefix taxonomy (`tools_*`, `*_engine`, `NN_*`, `test_*`), stay strictly **`< 465` lines** (`<= 400` target via the 5-Stage Evolution Ladder), and pass `mypy --strict` and `ruff check` with 0 errors.
+- Centralize schema versions (`MCP_LAYER_SCHEMA_VERSION`, `TEMPLATE_SCHEMA_VERSION`), slice bounds, and domain cut-points in [`scripts/dotfiles_mcp/constants.py`](scripts/dotfiles_mcp/constants.py) with explicit absolute imports (zero magic numbers/raw slices, zero `import ... as c` aliases, `.get()` at external boundaries vs. `d["k"]` on guaranteed internal dicts, and `{...}` literals instead of `.update()` packing).
 - Keep `scripts/dotfiles_mcp/__init__.py` and all `tests/**/__init__.py` files at **`0 bytes`** (package marker purity).
-- Maintain **100% isolated unit test coverage** (`tests/unit/dotfiles_mcp/`) and **100% total statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` with explicit `# Arrange`, `# Act`, `# Assert` comments, exact boundary cut-points (`N` vs `N ± 1`), bipolar guard assertions (negative pole first, positive pole second), and zero `# pragma: no cover` or blind `subprocess.run` lambdas.
+- Maintain **100% isolated unit test coverage** (`tests/unit/dotfiles_mcp/`) and **100% total statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` (`1` `Test<Module>` class per file, 1-line invariant docstring on every `test_*` method, explicit `# Arrange`, `# Act`, `# Assert` comments, exact boundary cut-points `N` vs `N ± 1`, bipolar guard assertions, and zero `# pragma: no cover` or blind `subprocess.run` lambdas).
 
 ---
 
@@ -61,29 +62,32 @@ All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfil
 
 `dotfiles-ubuntu` uses a two-tier dependency layout:
 - **[`requirements.txt`](requirements.txt)** — Base runtime dependencies (empty in the upstream repository because `scripts/dotfiles_mcp_server.py` and the `~/.gemini/config/scripts/*.py` hooks use 100% Ubuntu 26.04 LTS `Python 3.14` standard library; extensible in corporate/service forks or via `requirements-<env>.txt`).
-- **[`requirements-dev.txt`](requirements-dev.txt)** — Chains `-r requirements.txt` and installs the development, testing, and linting toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`) into `./venv`.
+- **[`requirements-dev.txt`](requirements-dev.txt)** — Chains `-r requirements.txt` and installs the development, testing, and linting toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`, `shellcheck-py`) into `./venv`.
 
-Contributors modifying Python scripts, hooks, MCP/Docker tooling, or tests should initialize `./venv` via [`Makefile`](Makefile):
+Contributors modifying Python scripts, hooks, MCP/Docker tooling, or tests should initialize `./venv` (and local `.agents/` overlay) via [`Makefile`](Makefile):
 
 ```bash
-cd ~/dotfiles-ubuntu
+cd ~/dotfiles-ubuntu   # or cd ~/Projects/dev-dotfiles-ubuntu
 
-# 1. Create ./venv and install dev/test tools from requirements-dev.txt (chains -r requirements.txt)
-make install
+# 1. Create ./venv, install requirements-dev.txt, and materialize .agents/ (technical-base + Priority-1 skills)
+make setup-dev         # (or 'make install' for ./venv only)
 
-# 2. Run unit + integration + end-to-end tests with 100% statement and branch coverage gate
+# 2. Check consolidated workspace status (operating_state, mcp_operating_mode, command_tiers, horizon & diff)
+make status
+
+# 3. Run unit + implementation + end-to-end tests with 100% statement and branch coverage gate
 make test-cov
 
-# 3. Run Ruff linter + Mypy --strict type checking
+# 4. Run Ruff linter + Mypy --strict type checking
 make lint
 
-# 4. Run full 8-stage repository verification suite (Bash, Python, hooks.json, AGENTS.md budget, SKILL.md, MCP/Subtree/Docker contract, pytest 100% cov)
+# 5. Run full 8-stage repository verification suite (Bash, ShellCheck, Python, hooks.json, AGENTS.md budget, SKILL.md, MCP/Subtree/Docker contract, pytest 100% isolated + total cov)
 make verify
 
-# 5. (Optional) Build and verify the hardened Ubuntu 26.04 MCP Docker image
+# 6. (Optional) Build and verify the hardened Ubuntu 26.04 MCP Docker image
 make docker-build && make docker-self-test
 
-# 6. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
+# 7. Verify local ~/.gemini/config/ symlinks & tree unfolding (if stowed locally)
 ./scripts/audit-global-config.sh
 ```
 
@@ -99,10 +103,12 @@ When contributing upward from an Enterprise `Root 0` workspace while keeping `~/
 ## 4. Versioning & Commit Conventions
 
 - **Conventional Commits**: All commit messages follow [Conventional Commits](https://www.conventionalcommits.org/):
-  - `feat:` — New skill, hook, bootstrap capability, or external recipe
-  - `fix:` — Bug fix in scripts, hooks, or rules
+  - `feat:` — New skill, hook, bootstrap/governance capability, or external recipe
+  - `fix:` — Bug fix in scripts, hooks, MCP engines, or rules
+  - `refactor:` — Structural code decomposition (`< 465` lines), constant extraction, or symmetry alignment
+  - `test:` — Unit (`tests/unit/`), implementation (`tests/imp/`), or end-to-end (`tests/e2e/`) test additions
   - `enrich:` — Knowledge promotion from downstream projects into global rules/skills
   - `docs:` — Documentation or template updates
   - `chore:` — Package manifest snapshots (`system/*.txt`) or maintenance
 - **Semantic Versioning (`VERSION` + `CHANGELOG.md`)**:
-  - Update `VERSION` and `CHANGELOG.md` when cutting a new release, and tag with `git tag -a vX.Y.Z -m "Release vX.Y.Z"`.
+  - Record iterative changes under `## [Unreleased]` in `CHANGELOG.md` without bumping `VERSION` during working commits; cut explicit SemVer releases (`VERSION`, `pyproject.toml`, `README.md`, `CHANGELOG.md`, and `git tag -a vX.Y.Z`) via `/release`.

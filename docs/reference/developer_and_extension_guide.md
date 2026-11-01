@@ -61,13 +61,14 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --to-layer dept-security
    ```
    Compares SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promotes rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates.
-5. **Materialize, Inspect & Reap Ephemeral Department Bot Forks (`spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`)**:
+5. **Materialize, Inspect, Reap & Consult Ephemeral Department Bot Forks (`consult-layer`, `spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`)**:
    ```bash
+   ./scripts/layer-config.sh consult-layer /path/to/project --layer dept-legal --query "GDPR retention"
    ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
    ./scripts/layer-config.sh inspect-ephemeral
    ./scripts/layer-config.sh reap-ephemeral --id all
    ```
-6. **Compose Global Workstation Profile, Register Subtrees, Bootstrap, Sync & Enforce Layer Authority (`set-global-profile`, `register-subtree`, `bootstrap-workspace`, `sync-layer`, `set-authority`, `check-authority`)**:
+6. **Compose Global Workstation Profile, Register Subtrees, Bootstrap, Sync, Delegate & Enforce Layer Authority, Roster & Environment Promotion (`set-global-profile`, `register-subtree`, `bootstrap-workspace`, `sync-layer`, `status`, `set-authority`, `manage-roster`, `check-authority`, `configure-git-policy`, `check-env-promotion`, `record-decision`, `inspect-horizon`, `compare-upstream`, `delegate-to-child`, `start-task`, `complete-task`)**:
    ```bash
    ./scripts/layer-config.sh set-global-profile human-core --stow
    ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
@@ -75,10 +76,19 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --id dept-legal-ip --role domain-policy --precedence 5 \
      --templates business-base
    ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
+   ./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
    ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
+   ./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
+   ./scripts/layer-config.sh check-env-promotion /path/to/dept-legal --to-env pre --email "qa@acme.com"
+   ./scripts/layer-config.sh record-decision /path/to/dept-legal --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
+   ./scripts/layer-config.sh status /path/to/dept-legal
    ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
+   ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
+   ./scripts/layer-config.sh delegate-to-child /path/to/corporate-root --to-child dept-legal --task "Publish GDPR policy" --ticket LEGAL-2026-004
    ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
      --id squad-patent-ops --role squad --parent-dir /path/to/dept-legal
+   ./scripts/layer-config.sh start-task /path/to/squad-patents --task "LEGAL-2026-004"
+   ./scripts/layer-config.sh complete-task /path/to/squad-patents --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
    ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
    ```
 7. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.

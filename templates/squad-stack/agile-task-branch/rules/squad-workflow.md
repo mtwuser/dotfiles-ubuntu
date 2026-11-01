@@ -31,8 +31,8 @@ description: "Human-agent squad collaboration, task-tag claiming, and Git task-b
 4. **1-Hop Escalation & Upward Delivery (`make promote`)**:
    - Never mutate inherited department or corporate rules (`layer-NN-*.md`) in place.
    - Propose rule improvements, roadmap updates, or blocker escalations 1-hop upward via `./scripts/layer-config.sh promote-from-project . --source <rel-path> --create-pr` (`make promote SOURCE=<rel-path>`).
-5. **Inter-Department & Cross-Squad Consultation**:
-   - When a task requires verifying another department's policy or another squad's contract, use a read-only ephemeral consultation (`orchestrate_ephemeral_fork` with `access_mode="strictly-read-only"`) rather than copying foreign repositories into the workspace.
+5. **Inter-Department & Cross-Squad Consultation (`make consult`)**:
+   - When a task requires verifying another department's policy or another squad's contract, run a zero-residue read-only ephemeral consultation via `./scripts/layer-config.sh consult-layer . --layer <id> --query "<text>"` (`make consult LAYER=<id> QUERY="<text>"` or `orchestrate_ephemeral_fork` with `ephemeral_scope="inter-layer"` and `access_mode="strictly-read-only"`) rather than copying foreign repositories into the workspace.
 
 ---
 
