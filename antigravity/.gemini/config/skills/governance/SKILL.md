@@ -71,34 +71,62 @@ Always write for the **USER** (or downstream adopter), not internal scratch note
 
 ---
 
-## Part 3 — Bidirectional 1-Hop Governance Delivery (`Root 0 <-> Department <-> Squad`)
+## Part 3 — Inter-Layer Operational & Business Governance (`Root 0 <-> Department <-> Squad <-> Project`)
 
-> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, `Department` (`department`), or `Squad` (`squad`) workspaces to deliver directives, rules, roadmaps, validation checklists (`WORKVALI.md`), or corporate ledger artifacts 1 hop downward (`make delegate`) or propose them 1 hop upward via Pull Request (`make promote`).
+> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, `Department` (`department`), `Squad` (`squad`), or `Project` workspaces to orchestrate reciprocal task delegation (`make delegate`), ticket-linked branch execution (`make task`), inter-layer consultation (`make consult`), upward completion receipts (`make complete`), bottom-up roadmap/ledger proposals (`make promote`), isomorphic `dev -> tst -> pre -> pro` stage gates (`make env-gate`), 4-role roster management (`make roster`), and non-destructive proposal decisions (`make decision`).
+> *(For promoting Antigravity agent rules `.agents/rules/*.md`, skills `.agents/skills/*/SKILL.md`, or reusable `templates/**`, use **`/enrich`** instead.)*
 
-### 1. Top-Down 1-Hop Delivery (`make delegate` / `delegate-to-child`)
+### 1. Top-Down 1-Hop Directive & Artifact Delivery (`make delegate` / `delegate-to-child`)
 
-1. **Enforce the 1-Hop Horizon**:
-   - `Root 0` (`corporate`) delivers exclusively to its immediate child `Department` / `domain-policy` layers.
-   - `Department` (`department`) delivers exclusively to its immediate child `Squad` layers.
-   - Never bypass an intermediate layer to inject tasks 2 hops down.
-2. **Supported Target Governance Surfaces (`SURFACE` / `--surface`)**:
-   - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable entry (`- [ ] **[P1 · Delegated from '<parent-id>' ('<role>', 'precedence: <N>')]**: ...`) into the child's tracker.
-   - **Roadmaps & Corporate Ledgers (`roadmaps`, `corporate`)**: Delivers `--source <rel-path>` into `<child>/roadmaps/<filename>` or `<child>/corporate/<filename>` with a provenance header (`> **Delivered from**: '<parent-id>'`).
-   - **Normative Rules (`rules`)**: Delivers `--source <rel-path>` into `<child>/templates/<child-id>/rules/<filename>` and `<child>/.agents/rules/<filename>` with normalized Antigravity frontmatter.
-3. **Execute Deterministic CLI Delivery**:
-   - From a layer workspace with a generated `Makefile`:
+1. **Enforce the 1-Hop Horizon & Role Authority (`owner` or `maintainer`)**:
+   - `Root 0` (`corporate`) delivers exclusively to its immediate child `Department` / `domain-policy` layers (`Department` delivers to `Squad`). Never skip tiers.
+2. **Traceable Ticket Registration (`## Outbound Delegations`) & Non-Destructive Staging**:
+   - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable directive (`- [ ] **[P1 · [<TICKET-ID>] · Delegated from '<parent-id>']**: ...`) into the child's tracker and logs `- [/] **[<TICKET-ID> -> <child-id> (<surface>, stage: delegated)]**` under `## Outbound Delegations` in the parent's `WORKTASK.md`.
+   - **Roadmaps, Corporate Ledgers & Rules (`roadmaps`, `corporate`, `rules`)**: Delivers `--source <rel-path>` into the child surface. If the target file already exists and `--force` is not passed, stages non-destructively at `<child>/.agents/proposals/from-<parent-id>/<file>` and adds a `P0` review item in `<child>/WORKTASK.md`.
+   ```bash
+   make delegate CHILD=<child-layer-id> [TASK="<directive>"] [TICKET=<TICKET-ID>] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2]
+   ```
+
+### 2. Child Execution (`make task`), Ephemeral Consultation (`make consult`) & Reciprocal Completion (`make complete`)
+
+1. **Claim Task & Create Ticket-Linked Feature Branch (`make task` / `start-task`)**:
+   ```bash
+   make task TASK="<ticket-id-or-text>" [TICKET=<TICKET-ID>]
+   # Marks item [/] in WORKTASK.md, records Ticket ID & Origin Layer in .agents/SESSION.md,
+   # and emits: git checkout -b feature/<TICKET-ID>-<descriptive-slug>
+   ```
+2. **One-Shot Read-Only Inter-Layer Consultation (`make consult` / `consult-layer`)**:
+   ```bash
+   make consult LAYER=<target-layer-or-template> QUERY="<question>"
+   # Spawns a strictly-read-only ephemeral fork, returns a 4-Channel Executive Digest + rcap1 capsules, and auto-reaps.
+   ```
+3. **Close Task & Emit Upward Completion Receipt (`make complete` / `complete-task`)**:
+   ```bash
+   make complete TASK="<ticket-id-or-text>" [DELIVERABLE=<rel-path>]
+   # Marks item [x] in child WORKTASK.md and reciprocally updates parent WORKTASK.md
+   # (## Outbound Delegations -> [x] ... stage: completed (pro)), or stages
+   # .agents/proposals/to-<parent>/completion-<ticket>.md + PR plan (feature/<TICKET-ID>-completed).
+   ```
+
+### 3. Bottom-Up Operational Proposals (`make promote`), Stage Gates (`make env-gate`), Roster (`make roster`) & Decisions (`make decision`)
+
+1. **Bottom-Up Roadmap, Ledger & Tracker Proposals (`make promote` / `promote-from-project --create-pr`)**:
+   - Escalates operational/business artifacts (`roadmaps/*.md`, `corporate/**`, `docs/**`, `BACKLOG.md`, `WORKROAD.md`, `WORKVALI.md`) 1 hop upward via PR (staging non-destructively at `.agents/proposals/to-<parent>/` when protected):
      ```bash
-     make delegate CHILD=<child-layer-id> [TASK="<directive>"] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2]
+     make promote SOURCE=<roadmaps/file.md|corporate/policy.md|WORKVALI.md|BACKLOG.md>
      ```
-   - Or directly via `layer-config.sh`:
+2. **Isomorphic Business & Technical `dev -> tst -> pre -> pro` Promotion Gate (`make env-gate`)**:
+   - Verifies stage readiness (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` + `validator` / `owner` authority for `pre`, `CHANGELOG.md` + `owner` release authority for `pro`):
      ```bash
-     ./scripts/layer-config.sh delegate-to-child [<workspace-dir>] --to-child <child-layer-id> [--task "<directive>"] [--source <rel-path>] [--surface <surface>] [--priority P0|P1|P2]
+     make env-gate ENV=<tst|pre|pro>
      ```
-
-### 2. Bottom-Up 1-Hop Proposal via Pull Request (`make promote` / `promote-from-project --create-pr`)
-
-- Any child layer (`Squad` -> `Department` -> `Root 0`) can escalate a rule (`.agents/rules/*.md`), skill, roadmap (`roadmaps/*.md`), corporate policy (`corporate/**`), doc (`docs/**`), or governance tracker proposal (`BACKLOG.md`, `WORKROAD.md`, `WORKVALI.md`) 1 hop upward via Pull Request:
-  ```bash
-  make promote SOURCE=<rel-path> [TEMPLATE=<pack>]
-  ```
-- The parent layer's owner (`layer_authority.owner_role`) reviews and validates the PR before merging it into the parent's governance flow.
+3. **4-Role Roster & `.github/CODEOWNERS` Sync (`make roster` / `manage-roster`)**:
+   - Maintains `owners`, `maintainers`, `validators`, and `members` in `system/mcp-layer.json` and syncs `.github/CODEOWNERS`:
+     ```bash
+     make roster [ADD=<email>] [REMOVE=<email>] [ROLE=owner|maintainer|validator|member]
+     ```
+4. **Human Governance Decision Recording (`make decision` / `record-decision`)**:
+   - Resolves pending staged proposals or blocked governance items in `WORKTASK.md`, `.agents/SESSION.md`, and `logs/governance_audit.jsonl`:
+     ```bash
+     make decision ITEM=<proposal-or-ticket> DEC=<approve|reject|defer|blocked> REASON="<justification>"
+     ```

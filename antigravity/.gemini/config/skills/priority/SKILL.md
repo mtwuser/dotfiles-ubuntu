@@ -66,17 +66,18 @@ When starting work on the next phase in `WORKROAD.md`:
    - Scan active tasks → detect relationships → analyze dependencies → present brief report
 4. **Move** only that phase into `WORKTASK.md` as a `T` item (`T1`, `T2`, etc.)
 5. **Mark** the promoted phase in `WORKROAD.md` as `→ promoted to TN`
-6. **Claim & Start the Task (`make task`)**: Run `./scripts/layer-config.sh start-task . --task "<id-or-text>"` (or `make task TASK="<id-or-text>"`) to mark the item `[/]` in `WORKTASK.md`, record the active task and branch (`task/<id>-<slug>`) in `.agents/SESSION.md`, and emit the canonical Git branch command (`git checkout -b task/<id>-<slug>`).
+6. **Claim & Start the Task (`make task`)**: Run `./scripts/layer-config.sh start-task . --task "<id-or-text>" [--ticket <TICKET-ID>]` (or `make task TASK="<id-or-text>" [TICKET=<TICKET-ID>]`) to mark the item `[/]` in `WORKTASK.md`, record the active task, `Ticket ID`, `Origin Layer`, and branch in `.agents/SESSION.md`, and emit the canonical Git branch command (`git checkout -b feature/<TICKET-ID>-<slug>` when a ticket ID is present, or `git checkout -b task/<slug>`).
 
-### 3. Completion (`WORKTASK.md` → `CHANGELOG.md`)
+### 3. Completion (`WORKTASK.md` → `make complete` → `CHANGELOG.md`)
 
 When a `WORKTASK.md` block is fully completed (all sub-items `[x]`):
 
-1. **Write** the `CHANGELOG.md` entry under `[Unreleased]` (concise, user-facing language)
-2. **Update `docs/`** — ensure all new/modified capabilities are documented in permanent architecture/reference docs
-3. **Delete** the completed block from `WORKTASK.md` entirely
-4. **Delete** the completed phase from `WORKROAD.md` / `BACKLOG.md` and from the source roadmap in `roadmaps/` (if all phases of that roadmap are complete, delete the file from `roadmaps/` or archive it to `docs/history/`)
-5. **Promote** the next phase (repeat cycle)
+1. **Send Reciprocal Upward Completion Receipt (`make complete`, when delegated or ticketed)**: Run `./scripts/layer-config.sh complete-task . --task "<id-or-text>" [--deliverable <rel-path>]` (or `make complete TASK="<id-or-text>" [DELIVERABLE=<rel-path>]`) so the parent layer's `WORKTASK.md` (`## Outbound Delegations`) is reciprocally updated to `stage: completed (pro)` (or a non-destructive completion receipt `.agents/proposals/to-<parent>/completion-<ticket>.md` + PR plan is staged) before removing the local item.
+2. **Write** the `CHANGELOG.md` entry under `[Unreleased]` (concise, user-facing language)
+3. **Update `docs/`** — ensure all new/modified capabilities are documented in permanent architecture/reference docs
+4. **Delete** the completed block from `WORKTASK.md` entirely
+5. **Delete** the completed phase from `WORKROAD.md` / `BACKLOG.md` and from the source roadmap in `roadmaps/` (if all phases of that roadmap are complete, delete the file from `roadmaps/` or archive it to `docs/history/`)
+6. **Promote** the next phase (repeat cycle)
 
 > [!CAUTION]
 > **Zero-clutter invariant**: Every document contains ONLY its designated content.
