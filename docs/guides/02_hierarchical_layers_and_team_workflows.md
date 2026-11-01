@@ -66,12 +66,20 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
 ### 3.1 Bootstrapping & Synchronizing Each Tier (`scripts/layer-config.sh`)
 
 ```bash
-# 1. [Corporate Root 0 Architect] Initialize Corporate Root and configure owner authority:
+# 1A. [Corporate Root 0 Architect — Option A: Standalone Layer Workspace]
+#     Initialize Corporate Root and configure owner authority:
 ./scripts/layer-config.sh bootstrap-workspace /path/to/corp-root \
-  --id acme-corp-root --role corporate --precedence 10 --templates business-base
+  --id acme-corp-root --role corporate --precedence 10 --templates business-base \
+  --upstream-url "https://github.com/mtwuser/dotfiles-ubuntu.git"
 ./scripts/layer-config.sh set-authority /path/to/corp-root \
-  --owner-role "Principal Enterprise Architect" --emails "architect@acme.com" \
-  --upstream-repo "https://github.com/mtwuser/dotfiles-ubuntu.git"
+  --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
+
+# 1B. [Corporate Root 0 Architect — Option B: Direct Platform Fork of dotfiles-ubuntu]
+#     Parameterize a cloned fork of dotfiles-ubuntu in place as Corporate Root 0:
+./scripts/layer-config.sh init-fork \
+  --id acme-corp-root --role corporate --precedence 10 --prune-default-templates
+./scripts/layer-config.sh set-authority \
+  --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
 
 # 2. [Department Lead] Bootstrap a Department workspace, configure authority, and mount into Root 0:
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \

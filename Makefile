@@ -41,7 +41,6 @@ $(VENV_BIN)/pytest:
 venv install install-dev: $(VENV_BIN)/pytest
 
 setup-dev: $(VENV_BIN)/pytest
-	@rm -f $(CURDIR)/.agents/rules/human-core.md
 	./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base
 
 workstation-setup:

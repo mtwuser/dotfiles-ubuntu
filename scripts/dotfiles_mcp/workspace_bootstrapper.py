@@ -180,7 +180,7 @@ def _render_layer_makefile(
         f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
         f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
         if layer_role == "corporate"
-        else ""
+        else "TARGET_REPO ?= $(PARENT_DIR)\n"
     )
     return (
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"

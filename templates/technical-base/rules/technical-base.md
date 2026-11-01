@@ -13,9 +13,9 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 - **Description**: Strict typing, `1:1:1` Human-Agent traceability, generated code verification, and diagnostic sweeps
 - **Applies**: All software engineering, scripting, and technical repositories
 
-1. **Utility Function & Pattern Reuse Gate**: Search the project (`grep` or semantic search) before writing helpers; import and reuse (moving to a shared module first if needed).
+1. **Utility Function & Pattern Reuse Gate**: Search the project (`grep` or semantic search) before writing helpers; import and reuse.
 2. **Strict Linter, Compiler & Typing Integrity**: Zero compiler, type-checker, or linter (`ruff`/`mypy --strict`, `tsc --noEmit`, `cargo clippy`, `shellcheck`) warnings/errors. Prefer `unknown`/`Protocol`/`interface` over `Any`/`any`.
-3. **`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Symbiosis**: Executable modules must declare `Specification: docs/architecture/<spec>.md`, and specs (`< 465` lines) must maintain a `1:1:1` table linking sources, `1:1` unit suites (`Test<Module>`), and verified invariants.
+3. **`1:1:1` Human-AI-Technology Symbiosis (`Spec <-> Source <-> Test`)**: Executable modules must declare `Specification: docs/architecture/<spec>.md`, specs (`< 465` lines) must maintain a `1:1:1` table linking sources, `1:1` unit suites (`Test<Module>`), and invariants, and human guides (`docs/guides/`) must align verbatim with CLI/E2E workflows.
 4. **Generated Output & Package-Marker Purity**: Verify all `import` packages exist, generated files pass linters, zero ghost placeholders (`my_app`), and package markers remain side-effect-free (in Python, `src/**/__init__.py` and `tests/**/__init__.py` MUST remain `0 bytes`).
 5. **Pre-Debug Diagnostic Sweep**: Run `make doctor` / `make verify` before blind-debugging, and crystallize repeated checks into `Makefile` targets.
 

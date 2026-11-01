@@ -37,9 +37,13 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 ---
 
-## Phase 1 — Pass 1: Conceptual Coherence, Stack Currency & 4-Perspective Lifecycle Matrix
+## Phase 1 — Pass 1: Conceptual Coherence, Human Persona Journeys & 4-Perspective Lifecycle Matrix
 
-Trace every core domain flow and rule across **4 operational perspectives** to uncover hidden contradictions that single-file reviews miss:
+Evaluate the repository along **two orthogonal axes**:
+1. **Horizontal Technical Lifecycle Matrix (4 Perspectives)** — how every rule or component behaves across setup, runtime, testing, and federation.
+2. **Vertical Human Persona Journeys (`Human <-> AI <-> Technology` Unity)** — how real human archetypes experience the repository from entry point (`README.md` / CLI) to day-2 operations.
+
+### 1.1 Horizontal 4-Perspective Lifecycle Matrix
 
 | Perspective | Question to Verify Across Every Flow |
 | :--- | :--- |
@@ -48,8 +52,21 @@ Trace every core domain flow and rule across **4 operational perspectives** to u
 | **3. Verification / Testing / Gates** | Do automated linters, parity gates, and tests actually exercise the real runtime structure (e.g., class-indented methods, multi-channel guards, isolated unit coverage)? |
 | **4. Federation / Integration / Extrapolation** | Do cross-layer interactions, MCP contracts, and shared templates remain 100% extrapolable without leaking local repository assumptions? |
 
+### 1.2 Vertical Human Persona & Use-Case Journey Matrix (`Human <-> AI <-> Technology`)
+
+Identify the concrete human archetypes served by the repository and simulate each persona's end-to-end journey from first contact to completion:
+
+| Human Archetype (`Persona`) | End-to-End Journey to Simulate & Validate |
+| :--- | :--- |
+| **P1. Individual / First-Time User** | Clones the repository, reads `README.md` Quick-Start, runs initial setup/bootstrap, and executes the health/audit command. Verify zero surprise overwrites, zero false-positive drift warnings across supported profiles, and clear next steps. |
+| **P2. Organizational / Root-0 Adopter** | Forks or bootstraps the top-level organizational/domain workspace (`Root 0`), configures authority and upstream lineage, and follows the step-by-step guide in `docs/guides/`. Verify that every documented CLI command and flag in the guide executes verbatim without error. |
+| **P3. Department / Team Integrator** | Inherits from `Root 0` (`--parent-dir` or subtree), scaffolds domain/team packs, and uses generated `Makefile` / CLI ergonomics (`make sync`, `make diff`, `make promote`) for 1-hop upward/downward flows. |
+| **P4. Consumer Project Developer & Agent** | Applies templates to an application repository, works under active guardrails/hooks, runs tests, and receives actionable remediation whenever a guardrail blocks an operation. |
+| **P5. Upstream Maintainer / Operator** | Runs full verification (`make verify`), inspects diagnostics, and prepares releases (`/release`) with zero cross-tier or private identifier leaks. |
+
 ### Pass 1 Checklist
 - [ ] **3-Tier Documentation Coherence (`README.md` $\rightarrow$ `docs/guides/` $\rightarrow$ `docs/architecture/` & `docs/reference/`)**: Verify directory trees against disk (`find`/`ls`), relative links (`test -f`), CLI flag tables, and `< 465`-line modularity.
+- [ ] **Verbatim Human Walkthrough Parity**: Verify that every CLI command and flag sequence shown in `README.md` and `docs/guides/` matches the actual parser options and succeeds end-to-end.
 - [ ] **Modern Stack Currency**: Verify that docs, rules, templates, and code use the target modern stack version consistently (zero outdated version ranges or legacy typing syntax).
 - [ ] **Zero-Backward Law Scan**: Confirm zero `@deprecated` markers, compatibility aliases (`OldName = NewName`), dual CLI flags, or dead transition branches.
 - [ ] **Generic vs. Local Rule Purity**: Confirm that reusable base rules (`technical-base`) and shared skills contain zero hardcoded counts, paths, or assumptions tied to a single repository.

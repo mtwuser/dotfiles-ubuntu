@@ -360,7 +360,17 @@ fi
 # 8. Repo Status
 section "Repo Status"
 cd "$SCRIPT_DIR"
-if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+WORKSTATION_CONF="${DOTFILES_WORKSTATION_CONF:-$HOME/.config/dotfiles-ubuntu/workstation.conf}"
+ACTIVE_PROFILE="human-core"
+if [ -f "$WORKSTATION_CONF" ]; then
+  # shellcheck disable=SC1090
+  . "$WORKSTATION_CONF"
+  ACTIVE_PROFILE="${DOTFILES_GLOBAL_PROFILE:-human-core}"
+fi
+STATUS_LINES="$(git status --porcelain 2>/dev/null || true)"
+if [ "$ACTIVE_PROFILE" != "human-core" ] && [ "$STATUS_LINES" = " M antigravity/.gemini/config/AGENTS.md" ]; then
+  ok "Working tree clean (composed global profile: $ACTIVE_PROFILE)"
+elif [ -n "$STATUS_LINES" ]; then
   warn "Uncommitted changes:"
   git status --short | while IFS= read -r line; do item "$line"; done
 else

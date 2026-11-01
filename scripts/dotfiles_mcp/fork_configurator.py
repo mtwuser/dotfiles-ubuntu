@@ -367,7 +367,7 @@ def apply_fork_to_project(
     else:
         for tpl_item in root_manifest.get("default_stack_templates", []):
             tpl_str = str(tpl_item)
-            if (repo_dir / "templates" / tpl_str).is_dir():
+            if tpl_str != "human-core" and (repo_dir / "templates" / tpl_str).is_dir():
                 resolved_templates.append((tpl_str, repo_dir / "templates" / tpl_str))
 
     resolved_tpl_name = ",".join(t[0] for t in resolved_templates)

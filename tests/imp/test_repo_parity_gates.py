@@ -132,12 +132,20 @@ class TestRepoParityGates:
         ext_guide = (REPO_DIR / "docs/reference/developer_and_extension_guide.md").read_text(
             encoding="utf-8"
         )
+        guide_02 = (
+            REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md"
+        ).read_text(encoding="utf-8")
+        full_audit_skill = (
+            REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md"
+        ).read_text(encoding="utf-8")
 
         # Act
         pre_matcher = set(hooks_data["pre-tool-guard"]["PreToolUse"][0]["matcher"].split("|"))
         post_matcher = set(hooks_data["auto-format"]["PostToolUse"][0]["matcher"].split("|"))
 
         # Assert
+        assert "--upstream-repo" not in guide_02
+        assert "Vertical Human Persona & Use-Case Journey Matrix" in full_audit_skill
         assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
         assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
         assert post_invocation_lint._AGENTS_MD_MAX_BYTES == mcp_constants.AGENTS_MD_MAX_BYTES

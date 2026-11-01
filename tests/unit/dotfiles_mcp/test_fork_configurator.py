@@ -287,11 +287,15 @@ class TestForkConfigurator:
                     "layer_id": "acme-team-web",
                     "layer_role": "team",
                     "precedence": 40,
-                    "default_stack_templates": ["web-starter"],
+                    "default_stack_templates": ["human-core", "web-starter"],
                     "surface_bindings": [{"binding_id": "b1"}],
                 }
             ),
             encoding="utf-8",
+        )
+        (fork_dir / "templates/human-core/rules").mkdir(parents=True)
+        (fork_dir / "templates/human-core/rules/human-core.md").write_text(
+            "# Global Baseline\n", encoding="utf-8"
         )
         scaffold_template_pack(
             fork_dir,

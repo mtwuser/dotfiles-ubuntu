@@ -413,6 +413,10 @@ class TestLayerConfigAndPromotionE2E:
         assert pr_promo["promotion_pr_plan"]["target_layer_id"] == "dept-eng-platform"
         assert pr_promo["promotion_pr_plan"]["contributing_org"] == "Acme Corp"
         assert "CONTRIB_REPO ?=" in (corp_dir / "Makefile").read_text(encoding="utf-8")
+        assert "TARGET_REPO ?= $(PARENT_DIR)" in (dept_dir / "Makefile").read_text(encoding="utf-8")
+        assert "TARGET_REPO ?= $(PARENT_DIR)" in (squad_dir / "Makefile").read_text(
+            encoding="utf-8"
+        )
         assert (
             dept_boot["applied_template"]
             == "business-base,acme-corporate-base,technical-base,dept-eng-platform"

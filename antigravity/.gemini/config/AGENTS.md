@@ -53,22 +53,22 @@ Verify these mandates before proposing solutions or modifying files in any works
 #### 8. Mandatory Pre-Commit Hygiene & Zero-Literal Exclusion (Anti-Streisand Gate)
 > *"Never finish a task leaving behind script residue, broken side effects, or self-defeating exclusion literals."*
 
-**Mandate:** Execute BEFORE delivering `git commit` blocks: (1) **Pesticide Scan** (delete scratch files); (2) **Side-Effect Coherence** (`make verify`, `audit.sh`, `layer-config.sh`); (3) **Sterile Root** (`git status --short`); (4) **Multi-Repo Parity** (sync `CHANGELOG.md`, `README.md`, and verify suites in each modified repo); (5) **Zero-Literal Exclusion (Anti-Streisand Invariant)** — when ensuring a private identifier never appears in a repo, **NEVER** embed that forbidden literal inside rules, tests, or scripts; use dynamic discovery or structural regexes.
+**Mandate:** Execute BEFORE delivering `git commit` blocks: (1) **Pesticide Scan** (delete scratch files); (2) **Side-Effect Coherence** (`make verify`, `audit.sh`, `layer-config.sh`); (3) **Sterile Root** (`git status --short`); (4) **Multi-Repo Parity** (sync `CHANGELOG.md`, `README.md`, and verify suites); (5) **Zero-Literal Exclusion** — never embed forbidden private identifiers inside rules, tests, or scripts; use dynamic discovery or structural regexes.
 
-#### 9. Exhaustive Implementation Planning (Anti-Myopia)
-> *"Move deliberately rather than rushing: short verified steps backed by comprehensive cross-cutting plans."*
+#### 9. Exhaustive Planning & Human Persona Journey Validation (`Human <-> AI <-> Technology`)
+> *"Validate every plan and change by walking each human user archetype end-to-end."*
 
-**Mandate:** (1) **Additive Plans** mapping transversal side-effects; (2) **No Phase Compression**; (3) **Execution Block** until user approval; (4) **Zero Scope Creep** (log adjacent observations in `BACKLOG.md`).
+**Mandate:** (1) **Additive Plans** mapping side-effects; (2) **Persona Journey Walkthrough** (simulate *Individual*, *Root 0*, *Department*, and *Consumer* journeys from `docs/guides/` to CLI and day-2 audits); (3) **No Phase Compression** & **Execution Block** until approval; (4) **Zero Scope Creep** (log in `BACKLOG.md`).
 
 #### 10. Documentation Coherence & Human-Centric Progressive Disclosure
-> *"Structure documentation for human comprehension first (progressive disclosure) and keep every link and tree synchronized."*
+> *"Structure documentation for human comprehension first and keep every link and tree synchronized."*
 
 **Mandate:**
 1. **3-Tier Progressive Disclosure (`README.md` $\rightarrow$ `docs/guides/` $\rightarrow$ `docs/architecture/` & `docs/reference/`)**:
-   - **Tier 1 (`README.md`, $\le 400$ lines)**: Executive gateway (Quick-Start, repo tree, CLI cheat-sheet, and navigation table to `docs/`).
+   - **Tier 1 (`README.md`, $\le 400$ lines)**: Executive gateway (Quick-Start, repo tree, CLI cheat-sheet, and navigation table).
    - **Tier 2 (`docs/guides/*.md`, `< 465` lines)**: Step-by-step human operator & team workflow guides.
    - **Tier 3 (`docs/architecture/*.md` & `docs/reference/*.md`, `< 465` lines)**: Normative `1:1:1` specs (`Specification:`) and technical playbooks.
-2. **Post-Move/Rename Coherence**: Sync `README.md` and `docs/README.md` trees against `find`/`ls`, verify doc links (`test -f`), sweep `.md` files (`grep -rn`), and leave zero orphaned references.
+2. **Post-Move/Rename Coherence**: Sync `README.md` and `docs/README.md` trees against `find`/`ls`, verify links (`test -f`), sweep `.md` files (`grep -rn`), and leave zero orphans.
 
 #### 11. `dotfiles-ubuntu` Native Self-Guidance & Scaffolding-First Mandate
 > *"Use the platform's deterministic CLI orchestrators (`layer-config.sh`, `layer-subtree.sh`) instead of ad-hoc manual steps."*
