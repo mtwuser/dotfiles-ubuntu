@@ -28,7 +28,7 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 - **Applies**: All source code files
 
 1. **Behavioral Invariant & Atomic `1:1:1` Alignment**: When splitting modules, tests pass identically, test count never decreases, coverage stays 100%, and `1:1:1` tests/specs align in the SAME iteration.
-2. **Zero-Residue, Escalation & File-Prefix Naming**: Remove replaced symbols atomically (zero aliases/shims). On every edit, refactor, or feature, prevent drift with older (`> 90d`) or compressed code by escalating (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), naming files by role prefix/suffix (`tools_*`, `*_engine`, `NN_*`, `test_*`), and logging refactors (`BACKLOG.md`).
+2. **Zero-Residue, Age Review & File-Prefix Naming**: Remove replaced symbols atomically (zero aliases/shims). On every edit/feature, review older (`> 90d`) or compressed code: if aligned, consolidate/automate; if drifted, escalate (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), name files by role (`tools_*`, `*_engine`, `NN_*`, `test_*`), and log in `BACKLOG.md`.
 3. **Code Decommissioning (3-Step Test Pruning & Zero-Literal Leak Gate)**: When deleting a module/symbol: (a) **`1:1` File Purge** (delete orphan unit tests); (b) **Symbol & Fixture Purge** (grep `tests/` for removed symbols/mocks); (c) **Default-Parameter Sensitivity** (test non-defaults); (d) **Zero-Literal Exclusion** (regexes/dynamic discovery, never private literals).
 
 ---

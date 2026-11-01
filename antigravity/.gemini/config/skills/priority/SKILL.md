@@ -35,8 +35,9 @@ All work plans and tasks are centralized at the repository root.
 When `WORKROAD.md` has no pending items for the current stage, or when a new roadmap is scheduled:
 
 1. **Identify** the next future roadmap in `roadmaps/` by priority
-2. **Deep-analysis (Phase 0.5)** — before promoting:
-   - Codebase audit → already-implemented detection → implementation strategy → added-value discovery
+2. **Deep-analysis (Phase 0.5, Mode-Aware)** — before promoting, inspect according to `workspace_mode` (`make status`):
+   - **In `technical` or `hybrid` mode**: Codebase & infrastructure audit → already-implemented detection → implementation strategy → added-value discovery
+   - **In `business` mode (`corporate-root` / `domain-policy` / `department`)**: Normative policy & *Lex Superior* (`0..100`) audit → Single Source of Truth ledger (`corporate/`) & Traceable ID check → cross-surface & 1-hop downstream layer impact strategy
 3. **Present analysis** to the user for review
 4. **Enrich** the roadmap file in `roadmaps/` and add its phase checklist into `WORKROAD.md`
 5. **Keep the source file in `roadmaps/`** while its phases are pending — it serves as the detailed technical specification until all phases are implemented (at which point it is deleted or archived to `docs/history/`)

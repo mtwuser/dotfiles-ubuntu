@@ -9,11 +9,11 @@ description: audit code structure, quality, and testing alignment against projec
 
 ---
 
-## Scopes & Mode Selection (`workspace_mode`)
+## Scopes & Mode Selection (`operating_state` & `workspace_mode`)
 
-Check `workspace_mode` from `make status` (or `.agents/rules/*.md`):
-- **`technical` / `hybrid` mode (`technical-base` / `tech-stack/*`)**: Execute §1–§5 below (plus §6 when `hybrid`).
-- **`business` mode (`business-base` / `business-stack/*` / `Root 0` / `Department`)**: Skip code/unit-test checks (§1–§4) and execute **§6 Business & Normative Governance Audit (`corporate/`, `templates/`, `docs/`, `surfaces/`)** plus **§5 Zero-Residue Scan**.
+Check `operating_state` and `workspace_mode` from `make status` (or `.agents/rules/*.md`):
+- **`technical` / `hybrid` mode (`technical-base` / `tech-stack/*`)**: Execute §1–§5 below (plus §6 when `hybrid`). Scope §1.2 (`Models & Serializers`) and `views/controllers` checks strictly to web/ORM application stacks (`tech-stack/*`); in CLI/MCP/library repositories (such as `operating_state == "oss-dev"`), audit `engine / tools / protocol / cli` boundaries instead.
+- **`business` mode (`business-base` / `business-stack/*` / `corporate-root` / `domain-policy` / `department`)**: Skip code/unit-test checks (§1–§4) and execute **§6 Business & Normative Governance Audit (`corporate/`, `templates/`, `docs/`, `surfaces/`)** plus **§5 Zero-Residue Scan**.
 
 | Scope | What it audits |
 |-------|---------------|
@@ -37,7 +37,7 @@ Execute these checks **in order**:
 - [ ] **Dead code** — unused imports, unreachable functions, commented-out blocks
 - [ ] **Naming conventions** — models as nouns, services as verbs, consistent suffixes
 - [ ] **Structural Evolution & Anti-Over-Compression (`Inline -> Function -> Class -> Protocol/Polymorphism -> Module`)** — flag defensive syntactic compression (opaque short variable names like `d_rec` / `out_h`, chained `.update()` packing near `< 465` lines), $\ge 3$ functions sharing $\ge 4$ context parameters (*Data Clump* $\rightarrow$ Class/`@dataclass`), or $\ge 3$–$4$ `if/elif` role/surface branches ($\rightarrow$ declarative catalog or `Protocol` polymorphism)
-- [ ] **Temporal Staleness & Obsolescence Radar (`14d / 90d / 180d`)** — check `stale_proposals` (`> 14d`) in `make status`, code/spec modules untouched for `> 90d` while sibling modules evolved (or `Source` newer than its `1:1:1` `Spec`), and policies/templates untouched for `> 180d`
+- [ ] **Bifurcated Age & Staleness Radar (`14d / 90d / 180d`)** — check `stale_proposals` (`> 14d`) in `make status`, and evaluate modules/specs untouched for `> 90d` (or policies/templates untouched for `> 180d`) along two branches: (a) **Aligned in Active Use (`0` drift)** $\rightarrow$ candidate for **consolidation, automation (`C1` target/hook), or upward `/enrich`**; (b) **Drifted / Misaligned** (differs from newer idioms or `Source` newer than its `1:1:1` `Spec`) $\rightarrow$ candidate for **refactoring, adjustment, or decommissioning**
 
 ### 1.2 Models & Serializers
 

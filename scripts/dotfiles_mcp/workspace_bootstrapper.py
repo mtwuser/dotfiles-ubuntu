@@ -14,7 +14,9 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
+    COMMAND_CONSCIOUSNESS_TIERS,
     KEBAB_ID_RE,
+    LAYER_MAKEFILE_RECIPES,
     LAYER_ROLE_MAKEFILE_TARGETS,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
@@ -142,10 +144,7 @@ def _render_layer_makefile(
     parent_val = (
         str(effective_parent.resolve()) if effective_parent.resolve() != repo_dir.resolve() else ""
     )
-    cli, dev_repo = (
-        "$(DOTFILES_DIR)/scripts/layer-config.sh",
-        "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))",
-    )
+    dev_repo = "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))"
     contrib_cfg = (
         f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
         f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
@@ -153,33 +152,9 @@ def _render_layer_makefile(
         else "TARGET_REPO ?= $(PARENT_DIR)\n"
     )
     active = LAYER_ROLE_MAKEFILE_TARGETS.get(layer_role, LAYER_ROLE_MAKEFILE_TARGETS["department"])
-    run, pf = f"\t@{cli}", "$(CURDIR) $(PARENT_FLAG)"
-    all_recipes: dict[str, str] = {
-        "status": f"{run} status {pf}",
-        "task": f'{run} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)',
-        "complete": f'{run} complete-task {pf} --task "$(TASK)"',
-        "consult": f'{run} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)"',
-        "horizon": f"{run} inspect-horizon {pf}",
-        "sync": f"{run} sync-layer {pf}",
-        "upstream-diff": f"{run} compare-upstream {pf}",
-        "diff": f"{run} diff-project $(CURDIR)",
-        "authority": f"{run} check-authority $(CURDIR) --op release",
-        "roster": (
-            f"{run} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
-            "$(if $(ROLE),--role $(ROLE),)"
-        ),
-        "env-gate": f"{run} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
-        "decision": (
-            f'{run} record-decision $(CURDIR) --item "$(ITEM)" '
-            '--decision $(DEC) --reason "$(REASON)"'
-        ),
-        "promote": f"{run} promote-from-project $(CURDIR) --source $(SOURCE) $(PR_FLAGS)",
-        "delegate": f'{run} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)"',
-        "mcp-test": f"{run} list-templates $(CURDIR)",
-    }
-    sel = [t for t in active if t in all_recipes]
+    sel = [t for t in active if t in LAYER_MAKEFILE_RECIPES]
     phony, help_lines = " ".join(["help", *sel]), "\n".join(f'\t@echo "  make {t}"' for t in sel)
-    recipes = "\n".join(f"{t}:\n{all_recipes[t]}" for t in sel)
+    recipes = "\n".join(f"{t}:\n{LAYER_MAKEFILE_RECIPES[t]}" for t in sel)
     return (
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
@@ -408,7 +383,12 @@ def inspect_workspace_status(
     tpls = [str(x) for x in m.get("default_stack_templates", [])]
     rules = [p.name for p in sorted((ws / ".agents/rules").glob("*.md"))]
     has_tech = bool({"technical-base.md", "coding.md"} & set(rules) or "technical-base" in tpls)
-    has_biz = bool("business-base.md" in rules or "business-base" in tpls or role == "corporate")
+    has_biz = bool(
+        "business-base.md" in rules
+        or "business-base" in tpls
+        or role in ("corporate", "domain-policy")
+        or (ws / "corporate").is_dir()
+    )
     mode = "hybrid" if (has_tech and has_biz) else ("business" if has_biz else "technical")
     s_file = ws / ".agents/SESSION.md"
     s_txt = s_file.read_text(encoding="utf-8") if s_file.is_file() else ""
@@ -431,9 +411,20 @@ def inspect_workspace_status(
     lim, last_cid = STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
     mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
-    is_oss_dev = role == "workstation" and not (ws / ".workstation-state.json").is_file()
+    is_ro_app = role == "workstation" and (ws / ".workstation-state.json").is_file()
+    op_state = (
+        "oss-readonly-appliance"
+        if is_ro_app
+        else (
+            "oss-dev"
+            if role == "workstation"
+            else ("corporate-root" if role == "corporate" else role)
+        )
+    )
+    cmd_tiers = {k: [t for t in v if t in mk_t] for k, v in COMMAND_CONSCIOUSNESS_TIERS.items()}
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
-    out.update(precedence=prec, workspace_mode=mode, is_oss_dev_workspace=is_oss_dev)
+    out.update(operating_state=op_state, precedence=prec, workspace_mode=mode)
+    out.update(is_oss_dev_workspace=op_state == "oss-dev", command_tiers=cmd_tiers)
     out.update(active_templates=tpls, active_rules=rules, available_makefile_targets=mk_t)
     out.update(git_governance=inspect_git_governance_state(ws))
     out["has_project_start_skill"] = (ws / ".agents/skills/start/SKILL.md").is_file()

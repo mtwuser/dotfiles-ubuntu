@@ -22,6 +22,18 @@ VALID_LAYER_ROLES = (
     "environment-cluster",
     "workstation",
 )
+VALID_OPERATING_STATES: tuple[str, ...] = (
+    "oss-readonly-appliance",
+    "oss-dev",
+    "corporate-root",
+    "domain-policy",
+    "department",
+    "squad",
+    "service-node",
+    "environment-cluster",
+    "ephemeral-bot",
+    "project",
+)
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
     "main",
@@ -303,6 +315,46 @@ LAYER_ROLE_MAKEFILE_TARGETS: dict[str, tuple[str, ...]] = {
     "project": tuple(
         t for t in _FULL_LAYER_TARGETS if t not in ("delegate", "horizon", "mcp-test")
     ),
+}
+COMMAND_CONSCIOUSNESS_TIERS: dict[str, tuple[str, ...]] = {
+    "auto_reflexive": (
+        "status", "diff", "horizon", "upstream-diff", "consult", "authority",
+        "mcp-test", "verify", "audit", "test", "test-unit", "test-imp",
+        "test-e2e", "lint", "format",
+    ),
+    "guided_tactical": (
+        "task", "sync", "setup-dev", "workstation-sync", "docker-build",
+    ),
+    "conscious_human_gated": (
+        "delegate", "complete", "promote", "env-gate", "decision", "roster",
+    ),
+}  # fmt: skip
+_CLI_RUN = "\t@$(DOTFILES_DIR)/scripts/layer-config.sh"
+_PF = "$(CURDIR) $(PARENT_FLAG)"
+LAYER_MAKEFILE_RECIPES: dict[str, str] = {
+    "status": f"{_CLI_RUN} status {_PF}",
+    "task": (
+        f'{_CLI_RUN} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)'
+    ),
+    "complete": f'{_CLI_RUN} complete-task {_PF} --task "$(TASK)"',
+    "consult": f'{_CLI_RUN} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)"',
+    "horizon": f"{_CLI_RUN} inspect-horizon {_PF}",
+    "sync": f"{_CLI_RUN} sync-layer {_PF}",
+    "upstream-diff": f"{_CLI_RUN} compare-upstream {_PF}",
+    "diff": f"{_CLI_RUN} diff-project $(CURDIR)",
+    "authority": f"{_CLI_RUN} check-authority $(CURDIR) --op release",
+    "roster": (
+        f"{_CLI_RUN} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
+        "$(if $(ROLE),--role $(ROLE),)"
+    ),
+    "env-gate": f"{_CLI_RUN} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
+    "decision": (
+        f'{_CLI_RUN} record-decision $(CURDIR) --item "$(ITEM)" '
+        '--decision $(DEC) --reason "$(REASON)"'
+    ),
+    "promote": f"{_CLI_RUN} promote-from-project $(CURDIR) --source $(SOURCE) $(PR_FLAGS)",
+    "delegate": f'{_CLI_RUN} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)"',
+    "mcp-test": f"{_CLI_RUN} list-templates $(CURDIR)",
 }
 GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
     {

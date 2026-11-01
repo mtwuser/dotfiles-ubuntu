@@ -68,7 +68,7 @@ After any architectural change that affects terminology, structure, or core mech
 2. **Bilingual Structural Parity**: For projects maintaining bilingual pairs (`*.md` and `*_es.md`), verify 1:1 parity in heading counts (`#`–`######`) and fenced code block counts (` ``` `) across every pair.
 3. **Language Purity**: Verify 0 non-English characters or untranslated labels in English `.md` and `.mmd` files.
 4. **Relative Link Integrity**: Verify that every relative markdown link (`[label](path/to/file.md)`) resolves to an existing file on disk.
-5. **Context-Dependent Temporal Staleness & `1:1:1` Drift Radar**: Flag artifacts exceeding their context staleness threshold (`> 14 days` for `.agents/proposals/**` / active `WORKTASK.md` items, `> 90 days` for code/tests/`docs/architecture/*.md` or when a source module was modified more recently than its `1:1:1` spec, and `> 180 days` for `corporate/**` / `templates/**` / `docs/reference/*.md`).
+5. **Context-Dependent Bifurcated Age & `1:1:1` Drift Radar**: Evaluate artifacts exceeding their context age threshold (`> 14 days` for `.agents/proposals/**` / active `WORKTASK.md` items, `> 90 days` for code/tests/`docs/architecture/*.md` or when a source module was modified more recently than its `1:1:1` spec, and `> 180 days` for `corporate/**` / `templates/**` / `docs/reference/*.md`): classify untouched artifacts that remain 100% aligned in active use as **Consolidated (candidates for `C1` automation, compaction, or `/enrich`)**, and those diverging from newer idioms or `1:1:1` specs as **Drifted (candidates for refactoring, adjustment, or decommissioning)**.
 
 ---
 

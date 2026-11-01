@@ -73,8 +73,15 @@ Always write for the **USER** (or downstream adopter), not internal scratch note
 
 ## Part 3 — Inter-Layer Operational & Business Governance (`Root 0 <-> Department <-> Squad <-> Project`)
 
-> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, `Department` (`department`), `Squad` (`squad`), or `Project` workspaces to orchestrate reciprocal task delegation (`make delegate`), ticket-linked branch execution (`make task`), inter-layer consultation (`make consult`), upward completion receipts (`make complete`), bottom-up roadmap/ledger proposals (`make promote`), isomorphic `dev -> tst -> pre -> pro` stage gates (`make env-gate`), 4-role roster management (`make roster`), and non-destructive proposal decisions (`make decision`).
+> **When to use**: Use this procedure in `corporate-root` (`corporate`), `domain-policy`, `department`, `squad`, or `project` workspaces to orchestrate reciprocal task delegation (`make delegate`), ticket-linked branch execution (`make task`), inter-layer consultation (`make consult`), upward completion receipts (`make complete`), bottom-up roadmap/ledger proposals (`make promote`), isomorphic `dev -> tst -> pre -> pro` stage gates (`make env-gate`), 4-role roster management (`make roster`), and non-destructive proposal decisions (`make decision`).
 > *(For promoting Antigravity agent rules `.agents/rules/*.md`, skills `.agents/skills/*/SKILL.md`, or reusable `templates/**`, use **`/enrich`** instead.)*
+
+### 0. Command Cadence & Human-Consciousness Tiers (`command_tiers` in `make status`)
+
+Match execution autonomy to the operation's cadence, consolidation level, and blast radius:
+- **`C1: auto_reflexive` (High-Frequency / Consolidated & Automated — `0` cross-layer mutation)**: `make status`, `make diff`, `make horizon`, `make upstream-diff`, `make consult`, `make authority`, `make mcp-test`, `make lint`, `make format`, `make test-unit`, `make test-imp`, `make test-e2e`, `make verify`, `/sopen`, `/review`. Safe for the agent to run autonomously (`// delegate: flash`).
+- **`C2: guided_tactical` (Per-Task / Intra-Layer Transitions — local workspace state)**: `make task`, `make sync`, `compare-upstream --apply-safe`, `make setup-dev`, `make workstation-sync`, `/priority`, `/continue`, `/sclose`, `/full-audit`. Agent prepares local trackers/state and presents the branch/commit block or blueprint for user execution.
+- **`C3: conscious_human_gated` (Low-Frequency / High-Consciousness Inter-Layer & Authority Gates)**: `make delegate`, `make complete`, `make promote`, `make env-gate`, `make decision`, `make roster`, `/enrich` (§4), `/release`. Never auto-chain silently; always surface the **1-Hop Impact Summary** (`origin -> target`, ticket/proposal ID, authority check) and require explicit human intent.
 
 ### 1. Top-Down 1-Hop Directive & Artifact Delivery (`make delegate` / `delegate-to-child`)
 

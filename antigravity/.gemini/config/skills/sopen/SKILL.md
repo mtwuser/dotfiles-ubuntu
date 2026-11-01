@@ -19,7 +19,8 @@ description: restore session state and initialize workspace — first command in
    ```
    *(If `Makefile` defines `status:`, `make status` runs `layer-config.sh status` with `PARENT_DIR` automatically.)*
 2. **Parse the returned JSON digest** — it provides in a single call:
-   - `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `layer_id`, `layer_role`, `precedence`, `active_templates`, `active_rules`
+   - `operating_state` (`"oss-readonly-appliance"` | `"oss-dev"` | `"corporate-root"` | `"domain-policy"` | `"department"` | `"squad"` | `"project"`), `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `layer_id`, `layer_role`, `precedence`, `active_templates`, `active_rules`, and `command_tiers` (`auto_reflexive`, `guided_tactical`, `conscious_human_gated`)
+   - **Read-Only Appliance Gate**: If `operating_state == "oss-readonly-appliance"` (`~/dotfiles-ubuntu` with `.workstation-state.json`), warn immediately that `$HOME/dotfiles-ubuntu` is a read-only runtime appliance and redirect any authoring to `DOTFILES_DEV_REPO_DIR` (`make setup-dev`).
    - `has_project_start_skill` (`bool` — if `false`, do NOT search for `.agents/skills/start/SKILL.md`)
    - `session_state` (`exists`, `last_conversation_id`, and `excerpt` of `.agents/SESSION.md`)
    - `priority_state` (`active_tracker` and `excerpt` of `WORKTASK.md` / `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` / `README.md`)

@@ -270,14 +270,27 @@ class TestWorkspaceBootstrapper:
             encoding="utf-8",
         )
         ws_status = inspect_workspace_status(repo_dir, repo_dir)
+        (repo_dir / ".workstation-state.json").write_text('{"mode": "readonly"}', encoding="utf-8")
+        ro_status = inspect_workspace_status(repo_dir, repo_dir)
+        (repo_dir / ".workstation-state.json").unlink()
+        corp_status = inspect_workspace_status(repo_dir, bare_layer)
         dept_status = inspect_workspace_status(repo_dir, target_dir)
         proj_status = inspect_workspace_status(repo_dir, tmp_path / "empty-proj")
 
         # Assert
+        assert ws_status["operating_state"] == "oss-dev"
         assert ws_status["is_oss_dev_workspace"] is True
         assert "setup-dev" in ws_status["available_makefile_targets"]
+        assert "verify" in ws_status["command_tiers"]["auto_reflexive"]
+        assert "setup-dev" in ws_status["command_tiers"]["guided_tactical"]
+        assert ro_status["operating_state"] == "oss-readonly-appliance"
+        assert ro_status["is_oss_dev_workspace"] is False
+        assert corp_status["operating_state"] == "corporate-root"
+        assert "delegate" in corp_status["command_tiers"]["conscious_human_gated"]
+        assert dept_status["operating_state"] == "domain-policy"
         assert dept_status["is_oss_dev_workspace"] is False
         assert "setup-dev" not in dept_status["available_makefile_targets"]
+        assert proj_status["operating_state"] == "project"
         assert dry_res["dry_run"] is True
         assert squad_pre_git["dry_run"] is True
         assert dry_res["scaffolded_template"] is None

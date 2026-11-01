@@ -210,22 +210,25 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
    - **`/sopen`**: Runs `make status` (`./scripts/layer-config.sh status`) to obtain the workspace's session state, git state, 1-hop horizon, and rule drift in a single `< 0.2s` JSON call.
    - **`/governance` (1-Hop Downward Delegation)**: Delegates an executive or departmental directive 1-hop downward (`Root 0 -> Department` or `Department -> Squad`) via `make delegate CHILD=<layer-id> TASK="<directive>" [PRIORITY=P0|P1|P2]`.
    - **`/enrich`**: Classifies local `.agents/` rules against the 1-hop parent layer, runs `make promote` (upward) or `make sync` (downward) after user approval, and prepares commit/PR blocks.
-2. **In Terminal (Role-Specialized `Makefile` in Every Layer Workspace)**:
-   - `make status` — Returns the consolidated `< 0.2s` JSON digest (`workspace_mode`, `session_state`, `priority_state`, `git_state`, `git_governance`, `horizon`, `agent_diff`).
-   - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task` with `Ticket ID` and `Origin Layer`), and outputs `git checkout -b feature/<TICKET-ID>-<slug>`.
-   - `make complete TASK=<id> [DELIVERABLE=<path>]` — Marks a task `[x]` in `WORKTASK.md` and updates the parent layer's `WORKTASK.md` (`## Outbound Delegations` $\rightarrow$ `stage: completed (pro)`) or stages a non-destructive completion receipt + PR plan (`feature/<TICKET-ID>-completed`).
-   - `make consult LAYER=<id> QUERY="<question>"` — Spawns a one-shot `strictly-read-only` ephemeral consultation against `<id>`, returns a 4-Channel Executive Digest + `rcap1` capsules, and auto-reaps with zero residue.
-   - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
-   - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
-   - `make upstream-diff` — Compares rule sections (`#`/`##`) between the upstream parent/Open Source and local templates (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).
-   - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
-   - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
-   - `make roster [ADD=<email>] [REMOVE=<email>] [ROLE=owner|maintainer|validator|member]` — Inspects or updates the layer's `owners` / `maintainers` / `validators` / `members` roster in `system/mcp-layer.json` and synchronizes `.github/CODEOWNERS`.
-   - `make decision ITEM=<ref> DEC=<approve|reject|defer|blocked> [REASON=<text>]` — Records a human governance review decision in `WORKTASK.md` and `logs/governance_audit.jsonl`.
-   - `make env-gate ENV=<tst|pre|pro>` — Evaluates isomorphic Business & Technical `dev -> tst -> pre -> pro` promotion invariants (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` + `validator_emails` gate for `pre`, `CHANGELOG.md` + `layer_authority` for `pro`).
-   - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr` (staging non-destructively at `.agents/proposals/to-<layer>/` when target files already exist or caller lacks direct release authority, unless `--force` is passed).
-   - `make delegate CHILD=<layer-id> TASK="<directive>" [TICKET=<id>] [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface, records `- [/] **[<TICKET-ID> -> <child> (stage: delegated)]**` under `## Outbound Delegations` in the parent layer's `WORKTASK.md`, and stages existing files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed.
-   - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
+2. **In Terminal (Role-Specialized `Makefile` & 3 Command Consciousness Tiers in Every Layer Workspace)**:
+   - **`make status`** — Returns the consolidated `< 0.2s` JSON digest (`operating_state`: `"oss-readonly-appliance"` | `"oss-dev"` | `"corporate-root"` | `"domain-policy"` | `"department"` | `"squad"` | `"project"`, `workspace_mode`: `"business"` | `"technical"` | `"hybrid"`, `command_tiers`, `session_state`, `priority_state`, `git_state`, `git_governance`, `horizon`, `agent_diff`).
+   - **Tier `C1: auto_reflexive` (High-Frequency / Consolidated & Auto-Runnable — `0` cross-layer mutation)**:
+     - `make consult LAYER=<id> QUERY="<question>"` — Spawns a one-shot `strictly-read-only` ephemeral consultation against `<id>`, returns a 4-Channel Executive Digest + `rcap1` capsules, and auto-reaps with zero residue.
+     - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
+     - `make upstream-diff` — Compares rule sections (`#`/`##`) between the upstream parent/Open Source and local templates (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).
+     - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
+     - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
+     - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
+   - **Tier `C2: guided_tactical` (Per-Task / Intra-Layer Transitions — local workspace state)**:
+     - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task` with `Ticket ID` and `Origin Layer`), and outputs `git checkout -b feature/<TICKET-ID>-<slug>`.
+     - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
+   - **Tier `C3: conscious_human_gated` (Low-Frequency / High-Consciousness Inter-Layer & Authority Gates)**:
+     - `make complete TASK=<id> [DELIVERABLE=<path>]` — Marks a task `[x]` in `WORKTASK.md` and updates the parent layer's `WORKTASK.md` (`## Outbound Delegations` $\rightarrow$ `stage: completed (pro)`) or stages a non-destructive completion receipt + PR plan (`feature/<TICKET-ID>-completed`).
+     - `make roster [ADD=<email>] [REMOVE=<email>] [ROLE=owner|maintainer|validator|member]` — Inspects or updates the layer's `owners` / `maintainers` / `validators` / `members` roster in `system/mcp-layer.json` and synchronizes `.github/CODEOWNERS`.
+     - `make decision ITEM=<ref> DEC=<approve|reject|defer|blocked> [REASON=<text>]` — Records a human governance review decision in `WORKTASK.md` and `logs/governance_audit.jsonl`.
+     - `make env-gate ENV=<tst|pre|pro>` — Evaluates isomorphic Business & Technical `dev -> tst -> pre -> pro` promotion invariants (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` + `validator_emails` gate for `pre`, `CHANGELOG.md` + `layer_authority` for `pro`).
+     - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr` (staging non-destructively at `.agents/proposals/to-<layer>/` when target files already exist or caller lacks direct release authority, unless `--force` is passed).
+     - `make delegate CHILD=<layer-id> TASK="<directive>" [TICKET=<id>] [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface, records `- [/] **[<TICKET-ID> -> <child> (stage: delegated)]**` under `## Outbound Delegations` in the parent layer's `WORKTASK.md`, and stages existing files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed.
 
 ---
 
