@@ -27,7 +27,7 @@ Beyond individual workstation setup, `dotfiles-ubuntu` is architected so any com
 ```mermaid
 flowchart TD
     subgraph OSS["Tier 0 — Public Open-Source Upstream (layer_role: workstation)"]
-        PUB["mtwuser/dotfiles-ubuntu\n• Base Ubuntu 26.04 Engine + Antigravity 2.0 Hooks & 12 Skills\n• 3-Tier Profiles (human-core, technical-base, business-base)\n• Zero-Dependency Contextual MCP Server & Layer/Subtree CLI"]
+        PUB["mtwuser/dotfiles-ubuntu\n• Base Ubuntu 26.04 Engine + Antigravity 2.0 Hooks & 13 Skills\n• 3-Tier Profiles (human-core, technical-base, business-base)\n• Zero-Dependency Contextual MCP Server & Layer/Subtree CLI"]
     end
 
     subgraph Org["Tier 1 — Corporate Reference Root 0 (layer_role: corporate, precedence: 10)"]

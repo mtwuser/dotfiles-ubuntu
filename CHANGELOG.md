@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.3.0] - 2026-11-01
 
 ### Added
 - **2-Pass, 4-Perspective + 5-Persona Exhaustive Repository Audit Skill (`/full-audit`) & 4-Scope Governance Separation (`antigravity/.gemini/config/skills/full-audit/SKILL.md`, `templates/human-core/`, `templates/technical-base/`, `templates/fastapi-hexagonal/`, `tests/imp/test_repo_parity_gates.py`)**:
