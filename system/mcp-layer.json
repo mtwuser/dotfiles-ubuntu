@@ -55,8 +55,8 @@
         "Domain never imports from Infrastructure or Application",
         "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes"
       ],
-      "rule_files": ["templates/fastapi-hexagonal/rules/coding.md"],
-      "canonical_templates": ["templates/fastapi-hexagonal/rules/coding.md"],
+      "rule_files": ["templates/tech-stack/fastapi-hexagonal/rules/coding.md"],
+      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/rules/coding.md"],
       "ephemeral_fork_policy": {
         "bot_role": "dept-hexagonal-architect",
         "trigger": "on_surface_match",
@@ -81,8 +81,8 @@
         "Every test method must contain explicit # Arrange, # Act, and # Assert comments",
         "Maintain 100% statement and branch coverage with < 1s per unit test"
       ],
-      "rule_files": ["templates/fastapi-hexagonal/rules/testing.md"],
-      "canonical_templates": ["templates/fastapi-hexagonal/skills/testing/SKILL.md"],
+      "rule_files": ["templates/tech-stack/fastapi-hexagonal/rules/testing.md"],
+      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/skills/testing/SKILL.md"],
       "ephemeral_fork_policy": {
         "bot_role": "dept-qa-test-auditor",
         "trigger": "on_surface_match",

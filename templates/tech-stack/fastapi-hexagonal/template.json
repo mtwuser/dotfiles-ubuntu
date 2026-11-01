@@ -1,7 +1,9 @@
 {
   "schema_version": "1.0",
   "template_id": "fastapi-hexagonal",
-  "kind": "stack-starter",
+  "kind": "tech-stack",
+  "stack_group": "tech-stack",
+  "extends": "technical-base",
   "target_role": "squad",
   "description": "FastAPI + Hexagonal DDD + HTMX starter rules, skills, and governance templates",
   "recommended_surface_bindings": [
@@ -20,13 +22,13 @@
         "1:1:1 Source <-> Unit Test (Test<Module>) <-> Specification traceability with 100% branch coverage"
       ],
       "rule_files": [
-        "templates/fastapi-hexagonal/rules/coding.md",
-        "templates/fastapi-hexagonal/rules/testing.md",
-        "templates/fastapi-hexagonal/rules/environment.md"
+        "templates/tech-stack/fastapi-hexagonal/rules/coding.md",
+        "templates/tech-stack/fastapi-hexagonal/rules/testing.md",
+        "templates/tech-stack/fastapi-hexagonal/rules/environment.md"
       ],
       "canonical_templates": [
-        "templates/fastapi-hexagonal/rules/coding.md",
-        "templates/fastapi-hexagonal/rules/testing.md"
+        "templates/tech-stack/fastapi-hexagonal/rules/coding.md",
+        "templates/tech-stack/fastapi-hexagonal/rules/testing.md"
       ]
     }
   ]

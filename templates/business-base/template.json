@@ -1,7 +1,8 @@
 {
   "schema_version": "1.0",
   "template_id": "business-base",
-  "kind": "domain-policy-pack",
+  "kind": "core-base",
+  "stack_group": "business",
   "target_role": "corporate",
   "description": "Enterprise Corporate Governance, Single Source of Truth Ledger Integrity, Lex Superior Compliance & Cross-Surface Cascade Baseline",
   "recommended_surface_bindings": [

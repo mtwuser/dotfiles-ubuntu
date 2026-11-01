@@ -13,28 +13,25 @@ from typing import Any
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
     ROLE_DEFAULT_PRECEDENCE,
+    TEMPLATE_STACK_GROUP_DIRS,
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
 )
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
+    _iter_layer_template_dirs,
     _merge_unique_strings,
     _parse_skill_frontmatter,
     _render_lineage_markdown,
+    _resolve_template_dest_dir,
+    _resolve_template_dir,
 )
 from dotfiles_mcp.promotion_engine import collect_layer_effective_bindings
 
 
 def discover_layer_template_names(layer_dir: Path) -> list[str]:
     """Return sorted template directory names present under layer_dir/templates."""
-    templates_root = layer_dir / "templates"
-    if not templates_root.is_dir():
-        return []
-    return [
-        d.name
-        for d in sorted(templates_root.iterdir())
-        if d.is_dir() and not d.name.startswith(".")
-    ]
+    return [name for name, _path in _iter_layer_template_dirs(layer_dir)]
 
 
 def _inspect_single_template_dir(
@@ -65,10 +62,12 @@ def _inspect_single_template_dir(
         if assets_dir.is_dir()
         else []
     )
+    parent_grp = tpl_dir.parent.name if tpl_dir.parent.name in TEMPLATE_STACK_GROUP_DIRS else "core"
     return dict(
         template_name=tpl_dir.name,
         source_layer=source_layer,
         kind=str(meta.get("kind", "stack-starter")),
+        stack_group=str(meta.get("stack_group", parent_grp)),
         target_role=str(meta.get("target_role", "squad")),
         description=str(meta.get("description", f"Template pack {tpl_dir.name}")),
         rules=rules,
@@ -92,12 +91,7 @@ def discover_templates_catalog(
             search_targets.append((str(entry.get("name", rel)), repo_dir / rel))
 
     for source_layer, ldir in search_targets:
-        templates_root = ldir / "templates"
-        if not templates_root.is_dir():
-            continue
-        for tpl_dir in sorted(templates_root.iterdir()):
-            if not tpl_dir.is_dir() or tpl_dir.name.startswith("."):
-                continue
+        for _tpl_name, tpl_dir in _iter_layer_template_dirs(ldir):
             catalog.append(_inspect_single_template_dir(tpl_dir, ldir, source_layer))
     return catalog
 
@@ -177,7 +171,7 @@ def configure_fork_manifest(
             if not isinstance(b, dict):
                 continue
             refs = [*b.get("rule_files", []), *b.get("canonical_templates", [])]
-            if not any("templates/fastapi-hexagonal/" in str(r) for r in refs):
+            if not any("fastapi-hexagonal/" in str(r) for r in refs):
                 kept_bindings.append(b)
         manifest["surface_bindings"] = kept_bindings
 
@@ -210,9 +204,11 @@ def scaffold_template_pack(
     if not effective_rule.endswith(".md") or "/" in effective_rule or ".." in effective_rule:
         raise ValueError(f"Invalid rule_filename {effective_rule!r}: must be a simple .md filename")
 
-    tpl_dir = repo_dir / "templates" / template_name
-    if tpl_dir.exists():
+    if _resolve_template_dir(repo_dir, template_name) is not None:
         raise ValueError(f"Template directory already exists: templates/{template_name}")
+    tpl_dir = _resolve_template_dest_dir(repo_dir, template_name, kind=kind)
+    rel_tpl = str(tpl_dir.relative_to(repo_dir)).replace("\\", "/")
+    is_tech = kind in ("stack-starter", "tech-stack")
 
     desc = description or f"{template_name} ({kind}) governance and template pack"
     mode = "authoritative" if kind == "domain-policy-pack" else "transversal"
@@ -227,12 +223,8 @@ def scaffold_template_pack(
         "traits": traits or ["*"],
         "default_resolution": default_res,
         "invariants": [f"Enforce {template_name} ({kind}) rules and canonical assets"],
-        "rule_files": [f"templates/{template_name}/rules/{effective_rule}"],
-        "canonical_templates": (
-            [f"templates/{template_name}/assets/canonical_snippet.md"]
-            if kind != "stack-starter"
-            else []
-        ),
+        "rule_files": [f"{rel_tpl}/rules/{effective_rule}"],
+        "canonical_templates": ([f"{rel_tpl}/assets/canonical_snippet.md"] if not is_tech else []),
     }
     tpl_manifest = {
         "schema_version": "1.0",
@@ -243,39 +235,39 @@ def scaffold_template_pack(
         "recommended_surface_bindings": [binding_entry],
     }
     files_to_write: dict[str, str] = {
-        f"templates/{template_name}/template.json": json.dumps(tpl_manifest, indent=2) + "\n",
-        f"templates/{template_name}/rules/{effective_rule}": (
+        f"{rel_tpl}/template.json": json.dumps(tpl_manifest, indent=2) + "\n",
+        f"{rel_tpl}/rules/{effective_rule}": (
             f"---\ntrigger: always_on\n"
             f'description: "Governance rules and invariants for {template_name} ({kind})."\n'
             f"---\n\n# {template_name} Governance Rules ({kind})\n\n## Scope & Surface Target\n"
-            f"- **Template Pack**: `templates/{template_name}/` (`{kind}`).\n\n"
+            f"- **Template Pack**: `{rel_tpl}/` (`{kind}`).\n\n"
             f"## Normative Invariants\n"
             f'> *"Enforce {template_name} invariants consistently across matching surfaces"*\n\n'
-            f"- Follow the canonical patterns defined in `templates/{template_name}/`.\n\n"
+            f"- Follow the canonical patterns defined in `{rel_tpl}/`.\n\n"
             f"## Verification & Sign-Off Gates\n"
             f"- [ ] Verify zero drift via `./scripts/layer-config.sh diff-project`.\n"
         ),
-        f"templates/{template_name}/skills/{template_name}-guide/SKILL.md": (
+        f"{rel_tpl}/skills/{template_name}-guide/SKILL.md": (
             f"---\nname: {template_name}-guide\n"
             f'description: "Procedural guide for applying {template_name} ({kind}) rules."\n'
             f"---\n\n# {template_name} Guide\n\n"
-            f"1. Review `templates/{template_name}/rules/{effective_rule}`.\n"
+            f"1. Review `{rel_tpl}/rules/{effective_rule}`.\n"
             f"2. Verify invariants via `./scripts/layer-config.sh diff-project` "
             f"and promote via `promote-from-project --create-pr`.\n"
         ),
     }
-    if kind in ("stack-starter", "project-overlay"):
-        files_to_write[f"templates/{template_name}/governance/WORKTASK.md"] = (
+    if is_tech or kind == "project-overlay":
+        files_to_write[f"{rel_tpl}/governance/WORKTASK.md"] = (
             f"# Active Work Tasks — {template_name}\n\n- [ ] Initial setup\n"
         )
-    if kind == "stack-starter":
-        files_to_write[f"templates/{template_name}/governance/Makefile"] = (
+    if is_tech:
+        files_to_write[f"{rel_tpl}/governance/Makefile"] = (
             ".PHONY: install format lint test test-cov verify\n"
             "install:\n\t@echo 'Configure stack dependencies'\n"
             "verify:\n\t@echo 'Run stack verification gates'\n"
         )
-    if kind != "stack-starter":
-        files_to_write[f"templates/{template_name}/assets/canonical_snippet.md"] = (
+    if not is_tech:
+        files_to_write[f"{rel_tpl}/assets/canonical_snippet.md"] = (
             f"<!-- Canonical asset for {template_name} ({kind}) -->\n"
         )
 
@@ -352,15 +344,15 @@ def apply_fork_to_project(
             if ":" in raw_ref:
                 layer_part, tpl_part = raw_ref.split(":", 1)
                 for name, ldir, _m in candidate_layers:
-                    if name == layer_part and (ldir / "templates" / tpl_part).is_dir():
-                        found_dir = ldir / "templates" / tpl_part
-                        found_name = tpl_part
+                    cand_d = _resolve_template_dir(ldir, tpl_part) if name == layer_part else None
+                    if cand_d is not None:
+                        found_dir, found_name = cand_d, cand_d.name
                         break
             else:
                 for _name, ldir, _m in sorted(candidate_layers, key=lambda item: item[0] != "root"):
-                    if (ldir / "templates" / raw_ref).is_dir():
-                        found_dir = ldir / "templates" / raw_ref
-                        found_name = raw_ref
+                    cand_d = _resolve_template_dir(ldir, raw_ref)
+                    if cand_d is not None:
+                        found_dir, found_name = cand_d, cand_d.name
                         break
             if found_dir is None:
                 raise ValueError(f"Template {raw_ref!r} not found in selected layers")
@@ -368,13 +360,25 @@ def apply_fork_to_project(
     else:
         for tpl_item in root_manifest.get("default_stack_templates", []):
             tpl_str = str(tpl_item)
-            if tpl_str != "human-core" and (repo_dir / "templates" / tpl_str).is_dir():
-                resolved_templates.append((tpl_str, repo_dir / "templates" / tpl_str))
+            cand_d = _resolve_template_dir(repo_dir, tpl_str) if tpl_str != "human-core" else None
+            if cand_d is not None:
+                resolved_templates.append((cand_d.name, cand_d))
 
     resolved_tpl_name = ",".join(t[0] for t in resolved_templates)
+    mat_templates = list(resolved_templates)
+    seen_names = {t[0] for t in mat_templates}
+    for grp, base_id in (("tech-stack", "technical-base"), ("business-stack", "business-base")):
+        if (
+            base_id not in seen_names
+            and any(d.parent.name == grp for _n, d in resolved_templates)
+            and (base_dir := _resolve_template_dir(repo_dir, base_id)) is not None
+        ):
+            mat_templates.insert(0, (base_id, base_dir))
+            seen_names.add(base_id)
+
     copied_files: list[str] = []
     agents_dir = target_project_dir / ".agents"
-    for tpl_name, tpl_dir in resolved_templates:
+    for tpl_name, tpl_dir in mat_templates:
         for sub_name, dest_sub in (
             ("rules", agents_dir / "rules"),
             ("skills", agents_dir / "skills"),
@@ -453,6 +457,6 @@ def apply_fork_to_project(
         target_project_dir=str(target_project_dir),
         applied_template=resolved_tpl_name or None,
         participating_layers=[name for name, _d, _m in candidate_layers],
-        files_materialized=copied_files,
+        files_materialized=_merge_unique_strings(copied_files),
         dry_run=dry_run,
     )

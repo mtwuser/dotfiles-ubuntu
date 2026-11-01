@@ -16,6 +16,7 @@ from dotfiles_mcp.constants import (
     ANSI_ESCAPE_RE,
     VALID_ENVIRONMENTS,
 )
+from dotfiles_mcp.fork_configurator import discover_layer_template_names
 from dotfiles_mcp.manifest_helpers import (
     _is_running_in_container,
     _merge_unique_strings,
@@ -46,12 +47,7 @@ class FederationToolsMixin(MCPNodeBase):
             _parse_skill_frontmatter(sf, target_dir)["name"]
             for sf in sorted(skills_root.glob("*/SKILL.md"))
         ]
-        templates_root = target_dir / "templates"
-        template_names = (
-            [d.name for d in sorted(templates_root.iterdir()) if d.is_dir()]
-            if templates_root.is_dir()
-            else []
-        )
+        template_names = discover_layer_template_names(target_dir)
         docs_root = target_dir / "docs"
         docs_files = (
             [str(p.relative_to(target_dir)) for p in sorted(docs_root.rglob("*.md"))]

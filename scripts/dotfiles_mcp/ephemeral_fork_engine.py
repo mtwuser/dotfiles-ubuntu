@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp import constants as c
+from dotfiles_mcp.manifest_helpers import _resolve_template_dir
 
 
 def _is_writable_or_creatable(target: Path) -> bool:
@@ -214,25 +215,23 @@ def spawn_ephemeral_fork(
         )
 
     created_at = round(now_epoch if now_epoch is not None else time.time(), 3)
-    expires_at, seed = (
-        round(created_at + ttl_seconds, 3),
-        f"{role_clean}:{created_at}:{target_globs}:{mount_templates}:{mount_project_rules_from}",
-    )
+    expires_at = round(created_at + ttl_seconds, 3)
+    seed = f"{role_clean}:{created_at}:{target_globs}:{mount_templates}:{mount_project_rules_from}"
     fork_id = f"eph-{role_clean}-{hashlib.sha256(seed.encode('utf-8')).hexdigest()[:8]}"
-    session_secret = hashlib.sha256(f"rcap1-ephemeral:{fork_id}:{created_at}".encode()).hexdigest()[
-        :24
-    ]
+    s_raw = f"rcap1-ephemeral:{fork_id}:{created_at}".encode()
+    session_secret = hashlib.sha256(s_raw).hexdigest()[:24]
     default_tpls = list(base_manifest.get("default_stack_templates", []))
     effective_templates = list(mount_templates) if mount_templates is not None else default_tpls
+    tpl_dirs = [d for t in effective_templates if (d := _resolve_template_dir(repo_dir, t))]
     tpl_rules = [
-        f"templates/{t}/rules/{rf.name}"
-        for t in effective_templates
-        for rf in sorted((repo_dir / "templates" / t / "rules").glob("*.md"))
+        str(rf.relative_to(repo_dir)).replace("\\", "/")
+        for td in tpl_dirs
+        for rf in sorted((td / "rules").glob("*.md"))
     ]
     tpl_assets = [
-        f"templates/{t}/assets/{af.name}"
-        for t in effective_templates
-        for af in sorted((repo_dir / "templates" / t / "assets").glob("*.md"))
+        str(af.relative_to(repo_dir)).replace("\\", "/")
+        for td in tpl_dirs
+        for af in sorted((td / "assets").glob("*.md"))
     ]
     canonical_tpls, rule_files = (
         tpl_assets or tpl_rules,

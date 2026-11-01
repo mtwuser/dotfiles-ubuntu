@@ -24,8 +24,11 @@ from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES, KEBAB_ID_RE, MATERIALIZE
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _inspect_mounted_children_drifts,
+    _iter_layer_template_dirs,
     _parse_skill_frontmatter,
     _resolve_oss_contrib_repo_dir,
+    _resolve_template_dest_dir,
+    _resolve_template_dir,
 )
 
 
@@ -39,24 +42,21 @@ def collect_layer_effective_bindings(
     """Merge manifest surface_bindings with active template.json recommended_surface_bindings."""
     effective: list[dict[str, Any]] = []
     seen_ids: set[str] = set()
-    for raw_b in manifest.get("surface_bindings") or []:
-        if isinstance(raw_b, dict):
-            if raw_b.get("binding_id"):
-                seen_ids.add(str(raw_b["binding_id"]))
-            effective.append(raw_b)
+    candidates = list(manifest.get("surface_bindings") or [])
     for tpl_name in manifest.get("default_stack_templates", []):
-        meta_file = layer_dir / "templates" / str(tpl_name) / "template.json"
-        if not meta_file.is_file():
-            continue
-        loaded = json.loads(meta_file.read_text(encoding="utf-8"))
-        recs = loaded.get("recommended_surface_bindings", []) if isinstance(loaded, dict) else []
-        for rec_b in recs:
-            if isinstance(rec_b, dict):
-                bid = str(rec_b.get("binding_id", ""))
-                if not bid or bid not in seen_ids:
-                    if bid:
-                        seen_ids.add(bid)
-                    effective.append(rec_b)
+        tpl_dir = _resolve_template_dir(layer_dir, str(tpl_name))
+        meta_file = tpl_dir / "template.json" if tpl_dir is not None else None
+        if meta_file is not None and meta_file.is_file():
+            loaded = json.loads(meta_file.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                candidates.extend(loaded.get("recommended_surface_bindings", []))
+    for raw_b in candidates:
+        if isinstance(raw_b, dict):
+            bid = str(raw_b.get("binding_id", ""))
+            if not bid or bid not in seen_ids:
+                if bid:
+                    seen_ids.add(bid)
+                effective.append(raw_b)
     return effective
 
 
@@ -76,15 +76,15 @@ def _route_novel_item(
                 if tpls
                 else f"layers/{lname}/antigravity/.gemini/config/{suffix}"
             )
-            cmd = f"./scripts/layer-subtree.sh push {lname} feat/promote-{stem}"
-            return dict(
-                item=item_name,
-                kind=item_kind,
-                target_layer=lname,
-                target_role=rec["layer_role"],
-                target_destination=dest,
-                subtree_push_command=cmd,
-            )
+            push_cmd = f"./scripts/layer-subtree.sh push {lname} feat/promote-{stem}"
+            return {
+                "item": item_name,
+                "kind": item_kind,
+                "target_layer": lname,
+                "target_role": rec["layer_role"],
+                "target_destination": dest,
+                "subtree_push_command": push_cmd,
+            }
     root_rec, root_tpls = layer_records[0], list(layer_records[0]["templates"])
     if item_kind == "rules" and root_tpls:
         dest, scope = (
@@ -95,15 +95,15 @@ def _route_novel_item(
         dest, scope = f"antigravity/.gemini/config/skills/{stem}/SKILL.md", "global-skills-root"
     else:
         dest, scope = "antigravity/.gemini/config/AGENTS.md", "global-agents-root"
-    return dict(
-        item=item_name,
-        kind=item_kind,
-        target_layer="root",
-        target_role=root_rec["layer_role"],
-        target_scope=scope,
-        target_destination=dest,
-        root_agents_md_headroom_bytes=root_headroom_bytes,
-    )
+    return {
+        "item": item_name,
+        "kind": item_kind,
+        "target_layer": "root",
+        "target_role": root_rec["layer_role"],
+        "target_scope": scope,
+        "target_destination": dest,
+        "root_agents_md_headroom_bytes": root_headroom_bytes,
+    }
 
 
 def compare_project_patterns_multilayer(
@@ -123,14 +123,11 @@ def compare_project_patterns_multilayer(
         for sf in (ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md"):
             layer_a_skills.update((_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name))
         tpl_names: list[str] = []
-        for tdir in sorted((ldir / "templates").glob("*")):
-            if tdir.is_dir() and not tdir.name.startswith("."):
-                tpl_names.append(tdir.name)
-                layer_b_rules.update(rf.name for rf in (tdir / "rules").glob("*.md"))
-                for sf in (tdir / "skills").glob("*/SKILL.md"):
-                    layer_b_skills.update(
-                        (_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name)
-                    )
+        for tname, tdir in _iter_layer_template_dirs(ldir):
+            tpl_names.append(tname)
+            layer_b_rules.update(rf.name for rf in (tdir / "rules").glob("*.md"))
+            for sf in (tdir / "skills").glob("*/SKILL.md"):
+                layer_b_skills.update((_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name))
         raw_id = f"{lname}-{manifest.get('layer_id', '')}".lower()
         kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= 3}
         for b in collect_layer_effective_bindings(ldir, manifest):
@@ -177,7 +174,7 @@ def compare_project_patterns_multilayer(
 
 def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, Any]:
     """Compare SHA-256 digests between <project_dir>/.agents/ and fork layers/templates."""
-    layer_sources: dict[str, tuple[str, Path]] = {}
+    layer_sources: dict[str, list[tuple[str, Path]]] = {}
     agents_dir, proj_resolved = project_dir / ".agents", project_dir.resolve()
     search_layers: list[tuple[str, Path]] = [
         ("root", repo_dir),
@@ -188,25 +185,25 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
         ),
     ]
     for lname, ldir in search_layers:
-        for tdir in sorted((ldir / "templates").glob("*")):
-            if not tdir.is_dir() or tdir.name.startswith("."):
-                continue
-            tag = f"{lname}:{tdir.name}"
+        for tname, tdir in _iter_layer_template_dirs(ldir):
+            tag = f"{lname}:{tname}"
             for rf in sorted((tdir / "rules").glob("*.md")):
-                layer_sources.setdefault(f"rules/{rf.name}", (tag, rf))
+                layer_sources.setdefault(f"rules/{rf.name}", []).append((tag, rf))
             for sf in sorted((tdir / "skills").glob("*/SKILL.md")):
-                layer_sources.setdefault(f"skills/{sf.parent.name}/SKILL.md", (tag, sf))
+                layer_sources.setdefault(f"skills/{sf.parent.name}/SKILL.md", []).append((tag, sf))
             for af in sorted((tdir / "assets").rglob("*")):
                 if af.is_file():
                     rel_a = str(af.relative_to(tdir / "assets")).replace("\\", "/")
-                    layer_sources.setdefault(f"assets/{tdir.name}/{rel_a}", (tag, af))
+                    layer_sources.setdefault(f"assets/{tname}/{rel_a}", []).append((tag, af))
         for sf in sorted((ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md")):
             k, v = f"skills/{sf.parent.name}/SKILL.md", (f"layer:{lname}", sf)
-            layer_sources[k] = v if proj_resolved == repo_dir.resolve() else layer_sources.get(k, v)
+            layer_sources[k] = (
+                [v, *layer_sources.get(k, [])]
+                if proj_resolved == repo_dir.resolve()
+                else [*layer_sources.get(k, []), v]
+            )
 
-    in_sync: list[dict[str, str]] = []
-    modified_in_project: list[dict[str, str]] = []
-    novel_in_project: list[str] = []
+    in_sync, modified_in_project, novel_in_project = [], [], []
     proj_files: list[tuple[str, Path]] = [
         *((f"rules/{rf.name}", rf) for rf in sorted((agents_dir / "rules").glob("*.md"))),
         *(
@@ -222,32 +219,35 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     for rel_key, pfile in proj_files:
         if not pfile.resolve().is_relative_to(proj_resolved):
             raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
-        matched_origin: tuple[str, Path] | None = layer_sources.get(rel_key)
+        candidates: list[tuple[str, Path]] = list(layer_sources.get(rel_key, []))
         m = MATERIALIZED_RULE_RE.match(pfile.name)
         if m:
             sub_name, rel_ag = m.group(2), "antigravity/.gemini/config/AGENTS.md"
             sub_ag = (repo_dir if sub_name == "root" else repo_dir / "layers" / sub_name) / rel_ag
             if sub_ag.is_file():
-                matched_origin = (f"layer:{sub_name}", sub_ag)
-        if matched_origin is not None:
-            origin, src_path = matched_origin
+                candidates = [(f"layer:{sub_name}", sub_ag)]
+        if candidates:
             p_bytes = pfile.read_bytes()
-            src_norm = _ensure_rule_file_frontmatter(src_path, sync_in_place=False).encode("utf-8")
-            if p_bytes in (src_path.read_bytes(), src_norm):
-                in_sync.append({"file": rel_key, "source": origin})
+            sync_origin = None
+            for orig, sp in candidates:
+                fm_bytes = _ensure_rule_file_frontmatter(sp, sync_in_place=False).encode("utf-8")
+                if p_bytes in (sp.read_bytes(), fm_bytes):
+                    sync_origin = orig
+                    break
+            if sync_origin is not None:
+                in_sync.append({"file": rel_key, "source": sync_origin})
             else:
-                t_rel = str(src_path.relative_to(repo_dir))
-                modified_in_project.append(
-                    {"file": rel_key, "source": origin, "target_path": t_rel}
-                )
+                origin, src_path = candidates[0]
+                rel_t = str(src_path.relative_to(repo_dir))
+                modified_in_project.append(dict(file=rel_key, source=origin, target_path=rel_t))
         else:
             novel_in_project.append(rel_key)
-    return {
-        "project_dir": str(project_dir),
-        "in_sync": in_sync,
-        "modified_in_project": modified_in_project,
-        "novel_in_project": novel_in_project,
-    }
+    return dict(
+        project_dir=str(project_dir),
+        in_sync=in_sync,
+        modified_in_project=modified_in_project,
+        novel_in_project=novel_in_project,
+    )
 
 
 def promote_project_asset_to_layer(
@@ -286,23 +286,22 @@ def promote_project_asset_to_layer(
         verify_oss_promotion_agnosticism(project_dir.resolve(), content, source_rel_path)
 
     rel_parts = src_file.relative_to(project_dir.resolve()).parts
+    tpl_idx = 2 if len(rel_parts) >= 5 and rel_parts[1] in ("business-stack", "tech-stack") else 1
     is_tpl_src = (
-        len(rel_parts) >= 4
+        len(rel_parts) >= tpl_idx + 3
         and rel_parts[0] == "templates"
-        and rel_parts[2] in ("rules", "skills", "assets")
+        and rel_parts[tpl_idx + 1] in ("rules", "skills", "assets")
     )
-    inferred_tpl = (
-        rel_parts[2]
-        if len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets")
-        else (rel_parts[1] if is_tpl_src else None)
-    )
+    is_ag_asset = len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets")
+    inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
     eff_template = target_template or inferred_tpl
     if eff_template and not KEBAB_ID_RE.match(eff_template):
         raise ValueError(f"Invalid target_template {eff_template!r}: must be kebab-case")
-    if len(rel_parts) >= 4 and (
-        rel_parts[:2] == (".agents", "assets") or (is_tpl_src and rel_parts[2] == "assets")
-    ):
-        dest_file = layer_base / "templates" / str(eff_template) / "assets" / Path(*rel_parts[3:])
+    tpl_dest = _resolve_template_dest_dir(layer_base, str(eff_template)) if eff_template else None
+    if is_ag_asset or (is_tpl_src and rel_parts[tpl_idx + 1] == "assets"):
+        tail = rel_parts[3:] if is_ag_asset else rel_parts[tpl_idx + 2 :]
+        base_t = tpl_dest or (layer_base / "templates" / str(eff_template))
+        dest_file = base_t / "assets" / Path(*tail)
     elif src_file.name == "SKILL.md":
         lines = content.splitlines()
         if len(lines) > 500 or not lines or lines[0].strip() != "---":
@@ -312,12 +311,10 @@ def promote_project_asset_to_layer(
             raise ValueError("Promoted SKILL.md must have kebab-case name and description")
         sub_p = f"skills/{src_file.parent.name}/SKILL.md"
         dest_file = (
-            layer_base / "templates" / eff_template / sub_p
-            if eff_template
-            else layer_base / "antigravity/.gemini/config" / sub_p
+            tpl_dest / sub_p if tpl_dest else layer_base / "antigravity/.gemini/config" / sub_p
         )
-    elif eff_template:
-        dest_file = layer_base / "templates" / eff_template / "rules" / src_file.name
+    elif tpl_dest is not None:
+        dest_file = tpl_dest / "rules" / src_file.name
     else:
         dest_file = layer_base / "antigravity/.gemini/config/AGENTS.md"
         if (
@@ -393,19 +390,19 @@ def inspect_layer_horizon(
     contrib_dir = _resolve_oss_contrib_repo_dir(up) if is_oss else up
     auth_v = verify_layer_operation_authority(ws, operation="release", actor_email=actor_email)
     up_auth_v = verify_layer_operation_authority(up, operation="release", actor_email=actor_email)
-    ws_tpls = [d.name for d in sorted((ws / "templates").glob("*")) if d.is_dir()]
+    ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
     cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
-    shared = [
-        t
-        for t in dict.fromkeys(cand_tpls)
-        if (up / "templates" / t).is_dir() and (ws / "templates" / t).is_dir()
+    tpl_pairs = [
+        (tpl, u_d, w_d)
+        for tpl in dict.fromkeys(cand_tpls)
+        if (u_d := _resolve_template_dir(up, tpl)) and (w_d := _resolve_template_dir(ws, tpl))
     ]
     drifts: list[dict[str, Any]] = []
-    for tpl in shared:
-        for ws_rf in sorted((ws / "templates" / tpl / "rules").glob("*.md")):
-            up_rf = up / "templates" / tpl / "rules" / ws_rf.name
+    for tpl, up_tdir, ws_tdir in tpl_pairs:
+        for ws_rf in sorted((ws_tdir / "rules").glob("*.md")):
+            up_rf = up_tdir / "rules" / ws_rf.name
             if not up_rf.is_file() or _sha256_file(ws_rf) != _sha256_file(up_rf):
-                rel_src = f"templates/{tpl}/rules/{ws_rf.name}"
+                rel_src = str(ws_rf.relative_to(ws)).replace("\\", "/")
                 up_newer = up_rf.is_file() and up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
                 oss_ok = True
                 try:
@@ -417,13 +414,13 @@ def inspect_layer_horizon(
                     f"--to-template {tpl} --upstream-dir {contrib_dir} --create-pr"
                 )
                 drifts.append(
-                    {
-                        "template": tpl,
-                        "rule_file": rel_src,
-                        "drift_direction": "upstream_newer" if up_newer else "workspace_newer",
-                        "oss_agnostic": oss_ok,
-                        "promote_command": cmd,
-                    }
+                    dict(
+                        template=tpl,
+                        rule_file=rel_src,
+                        drift_direction="upstream_newer" if up_newer else "workspace_newer",
+                        oss_agnostic=oss_ok,
+                        promote_command=cmd,
+                    )
                 )
     local_diff = diff_project_against_layers(ws, ws)
     child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))

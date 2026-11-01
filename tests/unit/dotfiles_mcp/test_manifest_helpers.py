@@ -296,6 +296,15 @@ class TestManifestHelpers:
         sibling_contrib = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
         monkeypatch.setenv("DOTFILES_DEV_REPO_DIR", str(env_contrib))
         env_resolved = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
+        src_tech_tpl = tmp_path / "src_repo/templates/tech-stack/fastapi-hexagonal"
+        src_tech_tpl.mkdir(parents=True)
+        empty_resolved = manifest_helpers._resolve_template_dir(up_repo, "tech-stack")
+        dest_from_src = manifest_helpers._resolve_template_dest_dir(
+            up_repo, "fastapi-hexagonal", src_tpl=src_tech_tpl
+        )
+        dest_from_kind = manifest_helpers._resolve_template_dest_dir(
+            up_repo, "crm-ops", kind="business-stack"
+        )
 
         # Assert
         assert res_h1.startswith(
@@ -308,6 +317,9 @@ class TestManifestHelpers:
         assert fallback_contrib == up_repo
         assert sibling_contrib == dev_sibling.resolve()
         assert env_resolved == env_contrib.resolve()
+        assert empty_resolved is None
+        assert dest_from_src == up_repo / "templates/tech-stack/fastapi-hexagonal"
+        assert dest_from_kind == up_repo / "templates/business-stack/crm-ops"
 
     def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(self) -> None:
         """Render role-specific Layer Setup Blueprints and Level 4 Project Lineage prompts."""

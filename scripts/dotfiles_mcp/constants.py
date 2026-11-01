@@ -22,7 +22,14 @@ VALID_LAYER_ROLES = (
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+TEMPLATE_STACK_GROUP_DIRS = (
+    "business-stack",
+    "tech-stack",
+)
 VALID_TEMPLATE_KINDS = (
+    "core-base",
+    "business-stack",
+    "tech-stack",
     "stack-starter",
     "domain-policy-pack",
     "department-pack",

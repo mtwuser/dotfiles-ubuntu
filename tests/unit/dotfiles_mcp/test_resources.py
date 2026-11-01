@@ -72,14 +72,20 @@ class TestResourcesMixin:
         assert rules_md["mimeType"] == "text/markdown"
         assert "Antigravity Universal Rules" in rules_md["text"]
         assert "pre-tool-guard" in hooks
-        assert skills["count"] >= 10
-        assert any(s["name"] == "testing" for s in skills["skills"])
+        assert skills["count"] == 10
+        assert any(s["name"] == "sopen" for s in skills["skills"])
         assert templates["count"] == 4
         assert [t["template_name"] for t in templates["templates"]] == [
             "business-base",
             "fastapi-hexagonal",
             "human-core",
             "technical-base",
+        ]
+        tech_tpl = next(t for t in templates["templates"] if t["template_name"] == "technical-base")
+        assert sorted(s["name"] for s in tech_tpl["skills"]) == [
+            "refactoring",
+            "testing",
+            "validation",
         ]
         assert docs_idx["mimeType"] == "text/markdown"
         assert "Documentation Index" in docs_idx["text"]

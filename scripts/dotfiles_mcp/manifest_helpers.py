@@ -16,7 +16,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import REPO_DIR
+from dotfiles_mcp.constants import REPO_DIR, TEMPLATE_STACK_GROUP_DIRS
 
 
 def _read_version(repo_dir: Path | None = None) -> str:
@@ -152,6 +152,59 @@ def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dic
                 "decrypted_hops": int(parsed.get("decrypted_hops", 0)),
             }
     return {}
+
+
+def _iter_layer_template_dirs(layer_dir: Path) -> list[tuple[str, Path]]:
+    """Return sorted (template_name, template_dir) pairs across root and stack-group folders."""
+    templates_root = layer_dir / "templates"
+    if not templates_root.is_dir():
+        return []
+    found: dict[str, Path] = {}
+    for d in sorted(templates_root.iterdir()):
+        if not d.is_dir() or d.name.startswith("."):
+            continue
+        if d.name in TEMPLATE_STACK_GROUP_DIRS:
+            for sub in sorted(d.iterdir()):
+                if sub.is_dir() and not sub.name.startswith("."):
+                    found.setdefault(sub.name, sub)
+        else:
+            found[d.name] = d
+    return sorted(found.items(), key=lambda item: item[0])
+
+
+def _resolve_template_dir(layer_dir: Path, tpl_ref: str) -> Path | None:
+    """Resolve a template pack directory by short name or stack-group relative path."""
+    clean = tpl_ref.strip().strip("/")
+    if not clean or clean in TEMPLATE_STACK_GROUP_DIRS:
+        return None
+    templates_root = layer_dir / "templates"
+    leaf = clean.split("/")[-1]
+    for cand in (
+        templates_root / clean,
+        templates_root / leaf,
+        *(templates_root / grp / leaf for grp in TEMPLATE_STACK_GROUP_DIRS),
+    ):
+        if cand.is_dir() and cand.name not in TEMPLATE_STACK_GROUP_DIRS:
+            return cand
+    return None
+
+
+def _resolve_template_dest_dir(
+    layer_dir: Path,
+    tpl_name: str,
+    *,
+    kind: str | None = None,
+    src_tpl: Path | None = None,
+) -> Path:
+    """Resolve the destination directory for creating, syncing, or promoting a template pack."""
+    existing = _resolve_template_dir(layer_dir, tpl_name)
+    if existing is not None:
+        return existing
+    if src_tpl is not None and src_tpl.parent.name in TEMPLATE_STACK_GROUP_DIRS:
+        return layer_dir / "templates" / src_tpl.parent.name / tpl_name
+    if kind in TEMPLATE_STACK_GROUP_DIRS:
+        return layer_dir / "templates" / str(kind) / tpl_name
+    return layer_dir / "templates" / tpl_name
 
 
 def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:

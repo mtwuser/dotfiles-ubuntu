@@ -21,7 +21,7 @@ from dotfiles_mcp.constants import (
     REPO_DIR,
 )
 from dotfiles_mcp.fork_configurator import discover_layer_template_names
-from dotfiles_mcp.manifest_helpers import _read_version
+from dotfiles_mcp.manifest_helpers import _read_version, _resolve_template_dir
 
 
 class MCPNodeBase:
@@ -105,7 +105,7 @@ class MCPNodeBase:
             )
         manifest = self._load_layer_manifest(target_dir)
         for tpl_name in manifest.get("default_stack_templates", []):
-            if not (target_dir / "templates" / str(tpl_name)).is_dir():
+            if _resolve_template_dir(target_dir, str(tpl_name)) is None:
                 warnings.append(
                     self._emit_warning(
                         "WARN",

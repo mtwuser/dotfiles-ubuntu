@@ -19,8 +19,11 @@ from .fork_configurator import (
 )
 from .manifest_helpers import (
     _is_dest_template_newer,
+    _iter_layer_template_dirs,
     _merge_unique_strings,
     _render_layer_onboarding_readme,
+    _resolve_template_dest_dir,
+    _resolve_template_dir,
     _sync_mounted_children_into_parent,
 )
 
@@ -265,18 +268,15 @@ def bootstrap_layer_workspace(
     )
     for tpl_name in requested_templates:
         src_tpl = next(
-            (
-                r / "templates" / tpl_name
-                for r in search_roots
-                if (r / "templates" / tpl_name).is_dir()
-            ),
+            (d for r in search_roots if (d := _resolve_template_dir(r, tpl_name)) is not None),
             None,
         )
-        dest_tpl = target_dir / "templates" / tpl_name
+        dest_tpl = _resolve_template_dest_dir(target_dir, tpl_name, src_tpl=src_tpl)
         if src_tpl is not None and src_tpl.resolve() != dest_tpl.resolve():
             copied_templates.append(tpl_name)
             if not dry_run:
                 shutil.rmtree(dest_tpl, ignore_errors=True)
+                dest_tpl.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(src_tpl, dest_tpl)
     manifest_res = configure_fork_manifest(
         target_dir,
@@ -403,11 +403,7 @@ def sync_layer_workspace(
         manifest["default_stack_templates"] = list(stack_templates)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
-    existing_tpls = [
-        d.name
-        for d in sorted((target_dir / "templates").glob("*"))
-        if d.is_dir() and not d.name.startswith(".")
-    ]
+    existing_tpls = [name for name, _p in _iter_layer_template_dirs(target_dir)]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     search_roots = (
@@ -420,14 +416,10 @@ def sync_layer_workspace(
         if tpl_name == own_layer_id:
             continue
         src_tpl = next(
-            (
-                r / "templates" / tpl_name
-                for r in search_roots
-                if (r / "templates" / tpl_name).is_dir()
-            ),
+            (d for r in search_roots if (d := _resolve_template_dir(r, tpl_name)) is not None),
             None,
         )
-        dest_tpl = target_dir / "templates" / tpl_name
+        dest_tpl = _resolve_template_dest_dir(target_dir, tpl_name, src_tpl=src_tpl)
         if (
             src_tpl is not None
             and src_tpl.resolve() != dest_tpl.resolve()
@@ -436,6 +428,7 @@ def sync_layer_workspace(
             synced_templates.append(tpl_name)
             if not dry_run:
                 shutil.rmtree(dest_tpl, ignore_errors=True)
+                dest_tpl.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(src_tpl, dest_tpl)
 
     synced_children = _sync_mounted_children_into_parent(

@@ -297,12 +297,12 @@ class TestRepoParityGates:
         extrapolable_technical_targets = [
             REPO_DIR / "templates/technical-base/rules/technical-base.md",
             REPO_DIR / "templates/business-base/rules/business-base.md",
-            REPO_DIR / "antigravity/.gemini/config/skills/testing/SKILL.md",
-            REPO_DIR / "antigravity/.gemini/config/skills/refactoring/SKILL.md",
+            REPO_DIR / "templates/technical-base/skills/testing/SKILL.md",
+            REPO_DIR / "templates/technical-base/skills/refactoring/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/priority/SKILL.md",
-            REPO_DIR / "antigravity/.gemini/config/skills/validation/SKILL.md",
+            REPO_DIR / "templates/technical-base/skills/validation/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/architecture-review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/governance/SKILL.md",
         ]

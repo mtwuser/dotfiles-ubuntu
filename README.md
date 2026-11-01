@@ -96,8 +96,8 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │   │   ├── AGENTS.md                  ←   Global baseline (< 18 KB token budget cap)
 │   │   ├── hooks.json                 ←   Lifecycle hook bindings (PreToolUse, PostToolUse, PostInvocation, Stop)
 │   │   ├── scripts/                   ←   pre_tool_guard.py, post_edit_format.py, post_invocation_lint.py, stop_verify_tests.py
-│   │   └── skills/                    ←   13 global skills (sopen, sclose, continue, release, enrich, priority, review,
-│   │                                      full-audit, architecture-review, governance, refactoring, testing, validation)
+│   │   └── skills/                    ←   10 universal global skills (sopen, sclose, continue, release, enrich, priority,
+│   │                                      review, full-audit, architecture-review, governance)
 │   └── .local/share/applications/     ←   antigravity-agents.desktop, antigravity-ide.desktop
 │
 ├── docs/                              ← NOT stow — 3-tier navigable documentation hub (< 465 lines per file)
@@ -107,7 +107,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │   │   └── 02_hierarchical_layers_and_team_workflows.md ← 3-tier profiles, multi-layer lifecycle, authority & PR promotion
 │   ├── architecture/                  ←   Tier 3A: Normative technical specifications (1:1:1 with code & unit tests)
 │   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
-│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 13 skills
+│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 10 global + 3 tech skills
 │   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (v1.2)
 │   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver, authority & promotion
 │   │   └── 05_ephemeral_forks_and_department_bots.md       ← Ephemeral Department Bot forks, project bridges & TTL GC
@@ -116,7 +116,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
 │       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
-├── templates/                         ← NOT stow — polymorphic template packs (human-core, technical-base, business-base, fastapi-hexagonal)
+├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/*, tech-stack/fastapi-hexagonal)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans

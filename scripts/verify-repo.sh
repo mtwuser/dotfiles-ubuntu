@@ -297,7 +297,7 @@ from pathlib import Path
 import re, sys
 
 kebab_re = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-skill_files = sorted(list(Path("antigravity/.gemini/config/skills").glob("*/SKILL.md")) + list(Path("templates").glob("*/skills/*/SKILL.md")))
+skill_files = sorted(list(Path("antigravity/.gemini/config/skills").glob("*/SKILL.md")) + list(Path("templates").rglob("skills/*/SKILL.md")))
 if not skill_files:
     sys.exit("No SKILL.md files found")
 for sf in skill_files:

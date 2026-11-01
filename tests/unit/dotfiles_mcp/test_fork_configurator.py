@@ -305,15 +305,19 @@ class TestForkConfigurator:
         (fork_dir / "templates/human-core/rules/human-core.md").write_text(
             "# Global Baseline\n", encoding="utf-8"
         )
+        (fork_dir / "templates/technical-base/rules").mkdir(parents=True)
+        (fork_dir / "templates/technical-base/rules/technical-base.md").write_text(
+            "# Technical Baseline\n", encoding="utf-8"
+        )
         scaffold_template_pack(
             fork_dir,
             template_name="web-starter",
-            kind="project-overlay",
+            kind="tech-stack",
             dry_run=False,
         )
-        (fork_dir / "templates/web-starter/rules/subdir").mkdir(parents=True)
-        (fork_dir / "templates/web-starter/assets/subdir").mkdir(parents=True)
-        (fork_dir / "templates/web-starter/governance/SESSION.md").write_text(
+        (fork_dir / "templates/tech-stack/web-starter/rules/subdir").mkdir(parents=True)
+        (fork_dir / "templates/tech-stack/web-starter/assets/subdir").mkdir(parents=True)
+        (fork_dir / "templates/tech-stack/web-starter/governance/SESSION.md").write_text(
             "# Session Log\n", encoding="utf-8"
         )
         (fork_dir / "antigravity/.gemini/config").mkdir(parents=True)

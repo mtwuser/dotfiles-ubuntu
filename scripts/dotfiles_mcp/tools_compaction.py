@@ -26,7 +26,7 @@ from dotfiles_mcp.constants import (
     VALID_ENVIRONMENTS,
     VALID_RESOLUTIONS,
 )
-from dotfiles_mcp.manifest_helpers import _read_version
+from dotfiles_mcp.manifest_helpers import _iter_layer_template_dirs, _read_version
 from dotfiles_mcp.node_base import MCPNodeBase
 
 
@@ -167,8 +167,9 @@ class CompactionToolsMixin(MCPNodeBase):
             if scope in ("all", "global"):
                 candidate_files.append((lname, ldir, ldir / "antigravity/.gemini/config/AGENTS.md"))
             if scope in ("all", "templates"):
-                for tf in sorted((ldir / "templates").glob("*/rules/*.md")):
-                    candidate_files.append((lname, ldir, tf))
+                for _tname, tdir in _iter_layer_template_dirs(ldir):
+                    for tf in sorted((tdir / "rules").glob("*.md")):
+                        candidate_files.append((lname, ldir, tf))
             if scope in ("all", "docs"):
                 for df in sorted((ldir / "docs").rglob("*.md")):
                     candidate_files.append((lname, ldir, df))

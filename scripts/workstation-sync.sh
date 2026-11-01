@@ -139,6 +139,8 @@ run_sync() {
     done
     stow -d "$RUNTIME_DIR" -t "$HOME" -R bash antigravity 2>/dev/null || \
       stow -d "$RUNTIME_DIR" -t "$HOME" -R antigravity 2>/dev/null || true
+    find "$HOME/.gemini/config/skills" -maxdepth 2 -xtype l -delete 2>/dev/null || true
+    find "$HOME/.gemini/config/skills" -mindepth 1 -maxdepth 1 -type d -empty -delete 2>/dev/null || true
     if [ "${DOTFILES_STOW_GIT:-0}" = "1" ] || [ -L "$HOME/.gitconfig" ]; then
       stow -d "$RUNTIME_DIR" -t "$HOME" -R git 2>/dev/null || true
     fi

@@ -13,11 +13,12 @@ Project starter template for **FastAPI + Hexagonal Architecture (DDD) + HTMX/Isl
 # Manual alternative:
 # 1. Copy template rules, skills & session template to your project's .agents/ directory
 mkdir -p <your-project>/.agents
-cp -r ~/dotfiles-ubuntu/templates/fastapi-hexagonal/{rules,skills} <your-project>/.agents/
-cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/SESSION.md <your-project>/.agents/SESSION.md
+cp -r ~/dotfiles-ubuntu/templates/technical-base/{rules,skills} <your-project>/.agents/
+cp -r ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/{rules,skills} <your-project>/.agents/
+cp ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/governance/SESSION.md <your-project>/.agents/SESSION.md
 
 # 2. Copy root governance files (used by /sopen, /continue, /priority, /sclose)
-cp ~/dotfiles-ubuntu/templates/fastapi-hexagonal/governance/{WORKTASK,WORKROAD,WORKVALI,BACKLOG,CHANGELOG}.md <your-project>/
+cp ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/governance/{WORKTASK,WORKROAD,WORKVALI,BACKLOG,CHANGELOG}.md <your-project>/
 
 # 3. Customize placeholders:
 #    - Update .agents/rules/environment.md with your project paths
