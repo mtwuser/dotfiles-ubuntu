@@ -23,21 +23,21 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 
 ## Refactoring & Code Decommissioning
 
-- **Description**: Rules for moving, renaming, extracting, restructuring, and decommissioning code (`skills/refactoring/SKILL.md`)
+- **Description**: Rules for moving, renaming, extracting, and decommissioning code (`skills/refactoring/SKILL.md`)
 - **Applies**: All source code files
 
 1. **Behavioral Invariant & Atomic `1:1:1` Alignment**: When splitting modules, tests pass with identical results, test count never decreases, coverage stays 100%, and `1:1:1` tests/specs align in the SAME iteration.
 2. **Zero-Residue & Rename Urgency**: When `A` is replaced by `B`, remove `A` completely in the same changeset (zero `OldName = NewName` aliases, `@deprecated` classes, or re-export shims). Rename symbols moved across modules when context changes.
-3. **Code Decommissioning (3-Step Test Pruning & Zero-Literal Leak Gate)**: When deleting a module/symbol or retiring internal names: (a) **`1:1` File Purge** (delete orphan unit tests); (b) **Symbol & Fixture Purge** (grep `tests/` for removed symbols/mocks); (c) **Default-Parameter Sensitivity** (test non-default values); (d) **Zero-Literal Exclusion** (never embed private identifiers in tests/scripts; use regexes/dynamic discovery).
+3. **Code Decommissioning (3-Step Test Pruning & Zero-Literal Leak Gate)**: When deleting a module/symbol: (a) **`1:1` File Purge** (delete orphan unit tests); (b) **Symbol & Fixture Purge** (grep `tests/` for removed symbols/mocks); (c) **Default-Parameter Sensitivity** (test non-default values); (d) **Zero-Literal Exclusion** (use regexes/dynamic discovery, never private literals).
 
 ---
 
 ## Testing & `1:1:1` Human-Agent Comprehension (Universal)
 
-- **Description**: Self-documenting `1:1:1` test architecture, 3-tier deduction, and coverage gates (`skills/testing/SKILL.md`)
+- **Description**: Self-documenting `1:1:1` test architecture, bidirectional 3-tier flow, and coverage gates (`skills/testing/SKILL.md`)
 - **Applies**: All test files
 
-1. **Human-Agent `1:1:1` Comprehension, 3-Tier Deduction (`E2E -> Imp -> Unit`) & AAA**: Model `E2E` as human persona journeys, `Imp` as cross-dependency/parity contracts, and `Unit` (`1` `Test<Module>` class per file linked to `Specification: docs/architecture/<spec>.md`) via 4 quadrants (nominal, `N` vs `N ± 1` boundaries, bipolar guards, outbound failures). Pair `test_<subject>_<scenario>_<expected>` names with a **1-line invariant docstring** and separate `# Arrange`, `# Act`, `# Assert` comments.
+1. **Human-Agent `1:1:1` Comprehension, Bidirectional 3-Tier Flow & AAA**: Deduce/validate **Top-Down (`E2E -> Imp -> Unit`)**; author/execute **Bottom-Up (`Unit -> Imp -> E2E`)**. Model `E2E` as persona journeys, `Imp` (*Implementation* boundary/parity contracts; never `int`), and `Unit` (`1` `Test<Module>` class/file linked to `Specification: docs/architecture/<spec>.md`) across 4 quadrants (nominal, `N` vs `N ± 1` boundaries, bipolar guards, outbound failures). Pair `test_<subject>_<scenario>_<expected>` names with a **1-line invariant docstring** and separate `# Arrange`, `# Act`, `# Assert` comments.
 2. **Constructor Injection & Runtime Seam Patching**: Inject spec-constrained mocks/fakes in constructors, patch at the runtime consumer lookup seam, and never use argument-ignoring boundary/subprocess stubs.
-3. **100% Isolated Unit Coverage, Boundary Cut-Points (`N` vs `N ± 1`), Speed & Zero Deprecations**: Maintain 100% statement/branch coverage in isolated unit runs, assert exact boundary cut-points (`N` vs `N ± 1`), `< 1s` per unit test, and 0 deprecation warnings.
-4. **Anti-Characterization, Bipolar Guards & Scope**: Never lock in broken production behavior; cross-check caller/API/UI contracts and fix bugs first. Verify guards on **both poles** (negative first, positive second) across all channels, and test executable logic (`1:1`) plus public defaults, never framework axiomatics.
+3. **100% Isolated Unit Coverage (`Unit -> Imp -> E2E`), Cut-Points (`N` vs `N ± 1`) & Speed**: Enforce 100% branch coverage on isolated `tests/unit/` first (`< 1s`/test, 0 deprecations) before `imp`/`e2e`, asserting exact `N` vs `N ± 1` cut-points.
+4. **Anti-Characterization, Bipolar Guards & Scope**: Never lock in broken behavior; cross-check caller/API/UI contracts and fix bugs first. Verify guards on **both poles** (negative first, positive second) across all channels, and test executable logic (`1:1`) plus public defaults, never framework axiomatics.

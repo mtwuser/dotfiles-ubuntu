@@ -53,19 +53,31 @@ Every `1:1:1` unit test must serve **both** the **Human** (who reads the `pytest
    - **1-Line Domain Invariant Docstring**: States *why* the invariant exists (not just *what* function is called), eliminating the need for explanatory inline prose comments inside the test body.
    - **AAA Body (`# Arrange`, `# Act`, `# Assert`)**: Uses DAMP literal values and exact boundary cut-points (`N` vs `N ± 1`).
 
-### Pre-Edit Reading Priority & 3-Tier Case-Deduction Matrix (`E2E -> Imp -> Unit`)
+### Bidirectional 3-Tier Test Flow (`E2E -> Imp -> Unit` vs. `Unit -> Imp -> E2E`) & `imp` Terminology
 
-Before modifying any production module or rule, read the `1:1:1` triad in strict descending radius of impact so implementation changes never break outbound cross-perspective contracts:
-1. **Priority 1 — Human Guides & Normative Spec (`docs/guides/` $\rightarrow$ `docs/architecture/<spec>.md`)**: Understand the *WHAT* and *WHY* (human persona journeys, normative invariants, and the `1:1:1` traceability table).
-2. **Priority 2 — Self-Documenting Test Hierarchy (`tests/e2e/` $\rightarrow$ `tests/imp/` $\rightarrow$ `tests/unit/`)**: Read the `Test<Module>` suites, natural-language method names, and 1-line invariant docstrings from outermost workflow (`E2E`) to innermost unit (`Unit`) *before* reading the code.
-3. **Priority 3 — Source Implementation (`src/` / `scripts/`)**: Read and modify the *HOW* with all outbound constraints and edge cases already loaded in context.
+#### 1. Why `imp` (`Implementation Tests`), Never `int`
+The middle tier is named **`tests/imp/` (Implementation Tests)** for two foundational reasons:
+1. **Lexical Collision Prevention**: `int` is the reserved integer primitive across Python, C, TypeScript, and SQL; `imp` prevents identifier, import, and search collisions.
+2. **Ontological Precision (`Implement` vs. `Integrate`)**:
+   - **Implementation (`tests/imp/`)**: Verifies how internal modules, adapters, CLI entrypoints, databases, and repository contracts are **implemented and wired together** across real local boundaries (`Module A <-> Module B`, `Code <-> DB/stdio/FS/Docs`).
+   - **Integration**: Refers to deploying and integrating the finished system into live production environments, external ecosystems, or CI/CD release pipelines.
 
-Conceptualize and deduce test cases across the 3 tiers without overlapping responsibilities:
+#### 2. Bidirectional Asymmetry: Top-Down Comprehension vs. Bottom-Up Construction & Execution
+Operate the 3 test tiers in **opposite directions** depending on whether you are **comprehending/deducing/validating** or **authoring/isolating/executing**:
 
-| Test Tier | Conceptual Focus | Systematic Case-Deduction Target |
+- **Direction A — Top-Down (`E2E -> Imp -> Unit`) for Pre-Edit Reading, Case Deduction & Validation**:
+  1. **Priority 1 — Human Guides & Normative Spec (`docs/guides/` $\rightarrow$ `docs/architecture/<spec>.md`)**: Understand the *WHAT* and *WHY* (human persona journeys, normative invariants, and the `1:1:1` traceability table).
+  2. **Priority 2 — Self-Documenting Test Hierarchy (`tests/e2e/` $\rightarrow$ `tests/imp/` $\rightarrow$ `tests/unit/`)**: Read `Test<Module>` suites, natural-language method names, and 1-line invariant docstrings from outermost human journey (`E2E`) to innermost unit (`Unit`) *before* reading the code so local changes never break outbound workflows.
+  3. **Priority 3 — Source Implementation (`src/` / `scripts/`)**: Read and modify the *HOW* with all outbound constraints loaded in context.
+- **Direction B — Bottom-Up (`Unit -> Imp -> E2E`) for Test Authoring, Refactoring & Fast-Fail Execution**:
+  1. **Step 1 — Isolated `Unit` First (`tests/unit/`, `100%` isolated branch coverage, `< 1s`/test)**: Author and execute `1:1` unit tests in strict isolation first. Running `E2E`/`Imp` first touches lines superficially and **masks** untested branches in `Unit`. Proving all 4 quadrants in `tests/unit/` with mocks guarantees algorithmic exhaustiveness in milliseconds.
+  2. **Step 2 — Boundary `Imp` Second (`tests/imp/`)**: With all combinatorial branches already proven in `Unit`, write `Imp` tests strictly for real boundary implementation (DB persistence, `stdio`/CLI subprocesses, filesystem permissions, and `Spec <-> Code <-> Doc` parity) without duplicating unit branch permutations.
+  3. **Step 3 — Vertical `E2E` Last (`tests/e2e/`)**: Verify complete multi-step human persona journeys end-to-end.
+
+| Test Tier | Conceptual Focus | Systematic Case-Deduction Target (`Top-Down`) & Authoring Scope (`Bottom-Up`) |
 | :--- | :--- | :--- |
 | **`tests/e2e/` (Human Persona & Vertical Journeys)** | Complete multi-step human workflows from public entrypoint to final state. | **Cross-Perspective / Outbound Cases**: Verify that tightening a rule or state transition in Step A does not restrict a valid downstream workflow in Step B. |
-| **`tests/imp/` (Cross-Dependency, Boundary I/O & Parity)** | Real inter-component contracts (CLI flags/exit codes, stdio/IPC/HTTP protocols, filesystem permissions, and `Spec <-> Code <-> Doc` parity). | **Integration & Drift Cases**: Verify parser flags match guides/Makefiles, read-only boundaries (`$HOME` vs workspace), and cross-surface synchronization. |
+| **`tests/imp/` (Cross-Component Implementation & Parity)** | Real internal boundary implementation (CLI flags/exit codes, `stdio`/IPC/HTTP protocols, DB adapters, FS permissions, and `Spec <-> Code <-> Doc` parity). | **Boundary Implementation & Drift Cases**: Verify parser flags match guides/Makefiles, read-only boundaries (`$HOME` vs workspace), and cross-surface synchronization. |
 | **`tests/unit/` (`1:1` Algorithmic Exhaustiveness — 4 Quadrants)** | Isolated single-module logic (`Test<Module>`, `100%` isolated branch coverage). | Deduce all **4 Quadrants**: (1) *Nominal Happy Path*, (2) *Exact Boundary Cut-Points (`N` vs `N ± 1`)*, (3) *Bipolar Security/Guard Poles (`Negative -> Positive`)*, and (4) *Outbound/Hostile Environment Failures* (malformed input, missing files, permission errors). |
 
 ### Anti-Characterization Trap & Bipolar Guard Verification — CRITICAL
@@ -96,8 +108,8 @@ When asked to consolidate tests, follow these phases strictly:
 
 **Phase 2 — Classification Audit**
 Find and fix misclassifications:
-3. **Database access in unit tier**: If a test uses real database calls, migrate it to an integration tier.
-4. **Mocking in integration tier**: If an integration test uses `@patch` to mock database objects, it is a disguised unit test. Convert it or delete it if redundant.
+3. **Database or real boundary I/O in unit tier**: If a test uses real database, subprocess, or network calls, migrate it to the implementation tier (`tests/imp/`).
+4. **Mocking in implementation tier (`tests/imp/`)**: If an `imp` test uses `@patch` to mock database or boundary objects, it is a disguised unit test. Convert it to `tests/unit/` or delete it if redundant.
 
 **Phase 3 — Structural Verification**
 
@@ -105,29 +117,29 @@ Find and fix misclassifications:
 5. **File mapping (logic files only)**: Ensure every source file with **executable logic** has a corresponding test file. Purely declarative schema/model files without custom methods or validators and trivial 1-line DI singleton getters already covered by router/controller tests should NOT have artificial test files that only test framework/ORM/Pydantic defaults.
 6. **One Class per File**: All test methods within the file MUST reside under a single class named `Test{SourceClassName}`. Fragmented mini-classes are strictly forbidden.
 7. **File placement**: Test content matches the file name (no view tests living inside model test files).
-8. **No redundancy**: Unit + integration should together cover 100%. No single line should be redundantly tested in both tiers if a mock solves it in unit.
+8. **No redundancy**: `tests/unit/` in isolation must cover 100% of module branches where mocks suffice, and `unit + imp` together verify both algorithmic branches and real boundary implementation without duplicating combinatorial logic across tiers.
 
-**Phase 4 — Execution & Verification**
-9. Run full test suite → 0 failures, 100% coverage maintained.
+**Phase 4 — Bottom-Up Execution & Verification (`Unit -> Imp -> E2E`)**
+9. Run `tests/unit/` in isolation first (`100%` branch coverage, `< 1s` per unit test), then `tests/imp/`, then `tests/e2e/` → 0 failures, 100% coverage maintained.
 10. Ensure performance metrics stay fast (e.g., `< 1s` per unit test).
 
 **Phase 5 — Diagnosing False-Positive Coverage & Drops**
-11. **The 100% Coverage Illusion**: If the suite shows 100% coverage but contains failing tests, it usually means a unit test is correctly covering the logic, while an outdated integration test executes the same path and fails. **Solution**: Purge the redundant integration test.
-12. **Transitive Coverage Drops & Isolated Unit Gate**: If deleting an integration/E2E test or CLI `--self-test` drops coverage in a module, it means the higher-tier test was masking incomplete `1:1` unit tests (often via shallow `len(text) > 0` smoke loops without schema verification). **Solution**: Enforce 100% coverage on `tests/unit/` in strict isolation (`pytest tests/unit/ --cov=<pkg> --cov-fail-under=100`) before running `imp`/`e2e`, and assert full response contracts for every cataloged resource/endpoint.
+11. **The 100% Coverage Illusion**: If the suite shows 100% coverage but contains failing tests, it usually means a unit test is correctly covering the logic, while an outdated implementation (`imp`) test executes the same path and fails. **Solution**: Purge or align the redundant implementation test.
+12. **Transitive Coverage Drops & Isolated Unit Gate**: If deleting an `imp`/`e2e` test or CLI `--self-test` drops coverage in a module, it means the higher-tier test was masking incomplete `1:1` unit tests (often via shallow `len(text) > 0` smoke loops without schema verification). **Solution**: Enforce 100% coverage on `tests/unit/` in strict isolation (`pytest tests/unit/ --cov=<pkg> --cov-fail-under=100`) before running `imp`/`e2e`, and assert full response contracts for every cataloged resource/endpoint.
 
 ### Refactoring Tests (File Migrations)
 
 When moving source files between modules, **tests MUST be migrated in the same changeset.** A test count decrease after a refactor implies orphaned tests.
 
-#### Unit Tests (Low Risk)
+#### Unit Tests (`tests/unit/` — Low Risk)
 1. Move the test file alongside the source file.
 2. Update all import paths inside the test file to point to the new source module.
 3. Update all `@patch` targets to reflect the new module path.
 
-#### Integration Tests (Higher Risk)
-1. Search for ALL integration test files referencing the moved module.
+#### Implementation Tests (`tests/imp/` — Higher Risk)
+1. Search for ALL implementation (`tests/imp/`) and E2E (`tests/e2e/`) test files referencing the moved module.
 2. Update all imports and patch targets in affected test files.
-3. If an integration test now covers lines that could easily be covered by unit mocks, convert it to a unit test.
+3. If an implementation test now covers lines that are purely algorithmic and solvable by unit mocks, convert it to a unit test in `tests/unit/`.
 
 #### Post-Refactor Verification
 1. **Pure Refactor**: Test count must equal or exceed the pre-refactor count.

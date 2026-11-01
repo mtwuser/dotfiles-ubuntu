@@ -333,7 +333,7 @@ When you fork `dotfiles-ubuntu` for a team or attach it to a microservice contai
     "dev": {
       "access_mode": "read-write-local",
       "requirements_file": "requirements-dev.txt",
-      "default_guardrails": ["Run local unit & integration tests before committing"]
+      "default_guardrails": ["Run local unit & implementation (tests/imp/) tests before committing"]
     },
     "pre": {
       "access_mode": "strictly-read-only",

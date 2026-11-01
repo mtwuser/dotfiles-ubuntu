@@ -68,15 +68,16 @@ Present findings as a structured table:
 
 The most common source of regressions. Check against project testing rules:
 
-### 2.1 Classification
+### 2.1 Classification (`Unit` vs. `Imp` vs. `E2E`)
 
-For each test file, verify classification is correct:
+For each test file, verify classification matches our 3-tier ontology (`imp` = **Implementation tests**, never `int`):
 
 | Check | Rule |
 |-------|------|
-| **Unit tests** | No real DB access, no real external calls, all dependencies mocked |
-| **Integration tests** | Uses real DB operations or external services |
-| **Misclassified** | Unit test that needs DB → move to integration. Integration test that doesn't need DB → move to unit |
+| **Unit tests (`tests/unit/`)** | No real DB/subprocess/network access, all dependencies mocked, `< 1s`/test, `100%` isolated branch coverage across 4 quadrants |
+| **Implementation tests (`tests/imp/`)** | Real internal boundary implementation (DB persistence, CLI/`stdio` subprocesses, FS permissions, `Spec <-> Code <-> Doc` parity) |
+| **E2E tests (`tests/e2e/`)** | Complete multi-step human persona journeys from entrypoint to final state |
+| **Misclassified** | Unit test with real DB/subprocess I/O → move to `tests/imp/`. Implementation test that mocks the boundary under test → move to `tests/unit/` |
 
 ### 2.2 1:1:1 File & Specification Mapping (`< 465` Lines)
 
@@ -98,9 +99,9 @@ Every production file with **executable logic** must have a corresponding unit t
 - [ ] **Patch at consumption** — `@patch('<module>.services.foo.ExternalDep')` not `@patch('external.module.ExternalDep')`
 - [ ] **No real external calls** in unit tests — all mocked
 
-### 2.4 Structure, Reading Priority & Human-Agent `1:1:1` Comprehension Symbiosis
+### 2.4 Structure, Bidirectional 3-Tier Flow & Human-Agent `1:1:1` Comprehension Symbiosis
 
-- [ ] **Reading Priority Order (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)** — read normative specs and self-documenting test suites (`E2E` persona journeys $\rightarrow$ `Imp` boundary/parity contracts $\rightarrow$ `Unit` 4-quadrant suites) before inspecting or mutating source code
+- [ ] **Bidirectional 3-Tier Flow (`Top-Down E2E -> Imp -> Unit` vs. `Bottom-Up Unit -> Imp -> E2E`)** — read normative specs and self-documenting test suites **Top-Down (`E2E` persona journeys $\rightarrow$ `Imp` boundary/parity implementation $\rightarrow$ `Unit` 4-quadrant suites)** before inspecting or mutating source code; execute verification **Bottom-Up (`Unit` in strict isolation first $\rightarrow$ `Imp` $\rightarrow$ `E2E`)** so higher tiers never mask missing unit branch coverage
 - [ ] **Single `Test<Module>` suite/class per file** — 1 class per test file, 0 loose top-level `test_*` functions, and `Specification: docs/architecture/<spec>.md` in the module docstring
 - [ ] **AAA pattern** — `# Arrange` / `# Act` / `# Assert` clearly separated (never merged)
 - [ ] **Self-documenting behavioral test names** — `test_<subject>_<scenario>_<expected>` readable in natural language

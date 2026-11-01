@@ -148,14 +148,14 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 - **Development & Testing (`./venv` + [`requirements-dev.txt`](../../requirements-dev.txt))**: `requirements-dev.txt` chains `-r requirements.txt` and adds the development/verification toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`, `shellcheck-py`) managed via [`Makefile`](../../Makefile) (`make install`) and [`pyproject.toml`](../../pyproject.toml).
 
 ### 6.2. Test Suite Architecture (`tests/unit/`, `tests/imp/` & `tests/e2e/`)
-- **`tests/unit/` (1:1 Module Mapping & 100% Branch Coverage)**:
+- **`tests/unit/` (`1:1:1` Spec-Module-Test Mapping & 100% Isolated Branch Coverage)**:
   - `test_pre_tool_guard.py` $\rightarrow$ `antigravity/.gemini/config/scripts/pre_tool_guard.py`
   - `test_post_edit_format.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_edit_format.py`
   - `test_post_invocation_lint.py` $\rightarrow$ `antigravity/.gemini/config/scripts/post_invocation_lint.py`
   - `test_stop_verify_tests.py` $\rightarrow$ `antigravity/.gemini/config/scripts/stop_verify_tests.py`
   - `test_dotfiles_mcp_server.py` $\rightarrow$ `scripts/dotfiles_mcp_server.py`
   - `tests/unit/dotfiles_mcp/test_<module>.py` $\rightarrow$ `1:1` unit test suites for all 16 executable modules in `scripts/dotfiles_mcp/` (`authority_engine`, `capsule_engine`, `ephemeral_fork_engine`, `fork_configurator`, `manifest_helpers`, `node_base`, `promotion_engine`, `resources`, `server`, `surface_weaver`, `tools_compaction`, `tools_ephemeral`, `tools_federation`, `tools_surface`, `tools_unfold`, `workspace_bootstrapper`).
-- **`tests/imp/` (Subprocess, `stdio` JSON-RPC 2.0, Bash CLI & Parity Gate Contracts)**:
+- **`tests/imp/` (Implementation Tests — Subprocess, `stdio` JSON-RPC 2.0, Bash CLI & Parity Gate Contracts)**:
   - `test_mcp_and_hooks_stdio.py`: Tests real subprocess `stdin`/`stdout` framing (newline-delimited and `Content-Length` LSP-style headers) for `dotfiles_mcp_server.py` and all 4 lifecycle hooks.
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh`, `layer-config.sh`, and `bash -n` syntax across all `.sh` scripts and external package recipes.
   - `test_repo_parity_gates.py`: Verifies `0-byte` `__init__.py` purity, `1:1:1` bidirectional `Source <-> Unit Test <-> Specification` traceability, `< 465`-line file size discipline across all `.py` and `docs/**/*.md` files, single-language English purity, and hook/MCP-to-doc parity.

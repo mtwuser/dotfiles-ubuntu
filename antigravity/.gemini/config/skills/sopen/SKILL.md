@@ -159,6 +159,7 @@ Present a structured summary:
 - **New machine**: If Tier 1 is empty, Tier 2 + Tier 3 are sufficient. Do not treat missing brain/ artifacts as an error.
 - **Path resolution**: Never hardcode absolute paths. Resolve all repo paths dynamically from workspace metadata.
 - **Behind origin**: If any repo is behind origin, present the sync recommendation prominently. Do NOT auto-pull — let the user decide.
+- **`.agents/SESSION.md` preservation**: Never run `rm -rf .agents` inside an active workspace (even to simulate clean CI checkouts), because `.agents/` is gitignored and contains `.agents/SESSION.md` (Tier 2 session recovery state).
 - After presenting, the user may:
   - Confirm → proceed with governance rules and work
   - Redirect → user gives a different task

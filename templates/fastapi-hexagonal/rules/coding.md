@@ -48,7 +48,7 @@ src/{context}/
 │
 └── tests/
     ├── unit/                        # 0 DB access, all deps mocked
-    └── imp/                         # DB/integration verification only
+    └── imp/                         # Real DB & boundary implementation verification only
 ```
 
 ### Layer Call Direction

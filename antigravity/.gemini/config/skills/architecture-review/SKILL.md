@@ -12,7 +12,7 @@ description: "Use when designing framework architecture, reviewing multi-dimensi
 ## Intersection Audit Pattern
 
 When working on framework design or architecture, apply this pattern systematically
-to discover unifying concepts (like `DeliveryChannel` emerged from Zone × Tier):
+to discover unifying concepts (e.g., how a unified execution policy emerges from `Surface × Authority Tier`):
 
 ### The 5-Step Process
 
@@ -56,11 +56,11 @@ Not every pair of dimensions produces a useful intersection. Before formalizing:
 
 After any architectural change that affects terminology, structure, or core mechanisms, execute this **5-Dimension Sweep** in order before resuming code implementation:
 
-1. **Normative Specifications (`docs/architecture/`)**: Update the authoritative specs first, including code snippets, imports, directory trees, and glossary appendices.
-2. **Reference Guides & Indexes (`docs/reference/`, `docs/adr/`)**: Align conceptual guides, ADR documents, and domain indexes so zero contradictions exist with normative specs.
-3. **Diagrams (`docs/diagrams/*.mmd`)**: Verify that diagram node labels, edges, and filenames match canonical terminology and are written in 100% pure English.
-4. **Root Guides & Agent Rules (`WHITEPAPER*.md`, `ARCHITECTURE.md`, `README.md`, `.agents/rules/`)**: Synchronize root entry points, directory trees, and agent rules.
-5. **Future Roadmaps (`roadmaps/*.md`)**: Propagate new enums, invariants, dimensions, and test paths into pending roadmap phases so future implementation tasks do not reintroduce obsolete designs.
+1. **Tier 3A Normative Specifications (`docs/architecture/*.md`)**: Update the authoritative specs first (`< 465` lines), including `1:1:1` (`Spec <-> Source <-> Unit Test`) traceability tables, code snippets, imports, directory trees, and glossary appendices.
+2. **Tier 2 Human Guides & Tier 3B Reference Docs (`docs/guides/*.md`, `docs/reference/*.md`, `docs/README.md`)**: Align step-by-step operator workflows, conceptual playbooks, and domain indexes so zero contradictions exist with normative specs.
+3. **Diagrams (`docs/diagrams/*.mmd` or inline Mermaid)**: Verify that diagram node labels, edges, and filenames match canonical terminology and are written in 100% pure English.
+4. **Tier 1 Root Gateway, Templates & Agent Rules (`README.md`, `templates/**`, `.agents/rules/`)**: Synchronize root entry points, directory trees, CLI cheat-sheets, and agent rules.
+5. **Active Governance & Roadmaps (`WORKTASK.md`, `WORKROAD.md` / `ROADMAP.md`, `BACKLOG.md`, `roadmaps/*.md`)**: Propagate new enums, invariants, dimensions, and test paths into pending roadmap phases so future implementation tasks do not reintroduce obsolete designs.
 
 ### Deterministic Verification Gates
 

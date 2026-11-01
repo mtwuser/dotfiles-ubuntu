@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Bidirectional 3-Tier Test Flow (`E2E <-> Imp <-> Unit`), `imp` (`Implementation Tests`) Ontology & Full 17-Skill Alignment (`templates/technical-base/`, `templates/fastapi-hexagonal/`, `antigravity/.gemini/config/skills/*`, `docs/`, `tests/imp/`)**:
+  - Codified the **Bidirectional 3-Tier Test Asymmetry** across [`technical-base.md`](templates/technical-base/rules/technical-base.md), [`skills/testing/SKILL.md`](antigravity/.gemini/config/skills/testing/SKILL.md), [`skills/refactoring/SKILL.md`](antigravity/.gemini/config/skills/refactoring/SKILL.md), [`skills/review/SKILL.md`](antigravity/.gemini/config/skills/review/SKILL.md), [`skills/full-audit/SKILL.md`](antigravity/.gemini/config/skills/full-audit/SKILL.md), and [`templates/fastapi-hexagonal/`](templates/fastapi-hexagonal/rules/testing.md): **Top-Down (`E2E -> Imp -> Unit`)** for pre-edit comprehension, case deduction, and validation vs. **Bottom-Up (`Unit -> Imp -> E2E`)** for test authoring, 100% isolated unit branch coverage without higher-tier masking, and fast-fail execution.
+  - Standardized `tests/imp/` as **Implementation Tests** across all rules, skills, templates, docs, and test docstrings (replacing residual `"integration test"` terminology and documenting the dual rationale: preventing `int` primitive collisions and distinguishing internal cross-component *implementation* from production *integration*).
+  - Modernized all remaining global skills (`priority`, `validation`, `architecture-review`, `governance`, `continue`, `sopen`) to align with the `1:1:1` reading priority, 3-Tier Progressive Disclosure (`README.md -> docs/guides/ -> docs/architecture/ & docs/reference/`), automated test materialization from manual `WORKVALI.md` (`L1–L5`) findings, `.agents/SESSION.md` preservation, and repository-agnostic extraction paths.
+
+---
+
 ## [2.3.0] - 2026-11-01
 
 ### Added

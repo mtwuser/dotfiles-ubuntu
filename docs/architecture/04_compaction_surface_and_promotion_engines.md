@@ -13,7 +13,7 @@
 
 ## 1. `1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability Matrix
 
-Every engine module in `scripts/dotfiles_mcp/` maintains a strict `1:1` unit test suite (`100%` branch coverage, `< 465` lines) and a bidirectional docstring pointer (`Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md`):
+Every engine module in `scripts/dotfiles_mcp/` maintains a strict `1:1:1` alignment between its `1:1` unit test suite (`100%` isolated branch coverage, `< 465` lines) and its bidirectional docstring pointer (`Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md`):
 
 | Engine Domain | Source Module (`scripts/dotfiles_mcp/`) | `1:1` Unit Test (`tests/unit/dotfiles_mcp/`) | Normative Section & Primary Symbols |
 |---|---|---|---|

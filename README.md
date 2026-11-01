@@ -107,7 +107,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │   │   └── 02_hierarchical_layers_and_team_workflows.md ← 3-tier profiles, multi-layer lifecycle, authority & PR promotion
 │   ├── architecture/                  ←   Tier 3A: Normative technical specifications (1:1:1 with code & unit tests)
 │   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
-│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1 contracts, 13 skills
+│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 13 skills
 │   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (v1.2)
 │   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver, authority & promotion
 │   │   └── 05_ephemeral_forks_and_department_bots.md       ← Ephemeral Department Bot forks, project bridges & TTL GC

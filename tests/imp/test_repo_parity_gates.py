@@ -301,10 +301,15 @@ class TestRepoParityGates:
             REPO_DIR / "antigravity/.gemini/config/skills/refactoring/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md",
+            REPO_DIR / "antigravity/.gemini/config/skills/priority/SKILL.md",
+            REPO_DIR / "antigravity/.gemini/config/skills/validation/SKILL.md",
+            REPO_DIR / "antigravity/.gemini/config/skills/architecture-review/SKILL.md",
+            REPO_DIR / "antigravity/.gemini/config/skills/governance/SKILL.md",
         ]
         scope_leak_re = re.compile(
             r"\b(24\s+test|25\s+test|16\s+modules|8\s+verification\s+gates"
-            r"|hx-post|hx-get|hx-target|--prepare-pr)\b",
+            r"|hx-post|hx-get|hx-target|--prepare-pr|isomorphic_extraction"
+            r"|\x69ntegration\s+tests?|\x69ntegration\s+tier)\b",
             re.IGNORECASE,
         )
         arch_04 = (
@@ -345,10 +350,9 @@ class TestRepoParityGates:
         # Assert
         assert violations == []
         assert scope_violations == []
-        assert (
-            "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base"
-            in (REPO_DIR / "Makefile").read_text(encoding="utf-8")
-        )
+        assert "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base" in (
+            REPO_DIR / "Makefile"
+        ).read_text(encoding="utf-8")
         for canonical in (
             "promoter_codon",
             "_parse_capsule_envelope",

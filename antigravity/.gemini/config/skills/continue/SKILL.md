@@ -131,7 +131,8 @@ Same pattern for any additional sub-repos when applicable.
 8. **Force-tracked `.gitignore` files**: If a repository force-tracks files listed in `.gitignore` (such as `WORKROAD.md`, `WORKTASK.md`, `WORKVALI.md`, `BACKLOG.md`, `.agents/SESSION.md`, or `roadmaps/*.md`), use `git add -u` (plus `git add -f <new_file>` for newly created files inside ignored directories) instead of passing individual ignored pathspecs without `-f`, ensuring modified governance files are never left unstaged.
 9. **Commit frequency**: after each plan execution, after accumulated changes, before session end.
 10. **Sync task tracker before commits** — mark `[x]`/`[/]` sub-items first.
-11. **Global config repo** — if `dotfiles-ubuntu` files were modified (antigravity config, shell config, or system manifests), include a separate commit block for it (same format, `cd ~/dotfiles-ubuntu`).
+11. **Global config repo** — if `dotfiles-ubuntu` files were modified in the contributor clone (`DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>` or `~/dotfiles-ubuntu`), include a separate commit block for it (`cd "${DOTFILES_DEV_REPO_DIR:-~/dotfiles-ubuntu}"`; when `~/dotfiles-ubuntu` is installed in read-only appliance mode, sync after publishing via `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync`).
+12. **`.agents/SESSION.md` preservation** — never delete `.agents/` in-place (`rm -rf .agents`) in an active workspace (e.g. when simulating clean CI checkouts), as `.agents/` is gitignored and holds `.agents/SESSION.md` (Tier 2 session state). Always isolate clean-checkout tests via temporary rename (`mv .agents .agents.bak` $\rightarrow$ test $\rightarrow$ `mv .agents.bak .agents`) or an ephemeral worktree.
 
 > [!IMPORTANT]
 > **Auto-commit after plan execution**: When plan finishes (all `[x]`), deliver commits **immediately** as final step — snapshot → sync task tracker → commits → present next step. Never require the user to invoke `/continue` just for commits.

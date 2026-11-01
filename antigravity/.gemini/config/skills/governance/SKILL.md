@@ -12,20 +12,20 @@ description: "Use when promoting work between tiers (roadmaps → active → don
 ### Promotion Flow
 
 Work flows strictly from left to right:
-`roadmaps/ → backlog → active tasks → CHANGELOG.md`
+`roadmaps/ → WORKROAD.md (or ROADMAP.md) / BACKLOG.md → WORKTASK.md → CHANGELOG.md`
 
-#### 1. Roadmap → Backlog
+#### 1. Future Roadmap (`roadmaps/`) → Active Roadmap (`WORKROAD.md` / `ROADMAP.md`)
 - Select the next roadmap by priority number.
-- Execute **deep-analysis** before promotion: audit existing code, detect already-implemented items, identify synergies.
-- Enrich the roadmap with your findings, then promote it to the active backlog.
+- Execute **deep-analysis** before promotion (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`): audit existing specs, tests, and code, detect already-implemented items, and identify synergies.
+- Enrich the roadmap with your findings, then promote its phase checklist to `WORKROAD.md`.
 
-#### 2. Backlog → Active Tasks
+#### 2. Active Roadmap / Backlog (`WORKROAD.md` / `BACKLOG.md`) → Active Tasks (`WORKTASK.md`)
 - Promote one phase at a time.
-- If the task tracker already has items, run cross-task analysis first to detect dependencies and shared components.
-- Move the phase to active tasks, renaming the prefix as needed (e.g. `R1` to `T1`).
+- If `WORKTASK.md` already has items, run cross-task analysis first to detect dependencies and shared components.
+- Move the phase to `WORKTASK.md`, renaming the prefix as needed (e.g. `R1` to `T1`).
 
-#### 3. Active Tasks → Done
-- Completed items are DELETED from the task tracker and backlog. Do not leave them as strikethrough (`~~`) or checkmarks.
+#### 3. Active Tasks (`WORKTASK.md`) → Done (`CHANGELOG.md`)
+- Completed items are DELETED from `WORKTASK.md`, `WORKROAD.md`, and `BACKLOG.md`. Do not leave them as strikethrough (`~~`) or checkmarks.
 - Log completed work exclusively in `CHANGELOG.md`.
 
 ### Mode Discipline ("Capture, don't act")
@@ -54,13 +54,13 @@ Always write for the **USER** (or downstream adopter), not internal scratch note
 ### The 3-Stage Extraction & Integration Pipeline
 
 #### Stage 1 — Exhaustive Reference Extraction & Gap Analysis (`docs/reference/`)
-1. **Sequential Segment Reading**: Read the raw conversation file in complete, non-overlapping line segments (never sample or skip middle sections) to extract 100% of domain insights, mathematical laws, and architectural mechanisms.
-2. **Structured Reference Corpus**: Synthesize the extracted concepts into structured reference documents (e.g., `docs/reference/isomorphic_extraction/NN_<topic>.md`), updating the corpus index (`README.md` / `README_es.md`) and master synthesis.
+1. **Sequential Segment Reading**: Read the raw conversation file in complete, non-overlapping line segments (never sample or skip middle sections) to extract 100% of domain insights, invariants, and architectural mechanisms.
+2. **Structured Reference Corpus**: Synthesize the extracted concepts into structured reference documents under `docs/reference/<topic>.md` (`< 465` lines per file), updating `docs/README.md` and `README.md`.
 3. **Fit & Gap Matrix**: Classify each extracted mechanism against the current architecture (`100% Aligned`, `Conceptual Enrichment`, or `Actionable Gap`) and present the gap analysis before modifying normative specs.
 
 #### Stage 2 — Normative Architectural & Roadmap Integration (`docs/architecture/` & `roadmaps/`)
-1. **Theoretical Foundations**: Add formal mathematical/theoretical sections to the project's foundation reference (e.g., `docs/reference/domain_foundations*.md`) with full bilingual parity.
-2. **Normative Specifications**: Integrate the approved mechanisms and glossary definitions into the authoritative architecture documents (`docs/architecture/01`–`04`, ES and EN).
+1. **Theoretical & Reference Foundations**: Add formal sections to the project's reference guides (`docs/reference/*.md`) and human workflow guides (`docs/guides/*.md`).
+2. **Normative Specifications (`1:1:1`)**: Integrate the approved mechanisms, `1:1:1` (`Spec <-> Source <-> Unit Test`) tables, and glossary definitions into the authoritative architecture documents (`docs/architecture/*.md`).
 3. **Roadmap Propagation**: Update pending roadmap files (`roadmaps/*.md`) so future implementation phases incorporate the newly formalized invariants.
 
 #### Stage 3 — Raw Source Decommissioning (Zero-Residue)

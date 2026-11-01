@@ -90,9 +90,9 @@ import sys
 
 script_dir = Path(sys.argv[1]).resolve()
 repo_dir = Path(sys.argv[2]).resolve()
-dry_run = sys.argv[3].lower() == "true"
+dry_run = sys.argv[3].lower() == "true" or "--dry-run" in sys.argv[5:] or "-n" in sys.argv[5:]
 subcmd = sys.argv[4]
-rest = sys.argv[5:]
+rest = [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
 
 sys.path.insert(0, str(script_dir))
 from dotfiles_mcp.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402

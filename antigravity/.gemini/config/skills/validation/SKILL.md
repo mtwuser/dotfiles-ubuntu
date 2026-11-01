@@ -82,14 +82,15 @@ L5  Boundary      →  What happens at the edges? (empty states, errors, stress)
 
 ### For Agent-Assisted Validation (Human tests, agent guides)
 
-1. **Agent prepares checklist** from project validation tracker, expanded with L1–L5 layers
+1. **Agent prepares checklist** from the project's validation tracker (`WORKVALI.md`), expanded with `L1`–`L5` layers
 2. **Human executes** steps in browser, narrating observations
 3. **Agent analyzes** the narration in real-time:
    - Classifies each observation as ✅ pass, ⚠️ cosmetic, or 🔴 bug
-   - Cross-references errors against application source (grep for stack trace symbols)
+   - Cross-references errors against application source (following `1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)
    - Identifies root cause when possible
-4. **Agent updates** validation tracker with results and captures issues in task tracker/backlog
-5. **Human confirms** findings and decides priority
+4. **Agent updates** `WORKVALI.md` with results and captures issues in `WORKTASK.md` / `BACKLOG.md`
+5. **Automated Test Materialization (`L1–L5 -> Unit / Imp / E2E`)**: Whenever a validation defect is fixed, materialize the corresponding automated regression test (`tests/unit/` for isolated logic, `tests/imp/` for boundary/adapter implementation, or `tests/e2e/` for the vertical persona journey) inside its `Test<Module>` suite so manual QA defects never regress
+6. **Human confirms** findings and decides priority
 
 ### For Autonomous Agent Validation (with browser tools)
 

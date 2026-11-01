@@ -29,15 +29,17 @@ Identify candidates for extraction when a file meets any of these thresholds:
 ## Execution Workflow
 Follow this sequence strictly to ensure no behavioral changes are introduced.
 
-1. **Baseline**: Run tests, confirm 100% coverage, record the test count.
-2. **Audit**: List all files that will be changed and all imports that will need updating.
-3. **Plan**: Document exact targets (which code → which new source files, `1:1` unit test files, and `docs/architecture/` specification entries).
-4. **Execute per file**: 
+1. **Baseline**: Run tests (`Unit -> Imp -> E2E`), confirm 100% isolated unit coverage, and record the total test count.
+2. **Pre-Edit Reading & Impact Audit (`Top-Down: E2E -> Imp -> Unit`)**:
+   - Read (1) `docs/guides/` & `docs/architecture/<spec>.md` $\rightarrow$ (2) `tests/e2e/` $\rightarrow$ `tests/imp/` $\rightarrow$ `tests/unit/` $\rightarrow$ (3) source code.
+   - List all files that will be changed and all imports/`@patch` seams that will need updating.
+3. **Plan**: Document exact targets (which code → which new source files, `1:1` unit test files, and `docs/architecture/` `1:1:1` specification entries).
+4. **Execute per file (`Bottom-Up Verification: Unit -> Imp -> E2E`)**:
    - Move the isolated logic and include the `Specification: docs/architecture/<spec>.md` header in the module docstring.
-   - Split/align the corresponding `1:1` unit test file (`test_<module>.py`) and update the `1:1:1` traceability table in `docs/architecture/<spec>.md`.
-   - Fix all imports.
-   - Run tests after EACH move to isolate breakages immediately.
-5. **Final verification**: Ensure the test count is identical (or higher), coverage is 100%, and every source, test, and `docs/**/*.md` file is `< 465` lines.
+   - Split/align the corresponding `1:1` unit test file (`test_<module>.py`, `class Test<Module>`) and update the `1:1:1` traceability table in `docs/architecture/<spec>.md`.
+   - Fix all imports and runtime `@patch` targets across `tests/{unit,imp,e2e}/`.
+   - Run tests **Bottom-Up (`tests/unit/` isolated first $\rightarrow$ `tests/imp/` $\rightarrow$ `tests/e2e/`)** after EACH move to isolate breakages in milliseconds without coverage masking.
+5. **Final verification**: Ensure the test count is identical (or higher), isolated unit and full coverage are 100%, and every source, test, and `docs/**/*.md` file is `< 465` lines.
 6. **Commit**: One atomic commit per logical change.
 
 ## Move Protocol Between Modules
@@ -61,7 +63,7 @@ Unlike pure refactoring (where test count must remain `>=` baseline), **feature 
 
 1. **1:1 Test File Mapping Audit (`orphan-test-file`)**:
    - Every unit test file (`tests/unit/**/test_<name>.py`) must correspond to an existing source module in `src/`.
-   - If `src/.../<name>.py` is deleted, delete `tests/unit/.../test_<name>.py` in the same changeset (or merge still-relevant macro/integration tests into the canonical owner's test file).
+   - If `src/.../<name>.py` is deleted, delete `tests/unit/.../test_<name>.py` in the same changeset (or merge still-relevant boundary/workflow tests into the canonical owner's implementation `tests/imp/` or E2E `tests/e2e/` test file).
 2. **Dead Symbol & Fixture Sweep**:
    - `grep -rn` across `tests/` for removed class names, functions, routes, fixtures, and `@patch` paths.
    - Remove any test method that existed solely to exercise the decommissioned behavior or axiomatic enum literal counts (`test_member_count`, `test_all_values`).

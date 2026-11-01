@@ -8,10 +8,11 @@ trigger: model_decision
 ---
 # Testing Rules — {PROJECT_NAME}
 
-## Test Classification & Placement
+## Test Classification, Bidirectional Flow & Placement
 
-1. **Unit tests** (`tests/unit/`): 0 DB access, all deps mocked, ms/test.
-2. **Imp tests** (`tests/imp/`): Gap closers that strictly require DB access. Keep imp tests ONLY for DB/integration verification.
+1. **Unit tests** (`tests/unit/`): 0 DB access, all deps mocked, ms/test (`1:1` algorithmic exhaustiveness across 4 quadrants).
+2. **Imp tests** (`tests/imp/` — **Implementation tests**, never `int`): Real cross-component boundary contracts (DB persistence, I/O adapters, parity). Named `imp` both to avoid colliding with the primitive `int` type and because they verify how internal components are *implemented* together (whereas *integration* is deploying/integrating into production). Keep `imp` tests strictly for real DB/adapter boundary verification.
+3. **Bidirectional 3-Tier Flow**: Read, deduce cases, and validate **Top-Down (`E2E -> Imp -> Unit`)** to preserve macroscopic persona/boundary invariants; author, isolate coverage, and execute **Bottom-Up (`Unit -> Imp -> E2E`)** so `tests/unit/` achieves 100% isolated branch coverage first without higher-tier masking.
 
 ## Architecture Invariants — MANDATORY
 
@@ -107,6 +108,6 @@ All commands run from project root with venv activated.
 | Domain Services | Pure business logic | Direct call, no mocks needed (no I/O) |
 | Domain Ports | Interface contracts | Verify implementations satisfy Protocol |
 | Application Use Cases | Orchestration flow | Mock ports/repositories |
-| Infrastructure Adapters | I/O integration | Imp tests with real DB/services |
+| Infrastructure Adapters | Real I/O & DB implementation | Imp tests (`tests/imp/`) with real DB/services |
 | API Routers | Request/response contracts | `httpx.AsyncClient` + dependency override |
 | Templates (HTMX) | HTML fragment responses | `httpx.AsyncClient` (`HX-Request: true`) + assert HTML content |

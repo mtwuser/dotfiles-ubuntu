@@ -106,9 +106,10 @@ Audit the alignment between **Normative Specifications**, **Executable Source Mo
    - **Test Method Name (`test_<subject>_<scenario_or_condition>_<expected_outcome>`)**: Reads as a natural-language functional proposition for human scanning.
    - **1-Line Invariant Docstring**: States *why* the test exists — the normative invariant, security pole, or boundary cut-point (`N` vs `N ± 1`) proven — eliminating the need for noisy inline narrative comments.
    - **Explicit AAA & Anti-Deception Gates**: Separate `# Arrange`, `# Act`, and `# Assert` comments, 100% isolated unit branch coverage, exact `N` vs `N ± 1` boundary cut-points, bipolar guard verification (negative pole first, positive pole second), explicit error matching (`match=`), and zero blind boundary/subprocess mocks.
-4. **Level 4 — 3-Tier Test Conceptualization, Case-Deduction Matrix (`E2E -> Imp -> Unit`) & Zero-Dependency Mutation Probes**:
+4. **Level 4 — Bidirectional 3-Tier Test Flow (`E2E <-> Imp <-> Unit`), `imp` Terminology & Zero-Dependency Mutation Probes**:
+   - **Bidirectional Asymmetry**: Read, deduce cases, and validate **Top-Down (`E2E -> Imp -> Unit`)**; author, isolate coverage, and execute **Bottom-Up (`Unit -> Imp -> E2E`)** so `tests/unit/` achieves 100% isolated branch coverage first without higher-tier masking.
    - **`tests/e2e/`**: Human persona journeys and multi-step vertical workflows catching cross-perspective/outbound regressions.
-   - **`tests/imp/`**: Real inter-component boundary contracts (CLI/stdio/IPC/FS) and `Spec <-> Code <-> Doc` parity gates.
+   - **`tests/imp/` (Implementation Tests — never `int`)**: Real internal boundary implementation (CLI/stdio/IPC/DB/FS) and `Spec <-> Code <-> Doc` parity gates (named `imp` to avoid `int` keyword collisions and to distinguish internal component *implementation* from production *integration*).
    - **`tests/unit/`**: `1:1` algorithmic exhaustiveness across all 4 quadrants (*Nominal*, *Exact `N` vs `N ± 1` Boundaries*, *Bipolar Guard Poles*, and *Outbound/Hostile Environment Failures*).
    - **Zero-Dependency Mutation Probe Loop (`Mutant Probe -> Outbound Survivor Check -> Test Materialization`)**: Probe critical conditions, filter sets, and default parameters with adversarial mutations (`<` $\leftrightarrow$ `<=`, omitted filter items, non-default role/flag values); whenever a mutant survives across `Unit` / `Imp` / `E2E`, materialize the missing case in its respective `Test<Module>` suite.
 

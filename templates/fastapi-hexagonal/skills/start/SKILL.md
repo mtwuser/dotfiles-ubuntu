@@ -21,10 +21,9 @@ Read: WORKVALI.md             → Pending manual validations
 Read: .agents/SESSION.md      → Previous session context (if any)
 ```
 
-### 2. Identify next work item (Priority Chain)
-1. `WORKTASK.md` — in-progress items first
-2. `WORKROAD.md` — next pending phase items
-3. `roadmaps/` — long-term planning
+### 2. Identify next work item (Priority Chain & Pre-Edit Reading Order)
+1. **Priority Chain**: `WORKTASK.md` (in-progress first) $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/`.
+2. **Pre-Edit Reading Priority (`1:1:1`)**: Before modifying any module, read (1) `docs/guides/` & `docs/architecture/<spec>.md` $\rightarrow$ (2) `tests/{e2e,imp,unit}/` (`Test<Module>`) $\rightarrow$ (3) source code in `src/`.
 
 ### 3. Report to user
 Summarize: what was last done, what is next, any blockers.

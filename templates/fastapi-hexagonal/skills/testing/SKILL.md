@@ -10,7 +10,10 @@ description: Guide for writing tests following hexagonal patterns with FastAPI
 2. **DAMP over DRY**: Tests are readable top-to-bottom with literal values
 3. **`1:1:1` File & Spec Mapping & Decommissioning (`orphan-test-file`)**: Every source file with **executable logic** (`service.py`, `router.py`, `repository.py`, `tasks.py`, or `models.py` with custom methods/properties) has one test file linked via `Specification: docs/architecture/<spec>.md`. Never create artificial `test_models.py` for declarative Pydantic fields or `test_dependencies.py` for 1-line getters already covered by router tests. When deleting a source module or feature, delete or consolidate its unit test file (`orphan-test-file`) in the same changeset.
 4. **One Class per File & Human-Agent `1:1:1` Comprehension**: `Test{SourceClassName}` — no suffixes (`Expanded`, `Coverage`, `Extended`). Pair every `test_<subject>_<scenario>_<expected>` method with a 1-line invariant docstring stating *why*.
-5. **Anti-Characterization Trap**: Never write tests that lock in broken behavior (e.g. an HTMX endpoint returning JSON or a missing ID returning HTTP 200 `{"error": ...}`). Fix the production bug first.
+5. **Bidirectional Test Flow (`E2E -> Imp -> Unit` vs. `Unit -> Imp -> E2E`) & `imp` Terminology**:
+   - **Comprehension & Case Deduction (`Top-Down: E2E -> Imp -> Unit`)**: Read `docs/guides/` and `docs/architecture/<spec>.md` first, then read existing tests from outermost journey (`E2E` / `Imp`) down to `Unit` before modifying production code.
+   - **Authoring, Isolation & Execution (`Bottom-Up: Unit -> Imp -> E2E`)**: Write and execute `tests/unit/` in strict isolation first (`100%` branch coverage, `< 1s`/test, `N` vs `N ± 1` boundary cut-points), then add `tests/imp/` (**Implementation tests** — named `imp` to avoid `int` keyword collisions and to denote internal component *implementation* rather than production *integration*) strictly for real DB/adapter boundaries.
+6. **Anti-Characterization Trap**: Never write tests that lock in broken behavior (e.g. an HTMX endpoint returning JSON or a missing ID returning HTTP 200 `{"error": ...}`). Fix the production bug first.
 
 ## Hexagonal Architecture Test Strategy
 

@@ -1,4 +1,4 @@
-"""Implementation/integration tests for Bash CLI scripts and repository invariants.
+"""Implementation tests for Bash CLI scripts and repository invariants.
 
 Specification: docs/architecture/01_system_and_stow_engine.md
 """
@@ -25,7 +25,7 @@ CLI_SCRIPTS = [
 
 
 class TestCLIScripts:
-    """Integration tests for Bash CLI scripts and repository contracts."""
+    """Implementation tests for Bash CLI scripts and repository contracts."""
 
     @pytest.mark.parametrize("script_path", CLI_SCRIPTS, ids=lambda p: p.name)
     def test_cli_scripts_support_help_and_version_flags(self, script_path: Path) -> None:

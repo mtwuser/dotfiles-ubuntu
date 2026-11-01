@@ -11,7 +11,7 @@ description: standard prioritization for picking up next work items
 ## Priority Chain
 
 ```
-Task Tracker (WORKTASK.md) → Active Roadmap / Backlog (WORKROAD.md / BACKLOG.md) → roadmaps/
+Task Tracker (WORKTASK.md) → Active Roadmap / Backlog (WORKROAD.md / ROADMAP.md / BACKLOG.md) → roadmaps/
 ```
 
 All work plans and tasks are centralized at the repository root.
@@ -49,13 +49,13 @@ When starting work on the next phase in `WORKROAD.md`:
 > **Granular promotion**: Promote individual phases/blocks one at a time, not the entire roadmap at once.
 > `WORKROAD.md` retains the strategic picture; `WORKTASK.md` holds only the active tactical phase.
 
-1. **Identify** the next pending phase/block within `WORKROAD.md`
-2. **Execute Promotion Analysis Checklist** — mandatory research:
-   - Phase 1: Technical documentation (feature docs, architecture specs, source file in `roadmaps/`)
-   - Phase 2: Existing code & precedent analysis
-   - Phase 3: Testing structure audit (read testing rules, audit existing tests, plan by tier)
-   - Phase 4: Naming & conventions
-   - Phase 5: Documentation persistence
+1. **Identify** the next pending phase/block within `WORKROAD.md` (or `ROADMAP.md` / `BACKLOG.md`)
+2. **Execute Promotion Analysis Checklist (`1:1:1` Reading Priority)** — mandatory research in strict top-down order:
+   - Phase 1: Human guides & normative specifications (`docs/guides/`, `docs/architecture/<spec>.md` `1:1:1` tables, and source file in `roadmaps/`)
+   - Phase 2: Self-documenting test hierarchy (`tests/e2e/` persona journeys $\rightarrow$ `tests/imp/` boundary implementation $\rightarrow$ `tests/unit/` 4-quadrant `Test<Module>` suites)
+   - Phase 3: Existing source code & precedent analysis (`src/` / `scripts/`)
+   - Phase 4: Naming, outbound non-restriction & convention alignment
+   - Phase 5: Documentation & `1:1:1` traceability persistence plan
 3. **Cross-task analysis** — if `WORKTASK.md` already has active items:
    - Scan active tasks → detect relationships → analyze dependencies → present brief report
 4. **Move** only that phase into `WORKTASK.md` as a `T` item (`T1`, `T2`, etc.)

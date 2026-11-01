@@ -1,4 +1,4 @@
-"""Implementation/integration tests for MCP server and lifecycle hooks over stdio.
+"""Implementation tests for MCP server and lifecycle hooks over stdio.
 
 Specification: docs/architecture/03_contextual_mcp_and_federation.md
 """
@@ -16,7 +16,7 @@ HOOKS_DIR = REPO_DIR / "antigravity" / ".gemini" / "config" / "scripts"
 
 
 class TestMCPAndHooksStdio:
-    """Integration tests for MCP server and lifecycle hooks over stdio."""
+    """Implementation tests for MCP server and lifecycle hooks over stdio."""
 
     def test_mcp_server_stdio_line_delimited_and_content_length_roundtrip(
         self,
