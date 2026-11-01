@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "template_id": "technical-base",
   "kind": "domain-policy-pack",
-  "target_role": "team",
+  "target_role": "squad",
   "description": "Software Engineering, 1:1:1 Code-Test-Spec Traceability, Refactoring & 100% AAA Testing Baseline",
   "recommended_surface_bindings": [
     {

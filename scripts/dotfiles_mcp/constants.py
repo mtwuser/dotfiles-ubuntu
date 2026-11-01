@@ -16,7 +16,7 @@ VALID_LAYER_ROLES = (
     "department",
     "domain-policy",
     "ephemeral-bot",
-    "team",
+    "squad",
     "service-node",
     "environment-cluster",
     "workstation",
@@ -34,7 +34,7 @@ ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
     "workstation": 10,
     "ephemeral-bot": 15,
     "department": 30,
-    "team": 50,
+    "squad": 50,
     "service-node": 60,
     "environment-cluster": 70,
 }

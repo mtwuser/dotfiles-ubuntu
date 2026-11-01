@@ -143,7 +143,7 @@ class TestAuthorityEngine:
                 {
                     "schema_version": "1.2",
                     "layer_id": "squad-web",
-                    "layer_role": "team",
+                    "layer_role": "squad",
                     "upstream_layer": {"layer_id": "dept-tech"},
                     "default_stack_templates": ["dept-tech", "squad-web"],
                     "layer_authority": {
@@ -254,7 +254,7 @@ class TestAuthorityEngine:
             json.dumps(
                 {
                     "layer_id": "squad-shm",
-                    "layer_role": "team",
+                    "layer_role": "squad",
                     "precedence": 50,
                 }
             ),
@@ -308,7 +308,7 @@ class TestAuthorityEngine:
 
         # Assert
         assert plan["origin_layer_id"] == "squad-shm"
-        assert plan["origin_layer_role"] == "team"
+        assert plan["origin_layer_role"] == "squad"
         assert plan["proposer_email"] == "member@squad.acme.com"
         assert plan["target_layer_id"] == "dept-tech"
         assert plan["reviewer_contact"] == "CTO <cto@acme.com>"
@@ -363,7 +363,7 @@ class TestAuthorityEngine:
             json.dumps(
                 {
                     "layer_id": "squad-alpha",
-                    "layer_role": "team",
+                    "layer_role": "squad",
                     "upstream_layer": {"layer_id": "dept-quantum"},
                 }
             ),

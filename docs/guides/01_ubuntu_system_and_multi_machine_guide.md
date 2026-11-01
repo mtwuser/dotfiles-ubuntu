@@ -76,7 +76,7 @@ The `system/` directory contains plain-text manifests of installed software, con
 | `system/external/{apt-repo,deb-url,script}/` | **Recipe catalog** for third-party software (Docker, Chrome, GCloud CLI, Proton, Discord, AutoFirma, Antigravity). Only recipes listed in `system/external.txt` are required by `audit.sh` or installed by `bootstrap.sh --external`. To enable a recipe on a fresh machine, add its relative path (e.g. `apt-repo/docker.sh`) to `system/external.txt` and run `./bootstrap.sh --external`. |
 | [`system/gnome-extensions.txt`](../../system/gnome-extensions.txt) | Installed GNOME Shell extension UUIDs. |
 | [`system/gnome-settings.dconf`](../../system/gnome-settings.dconf) | Declarative GNOME desktop settings (keybindings, interface, touchpad, dock, tiling) — excludes private/ephemeral state. |
-| [`system/mcp-layer.json`](../../system/mcp-layer.json) | Declarative layer/node identity (`corporate`, `domain-policy`, `department`, `team`, `service-node`, `workstation`), upstream lineage, authority policy, and federated MCP topology served by [`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py). |
+| [`system/mcp-layer.json`](../../system/mcp-layer.json) | Declarative layer/node identity (`corporate`, `domain-policy`, `department`, `squad`, `service-node`, `workstation`), upstream lineage, authority policy, and federated MCP topology served by [`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py). |
 
 ---
 

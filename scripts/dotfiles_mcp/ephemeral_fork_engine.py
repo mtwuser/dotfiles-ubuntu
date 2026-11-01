@@ -150,7 +150,7 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
     bridge_manifest: dict[str, Any] = {
         "schema_version": "1.2",
         "layer_id": f"bridge-{proj.name.lower().replace('_', '-')}",
-        "layer_role": "team",
+        "layer_role": "squad",
         "precedence": 20,
         "description": f"Ephemeral cross-project rule bridge from {proj.name}",
         "default_stack_templates": [],

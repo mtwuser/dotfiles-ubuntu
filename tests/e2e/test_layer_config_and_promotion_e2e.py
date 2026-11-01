@@ -362,7 +362,7 @@ class TestLayerConfigAndPromotionE2E:
             "--parent-dir",
             str(corp_dir),
         ]
-        squad_args = ("--id", "squad-cad-core", "--role", "team", "--parent-dir", str(dept_dir))
+        squad_args = ("--id", "squad-cad-core", "--role", "squad", "--parent-dir", str(dept_dir))
         promo_args = [
             *["--source", ".agents/rules/squad-cad-core.md", "--to-layer", "dept-eng-platform"],
             *["--to-template", "dept-eng-platform", "--create-pr", "--email", "dev@squad.acme.com"],
@@ -413,6 +413,10 @@ class TestLayerConfigAndPromotionE2E:
         assert pr_promo["promotion_pr_plan"]["target_layer_id"] == "dept-eng-platform"
         assert pr_promo["promotion_pr_plan"]["contributing_org"] == "Acme Corp"
         assert "CONTRIB_REPO ?=" in (corp_dir / "Makefile").read_text(encoding="utf-8")
+        assert "Level 1 — Root 0" in (corp_dir / "README.md").read_text(encoding="utf-8")
+        assert "Level 2 — Department" in (dept_dir / "README.md").read_text(encoding="utf-8")
+        assert "Level 3 — Squad" in (squad_dir / "README.md").read_text(encoding="utf-8")
+        assert "Level 4" in (squad_dir / ".agents/LAYER_LINEAGE.md").read_text(encoding="utf-8")
         assert "TARGET_REPO ?= $(PARENT_DIR)" in (dept_dir / "Makefile").read_text(encoding="utf-8")
         assert "TARGET_REPO ?= $(PARENT_DIR)" in (squad_dir / "Makefile").read_text(
             encoding="utf-8"

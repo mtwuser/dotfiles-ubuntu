@@ -20,6 +20,7 @@ from .fork_configurator import (
 from .manifest_helpers import (
     _is_dest_template_newer,
     _merge_unique_strings,
+    _render_layer_onboarding_readme,
     _sync_mounted_children_into_parent,
 )
 
@@ -224,7 +225,7 @@ def bootstrap_layer_workspace(
     scaffold_own_template: bool = True,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """One-shot initializer for a corporate, domain-policy, department, or team workspace."""
+    """One-shot initializer for a corporate, domain-policy, department, or squad workspace."""
     if not c.KEBAB_ID_RE.match(layer_id):
         raise ValueError(f"Invalid layer_id {layer_id!r}")
     if layer_role not in c.VALID_LAYER_ROLES:
@@ -321,13 +322,16 @@ def bootstrap_layer_workspace(
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
         "layers/.gitkeep": "",
         "Makefile": _render_layer_makefile(layer_id, layer_role, effective_parent, repo_dir),
-        "README.md": f"# {layer_id} (`{layer_role}`, `precedence: {effective_prec}`)\n",
+        "README.md": _render_layer_onboarding_readme(
+            layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
+        ),
         "CHANGELOG.md": (
             f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
             f"## [0.1.0]\n- Initial layer bootstrap.\n"
         ),
         "WORKTASK.md": (
             f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v0.1.0`).\n"
+            "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
         ),
         "antigravity/.gemini/config/AGENTS.md": (
             f"---\ntrigger: always_on\n"

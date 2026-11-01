@@ -66,7 +66,7 @@ Verify these mandates before proposing solutions or modifying files in any works
 **Mandate:**
 1. **3-Tier Progressive Disclosure (`README.md` $\rightarrow$ `docs/guides/` $\rightarrow$ `docs/architecture/` & `docs/reference/`)**:
    - **Tier 1 (`README.md`, $\le 400$ lines)**: Executive gateway (Quick-Start, repo tree, CLI cheat-sheet, and navigation table).
-   - **Tier 2 (`docs/guides/*.md`, `< 465` lines)**: Step-by-step human operator & team workflow guides.
+   - **Tier 2 (`docs/guides/*.md`, `< 465` lines)**: Step-by-step human operator & squad workflow guides.
    - **Tier 3 (`docs/architecture/*.md` & `docs/reference/*.md`, `< 465` lines)**: Normative `1:1:1` specs (`Specification:`) and technical playbooks.
 2. **Post-Move/Rename Coherence**: Sync `README.md` and `docs/README.md` trees against `find`/`ls`, verify links (`test -f`), sweep `.md` files (`grep -rn`), and leave zero orphans.
 

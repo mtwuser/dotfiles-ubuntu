@@ -313,7 +313,7 @@ class TestChainedMCPFederationE2E:
         subprocess.run(["git", "add", "-A"], cwd=dept_repo, env=git_env, check=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=dept_repo, env=git_env, check=True)
         subprocess.run(["git", "init", "-b", "master"], cwd=team_repo, env=git_env, check=True)
-        _create_node_fixture(team_repo, "acme-team-backend", "team", ["git", "python3"], {})
+        _create_node_fixture(team_repo, "acme-squad-backend", "squad", ["git", "python3"], {})
         subprocess.run(["git", "add", "-A"], cwd=team_repo, env=git_env, check=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=team_repo, env=git_env, check=True)
         subtree_env = {**git_env, "DOTFILES_REPO_DIR": str(team_repo)}

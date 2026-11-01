@@ -1,8 +1,8 @@
-# Hierarchical Governance Layers, Authority Gates & Team Workflows Guide
+# Hierarchical Governance Layers, Authority Gates & Squad Workflows Guide
 
 > **Human & Architect Operator Manual (Tier 2 Progressive Disclosure)**
 >
-> Step-by-step guide to the 3-Layer Configuration Architecture, 3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`), Multi-Tier Organizational Workflows (`Open Source <-> Corporate Root 0 <-> Department <-> Squad/Team`), Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)** and **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**.
+> Step-by-step guide to the 3-Layer Configuration Architecture, 3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`), 4-Level Organizational Hierarchy (`Corporate Root 0 <-> Department <-> Squad <-> Project`), Fill-in-the-Blanks Setup Blueprints & Initial Chat Kickoff Prompts, Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)** and **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**.
 
 ---
 
@@ -61,41 +61,116 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
 
 ---
 
-## 3. Multi-Tier Lifecycle: `Open Source <-> Corporate Root 0 <-> Department <-> Squad`
+## 3. 4-Level Hierarchy Lifecycle: `Root 0 -> Department -> Squad -> Project`
 
-### 3.1 Bootstrapping & Synchronizing Each Tier (`scripts/layer-config.sh`)
+When you initialize a layer via `bootstrap-workspace` (or a project via `apply-project`), the CLI automatically generates a **fill-in-the-blanks Setup Blueprint** and a **ready-to-paste Initial Chat Kickoff Prompt** inside the new workspace's `README.md` (or `.agents/LAYER_LINEAGE.md` for projects). Complete the 5 bullet fields and paste the kickoff prompt into your first `antigravity-agents` chat to materialize your layer rules, roadmap, and child tier commands automatically.
 
-```bash
-# 1A. [Corporate Root 0 Architect — Option A: Standalone Layer Workspace]
-#     Initialize Corporate Root and configure owner authority:
-./scripts/layer-config.sh bootstrap-workspace /path/to/corp-root \
-  --id acme-corp-root --role corporate --precedence 10 --templates business-base \
-  --upstream-url "https://github.com/mtwuser/dotfiles-ubuntu.git"
-./scripts/layer-config.sh set-authority /path/to/corp-root \
-  --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
+### 3.1 Level 1 — `Root 0` (`--role corporate`, `precedence: 10`)
 
-# 1B. [Corporate Root 0 Architect — Option B: Direct Platform Fork of dotfiles-ubuntu]
-#     Parameterize a cloned fork of dotfiles-ubuntu in place as Corporate Root 0:
-./scripts/layer-config.sh init-fork \
-  --id acme-corp-root --role corporate --precedence 10 --prune-default-templates
-./scripts/layer-config.sh set-authority \
-  --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
+1. **CLI Setup (Standalone Layer Workspace or Direct Platform Fork)**:
+   ```bash
+   # Option A: Standalone Corporate Root 0 workspace
+   ./scripts/layer-config.sh bootstrap-workspace /path/to/corp-root \
+     --id acme-corp-root --role corporate --precedence 10 --templates business-base \
+     --upstream-url "https://github.com/mtwuser/dotfiles-ubuntu.git"
+   ./scripts/layer-config.sh set-authority /path/to/corp-root \
+     --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
 
-# 2. [Department Lead] Bootstrap a Department workspace, configure authority, and mount into Root 0:
-./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
-  --id dept-legal-ip --role domain-policy --precedence 5 \
-  --parent-dir /path/to/corp-root --templates business-base
-./scripts/layer-config.sh set-authority /path/to/dept-legal \
-  --owner-role "Chief Legal Officer (CLO)" --emails "clo@acme.com"
-./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
+   # Option B: Parameterize a cloned fork of dotfiles-ubuntu in place as Root 0
+   ./scripts/layer-config.sh init-fork \
+     --id acme-corp-root --role corporate --precedence 10 --prune-default-templates
+   ./scripts/layer-config.sh set-authority \
+     --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
+   ```
+2. **Fill-in-the-Blanks Blueprint (`README.md` in `Root 0`)**:
+   ```markdown
+   ## Layer Setup Blueprint (Level 1 — Root 0 Business & Corporate Governance)
+   - **Layer ID & Role**: `acme-corp-root` (`corporate`, `precedence: 10`)
+   - **1-Hop Upstream Parent**: `open-source-root`
+   - **Active Template Packs**: `business-base`, `acme-corp-root`
+   - **Mission, Scope & Core Invariants**: [Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]
+   - **Downstream Topology (Next Tier)**: [Fill: Planned child Departments (--role department / --role domain-policy)]
+   - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
+   ```
+3. **Initial Chat Kickoff Prompt (`Root 0`)**:
+   ```text
+   Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/acme-corp-root/rules/acme-corp-root.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh bootstrap-workspace commands to initialize our planned child Departments.
+   ```
 
-# 3. [Squad / Team Lead] Bootstrap a Squad workspace inheriting from its parent Department:
-./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
-  --id squad-patent-ops --role team --precedence 60 \
-  --parent-dir /path/to/dept-legal --templates technical-base
-```
+### 3.2 Level 2 — `Department` (`--role department`, `precedence: 30` / `--role domain-policy`, `precedence: 5`)
 
-### 3.2 Authority Gate, 1-Hop Horizon Radar & Child-Contextualized Promotion
+1. **CLI Setup**:
+   ```bash
+   ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
+     --id dept-legal-ip --role domain-policy --precedence 5 \
+     --parent-dir /path/to/corp-root --templates business-base
+   ./scripts/layer-config.sh set-authority /path/to/dept-legal \
+     --owner-role "Chief Legal Officer (CLO)" --emails "clo@acme.com"
+   ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
+   ```
+2. **Fill-in-the-Blanks Blueprint (`README.md` in `Department`)**:
+   ```markdown
+   ## Layer Setup Blueprint (Level 2 — Department & Cross-Cutting Domain Governance)
+   - **Layer ID & Role**: `dept-legal-ip` (`domain-policy`, `precedence: 5`)
+   - **1-Hop Upstream Parent**: `acme-corp-root`
+   - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`
+   - **Mission, Scope & Core Invariants**: [Fill: Department mission, domain invariants, and target file surface globs]
+   - **Downstream Topology (Next Tier)**: [Fill: Planned child Squads (--role squad, e.g. squad-patent-ops)]
+   - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
+   ```
+3. **Initial Chat Kickoff Prompt (`Department`)**:
+   ```text
+   Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/dept-legal-ip/rules/dept-legal-ip.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh bootstrap-workspace commands to initialize our child Squads.
+   ```
+
+### 3.3 Level 3 — `Squad` (`--role squad`, `precedence: 50`)
+
+1. **CLI Setup**:
+   ```bash
+   ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
+     --id squad-patent-ops --role squad --precedence 50 \
+     --parent-dir /path/to/dept-legal --templates technical-base,fastapi-hexagonal
+   ./scripts/layer-config.sh set-authority /path/to/squad-patents \
+     --owner-role "Squad Lead" --emails "lead@squad.acme.com"
+   ```
+2. **Fill-in-the-Blanks Blueprint (`README.md` in `Squad`)**:
+   ```markdown
+   ## Layer Setup Blueprint (Level 3 — Squad Execution & Tech Stack Governance)
+   - **Layer ID & Role**: `squad-patent-ops` (`squad`, `precedence: 50`)
+   - **1-Hop Upstream Parent**: `dept-legal-ip`
+   - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`, `technical-base`, `fastapi-hexagonal`, `squad-patent-ops`
+   - **Mission, Scope & Core Invariants**: [Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]
+   - **Downstream Topology (Next Tier)**: [Fill: Target application repositories for apply-project, e.g. /path/to/patent-api]
+   - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
+   ```
+3. **Initial Chat Kickoff Prompt (`Squad`)**:
+   ```text
+   Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/squad-patent-ops/rules/squad-patent-ops.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh apply-project commands for our target application repositories.
+   ```
+
+### 3.4 Level 4 — `Project` (`apply-project`, Application / Service Workspace)
+
+1. **CLI Setup (Run from the `Squad` Workspace)**:
+   ```bash
+   ./scripts/layer-config.sh apply-project /path/to/patent-api \
+     --template technical-base,fastapi-hexagonal,squad-patent-ops
+   ```
+2. **Fill-in-the-Blanks Blueprint (`.agents/LAYER_LINEAGE.md` in `Project`)**:
+   ```markdown
+   ## Project Setup Blueprint (Level 4 — Application Workspace)
+   - **Applied Template Packs**: `technical-base,fastapi-hexagonal,squad-patent-ops`
+   - **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]
+   - **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]
+   - **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]
+   ```
+3. **Initial Chat Kickoff Prompt (`Project`)**:
+   ```text
+   /sopen — Read .agents/LAYER_LINEAGE.md, all inherited .agents/rules/*.md, and our Project Setup Blueprint.
+   Initialize README.md, docs/architecture/ (1:1:1 specs), WORKROAD.md, and WORKTASK.md for Phase 1,
+   then propose the Pre-Edit Scope Blueprint for Task 1.
+   ```
+
+### 3.5 Authority Gate, 1-Hop Horizon Radar & Child-Contextualized Promotion
 
 Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node only inspects its immediate `1-hop upstream` parent and its immediate `1-hop downstream` children (`layers/*`). Skipping intermediate layers (`Squad -> Corporate Root` or `Department -> Open Source`) is deterministically blocked (`CROSS_TIER_PROMOTION_BYPASS`).
 
@@ -125,7 +200,7 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
   --context "Validated across Corporate Root 0 + 5 Department subtrees + Squad workspaces"
 ```
 
-### 3.3 Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`
+### 3.6 Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`
 
 Nobody needs to memorize long `layer-config.sh` invocations for daily operations. Every layer workspace initialized or synced via `bootstrap-workspace` / `sync-layer` provides two built-in ergonomic channels:
 

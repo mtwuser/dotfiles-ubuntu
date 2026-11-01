@@ -20,6 +20,7 @@ from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _merge_unique_strings,
     _parse_skill_frontmatter,
+    _render_lineage_markdown,
 )
 from dotfiles_mcp.promotion_engine import collect_layer_effective_bindings
 
@@ -68,7 +69,7 @@ def _inspect_single_template_dir(
         template_name=tpl_dir.name,
         source_layer=source_layer,
         kind=str(meta.get("kind", "stack-starter")),
-        target_role=str(meta.get("target_role", "team")),
+        target_role=str(meta.get("target_role", "squad")),
         description=str(meta.get("description", f"Template pack {tpl_dir.name}")),
         rules=rules,
         skills=skills,
@@ -105,7 +106,7 @@ def configure_fork_manifest(
     repo_dir: Path,
     *,
     layer_id: str,
-    layer_role: str = "team",
+    layer_role: str = "squad",
     precedence: int | None = None,
     description: str | None = None,
     upstream_url: str | None = None,
@@ -237,7 +238,7 @@ def scaffold_template_pack(
         "schema_version": "1.0",
         "template_id": template_name,
         "kind": kind,
-        "target_role": "domain-policy" if kind == "domain-policy-pack" else "team",
+        "target_role": "domain-policy" if kind == "domain-policy-pack" else "squad",
         "description": desc,
         "recommended_surface_bindings": [binding_entry],
     }
@@ -420,18 +421,12 @@ def apply_fork_to_project(
                     shutil.copy2(afile, dest_a)
                     dest_a.chmod(0o644)
 
-    lineage_lines = [
-        "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
-        f"- **Applied Template Pack**: `{resolved_tpl_name or 'none'}`\n",
-        "## Participating Layers (Ordered by Precedence `0..100`)\n",
-        "| Precedence | Layer | Layer ID | Role | Surface Bindings |",
-        "|---:|---|---|---|---:|",
-    ]
+    lineage_rows: list[str] = []
     for name, ldir, m in candidate_layers:
         prec, lid = int(m.get("precedence", 50)), str(m.get("layer_id", name))
         role = str(m.get("layer_role", "department"))
         bindings = collect_layer_effective_bindings(ldir, m)
-        lineage_lines.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
+        lineage_rows.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")
         layer_agents = ldir / "antigravity/.gemini/config/AGENTS.md"
         dest_rule = agents_dir / "rules" / f"layer-{prec:02d}-{name}.md"
         if name == "root" and repo_dir.resolve() == target_project_dir.resolve():
@@ -450,7 +445,9 @@ def apply_fork_to_project(
     copied_files.append(str(lineage_dest.relative_to(target_project_dir)))
     if not dry_run:
         lineage_dest.parent.mkdir(parents=True, exist_ok=True)
-        lineage_dest.write_text("\n".join(lineage_lines) + "\n", encoding="utf-8")
+        lineage_dest.write_text(
+            _render_lineage_markdown(resolved_tpl_name, lineage_rows), encoding="utf-8"
+        )
 
     return dict(
         target_project_dir=str(target_project_dir),

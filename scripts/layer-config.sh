@@ -168,7 +168,7 @@ if subcmd == "init-fork":
     manifest = configure_fork_manifest(
         repo_dir,
         layer_id=str(opts["id"]),
-        layer_role=str(opts.get("role", "team")),
+        layer_role=str(opts.get("role", "squad")),
         precedence=int(str(opts["prec"])) if "prec" in opts else None,
         description=_opt_str(opts, "desc"),
         upstream_url=_opt_str(opts, "up_url"),

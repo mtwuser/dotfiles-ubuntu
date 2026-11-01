@@ -53,7 +53,7 @@ class TestDotfilesMCPServerCLI:
         monkeypatch.setattr(tempfile, "TemporaryDirectory", _raise_ro_oserror)
         rc_self_test_ro = dotfiles_mcp_server.main(["--self-test"])
         rc_stdio = dotfiles_mcp_server.main(
-            ["--layer-id", "test-layer", "--layer-role", "team", "--no-log"]
+            ["--layer-id", "test-layer", "--layer-role", "squad", "--no-log"]
         )
         rc_stdio_log = dotfiles_mcp_server.main(["--log-dir", str(tmp_path / "custom_logs")])
 

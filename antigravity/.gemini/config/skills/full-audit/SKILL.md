@@ -60,7 +60,7 @@ Identify the concrete human archetypes served by the repository and simulate eac
 | :--- | :--- |
 | **P1. Individual / First-Time User** | Clones the repository, reads `README.md` Quick-Start, runs initial setup/bootstrap, and executes the health/audit command. Verify zero surprise overwrites, zero false-positive drift warnings across supported profiles, and clear next steps. |
 | **P2. Organizational / Root-0 Adopter** | Forks or bootstraps the top-level organizational/domain workspace (`Root 0`), configures authority and upstream lineage, and follows the step-by-step guide in `docs/guides/`. Verify that every documented CLI command and flag in the guide executes verbatim without error. |
-| **P3. Department / Team Integrator** | Inherits from `Root 0` (`--parent-dir` or subtree), scaffolds domain/team packs, and uses generated `Makefile` / CLI ergonomics (`make sync`, `make diff`, `make promote`) for 1-hop upward/downward flows. |
+| **P3. Department / Squad Integrator** | Inherits from `Root 0` (`--parent-dir` or subtree), scaffolds domain/squad packs, and uses generated `Makefile` / CLI ergonomics (`make sync`, `make diff`, `make promote`) for 1-hop upward/downward flows. |
 | **P4. Consumer Project Developer & Agent** | Applies templates to an application repository, works under active guardrails/hooks, runs tests, and receives actionable remediation whenever a guardrail blocks an operation. |
 | **P5. Upstream Maintainer / Operator** | Runs full verification (`make verify`), inspects diagnostics, and prepares releases (`/release`) with zero cross-tier or private identifier leaks. |
 

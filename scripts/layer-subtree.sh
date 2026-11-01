@@ -29,7 +29,7 @@ usage() {
 Usage: ./scripts/layer-subtree.sh [--dry-run] <command> [args...]
 
 Orchestrate vertical upstream fork synchronization and horizontal git subtree
-context layers (layers/<layer-name>/) across corporate, departmental, team,
+context layers (layers/<layer-name>/) across corporate, departmental, squad,
 and service-node repositories.
 
 Commands:

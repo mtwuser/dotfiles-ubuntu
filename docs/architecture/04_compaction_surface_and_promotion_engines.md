@@ -61,7 +61,7 @@ When an organization scales from a single repository (`0` mounted subtrees) to `
 
 1. **Zero Hardcoded Departments (`0 → 1 → N` Arbitrary Layers)**:
    - The **Root repository** (`self.repo_dir`, default `precedence: 10`) provides the universal engineering baseline (`AGENTS.md` + `templates/*`) via GNU Stow and MCP without requiring a separate `"dept-it"` subtree.
-   - Any `0`, `1`, or `N` additional governance layers can be mounted under `layers/<any-slug>/` with any `layer_id`, `layer_role` (`department`, `domain-policy`, `team`, `corporate`, `service-node`), and numeric `precedence` (`0..100`).
+   - Any `0`, `1`, or `N` additional governance layers can be mounted under `layers/<any-slug>/` with any `layer_id`, `layer_role` (`department`, `domain-policy`, `squad`, `corporate`, `service-node`), and numeric `precedence` (`0..100`).
 2. **Four Universal Surface Selectors (`surface_bindings`)**:
    - **`target_globs`**: Relative file glob patterns (`["templates/**", "static/css/**", "*.html"]`, `["*"]`, or `["**"]`).
    - **`architectural_planes`**: Universal software engineering planes (`"schema"`, `"domain"`, `"application"`, `"presentation"`, `"infrastructure"`, `"testing"`, or `"*"`). Automatically inferred from `target_path` via `_infer_plane_from_path` when omitted.
@@ -79,11 +79,11 @@ When an organization scales from a single repository (`0` mounted subtrees) to `
 
 ## 4. Polymorphic Fork Configurator (`template.json`), Static Materialization & Multi-Layer Promotion Engine
 
-To ensure every fork (`corporate`, `domain-policy`, `department`, `team`, `service-node`) is proactively configurable and supports bidirectional knowledge flow in both **MCP Mode** and **Static / Non-MCP Mode**, `fork_configurator.py` and `promotion_engine.py` (exposed via `./scripts/layer-config.sh`) implement:
+To ensure every fork (`corporate`, `domain-policy`, `department`, `squad`, `service-node`) is proactively configurable and supports bidirectional knowledge flow in both **MCP Mode** and **Static / Non-MCP Mode**, `fork_configurator.py` and `promotion_engine.py` (exposed via `./scripts/layer-config.sh`) implement:
 
 | Capability | CLI Subcommand (`layer-config.sh`) | Python Function | Key Invariants & Guarantees |
 |---|---|---|---|
-| **Fork Identity & Default Pruning** | `init-fork --id <id> --role <role> [--precedence N] [--prune-default-templates]` | `configure_fork_manifest` | Assigns role-based default `precedence` (`domain-policy: 5`, `corporate: 10`, `department: 30`, `team: 50`) and optionally prunes upstream starter templates (`fastapi-hexagonal`, `human-core`, `technical-base`) and `fastapi-hexagonal` bindings when a fork targets another stack or policy domain. |
+| **Fork Identity & Default Pruning** | `init-fork --id <id> --role <role> [--precedence N] [--prune-default-templates]` | `configure_fork_manifest` | Assigns role-based default `precedence` (`domain-policy: 5`, `corporate: 10`, `department: 30`, `squad: 50`) and optionally prunes upstream starter templates (`fastapi-hexagonal`, `human-core`, `technical-base`) and `fastapi-hexagonal` bindings when a fork targets another stack or policy domain. |
 | **Polymorphic Template Discovery** | `list-templates` | `discover_templates_catalog` | Scans `templates/*/template.json` across `Root` and all mounted `layers/*` subtrees (`stack-starter`, `domain-policy-pack`, `department-pack`, `project-overlay`). |
 | **Template Pack Scaffolding** | `scaffold-template <name> --kind <kind> [--rule-file <fname>] [--register-binding]` | `scaffold_template_pack` | Generates `templates/<name>/template.json` (`v1.0`), `rules/<fname\|policy.md>`, `skills/<name>-guide/SKILL.md`, `governance/WORKTASK.md` or `assets/canonical_snippet.md`, and registers `<name>` in `default_stack_templates`. |
 | **Downward Static Materialization** | `apply-project <dir> [--template <ref>] [--layers all]` | `apply_fork_to_project` | Copies template `rules/`, `skills/`, `governance/`, and `assets/` into `<dir>/.agents/`, materializes `Root` (`layer-<NN>-root.md`) and mounted `layers/*` (`layer-<NN>-<name>.md`) `AGENTS.md` files into `.agents/rules/` in `precedence` order, and writes `.agents/LAYER_LINEAGE.md` using `collect_layer_effective_bindings`. |

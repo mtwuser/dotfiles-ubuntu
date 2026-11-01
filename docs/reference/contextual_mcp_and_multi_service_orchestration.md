@@ -2,11 +2,11 @@
 
 > **Reference & Configuration Guide — Operating `dotfiles-ubuntu` as a Node/Layer MCP Server**
 >
-> Just as `dotfiles-ubuntu` contextualizes engineering patterns across organizational layers (`Corporate → Team → Project`) via GNU Stow on a local workstation, any instance or fork of `dotfiles-ubuntu` hosted on a **system, container, remote server, or team repository** can also run as a **lightweight Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`).
+> Just as `dotfiles-ubuntu` contextualizes engineering patterns across organizational layers (`Corporate → Department → Squad → Project`) via GNU Stow on a local workstation, any instance or fork of `dotfiles-ubuntu` hosted on a **system, container, remote server, or squad repository** can also run as a **lightweight Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`).
 >
 > This capability is **100% optional, read-only, and zero-dependency** (pure Python 3 standard library). You can adopt it in **two ways**:
 > 1. **As a Standalone Node / Container MCP Use Case**: Turn any Ubuntu workstation, Docker container, Devcontainer, or remote server into a self-describing, auditable node that AI agents can inspect for package drift, configuration health, and navigable documentation (`docs/`).
-> 2. **As an Extension of the [Enterprise "pAIr programming" Governance Model](enterprise_pair_programming_governance.md)**: Orchestrate multiple customized `dotfiles-ubuntu` forks across **Corporate, Team, and Multi-Service / Multi-Container architectures**, creating a **Federated Context Mesh** where AI agents discover both the specialized MCPs of each service and the exact governance rules that apply to them.
+> 2. **As an Extension of the [Enterprise "pAIr programming" Governance Model](enterprise_pair_programming_governance.md)**: Orchestrate multiple customized `dotfiles-ubuntu` forks across **Corporate, Department, Squad, and Multi-Service / Multi-Container architectures**, creating a **Federated Context Mesh** where AI agents discover both the specialized MCPs of each service and the exact governance rules that apply to them.
 
 ---
 
@@ -16,9 +16,9 @@
 
 On a single developer laptop, **GNU Stow** (`./bootstrap.sh --stow`) is unbeatable: it links [`AGENTS.md`](../../antigravity/.gemini/config/AGENTS.md) and [`hooks.json`](../../antigravity/.gemini/config/hooks.json) directly into `~/.gemini/config/`, giving the AI agent zero-latency rules and deterministic `PreToolUse` safety guards.
 
-However, as soon as an engineering workflow involves **multiple containers, microservices, remote servers, or multiple team forks**, filesystem symlinks hit a physical wall:
+However, as soon as an engineering workflow involves **multiple containers, microservices, remote servers, or multiple squad forks**, filesystem symlinks hit a physical wall:
 - A symlink in `~/.gemini/config/` on your host laptop **cannot** inspect whether a worker container is missing an APT library declared in its [`system/packages-manual.txt`](../../system/packages-manual.txt).
-- A local symlink **cannot** read the `Layer B` templates of another team's fork or the `docs/` of a remote service node.
+- A local symlink **cannot** read the `Layer B` templates of another squad's fork or the `docs/` of a remote service node.
 - A flat `mcp_config.json` with 20 raw infrastructure MCP servers (databases, queues, cloud APIs) tells the AI agent *how to call* those tools, but gives **zero context** about *which architectural rules, migration restrictions, or safety guardrails govern each environment*.
 
 ### 1.2. The Solution: Every Node & Layer as a Self-Describing MCP Context Provider
@@ -49,7 +49,7 @@ Even for a single developer or a single project using Docker Compose, attaching 
 
 ### Mode B: Multi-Layer & Multi-Service Orchestration (Enterprise Extension)
 
-In complex enterprise architectures where multiple services, containers, servers, and teams interact, organizations customize forks of `dotfiles-ubuntu` for each layer and service node.
+In complex enterprise architectures where multiple services, containers, servers, and squads interact, organizations customize forks of `dotfiles-ubuntu` for each layer and service node.
 
 Instead of managing an unstructured list of disconnected MCP servers, the customized `dotfiles-ubuntu` instances form a **Hierarchical Context Mesh**:
 
@@ -61,9 +61,9 @@ flowchart TD
         CorpMCP["📡 mcp: dotfiles-corporate\n(layer_role: corporate)\n• Global Security & Compliance (AGENTS.md)\n• Approved Enterprise MCP Registry"]
     end
 
-    subgraph Tier2["Tier 2: Team / Domain Forks"]
-        BackendMCP["📡 mcp: dotfiles-team-backend\n(layer_role: team)\n• templates/fastapi-hexagonal/\n• API & Database Migration Standards"]
-        DataMCP["📡 mcp: dotfiles-team-data\n(layer_role: team)\n• templates/gcp-data-platform/\n• Pipeline & FinOps Guardrails"]
+    subgraph Tier2["Tier 2: Squad / Domain Forks"]
+        BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/fastapi-hexagonal/\n• API & Database Migration Standards"]
+        DataMCP["📡 mcp: dotfiles-squad-data\n(layer_role: squad)\n• templates/gcp-data-platform/\n• Pipeline & FinOps Guardrails"]
     end
 
     subgraph Tier3["Tier 3: Multi-Container / Multi-Server Application Nodes"]
@@ -73,8 +73,8 @@ flowchart TD
     end
 
     Agent <-->|"1. Read Corporate Standards"| CorpMCP
-    CorpMCP -.->|"Declares downstream team layers"| BackendMCP
-    CorpMCP -.->|"Declares downstream team layers"| DataMCP
+    CorpMCP -.->|"Declares downstream squad layers"| BackendMCP
+    CorpMCP -.->|"Declares downstream squad layers"| DataMCP
     Agent <-->|"2. Read Stack Blueprints & Guardrails"| BackendMCP
     BackendMCP -.->|"Declares service nodes"| NodeAPI
     BackendMCP -.->|"Declares service nodes"| NodeWorker
@@ -93,7 +93,7 @@ flowchart TD
    - A feature works in `checkout-api` but fails in `payment-worker` due to a native library mismatch (`libpq` / `cairo` / Node version).
    - The agent calls `audit_node_drift` and reads `dotfiles://system/manifests` on both `dotfiles-node-api` and `dotfiles-node-worker`, immediately pinpointing the exact package discrepancy between the two containers.
 3. **Cross-Layer `/enrich` Discovery**:
-   - Using `compare_layer_patterns`, the agent compares a microservice's `.agents/rules/` and `.agents/skills/` against both `dotfiles-team-backend` (`Layer B`) and `dotfiles-corporate` (`Layer A`), identifying which local rules should be promoted to the team fork versus the corporate fork.
+   - Using `compare_layer_patterns`, the agent compares a microservice's `.agents/rules/` and `.agents/skills/` against both `dotfiles-squad-backend` (`Layer B`) and `dotfiles-corporate` (`Layer A`), identifying which local rules should be promoted to the squad fork versus the corporate fork.
 
 ---
 
@@ -173,7 +173,7 @@ make docker-build        # Builds dotfiles-ubuntu-mcp:<version> and :latest
 make docker-self-test    # Verifies MCP self-test inside --read-only --network=none container
 ```
 
-Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent can run the Corporate/Team/Departmental MCP Hub in a **kernel-isolated sandbox** (`--read-only --network=none --cap-drop=ALL`) without cloning the repositories locally:
+Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent can run the Corporate/Departmental/Squad MCP Hub in a **kernel-isolated sandbox** (`--read-only --network=none --cap-drop=ALL`) without cloning the repositories locally:
 
 ```json
 {
@@ -239,7 +239,7 @@ For both **Pattern B** and **Pattern C**, your host IDE connects to each running
 
 | Docker Pattern | Primary Goal | Can Inspect Host/Service APT Drift? | Requires Local Clone on Host? |
 |----------------|--------------|:-----------------------------------:|:-----------------------------:|
-| **Pattern A (`docker run -i --rm`)** | Zero-install distribution & hermetic sandbox for Corporate/Departmental/Team rules, `docs/`, `layers/*`, & federated MCP discovery | Inspects the Hub image itself (`in_container: true`) | **No** (runs directly from registry image) |
+| **Pattern A (`docker run -i --rm`)** | Zero-install distribution & hermetic sandbox for Corporate/Departmental/Squad rules, `docs/`, `layers/*`, & federated MCP discovery | Inspects the Hub image itself (`in_container: true`) | **No** (runs directly from registry image) |
 | **Pattern B (`COPY --from` + `docker exec -i`)** | Bake layer context into `tst`/`pre`/`pro` microservice images without Git credentials during `docker build` | **Yes** — audits the live microservice container (`in_container: true`) | **No** |
 | **Pattern C (`-v :ro` + `docker exec -i`)** | Zero-rebuild live introspection of local `dev` containers | **Yes** — audits the live `dev` container using host's latest `~/dotfiles-ubuntu` | **Yes** (`~/dotfiles-ubuntu` mounted `:ro`) |
 
@@ -267,7 +267,7 @@ To give your local AI agent read-only visibility into the configuration, package
 
 ---
 
-### 3.5. Configure Multi-Layer Forks Simultaneously (`Corporate + Team + Node`)
+### 3.5. Configure Multi-Layer Forks Simultaneously (`Corporate + Squad + Node`)
 
 In an enterprise setting where a tech lead or architect works across organizational layers, multiple forks of `dotfiles-ubuntu` can be mounted simultaneously:
 
@@ -278,9 +278,9 @@ In an enterprise setting where a tech lead or architect works across organizatio
       "command": "python3",
       "args": ["/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py", "--layer-role", "corporate", "--layer-id", "acme-corp/dotfiles-enterprise"]
     },
-    "dotfiles-layer-team-backend": {
+    "dotfiles-layer-squad-backend": {
       "command": "python3",
-      "args": ["/home/<your-user>/dotfiles-team-backend/scripts/dotfiles_mcp_server.py", "--layer-role", "team", "--layer-id", "acme-corp/dotfiles-backend-hexagonal"]
+      "args": ["/home/<your-user>/dotfiles-squad-backend/scripts/dotfiles_mcp_server.py", "--layer-role", "squad", "--layer-id", "acme-corp/dotfiles-backend-hexagonal"]
     }
   }
 }
@@ -300,7 +300,7 @@ Because `scripts/dotfiles_mcp_server.py` implements the standard Model Context P
 
 ## 4. Customizing `system/mcp-layer.json` for Your Fork or Service Node
 
-When you fork `dotfiles-ubuntu` for a team or attach it to a microservice container, edit [`system/mcp-layer.json`](../../system/mcp-layer.json) to declare the layer's role, upstream parent, and any specialized MCP servers that operate in that environment:
+When you fork `dotfiles-ubuntu` for a squad or attach it to a microservice container, edit [`system/mcp-layer.json`](../../system/mcp-layer.json) to declare the layer's role, upstream parent, and any specialized MCP servers that operate in that environment:
 
 ```json
 {
@@ -371,7 +371,7 @@ When an AI agent connects to this node and runs `discover_federated_mcps`, it im
 
 In complex organizations, a single project often needs context from **multiple horizontal directions at once**: Corporate standards, cross-cutting Departments (Cybersecurity, Data Platform, Cloud/SRE), sibling Microservices (`svc-fraud`, `svc-ledger`), and target deployment Environments (`dev`, `tst`, `pre`, `pro`).
 
-Instead of configuring 10 separate MCP server processes on every developer machine, you can compose a **Multi-Dimensional Context Graph** inside your team or workstation fork by mounting secondary `dotfiles-ubuntu` forks into **`layers/<layer-name>/`** via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh):
+Instead of configuring 10 separate MCP server processes on every developer machine, you can compose a **Multi-Dimensional Context Graph** inside your squad or workstation fork by mounting secondary `dotfiles-ubuntu` forks into **`layers/<layer-name>/`** via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh):
 
 ### 5.1. End-to-End Workflow: Vertical Upstream Sync + Horizontal Subtree Mounting
 

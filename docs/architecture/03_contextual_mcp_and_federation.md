@@ -13,7 +13,7 @@ In `dotfiles-ubuntu`, Subsystem 1 ([`01_system_and_stow_engine.md`](01_system_an
 However, modern software systems frequently span boundaries that POSIX filesystem symlinks cannot cross:
 - **Containerized Runtime Topologies**: Docker containers, Devcontainers, Kubernetes pods, or sidecar services where each container has its own isolated packages and runtime state.
 - **Distributed Server & Node Architectures**: Multi-server staging/production nodes, data processing workers, or specialized GPU/ML hosts.
-- **Multi-Tier Organizational Forks**: Separate Git forks for Corporate Governance (`Layer A`), Team/Domain Architecture (`Layer B`), and Service Nodes (`Layer C`) that are not simultaneously symlinked to `$HOME`.
+- **Multi-Tier Organizational Forks**: Separate Git forks for Corporate Governance (`Layer A`), Squad/Domain Architecture (`Layer B`), and Service Nodes (`Layer C`) that are not simultaneously symlinked to `$HOME`.
 
 By embedding an **optional, zero-dependency, read-only MCP server** (`scripts/dotfiles_mcp_server.py`) inside `dotfiles-ubuntu`, every fork, container, or server hosting the repository can expose its **system manifests, drift status, active governance rules, navigable `docs/`, and downstream MCP topology** over standard JSON-RPC 2.0.
 
@@ -32,7 +32,7 @@ flowchart LR
 
     subgraph DistributedPlane["Plane 2: Inter-Node & Multi-Layer Plane (MCP Protocol)"]
         direction TB
-        MCP_CORP["Corporate / Team Fork MCP\n(Governance & Stack Blueprints)"]
+        MCP_CORP["Corporate / Squad Fork MCP\n(Governance & Stack Blueprints)"]
         MCP_CONT["Container / Service Node MCP\n(docker exec -i stdio)"]
         MCP_SSH["Remote Server Node MCP\n(ssh stdio)"]
     end
@@ -95,7 +95,7 @@ Each `dotfiles-ubuntu` instance exposes nine canonical URI resources representin
 
 | Resource URI | MIME Type | Source Files in Repository | Returned Payload Description |
 |--------------|-----------|----------------------------|------------------------------|
-| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `/.dockerenv`, `git rev-parse` / `DOTFILES_GIT_COMMIT` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `department`, `team`, `service-node`, `environment-cluster`, `workstation`), `hostname`, `in_container` (boolean), `os_pretty_name`, `git_commit`, and `upstream_layer`. |
+| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `/.dockerenv`, `git rev-parse` / `DOTFILES_GIT_COMMIT` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `department`, `squad`, `service-node`, `environment-cluster`, `workstation`), `hostname`, `in_container` (boolean), `os_pretty_name`, `git_commit`, and `upstream_layer`. |
 | `dotfiles://system/manifests` | `application/json` | `system/*.txt` (`packages-manual`, `snaps`, `npm-globals`, `nvm-default`, `external`, `gnome-extensions`) | Structured JSON dictionary containing counts and package lists for every declarative manifest tracked by this node/container. |
 | `dotfiles://governance/rules` | `text/markdown` | `antigravity/.gemini/config/AGENTS.md` | The complete `Layer A` universal behavioral and engineering rules active in this repository fork. |
 | `dotfiles://governance/hooks` | `application/json` | `antigravity/.gemini/config/hooks.json` | Lifecycle hook configuration (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`) active in this layer. |
@@ -135,7 +135,7 @@ The server exposes nine read-only, deterministic tools for live node auditing, m
 
 To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.2"`).
 
-When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corporate layer, domain-policy module, team archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its numeric deontic `precedence` (`0..100`)**, **its stack-agnostic `surface_bindings`**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
+When a squad, department, or engineer forks `dotfiles-ubuntu` for a specific corporate layer, domain-policy module, squad archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its numeric deontic `precedence` (`0..100`)**, **its stack-agnostic `surface_bindings`**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
 
 ```json
 {
@@ -223,9 +223,9 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
 | `layer_role` | Typical Deployment Target | Primary Purpose in the Context Mesh |
 |--------------|---------------------------|-------------------------------------|
 | **`corporate`** | Organization-wide fork (`acme-corp/dotfiles-ubuntu`) | Exposes transverse `Layer A` security, typing, and testing mandates (`AGENTS.md`) plus enterprise-approved MCP catalog. |
-| **`department`** | Cross-cutting departmental fork (`acme-dept-security`, `acme-dept-data`, `acme-dept-legal`) | Exposes department-specific compliance rules, data/cloud governance docs, `surface_bindings`, and departmental MCP servers; mounted into team/project repos via `git subtree` (`layers/<slug>`). |
+| **`department`** | Cross-cutting departmental fork (`acme-dept-security`, `acme-dept-data`, `acme-dept-legal`) | Exposes department-specific compliance rules, data/cloud governance docs, `surface_bindings`, and departmental MCP servers; mounted into squad/project repos via `git subtree` (`layers/<slug>`). |
 | **`domain-policy`** | Arbitrary regulatory, brand, or business-domain policy module (`layers/eu-gdpr`, `layers/brand-system`) | Exposes stack-agnostic `surface_bindings`, canonical templates, and domain invariants projected onto matching application surfaces via `resolve_surface_governance`. |
-| **`team`** | Team or domain fork (`acme-team-payments`) | Exposes `Layer B` stack starter templates (`templates/<stack>/`), domain conventions, and shared team MCP servers. |
+| **`squad`** | Squad or domain fork (`acme-squad-payments`) | Exposes `Layer B` stack starter templates (`templates/<stack>/`), domain conventions, and shared squad MCP servers. |
 | **`service-node`** | Application container, Devcontainer, or sibling service fork (`layers/svc-*` or `/opt/dotfiles-ubuntu`) | Exposes the service's package manifest (`system/*`), drift status (`audit_node_drift`), service `docs/`, and service-local MCPs (database, cache, queue) across `dev`, `tst`, `pre`, `pro`. |
 | **`environment-cluster`** | Shared environment topology fork (`layers/env-pre-cluster`) | Exposes cluster-wide observability and deployment guardrails for a specific environment tier (`tst`, `pre`, `pro`). |
 | **`workstation`** | Developer PC (`~/dotfiles-ubuntu`) | Default role combining local GNU Stow management with local MCP introspection and mounted `layers/*` subtrees. |
@@ -234,7 +234,7 @@ When a team, department, or engineer forks `dotfiles-ubuntu` for a specific corp
 
 ## 5. Multi-Dimensional Context Graph: `git fork` + `git subtree` (`layers/`) + Environment Profiles (`dev/tst/pre/pro`)
 
-A single linear chain of Git forks (`Public → Corporate → Team`) can only represent **vertical inheritance** from a single parent. Real enterprise architectures, however, are **multi-dimensional Directed Acyclic Graphs (DAGs)** where a project simultaneously intersects:
+A single linear chain of Git forks (`Public → Corporate → Squad`) can only represent **vertical inheritance** from a single parent. Real enterprise architectures, however, are **multi-dimensional Directed Acyclic Graphs (DAGs)** where a project simultaneously intersects:
 1. **Corporate governance** (vertical parent fork),
 2. **Multiple cross-cutting Departments** (e.g., Security, Data Platform, Cloud/SRE),
 3. **Sibling Microservices** with coupled APIs/events, and
@@ -245,21 +245,21 @@ A single linear chain of Git forks (`Public → Corporate → Team`) can only re
 ```mermaid
 flowchart TD
     Public["Public Upstream\n(mtwuser/dotfiles-ubuntu)"] -->|"1. Vertical Fork\n(layer-subtree.sh sync-upstream)"| Corp["Corporate Root Fork\n(acme-corp/dotfiles-ubuntu)"]
-    Corp -->|"Vertical Fork"| Team["Team / Workspace Hub\n(acme-team-payments)"]
+    Corp -->|"Vertical Fork"| Squad["Squad / Workspace Hub\n(acme-squad-payments)"]
     Corp -->|"Vertical Fork"| DeptSec["Department Fork\n(acme-dept-security)"]
     Corp -->|"Vertical Fork"| DeptData["Department Fork\n(acme-dept-data)"]
-    Team -->|"Vertical Fork"| SvcFraud["Sibling Service Fork\n(acme-svc-fraud)"]
+    Squad -->|"Vertical Fork"| SvcFraud["Sibling Service Fork\n(acme-svc-fraud)"]
 
-    DeptSec -->|"2. Horizontal Subtree (--squash)\nlayers/dept-security/"| Team
-    DeptData -->|"2. Horizontal Subtree (--squash)\nlayers/dept-data/"| Team
-    SvcFraud -->|"2. Horizontal Subtree (--squash)\nlayers/svc-fraud/"| Team
+    DeptSec -->|"2. Horizontal Subtree (--squash)\nlayers/dept-security/"| Squad
+    DeptData -->|"2. Horizontal Subtree (--squash)\nlayers/dept-data/"| Squad
+    SvcFraud -->|"2. Horizontal Subtree (--squash)\nlayers/svc-fraud/"| Squad
 
-    Team -->|"GNU Stow (always_on < 18 KB)"| Stow["~/.gemini/config/\n(Primary Layer Rules Only)"]
-    Team -->|"3. On-Demand MCP Graph\n(0 idle token cost)"| MCP["scripts/dotfiles_mcp_server.py\n(Auto-discovers root + layers/* + dev/tst/pre/pro)"]
+    Squad -->|"GNU Stow (always_on < 18 KB)"| Stow["~/.gemini/config/\n(Primary Layer Rules Only)"]
+    Squad -->|"3. On-Demand MCP Graph\n(0 idle token cost)"| MCP["scripts/dotfiles_mcp_server.py\n(Auto-discovers root + layers/* + dev/tst/pre/pro)"]
 ```
 
 1. **Vertical Inheritance via `git fork` (`./scripts/layer-subtree.sh sync-upstream`)**:
-   - Keeps the repository's primary root synchronized with its upstream parent (`Public → Corporate → Team`).
+   - Keeps the repository's primary root synchronized with its upstream parent (`Public → Corporate → Squad`).
 2. **Horizontal / Cross-Departmental Composition via `git subtree` (`./scripts/layer-subtree.sh add | pull | push`)**:
    - Secondary forks (Departmental governance repos, sibling service MCP repos, or cluster topologies) are mounted under the non-stow **`layers/<layer-name>/`** directory using `git subtree --squash`.
    - Because `bootstrap.sh` and `audit.sh` skip `layers/`, mounted subtrees add **0 bytes** to the `always_on` `~/.gemini/config/AGENTS.md` token budget.

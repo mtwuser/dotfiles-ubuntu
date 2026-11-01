@@ -82,7 +82,7 @@ class TestEphemeralForkEngine:
             },
             {
                 "binding_id": "dup-arch",
-                "layer": "team",
+                "layer": "squad",
                 "ephemeral_fork_policy": {"bot_role": "dept-hexagonal-architect"},
             },
         ]

@@ -289,3 +289,94 @@ def _resolve_oss_contrib_repo_dir(up: Path) -> Path:
         if (cand / "system" / "mcp-layer.json").is_file():
             return cand.resolve()
     return up
+
+
+_DEFAULT_SQUAD_SPEC: tuple[str, str, str, str] = (
+    "Level 3 — Squad Execution & Tech Stack Governance",
+    "[Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]",
+    "[Fill: Target application repositories for apply-project, e.g. /path/to/app-service]",
+    "apply-project commands for our target application repositories",
+)
+_ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
+    "corporate": (
+        "Level 1 — Root 0 (Business & Corporate Governance)",
+        "[Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]",
+        "[Fill: Planned child Departments (--role department / --role domain-policy)]",
+        "bootstrap-workspace commands to initialize our planned child Departments",
+    ),
+    "department": (
+        "Level 2 — Department & Cross-Cutting Domain Governance",
+        "[Fill: Department mission, domain invariants, and target file surface globs]",
+        "[Fill: Planned child Squads (--role squad, e.g. squad-core-api)]",
+        "bootstrap-workspace commands to initialize our child Squads",
+    ),
+    "domain-policy": (
+        "Level 2 — Department & Cross-Cutting Domain Policy Governance",
+        "[Fill: Cross-cutting policy domain (Legal/IP/Security), invariants, and surface globs]",
+        "[Fill: Consumer Departments or Squads mounting this policy layer]",
+        "register-subtree and bootstrap-workspace commands for consumer layers",
+    ),
+    "squad": _DEFAULT_SQUAD_SPEC,
+}
+
+
+def _render_layer_onboarding_readme(
+    layer_id: str,
+    layer_role: str,
+    effective_prec: int,
+    own_tpl_id: str,
+    active_templates: list[str],
+    parent_id: str | None = None,
+) -> str:
+    """Render a role-specific Layer Setup Blueprint and Initial Chat Kickoff Prompt."""
+    tier_title, scope_hint, children_hint, next_cmd_goal = _ROLE_ONBOARDING_SPECS.get(
+        layer_role, _DEFAULT_SQUAD_SPEC
+    )
+    tpl_csv = ", ".join(f"`{t}`" for t in active_templates) or "`none`"
+    parent_label = f"`{parent_id}`" if parent_id else "`open-source-root`"
+    return (
+        f"# {layer_id} (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
+        f"## Layer Setup Blueprint ({tier_title})\n\n"
+        f"- **Layer ID & Role**: `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`)\n"
+        f"- **1-Hop Upstream Parent**: {parent_label}\n"
+        f"- **Active Template Packs**: {tpl_csv}\n"
+        f"- **Mission, Scope & Core Invariants**: {scope_hint}\n"
+        f"- **Downstream Topology (Next Tier)**: {children_hint}\n"
+        f"- **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]\n\n"
+        f"## Initial Chat Kickoff Prompt\n\n"
+        f"```text\n"
+        f"Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and "
+        f".agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and "
+        f"templates/{own_tpl_id}/rules/{own_tpl_id}.md with our mission and invariants without "
+        f"duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and "
+        f"WORKTASK.md, and output the exact ./scripts/layer-config.sh {next_cmd_goal}.\n"
+        f"```\n"
+    )
+
+
+def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
+    """Render .agents/LAYER_LINEAGE.md with participating layers and Level 4 Project Blueprint."""
+    tpl_label = resolved_tpl_name or "none"
+    lines = [
+        "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
+        f"- **Applied Template Pack**: `{tpl_label}`\n",
+        "## Participating Layers (Ordered by Precedence `0..100`)\n",
+        "| Precedence | Layer | Layer ID | Role | Surface Bindings |",
+        "|---:|---|---|---|---:|",
+        *rows,
+        "",
+        "## Project Setup Blueprint (Level 4 — Application Workspace)",
+        f"- **Applied Template Packs**: `{tpl_label}`",
+        "- **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]",
+        "- **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]",
+        "- **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]",
+        "",
+        "## Initial Chat Kickoff Prompt",
+        "```text",
+        "/sopen — Read .agents/LAYER_LINEAGE.md, all inherited .agents/rules/*.md, and our "
+        "Project Setup Blueprint.",
+        "Initialize README.md, docs/architecture/ (1:1:1 specs), WORKROAD.md, and WORKTASK.md "
+        "for Phase 1, then propose the Pre-Edit Scope Blueprint for Task 1.",
+        "```",
+    ]
+    return "\n".join(lines) + "\n"

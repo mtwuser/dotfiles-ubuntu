@@ -131,7 +131,7 @@ For each candidate, determine the exact target layer and template pack using `.a
 
 > [!IMPORTANT]
 > **Strict 1-Hop Horizon & Never Bypass `Root 0`**:
-> - Never promote directly from a child layer (`team` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Layer A`).
+> - Never promote directly from a child layer (`squad` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Layer A`).
 > - Always inspect `make horizon` (`immediate_upstream_id`, `is_oss_community_horizon`, `actor_is_layer_owner`):
 >   - **Internal Corporate Horizon (`is_oss_community_horizon: false`)**: Promote strictly **1 hop upward** (`Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0`) via `make promote SOURCE=<path> [TEMPLATE=<pack>]` (or `./scripts/layer-subtree.sh pull <layer-name>` from `Root 0`).
 >   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-core|technical-base|business-base>` (or `~/dotfiles-ubuntu/scripts/layer-config.sh promote-from-project . --source <path> --to-layer dotfiles-ubuntu --template <pack> --create-pr`).

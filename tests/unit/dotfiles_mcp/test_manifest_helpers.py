@@ -308,3 +308,35 @@ class TestManifestHelpers:
         assert fallback_contrib == up_repo
         assert sibling_contrib == dev_sibling.resolve()
         assert env_resolved == env_contrib.resolve()
+
+    def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(self) -> None:
+        """Render role-specific Layer Setup Blueprints and Level 4 Project Lineage prompts."""
+        # Arrange
+        corp_args = ("corp-root", "corporate", 10, "corp-root", ["business-base"], None)
+        dept_args: tuple[str, str, int, str, list[str], str] = (
+            "dept-eng",
+            "department",
+            30,
+            "dept-eng",
+            [],
+            "corp-root",
+        )
+        squad_args = ("squad-api", "squad", 50, "squad-api", ["technical-base"], "dept-eng")
+
+        # Act
+        corp_md = manifest_helpers._render_layer_onboarding_readme(*corp_args)
+        dept_md = manifest_helpers._render_layer_onboarding_readme(*dept_args)
+        squad_md = manifest_helpers._render_layer_onboarding_readme(*squad_args)
+        lineage_md = manifest_helpers._render_lineage_markdown(
+            "technical-base", ["| `50` | `root` | `squad-api` | `squad` | `1` |"]
+        )
+
+        # Assert
+        assert "Level 1 — Root 0" in corp_md
+        assert "`open-source-root`" in corp_md
+        assert "Level 2 — Department" in dept_md
+        assert "`none`" in dept_md
+        assert "Level 3 — Squad Execution" in squad_md
+        assert "apply-project commands" in squad_md
+        assert "Project Setup Blueprint (Level 4" in lineage_md
+        assert "Initial Chat Kickoff Prompt" in lineage_md

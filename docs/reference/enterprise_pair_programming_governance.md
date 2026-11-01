@@ -10,19 +10,19 @@
 
 ## 1. The Enterprise Challenge in AI-Assisted Engineering
 
-When organizations adopt AI coding assistants across dozens of repositories and teams, three structural problems quickly appear:
+When organizations adopt AI coding assistants across dozens of repositories and squads, three structural problems quickly appear:
 
 1. **Prompt & Architectural Fragmentation**: Every developer prompts the AI differently. Without shared rules, AI-generated code drifts across repositories — mixing architectural layers, bypassing test standards, or introducing inconsistent patterns.
-2. **Knowledge Silos**: When a team discovers a high-leverage guardrail, testing pattern, or debugging workflow with an AI agent, that insight remains trapped in a single chat session or local repository instead of benefiting the rest of the organization.
+2. **Knowledge Silos**: When a squad discovers a high-leverage guardrail, testing pattern, or debugging workflow with an AI agent, that insight remains trapped in a single chat session or local repository instead of benefiting the rest of the organization.
 3. **Blind Codebase Exploration (High Token Cost & Latency)**: When an AI agent enters a repository that lacks structured, navigable documentation (`docs/`), it must spend dozens of tool calls running `grep` and reading raw source files just to infer the system's architecture, boundaries, and domain model.
 
 `dotfiles-ubuntu` solves all three problems by combining **hierarchical rule inheritance**, **bidirectional knowledge promotion (`/learn` + `/enrich`)**, and **navigable repository documentation (`docs/`)**.
 
 ---
 
-## 2. Multi-Level Governance Topology (Open Source $\rightarrow$ Corporate $\rightarrow$ Department & Team $\rightarrow$ Application)
+## 2. Multi-Level Governance Topology (Open Source $\rightarrow$ Corporate $\rightarrow$ Department $\rightarrow$ Squad $\rightarrow$ Project)
 
-Beyond individual workstation setup, `dotfiles-ubuntu` is architected so any company can fork the public open-source repository into a **Corporate Reference Layer**, branch out into **Departmental** and **Team/Stack** repositories, and apply the resulting context during daily **Application Development** — **either without MCP** (100% file- and symlink-based) **or with MCP** (active multi-layer and multi-environment orchestration):
+Beyond individual workstation setup, `dotfiles-ubuntu` is architected so any company can fork the public open-source repository into a **Corporate Reference Layer**, branch out into **Departmental** and **Squad/Stack** repositories, and apply the resulting context during daily **Project Development** — **either without MCP** (100% file- and symlink-based) **or with MCP** (active multi-layer and multi-environment orchestration):
 
 ```mermaid
 flowchart TD
@@ -40,9 +40,9 @@ flowchart TD
         DEPT_SRE["acme-dept-sre\n• Kubernetes / Terraform / Observability Standards\n• Telemetry & Cluster MCPs (dev/tst/pre/pro)"]
     end
 
-    subgraph Teams["Tier 2B — Squad / Team & Stack Forks (layer_role: team, precedence: 60..80)"]
-        TEAM_BE["acme-team-backend\n• templates/fastapi-hexagonal/ (Hexagonal DDD + HTMX)\n• Mounts layers/dept-security & layers/dept-data via git subtree"]
-        TEAM_FE["acme-team-frontend\n• templates/web-islands/ (Core Web Vitals & a11y)\n• Mounts layers/dept-security via git subtree"]
+    subgraph Squads["Tier 2B — Squad & Stack Forks (layer_role: squad, precedence: 50..80)"]
+        SQUAD_BE["acme-squad-backend\n• templates/fastapi-hexagonal/ (Hexagonal DDD + HTMX)\n• Mounts layers/dept-security & layers/dept-data via git subtree"]
+        SQUAD_FE["acme-squad-frontend\n• templates/web-islands/ (Core Web Vitals & a11y)\n• Mounts layers/dept-security via git subtree"]
     end
 
     subgraph Apps["Tier 3 — Daily Application Repositories (Consumer Projects)"]
@@ -54,33 +54,33 @@ flowchart TD
     CORP -->|"2a. Fork / Bootstrap Department Layers"| DEPT_SEC
     CORP -->|"2a. Fork / Bootstrap Department Layers"| DEPT_DATA
     CORP -->|"2a. Fork / Bootstrap Department Layers"| DEPT_SRE
-    CORP -->|"2b. Fork / Bootstrap Team Layers"| TEAM_BE
-    CORP -->|"2b. Fork / Bootstrap Team Layers"| TEAM_FE
+    CORP -->|"2b. Fork / Bootstrap Squad Layers"| SQUAD_BE
+    CORP -->|"2b. Fork / Bootstrap Squad Layers"| SQUAD_FE
 
-    DEPT_SEC -.->|"3. Mount via git subtree (--squash)\nlayers/dept-security/ (into Root 0 or Team)"| TEAM_BE
-    DEPT_DATA -.->|"3. Mount via git subtree (--squash)\nlayers/dept-data/ (into Root 0 or Team)"| TEAM_BE
-    DEPT_SEC -.->|"3. Mount via git subtree (--squash)\nlayers/dept-security/ (into Root 0 or Team)"| TEAM_FE
+    DEPT_SEC -.->|"3. Mount via git subtree (--squash)\nlayers/dept-security/ (into Root 0 or Squad)"| SQUAD_BE
+    DEPT_DATA -.->|"3. Mount via git subtree (--squash)\nlayers/dept-data/ (into Root 0 or Squad)"| SQUAD_BE
+    DEPT_SEC -.->|"3. Mount via git subtree (--squash)\nlayers/dept-security/ (into Root 0 or Squad)"| SQUAD_FE
 
-    TEAM_BE -->|"4. GNU Stow (~/.gemini/config/) +\napply-project (+ Optional MCP)"| PROJ_A
-    TEAM_BE -->|"4. GNU Stow (~/.gemini/config/) +\napply-project (+ Optional MCP)"| PROJ_B
+    SQUAD_BE -->|"4. GNU Stow (~/.gemini/config/) +\napply-project (+ Optional MCP)"| PROJ_A
+    SQUAD_BE -->|"4. GNU Stow (~/.gemini/config/) +\napply-project (+ Optional MCP)"| PROJ_B
 
-    PROJ_A -.->|"/enrich + make promote\n(1-Hop Upward Evolution)"| TEAM_BE
-    TEAM_BE -.->|"/enrich + make promote\n(1-Hop Upward Evolution)"| CORP
+    PROJ_A -.->|"/enrich + make promote\n(1-Hop Upward Evolution)"| SQUAD_BE
+    SQUAD_BE -.->|"/enrich + make promote\n(1-Hop Upward Evolution)"| CORP
 ```
 
 ### 2.1. Role of Each Organizational Tier (`Tier 0` $\rightarrow$ `Tier 3`)
 
 > **Distinguishing Organizational Tiers vs. Physical Context Pillars**:
-> - **Organizational Tiers (`Tier 0` $\rightarrow$ `Tier 3` below)** describe **who owns each Git repository** in the enterprise hierarchy and its deontic `layer_role` / `precedence` (`0..100`). Every organizational layer (`Tier 1`, `Tier 2A`, `Tier 2B`) is a full Git repository, and **any** parent or consumer layer (`Tier 1 Corporate Root 0` or `Tier 2B Team`) can mount child or cross-cutting layers into `layers/<name>/` via `git subtree` (`layer-subtree.sh`).
+> - **Organizational Tiers (`Tier 0` $\rightarrow$ `Tier 3` below)** describe **who owns each Git repository** in the enterprise hierarchy and its deontic `layer_role` / `precedence` (`0..100`). Every organizational layer (`Tier 1`, `Tier 2A`, `Tier 2B`) is a full Git repository, and **any** parent or consumer layer (`Tier 1 Corporate Root 0` or `Tier 2B Squad`) can mount child or cross-cutting layers into `layers/<name>/` via `git subtree` (`layer-subtree.sh`).
 > - **Physical Context Pillars (`Layer A / B / C / D` in [§4](#4-the-4th-pillar-navigable-repository-documentation-docs--google-ai-tooling) and [`docs/README.md`](../README.md))** describe the **four local file mechanisms** active inside a developer's workspace (`Layer A`: `~/.gemini/config/AGENTS.md` global baseline, `Layer B`: `templates/*` & mounted `layers/*` packs, `Layer C`: `<workspace>/.agents/` local rules/tasks, `Layer D`: 3-tier navigable `docs/`).
 
 | Organizational Tier | `layer_role` & `precedence` | Repository / Location | What It Defines & How `git subtree` (`layers/*`) Applies | Who Owns It |
 |---------------------|-----------------------------|-----------------------|----------------------------------------------------------|-------------|
 | **Tier 0: Open-Source Upstream** | `workstation` (default `10`) | `mtwuser/dotfiles-ubuntu` | Core Ubuntu 26.04 engine (`bootstrap.sh`, `backup.sh`, `audit.sh`, `workstation-sync.sh`), 3 base profiles (`human-core`, `technical-base`, `business-base`), 4 Python lifecycle hooks, 13 global skills, `layer-config.sh`, `layer-subtree.sh`, and `dotfiles_mcp_server.py`. | Open-Source Community |
-| **Tier 1: Corporate Reference (`Root 0`)** | `corporate` (`precedence: 10`) | Company fork (`acme-corp/dotfiles-ubuntu`) | Organization-wide rules, security boundaries, authority gates (`layer_authority`), and corporate `baseline_guardrails`. Can mount `Tier 2A` departments and `Tier 2B` teams under `layers/*` via `git subtree` for 360° governance and bidirectional `make sync`. | Architecture Board / Principal Architect |
-| **Tier 2A: Departmental / Domain Policy** | `domain-policy` (`5`) or `department` (`15..40`) | Departmental forks (`acme-dept-legal`, `acme-dept-security`, `acme-dept-data`) | Cross-cutting compliance rules, domain templates (`templates/<dept>/`), reference `docs/`, and departmental MCP servers (`dev/tst/pre/pro`). Consumed either as a parent layer (`--parent-dir`) or mounted into `Tier 1` / `Tier 2B` under `layers/<dept>/` via `git subtree`. | Legal/IP, Security, Finance, Data, SRE Teams |
-| **Tier 2B: Squad / Team & Stack** | `team` (`precedence: 60..80`) | Team fork (`acme-team-backend`) & `templates/<stack>/` | Stack-specific architectures and starter blueprints (e.g., `templates/fastapi-hexagonal/`), plus any `Tier 2A` departmental subtrees (`layers/dept-*`) mounted by that squad. Can also be mounted into `Tier 1` or `Tier 2A` under `layers/team-*`. | Staff Engineers / Squad Leads |
-| **Tier 3: Application Repository** | Consumer project (`.agents/`) | `<app-repo>/.agents/` + `docs/` + `WORKTASK.md` | Domain-specific invariants, bounded-context rules projected via `apply-project` (`.agents/rules/layer-<NN>-<name>.md` + `.agents/LAYER_LINEAGE.md`), active task tracking (`WORKROAD.md` $\rightarrow$ `WORKTASK.md` $\rightarrow$ `CHANGELOG.md`), and `SESSION.md`. | Product Squad / Application Developers |
+| **Tier 1: Corporate Reference (`Root 0`)** | `corporate` (`precedence: 10`) | Company fork (`acme-corp/dotfiles-ubuntu`) | Organization-wide rules, security boundaries, authority gates (`layer_authority`), and corporate `baseline_guardrails`. Can mount `Tier 2A` departments and `Tier 2B` squads under `layers/*` via `git subtree` for 360° governance and bidirectional `make sync`. | Architecture Board / Principal Architect |
+| **Tier 2A: Departmental / Domain Policy** | `domain-policy` (`5`) or `department` (`15..40`) | Departmental forks (`acme-dept-legal`, `acme-dept-security`, `acme-dept-data`) | Cross-cutting compliance rules, domain templates (`templates/<dept>/`), reference `docs/`, and departmental MCP servers (`dev/tst/pre/pro`). Consumed either as a parent layer (`--parent-dir`) or mounted into `Tier 1` / `Tier 2B` under `layers/<dept>/` via `git subtree`. | Legal/IP, Security, Finance, Data, SRE Leads |
+| **Tier 2B: Squad & Stack** | `squad` (`precedence: 50..80`) | Squad fork (`acme-squad-backend`) & `templates/<stack>/` | Stack-specific architectures and starter blueprints (e.g., `templates/fastapi-hexagonal/`), plus any `Tier 2A` departmental subtrees (`layers/dept-*`) mounted by that squad. Can also be mounted into `Tier 1` or `Tier 2A` under `layers/squad-*`. | Staff Engineers / Squad Leads |
+| **Tier 3: Project Repository** | Consumer project (`.agents/`) | `<project-repo>/.agents/` + `docs/` + `WORKTASK.md` | Domain-specific invariants, bounded-context rules projected via `apply-project` (`.agents/rules/layer-<NN>-<name>.md` + `.agents/LAYER_LINEAGE.md`), active task tracking (`WORKROAD.md` $\rightarrow$ `WORKTASK.md` $\rightarrow$ `CHANGELOG.md`), and `SESSION.md`. | Product Squad / Application Developers |
 
 ---
 
@@ -101,11 +101,11 @@ Organizations can start with **Perspective A** on Day 1 and enable **Perspective
    ./scripts/layer-subtree.sh sync-upstream https://github.com/mtwuser/dotfiles-ubuntu.git master
    ```
 
-#### Phase 2 — Create Departmental & Team Layers (`Tier 2A` & `Tier 2B`)
+#### Phase 2 — Create Departmental & Squad Layers (`Tier 2A` & `Tier 2B`)
 1. **Departmental Forks (`Tier 2A`)**: Cross-cutting departments (e.g., Cybersecurity, Data Platform, SRE) fork `acme-corp/dotfiles-ubuntu` (`layer_role: "department"`), document their domain standards in `docs/`, and declare their departmental MCP servers and `dev/tst/pre/pro` guardrails in `system/mcp-layer.json`.
-2. **Team Forks (`Tier 2B`)**: Product/engineering teams fork `acme-corp/dotfiles-ubuntu` (`layer_role: "team"`), add or customize their stack starter templates under `templates/<stack>/` (e.g., `templates/fastapi-hexagonal/`), and optionally mount the Departmental forks they depend on under `layers/<dept>/`:
+2. **Squad Forks (`Tier 2B`)**: Product/engineering squads fork `acme-corp/dotfiles-ubuntu` (`layer_role: "squad"`), add or customize their stack starter templates under `templates/<stack>/` (e.g., `templates/fastapi-hexagonal/`), and optionally mount the Departmental forks they depend on under `layers/<dept>/`:
    ```bash
-   # Inside acme-team-backend:
+   # Inside acme-squad-backend:
    # 1. Stay synchronized vertically with the Corporate Reference Layer:
    ./scripts/layer-subtree.sh sync-upstream git@github.com:acme-corp/dotfiles-ubuntu.git main
 
@@ -117,9 +117,9 @@ Organizations can start with **Perspective A** on Day 1 and enable **Perspective
    ./scripts/layer-subtree.sh pull-all
    ```
 
-#### Phase 3 — Apply During Daily Application Development (`Tier 3`: Without MCP vs. With MCP)
+#### Phase 3 — Apply During Daily Project Development (`Tier 3`: Without MCP vs. With MCP)
 
-Every developer on the team clones their Team fork (`git clone git@github.com:acme-corp/dotfiles-team-backend.git ~/dotfiles-ubuntu`) and runs `./bootstrap.sh --antigravity` (or `./bootstrap.sh --all` on an Ubuntu 26.04 workstation).
+Every developer on the squad clones their Squad fork (`git clone git@github.com:acme-corp/dotfiles-squad-backend.git ~/dotfiles-ubuntu`) and runs `./bootstrap.sh --antigravity` (or `./bootstrap.sh --all` on an Ubuntu 26.04 workstation).
 
 From there, each application repository (`checkout-service`, `inventory-platform`, etc.) integrates as follows:
 
@@ -127,7 +127,7 @@ From there, each application repository (`checkout-service`, `inventory-platform
 |------------------|--------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | **1. Workstation Setup** | Run `./bootstrap.sh --antigravity` once. GNU Stow links `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}`. | **Identical** (`AGENTS.md` and `hooks.json` stay stowed locally for zero-latency enforcement), **plus** register `scripts/dotfiles_mcp_server.py` in `~/.gemini/config/mcp_config.json` (either via local `python3`, via a pre-built hermetic Hub container `docker run -i --rm --read-only --network=none ghcr.io/<org>/dotfiles-mcp:latest`, or via `docker exec -i` / `ssh` against service nodes). |
 | **2. Application Repo Scaffolding** | Run `./scripts/layer-config.sh apply-project <app> --template <pack> --layers all` to materialize the template pack (`rules/`, `skills/`, `governance/`, `assets/`), `.agents/rules/layer-<NN>-<name>.md`, and `.agents/LAYER_LINEAGE.md`. | **Identical** — `<app>/.agents/` holds the application's local rules, `.agents/LAYER_LINEAGE.md`, and `WORKTASK.md`. |
-| **3. How Corporate & Team Rules Load** | Loaded automatically inline by the IDE from `~/.gemini/config/AGENTS.md` (`Layer A`) and `<app>/.agents/rules/*.md` (`Layer B/C` + materialized `layer-<NN>-<name>.md`). | Primary `Layer A/B/C` rules load inline via Stow, **and** the agent queries mounted Departmental (`layers/dept-*`) and Sibling-Service (`layers/svc-*`) rules/docs/bindings on demand via `resolve_surface_governance`, `query_governance_rules(layer="all")`, and `read_layer_document` with **0 idle token cost**. |
+| **3. How Corporate & Squad Rules Load** | Loaded automatically inline by the IDE from `~/.gemini/config/AGENTS.md` (`Layer A`) and `<app>/.agents/rules/*.md` (`Layer B/C` + materialized `layer-<NN>-<name>.md`). | Primary `Layer A/B/C` rules load inline via Stow, **and** the agent queries mounted Departmental (`layers/dept-*`) and Sibling-Service (`layers/svc-*`) rules/docs/bindings on demand via `resolve_surface_governance`, `query_governance_rules(layer="all")`, and `read_layer_document` with **0 idle token cost**. |
 | **4. Multi-Environment & Multi-Service Orchestration** | Managed manually by developers per repository. | Agent calls `discover_federated_mcps(layer="all", environment="pre")` to discover downstream database/cloud/telemetry MCPs filtered by environment (`dev`, `tst`, `pre`, `pro`) with automatically merged **`effective_guardrails`**. |
 | **5. Runtime Observability & Drift Audits** | Local hook checks (`post_invocation_lint.py` checks `AGENTS.md` 18 KB cap & 80 KB workspace budget; `./audit.sh` run manually). | Live MCP `audit_node_drift` across local host, Docker containers (`docker exec -i`), or remote SSH servers, plus structured JSONL telemetry & alerts in `logs/mcp_events.jsonl` and `logs/mcp_alerts.jsonl` (`dotfiles://mcp/diagnostics`). |
 | **6. Continuous Knowledge Sync** | `/sopen` pulls `~/dotfiles-ubuntu`; `/enrich` uses `./scripts/layer-config.sh diff-project` & `promote-from-project` to promote local `<app>/.agents/` discoveries upstream to Templates, Subtree Layers, or Corporate Root. | `/sopen` pulls `~/dotfiles-ubuntu` and inspects `layers/*` & `logs/mcp_alerts.jsonl`; `/enrich` combines `compare_layer_patterns(layer="all")`, `layer-config.sh diff-project` / `promote-from-project`, and `./scripts/layer-subtree.sh push <dept> <branch>` to route and promote patterns across the entire multi-dimensional graph. |
@@ -144,7 +144,7 @@ Static corporate coding guidelines fail because they are written top-down and qu
    Corporate Repo (Layer A)                          Corporate Repo (Layer A)
         │  git pull + stow -R antigravity                 ▲  /enrich (stack-agnostic)
         ▼                                                 │
-   Team Templates / Framework (Layer B)              Team Templates / Framework (Layer B)
+   Squad Templates / Framework (Layer B)             Squad Templates / Framework (Layer B)
         │  template copy / scaffold sync                  ▲  /enrich (stack-wide)
         ▼                                                 │
    Project Repository (.agents/ — Layer C)           Project Repository (/learn in chat)
@@ -155,12 +155,12 @@ Static corporate coding guidelines fail because they are written top-down and qu
    - When a developer corrects an AI agent or solves a subtle bug (for example, preventing orphan test files when decommissioning a module, or avoiding a FastAPI `from __future__ import annotations` runtime trap), that lesson is captured locally in `<project>/.agents/`.
 2. **Maturation & Upward Promotion (`/enrich`)**:
    - Periodically or at the end of a milestone, the developer runs **`/enrich`**.
-   - The `/enrich` skill scans the active workspace's `.agents/rules/` and `.agents/skills/`, compares them against `Layer B` (Team/Framework) and `Layer A` (`~/dotfiles-ubuntu`), and classifies every new pattern:
+   - The `/enrich` skill scans the active workspace's `.agents/rules/` and `.agents/skills/`, compares them against `Layer B` (Squad/Framework) and `Layer A` (`~/dotfiles-ubuntu`), and classifies every new pattern:
      - **Domain-specific?** Stays in `Layer C` (`<project>/.agents/`).
      - **Applicable to all projects using this framework/stack?** Promotes to `Layer B` (`templates/<stack>/` or framework `.agents/`).
      - **Universal across any tech stack?** Promotes to `Layer A` (`antigravity/.gemini/config/AGENTS.md` or global `skills/`).
 3. **Immediate Organization-Wide Distribution (`/sopen`)**:
-   - Once a promoted rule or skill is merged into the corporate or team `dotfiles-ubuntu` repository, every developer who starts a session with **`/sopen`** automatically pulls the update (`git pull --ff-only`) and applies it across all their local workspaces via GNU Stow symlinks.
+   - Once a promoted rule or skill is merged into the corporate or squad `dotfiles-ubuntu` repository, every developer who starts a session with **`/sopen`** automatically pulls the update (`git pull --ff-only`) and applies it across all their local workspaces via GNU Stow symlinks.
 
 ---
 
@@ -240,20 +240,20 @@ Consider a technology company (**Acme Corp**) with 150 engineers across Backend,
    - As architectural changes are made, the agent updates `docs/architecture/` in lockstep with the code.
 4. **Promoting a Discovery to the Whole Company (`/enrich` $\rightarrow$ `/sclose`)**:
    - During the sprint, the squad discovers a new security validation pattern for webhook signatures and codifies it in `checkout-service/.agents/rules/coding.md`.
-   - At the end of the milestone, the tech lead runs `/enrich`, promotes the webhook validation rule upstream to the Backend Team template (`templates/fastapi-hexagonal/`) and the universal test-pruning rule to the Corporate `AGENTS.md`, and closes the session with `/sclose`.
+   - At the end of the milestone, the tech lead runs `/enrich`, promotes the webhook validation rule upstream to the Backend Squad template (`templates/fastapi-hexagonal/`) and the universal test-pruning rule to the Corporate `AGENTS.md`, and closes the session with `/sclose`.
    - On the next morning's `/sopen`, every squad in the company automatically inherits the improved standard.
 
 ---
 
 ## 7. Extending to Distributed Topologies: Contextual Layer & System MCP Federation
 
-On a single developer workstation, GNU Stow symlinks (`~/.gemini/config/`) distribute rules with zero latency. However, enterprise systems rarely live on a single machine: they span **multiple Docker containers, microservices, staging/production servers, and separate team forks** where local filesystem symlinks cannot reach.
+On a single developer workstation, GNU Stow symlinks (`~/.gemini/config/`) distribute rules with zero latency. However, enterprise systems rarely live on a single machine: they span **multiple Docker containers, microservices, staging/production servers, and separate squad forks** where local filesystem symlinks cannot reach.
 
 To bridge this boundary without adding external dependencies, `dotfiles-ubuntu` can also operate as a **lightweight, read-only Model Context Protocol (MCP) Server** (`scripts/dotfiles_mcp_server.py`) at any layer or node:
 
 - **As a Standalone Node / Container MCP**: Any Ubuntu container, Devcontainer, or remote server hosting `dotfiles-ubuntu` can expose its declarative manifests (`system/*`), live drift status (`audit_node_drift`), and local `docs/` over standard `stdio` (`docker exec -i` or `ssh` — zero open network ports required).
-- **As an Enterprise Federated Context Mesh & Multi-Dimensional Subtree Graph**: Customized forks of `dotfiles-ubuntu` across **Corporate (`Tier 1`, `layer_role: corporate`)**, **Departmental (`Tier 2A`, `layer_role: domain-policy | department`)**, **Team (`Tier 2B`, `layer_role: team`)**, and **Service Node (`Tier 3`, `layer_role: service-node`)** dimensions can be composed via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh) (`git subtree --squash` under `layers/<name>/`) and queried across `dev`, `tst`, `pre`, and `pro` environments via `scripts/dotfiles_mcp_server.py`, allowing an orchestrating AI agent to:
-  1. Query corporate, departmental, and team architectural standards across repositories with zero `always_on` token overhead.
+- **As an Enterprise Federated Context Mesh & Multi-Dimensional Subtree Graph**: Customized forks of `dotfiles-ubuntu` across **Corporate (`Tier 1`, `layer_role: corporate`)**, **Departmental (`Tier 2A`, `layer_role: domain-policy | department`)**, **Squad (`Tier 2B`, `layer_role: squad`)**, and **Service Node (`Tier 3`, `layer_role: service-node`)** dimensions can be composed via [`scripts/layer-subtree.sh`](../../scripts/layer-subtree.sh) (`git subtree --squash` under `layers/<name>/`) and queried across `dev`, `tst`, `pre`, and `pro` environments via `scripts/dotfiles_mcp_server.py`, allowing an orchestrating AI agent to:
+  1. Query corporate, departmental, and squad architectural standards across repositories with zero `always_on` token overhead.
   2. Diagnose environment and package drift across multiple microservice containers simultaneously.
   3. Discover downstream domain MCPs (databases, queues, observability) filtered by target environment (`dev`, `tst`, `pre`, `pro`) **together with the mandatory safety guardrails** that govern them before executing any tool call.
 
@@ -265,6 +265,6 @@ To bridge this boundary without adding external dependencies, `dotfiles-ubuntu` 
 
 By treating **environment configuration**, **hierarchical AI rules**, **procedural skills**, **navigable repository documentation (`docs/`)**, and **optional MCP layer federation** as a single unified system:
 
-- **Organizational Knowledge Compounds**: Best practices flow upward from real project trenches (`Project → Team → Corporate`), while strategic architecture decisions distribute downward (`Corporate → Team → Project`) automatically.
-- **Inter-Team & Cross-Container Variability Drops**: Every repository and service container shares the same testing rigor, commit discipline, security guards, auditable system manifests, and task-tracking lifecycle (`WORKROAD → WORKTASK → CHANGELOG`).
-- **AI Agents Operate with Maximum Precision**: Armed simultaneously with corporate standards, team blueprints, project rules, a navigable `docs/` knowledge graph, and live MCP node introspection, AI agents spend less time guessing and more time delivering production-grade software alongside human engineers.
+- **Organizational Knowledge Compounds**: Best practices flow upward from real project trenches (`Project → Squad → Department → Corporate`), while strategic architecture decisions distribute downward (`Corporate → Department → Squad → Project`) automatically.
+- **Inter-Squad & Cross-Container Variability Drops**: Every repository and service container shares the same testing rigor, commit discipline, security guards, auditable system manifests, and task-tracking lifecycle (`WORKROAD → WORKTASK → CHANGELOG`).
+- **AI Agents Operate with Maximum Precision**: Armed simultaneously with corporate standards, squad blueprints, project rules, a navigable `docs/` knowledge graph, and live MCP node introspection, AI agents spend less time guessing and more time delivering production-grade software alongside human engineers.

@@ -23,7 +23,7 @@ This repository is modular — adopt the full platform or pick only the pieces y
 |------|-----------------------|--------------------|
 | **Tier 1 (Gateway)** | **[`README.md`](README.md)** *(this file)* · **[`docs/README.md`](docs/README.md)** | Quick-Start paths, repository tree, CLI cheat-sheet, and subsystem lookup map. |
 | **Tier 2 (Human Guides)** | **[`docs/guides/01_ubuntu_system_and_multi_machine_guide.md`](docs/guides/01_ubuntu_system_and_multi_machine_guide.md)** | GNU Stow tree unfolding, `system/*` manifests & external recipes, daily usage, all `bootstrap.sh` & `audit.sh` modes, multi-machine setup/migration, portability matrix, and uninstallation. |
-| **Tier 2 (Team Workflows)** | **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** | 3-Tier profiles (`human-core`, `technical-base`, `business-base`), `antigravity-ide` (360° viewer) vs. `antigravity-agents` (scoped workspaces), `Open Source <-> Corporate Root 0 <-> Department <-> Squad` lifecycle, Git email authority gates, 1-hop horizon radar, and upward PR promotion. |
+| **Tier 2 (Squad Workflows)** | **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** | 3-Tier profiles (`human-core`, `technical-base`, `business-base`), `antigravity-ide` (360° viewer) vs. `antigravity-agents` (scoped workspaces), `Root 0 -> Department -> Squad -> Project` setup blueprints & kickoff prompts, Git email authority gates, 1-hop horizon radar, and upward PR promotion. |
 | **Tier 3A (Normative Specs)** | **[`01`](docs/architecture/01_system_and_stow_engine.md)** · **[`02`](docs/architecture/02_antigravity_governance_and_hooks.md)** · **[`03`](docs/architecture/03_contextual_mcp_and_federation.md)** · **[`04`](docs/architecture/04_compaction_surface_and_promotion_engines.md)** · **[`05`](docs/architecture/05_ephemeral_forks_and_department_bots.md)** | `1:1:1` source-test-spec contracts (`Specification:`) for the Ubuntu engine, lifecycle hooks, MCP server, `rcap1` compaction, surface weaver, authority/promotion engines, and ephemeral Department Bots. |
 | **Tier 3B (Reference)** | **[`Enterprise Governance`](docs/reference/enterprise_pair_programming_governance.md)** · **[`Contextual MCP Mesh`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** · **[`Maintainer Guide`](docs/reference/developer_and_extension_guide.md)** | Enterprise "pAIr programming" playbook (with or without MCP), VS Code Copilot/Cursor mapping, Docker/SSH MCP orchestration, and maintainer extension workflows. |
 
@@ -69,7 +69,7 @@ cd ~/dotfiles-ubuntu
 
 ### Path 3: Enterprise & Multi-Tier Human-AI Governance (With or Without MCP)
 
-Orchestrate Human-AI governance across **Open Source (`workstation`) $\leftrightarrow$ Corporate (`Root 0`) $\leftrightarrow$ Department (`domain-policy` / `department`) $\leftrightarrow$ Squad (`team`) & Application** tiers (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
+Orchestrate Human-AI governance across **Open Source (`workstation`) $\leftrightarrow$ Corporate (`Root 0`) $\leftrightarrow$ Department (`domain-policy` / `department`) $\leftrightarrow$ Squad (`squad`) $\leftrightarrow$ Project** tiers (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
 
 ```
 Open Source Upstream (mtwuser/dotfiles-ubuntu)  ◄── Anonymized PR (promote-from-project --create-pr)
@@ -77,8 +77,8 @@ Open Source Upstream (mtwuser/dotfiles-ubuntu)  ◄── Anonymized PR (promote
    ▼
 Corporate Root 0 (layer_role: "corporate", precedence: 10)
    ├──► Department Forks (layer_role: "domain-policy" | "department", precedence: 5..40)
-   │       └──► Squad / Team Forks (layer_role: "team", precedence: 60..80)
-   │               └──► Application Repos (<app>/.agents/ projected via apply-project / bootstrap-workspace)
+   │       └──► Squad Forks (layer_role: "squad", precedence: 50..80)
+   │               └──► Application Projects (<project>/.agents/ projected via apply-project / bootstrap-workspace)
 ```
 
 📖 Step-by-step multi-tier commands, authority gates, and IDE vs. Agents workspace isolation: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
@@ -102,7 +102,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │
 ├── docs/                              ← NOT stow — 3-tier navigable documentation hub (< 465 lines per file)
 │   ├── README.md                      ←   Documentation index, Mermaid subsystem map & quick lookup
-│   ├── guides/                        ←   Tier 2: Human operator & team workflow guides
+│   ├── guides/                        ←   Tier 2: Human operator & squad workflow guides
 │   │   ├── 01_ubuntu_system_and_multi_machine_guide.md  ← Stow unfolding, manifests, bootstrap/audit & multi-machine sync
 │   │   └── 02_hierarchical_layers_and_team_workflows.md ← 3-tier profiles, multi-layer lifecycle, authority & PR promotion
 │   ├── architecture/                  ←   Tier 3A: Normative technical specifications (1:1:1 with code & unit tests)

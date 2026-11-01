@@ -44,7 +44,7 @@ class TestForkConfigurator:
                     "schema_version": "1.0",
                     "template_id": "web-stack",
                     "kind": "stack-starter",
-                    "target_role": "team",
+                    "target_role": "squad",
                     "description": "Web starter pack",
                 }
             ),
@@ -147,13 +147,13 @@ class TestForkConfigurator:
         fresh_dir.mkdir()
         fresh_manifest = configure_fork_manifest(
             fresh_dir,
-            layer_id="acme-team-core",
-            layer_role="team",
+            layer_id="acme-squad-core",
+            layer_role="squad",
         )
         non_dict_dir = tmp_path / "non_dict_repo"
         (non_dict_dir / "system").mkdir(parents=True)
         (non_dict_dir / "system/mcp-layer.json").write_text("[]", encoding="utf-8")
-        configure_fork_manifest(non_dict_dir, layer_id="acme-team-core")
+        configure_fork_manifest(non_dict_dir, layer_id="acme-squad-core")
 
         # Assert
         assert dry_manifest["precedence"] == 5
@@ -292,8 +292,8 @@ class TestForkConfigurator:
             json.dumps(
                 {
                     "schema_version": "1.2",
-                    "layer_id": "acme-team-web",
-                    "layer_role": "team",
+                    "layer_id": "acme-squad-web",
+                    "layer_role": "squad",
                     "precedence": 40,
                     "default_stack_templates": ["human-core", "web-starter"],
                     "surface_bindings": [{"binding_id": "b1"}],

@@ -26,7 +26,7 @@ Because `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over `*/` at 
 
 ## 2. Parameterizing a Fork & Adding Polymorphic Template Packs (`scripts/layer-config.sh` & `templates/<name>/`)
 
-Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/Legal Domain Policy (`domain-policy`)**, a **Department (`department`)**, or a **Tech-Stack Team (`team`)**, use `./scripts/layer-config.sh` rather than editing manifests manually:
+Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/Legal Domain Policy (`domain-policy`)**, a **Department (`department`)**, or a **Tech-Stack Squad (`squad`)**, use `./scripts/layer-config.sh` rather than editing manifests manually:
 
 1. **Parameterize Fork Identity (`init-fork`)**:
    ```bash
@@ -78,7 +78,7 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
    ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
    ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
    ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
-     --id squad-patent-ops --role team --parent-dir /path/to/dept-legal
+     --id squad-patent-ops --role squad --parent-dir /path/to/dept-legal
    ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
    ```
 7. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
@@ -125,7 +125,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
    - Use **only** the Python 3 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`). Never import third-party packages that would require `pip install`.
    - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
 2. **Customizing Layer Identity, Mounted Subtrees & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
-   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.2"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `ephemeral-bot`, `team`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings` (including `ephemeral_fork_policy`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
+   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "1.2"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `ephemeral-bot`, `squad`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings` (including `ephemeral_fork_policy`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
    - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
 3. **Run the Deterministic MCP, Subtree & Container Self-Tests**:
    ```bash
@@ -144,7 +144,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 
 ### 6.1. Layered Dependency Separation (`requirements.txt` $\leftarrow$ `requirements-dev.txt` & Environment Profiles)
 - **Base Runtime ([`requirements.txt`](../../requirements.txt) — Zero External Dependencies in Upstream)**: Every script executed during normal workstation, container, or remote server operation (`bootstrap.sh`, `backup.sh`, `audit.sh`, `antigravity/.gemini/config/scripts/*.py`, and `scripts/dotfiles_mcp_server.py`) uses **only the Python 3.14 standard library** and runs directly on Ubuntu 26.04 LTS's native `/usr/bin/python3` (`Python 3.14`). Consequently, `requirements.txt` contains zero packages in the upstream base repository, so users cloning `dotfiles-ubuntu` do **not** need a `venv` at runtime.
-- **Multi-Environment Fork Extensibility (`tst`, `pre`, `pro`)**: If a corporate, team, or service-node fork extends `dotfiles-ubuntu` with custom MCP tools or scripts that require third-party runtime libraries, shared runtime packages can be added to `requirements.txt` (`make install-runtime`), and environment-specific MCP dependencies (`tst`, `pre`, `pro`) can be declared in `requirements-<env>.txt` files starting with `-r requirements.txt`.
+- **Multi-Environment Fork Extensibility (`tst`, `pre`, `pro`)**: If a corporate, squad, or service-node fork extends `dotfiles-ubuntu` with custom MCP tools or scripts that require third-party runtime libraries, shared runtime packages can be added to `requirements.txt` (`make install-runtime`), and environment-specific MCP dependencies (`tst`, `pre`, `pro`) can be declared in `requirements-<env>.txt` files starting with `-r requirements.txt`.
 - **Development & Testing (`./venv` + [`requirements-dev.txt`](../../requirements-dev.txt))**: `requirements-dev.txt` chains `-r requirements.txt` and adds the development/verification toolchain (`pytest`, `pytest-cov`, `ruff`, `mypy`, `shellcheck-py`) managed via [`Makefile`](../../Makefile) (`make install`) and [`pyproject.toml`](../../pyproject.toml).
 
 ### 6.2. Test Suite Architecture (`tests/unit/`, `tests/imp/` & `tests/e2e/`)
@@ -160,7 +160,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - `test_cli_scripts.py`: Verifies `--help`, `--version`, invalid flag rejection, `layer-subtree.sh`, `layer-config.sh`, and `bash -n` syntax across all `.sh` scripts and external package recipes.
   - `test_repo_parity_gates.py`: Verifies `0-byte` `__init__.py` purity, `1:1:1` bidirectional `Source <-> Unit Test <-> Specification` traceability, `< 465`-line file size discipline across all `.py` and `docs/**/*.md` files, single-language English purity, and hook/MCP-to-doc parity.
 - **`tests/e2e/` (End-to-End Chained Multi-Node MCP Federation, Downward/Upward CLI+MCP Promotion, Surface Weaving, Ephemeral Bots & Full Agent Turn Simulation)**:
-  - `test_chained_mcp_federation_e2e.py`: Spawns chained `stdio` MCP server instances (`Corporate/Team Hub MCP` with mounted `layers/*` $\rightarrow$ `Downstream Service Node MCP` in `pre` environment) to validate end-to-end discovery, `effective_guardrails` inheritance, cross-node package manifest comparison, JSONL diagnostics (`dotfiles://mcp/diagnostics`), and real `git subtree add` + `pull-all` + live MCP rule discovery across local Git repositories.
+  - `test_chained_mcp_federation_e2e.py`: Spawns chained `stdio` MCP server instances (`Corporate/Squad Hub MCP` with mounted `layers/*` $\rightarrow$ `Downstream Service Node MCP` in `pre` environment) to validate end-to-end discovery, `effective_guardrails` inheritance, cross-node package manifest comparison, JSONL diagnostics (`dotfiles://mcp/diagnostics`), and real `git subtree add` + `pull-all` + live MCP rule discovery across local Git repositories.
   - `test_layer_config_and_promotion_e2e.py`: Validates the full downward-to-upward cycle across `scripts/layer-config.sh` (`init-fork`, `scaffold-template --register-binding`, `apply-project`, `diff-project`, `promote-from-project`) and `DotfilesMCPServer` (`compare_layer_patterns` with `materialized_layer_rules` and `promotion_routing`).
   - `test_surface_and_compaction_e2e.py`: Validates `0..N` multi-layer `resolve_surface_governance` projection (*Lex Superior* + *Lex Specialis*, `SURFACE_PRECEDENCE_COLLISION`, `SURFACE_ASSET_MISSING`), hop-by-hop `rcap1` (`L0 → L1 → L2 → L3`) capsule unfolding, live TOCTOU line-drift relocation (`line_drift_relocated=True`), and `L3` mutation rejection (`CAPSULE_CHAIN_BROKEN`).
   - `test_ephemeral_forks_e2e.py`: Validates rule-triggered `ephemeral_delegation_advisories`, `orchestrate_ephemeral_fork` (`one_shot` evaluation, cross-project `.agents/rules/*.md` bridging, `rcap1` `L3` capsule unfolding with `session_resonance_key`, `:ro` container `chmod 555` + `--no-log` fallback to `/tmp/dotfiles_ephemeral_forks`, post-reap `CAPSULE_RESONANCE_DENIED`, `MAX_ACTIVE_EPHEMERAL_FORKS=16` capacity gate `EPHEMERAL_FORK_LIMIT_REACHED`, TTL expiry `EPHEMERAL_FORK_EXPIRED`, and outbound symlink escape blocking), and `layer-config.sh` ephemeral CLI subcommands.

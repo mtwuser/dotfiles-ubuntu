@@ -29,7 +29,7 @@ Ephemeral Scoped Forks solve this paradox by keeping the primary orchestrator li
 3. **Case 3 — Privilege & Scope Sandboxing (`access_mode`, `model_tier`, `target_globs`)**:
    - Each ephemeral fork locks its `system/mcp-layer.json` to an explicit `model_tier` (`"flash"`, `"inherit"`, `"pro"`), `access_mode` (`"strictly-read-only"`, `"read-and-test-trigger"`, `"read-write-scoped"`), and `target_globs` boundary, preventing a support subagent from drifting outside its assigned surface (`AGENTS.md §12` & `§13.3`).
 4. **Case 4 — Canary Governance Dry-Run (`"on_demand"`)**:
-   - Before promoting a candidate rule to a Team or Department layer (`promote-from-project`), an engineer or agent can spawn an ephemeral fork with custom `target_globs`/`mount_templates`, run `action="evaluate"` against real `target_path`s to verify precedence weaving (`Lex Superior` / `Lex Specialis`) and token budgets, and immediately `reap` it.
+   - Before promoting a candidate rule to a Squad or Department layer (`promote-from-project`), an engineer or agent can spawn an ephemeral fork with custom `target_globs`/`mount_templates`, run `action="evaluate"` against real `target_path`s to verify precedence weaving (`Lex Superior` / `Lex Specialis`) and token budgets, and immediately `reap` it.
 
 ---
 
