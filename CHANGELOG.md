@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.5.0] - 2026-11-01
 
 ### Added
 - **Domain Cut-Points & Anti-Magic-Number Hygiene (`technical-base` Rule 6), 4-Tier Actor Permission Matrix (`owner`, `maintainer`, `validator`, `member`) & Role-Scoped Layer `Makefile` Hygiene (`templates/technical-base/rules/technical-base.md`, `scripts/dotfiles_mcp/constants.py`, `scripts/dotfiles_mcp/authority_engine.py`, `scripts/dotfiles_mcp/git_governance_engine.py`, `scripts/dotfiles_mcp/workflow_engine.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/layer-config.sh`)**:
