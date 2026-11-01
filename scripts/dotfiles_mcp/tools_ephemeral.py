@@ -292,7 +292,7 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
             {
                 "target_path": target_path,
                 "resolution_override": resolution,
-                "resonance_key": str(spawned.get("session_resonance_key", "")),
+                "resonance_key": str(spawned["session_resonance_key"]),
                 "include_capsules": True,
             }
         )
@@ -323,8 +323,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
             "action": "evaluate",
             "fork_id": spawned["fork_id"],
             "bot_role": spawned["bot_role"],
-            "ephemeral_scope": spawned.get("ephemeral_scope", "intra-layer"),
-            "actor_role": spawned.get("actor_role", actor_role),
+            "ephemeral_scope": spawned["ephemeral_scope"],
+            "actor_role": spawned["actor_role"],
             "auto_reaped": auto_reaped,
             "session_resonance_key": spawned["session_resonance_key"],
             "bridged_project_files": spawned["bridged_project_files"],

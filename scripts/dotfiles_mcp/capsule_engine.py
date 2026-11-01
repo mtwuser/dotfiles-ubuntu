@@ -19,11 +19,21 @@ from dotfiles_mcp.constants import (
     ALLOWED_ROOT_FILES,
     BACKTICK_PATH_RE,
     BOLD_TERM_RE,
+    CAPSULE_DIGEST_HEX_LEN,
+    CAPSULE_HMAC_HEX_LEN,
     CAPSULE_PREFIX,
+    CHARS_PER_TOKEN_ESTIMATE,
+    CODON_MAX_SEMANTIC_TAGS,
+    CODON_SLUG_MAX_CHARS,
     CODON_STOPWORDS,
+    EXON_BULLET_MAX_CHARS,
+    EXON_HEADING_MAX_CHARS,
+    EXON_MAX_BULLETS,
     MD_LINK_RE,
     NEXT_LEVEL_MAP,
+    SHA256_BLOCK_BYTES,
     WORD_TOKEN_RE,
+    ZLIB_MAX_COMPRESSION_LEVEL,
 )
 
 
@@ -41,7 +51,7 @@ def _b64url_decode(token: str) -> bytes:
 
 
 def _slugify_codon(text: str) -> str:
-    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:36]
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")[:CODON_SLUG_MAX_CHARS]
     return slug or "section"
 
 
@@ -52,7 +62,7 @@ def _extract_codon_tags(heading: str, body_text: str) -> list[str]:
         for word in WORD_TOKEN_RE.findall(chunk.lower()):
             if word not in CODON_STOPWORDS and word not in tags:
                 tags.append(word)
-                if len(tags) == 5:
+                if len(tags) == CODON_MAX_SEMANTIC_TAGS:
                     return tags
     return tags
 
@@ -73,15 +83,15 @@ def _extract_axiom_skeleton(heading: str, body_lines: list[str]) -> str:
                 folded += 1
             continue
         if stripped.startswith(">") or stripped.startswith(("**Mandate", "**Description")):
-            exons.append(stripped[:160])
+            exons.append(stripped[:EXON_HEADING_MAX_CHARS])
         elif stripped.startswith(("- ", "* ")) or re.match(r"^\d+\.\s", stripped):
-            if bullets < 4:
-                exons.append(stripped[:120])
+            if bullets < EXON_MAX_BULLETS:
+                exons.append(stripped[:EXON_BULLET_MAX_CHARS])
                 bullets += 1
             else:
                 folded += 1
         elif len(exons) == 1:
-            exons.append(stripped[:160])
+            exons.append(stripped[:EXON_HEADING_MAX_CHARS])
         else:
             folded += 1
     if folded > 0:
@@ -140,8 +150,10 @@ def _extract_l3_links(
                         {
                             "path": rel_str,
                             "bytes": size,
-                            "estimated_tokens": max(1, size // 4),
-                            "sha256": hashlib.sha256(raw_bytes).hexdigest()[:16],
+                            "estimated_tokens": max(1, size // CHARS_PER_TOKEN_ESTIMATE),
+                            "sha256": hashlib.sha256(raw_bytes).hexdigest()[
+                                :CAPSULE_DIGEST_HEX_LEN
+                            ],
                         }
                     )
                 break
@@ -149,7 +161,7 @@ def _extract_l3_links(
 
 
 def _compute_digest16(*parts: str) -> str:
-    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:16]
+    return hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest()[:CAPSULE_DIGEST_HEX_LEN]
 
 
 def _derive_chain_key(
@@ -169,7 +181,7 @@ def _xor_keystream(data: bytes, key: bytes) -> bytes:
     counter = 0
     while offset < len(data):
         block = hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
-        chunk_len = min(32, len(data) - offset)
+        chunk_len = min(SHA256_BLOCK_BYTES, len(data) - offset)
         for idx in range(chunk_len):
             out[offset + idx] = data[offset + idx] ^ block[idx]
         offset += chunk_len
@@ -184,11 +196,11 @@ def _seal_single_capsule(
 ) -> str:
     header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
     raw_inner = json.dumps(inner_payload, separators=(",", ":")).encode("utf-8")
-    compressed = zlib.compress(raw_inner, level=9)
+    compressed = zlib.compress(raw_inner, level=ZLIB_MAX_COMPRESSION_LEVEL)
     encrypted = _xor_keystream(compressed, chain_key)
     cipher_b64 = _b64url_encode(encrypted)
     signing_input = f"{CAPSULE_PREFIX}.{header_b64}.{cipher_b64}".encode("ascii")
-    sig_hex = hmac.new(chain_key, signing_input, hashlib.sha256).hexdigest()[:24]
+    sig_hex = hmac.new(chain_key, signing_input, hashlib.sha256).hexdigest()[:CAPSULE_HMAC_HEX_LEN]
     return f"{CAPSULE_PREFIX}.{header_b64}.{cipher_b64}.{sig_hex}"
 
 

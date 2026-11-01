@@ -24,8 +24,13 @@ from dotfiles_mcp.capsule_engine import (
 )
 from dotfiles_mcp.constants import (
     AGENT_TIER_RANK,
+    CAPSULE_ALERT_PREFIX_CHARS,
+    CAPSULE_HMAC_HEX_LEN,
+    L2_SECTION_MAX_CHARS,
+    L3_EXCERPT_MAX_CHARS,
     LEVEL_INDEX,
     LEVEL_MIN_TIER,
+    MAX_UNFOLDED_L3_LINKS,
     NEXT_LEVEL_MAP,
     VALID_AGENT_TIERS,
     VALID_CAPSULE_LEVELS,
@@ -69,7 +74,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                 "WARN",
                 "CAPSULE_CHAIN_BROKEN",
                 str(exc),
-                {"capsule_prefix": raw_token[:32]},
+                {"capsule_prefix": raw_token[:CAPSULE_ALERT_PREFIX_CHARS]},
             )
             raise CapsuleError(
                 f"{exc} [Recovery: Re-run query_governance_rules to obtain a fresh capsule.]"
@@ -156,7 +161,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
         step_key = _derive_chain_key(secret, hdr_layer, cur_lvl, str(header.get("ph", "")), cap_env)
         expected_sig = hmac.new(
             step_key, signing_prefix.encode("ascii"), hashlib.sha256
-        ).hexdigest()[:24]
+        ).hexdigest()[:CAPSULE_HMAC_HEX_LEN]
         if not hmac.compare_digest(sig_hex, expected_sig):
             msg = (
                 "Capsule resonance signature verification failed "
@@ -293,7 +298,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                     if is_eph_bridge
                     else _extract_l3_links(target_file, joined_section, layer_dir)
                 )
-                live_h2 = _compute_digest16(live_h1, joined_section[:8000])
+                live_h2 = _compute_digest16(live_h1, joined_section[:L2_SECTION_MAX_CHARS])
                 live_h3 = _compute_digest16(
                     live_h2,
                     *(f"{item['path']}:{item['sha256']}" for item in l3_links),
@@ -324,9 +329,17 @@ class UnfoldToolsMixin(CompactionToolsMixin):
 
         next_capsule_token = str(inner["next_cap"]) if "next_cap" in inner else None
         l3_paths = [str(item["path"]) for item in l3_links]
-        unfold_truncated = (target_level in ("L2", "L3") and len(joined_section) > 8000) or (
+        unfold_truncated = (
+            target_level in ("L2", "L3") and len(joined_section) > L2_SECTION_MAX_CHARS
+        ) or (
             target_level == "L3"
-            and (len(l3_paths) > 5 or any(int(item["bytes"]) > 4000 for item in l3_links[:5]))
+            and (
+                len(l3_paths) > MAX_UNFOLDED_L3_LINKS
+                or any(
+                    int(item["bytes"]) > L3_EXCERPT_MAX_CHARS
+                    for item in l3_links[:MAX_UNFOLDED_L3_LINKS]
+                )
+            )
         )
         unfold_warnings: list[dict[str, Any]] = []
         if unfold_truncated:
@@ -363,19 +376,19 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                 "section": heading,
                 "start_line": start_line,
                 "end_line": end_line,
-                "full_section": joined_section[:8000],
+                "full_section": joined_section[:L2_SECTION_MAX_CHARS],
                 "l3_links": l3_links,
             }
         else:
             linked_docs: list[dict[str, Any]] = []
-            for l3_path in l3_paths[:5]:
+            for l3_path in l3_paths[:MAX_UNFOLDED_L3_LINKS]:
                 l3_file = self._resolve_safe_path(l3_path, layer_dir)
                 l3_text = l3_file.read_text(encoding="utf-8")
                 linked_docs.append(
                     {
                         "path": str(l3_file.relative_to(self.repo_dir)),
                         "line_count": len(l3_text.splitlines()),
-                        "excerpt": l3_text[:4000],
+                        "excerpt": l3_text[:L3_EXCERPT_MAX_CHARS],
                     }
                 )
             root_manifest = self._load_layer_manifest()
@@ -403,7 +416,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
                 "file": str(target_file.relative_to(self.repo_dir)),
                 "layer": layer_name,
                 "section": heading,
-                "full_section": joined_section[:8000],
+                "full_section": joined_section[:L2_SECTION_MAX_CHARS],
                 "linked_l3_documents": linked_docs,
                 "effective_guardrails": _merge_unique_strings(
                     root_manifest.get("baseline_guardrails", []),

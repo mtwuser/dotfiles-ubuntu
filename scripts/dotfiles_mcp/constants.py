@@ -12,28 +12,18 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = SCRIPT_DIR.parent
 PROTOCOL_VERSION = "2024-11-05"
+MCP_LAYER_SCHEMA_VERSION = "1.2"
+TEMPLATE_SCHEMA_VERSION = "1.0"
+DEFAULT_INITIAL_LAYER_VERSION = "0.1.0"
+FALLBACK_UNKNOWN_VERSION = "0.0.0"
 VALID_LAYER_ROLES = (
-    "corporate",
-    "department",
-    "domain-policy",
-    "ephemeral-bot",
-    "squad",
-    "service-node",
-    "environment-cluster",
-    "workstation",
-)
+    "corporate", "department", "domain-policy", "ephemeral-bot",
+    "squad", "service-node", "environment-cluster", "workstation",
+)  # fmt: skip
 VALID_OPERATING_STATES: tuple[str, ...] = (
-    "oss-readonly-appliance",
-    "oss-dev",
-    "corporate-root",
-    "domain-policy",
-    "department",
-    "squad",
-    "service-node",
-    "environment-cluster",
-    "ephemeral-bot",
-    "project",
-)
+    "oss-readonly-appliance", "oss-dev", "corporate-root", "domain-policy",
+    "department", "squad", "service-node", "environment-cluster", "ephemeral-bot", "project",
+)  # fmt: skip
 MCP_OPERATING_MODES: dict[str, str] = {
     "oss-readonly-appliance": "workstation-baseline-provider",
     "oss-dev": "self-test-and-dev-only",
@@ -48,12 +38,8 @@ MCP_OPERATING_MODES: dict[str, str] = {
 }
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
-    "main",
-    "master",
-    "env/tst",
-    "env/pre",
-    "env/pro",
-)
+    "main", "master", "env/tst", "env/pre", "env/pro",
+)  # fmt: skip
 DEFAULT_PROCESS_BRANCH_PREFIXES: dict[str, str] = {
     "feature": "feature/",
     "task": "task/",
@@ -71,12 +57,8 @@ DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
 VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
 VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "maintainer", "validator", "member")
 VALID_TRACKER_FILES: tuple[str, ...] = (
-    "WORKTASK.md",
-    "BACKLOG.md",
-    "WORKROAD.md",
-    "ROADMAP.md",
-    "WORKVALI.md",
-)
+    "WORKTASK.md", "BACKLOG.md", "WORKROAD.md", "ROADMAP.md", "WORKVALI.md",
+)  # fmt: skip
 VALID_DELEGATION_DIRS: tuple[str, ...] = ("roadmaps", "rules", "corporate")
 VALID_DELEGATION_SURFACES: tuple[str, ...] = (*VALID_TRACKER_FILES, *VALID_DELEGATION_DIRS)
 AGENTS_RULES_PREFIX: tuple[str, str] = (".agents", "rules")
@@ -95,30 +77,58 @@ STATUS_EXCERPT_MAX_LINES = 35
 SKILL_MD_MAX_LINES = 500
 OWNER_WRITABLE_MODE_BIT = stat.S_IWUSR
 OWNER_DIR_RWX_BITS = stat.S_IRWXU
-TEMPLATE_STACK_GROUP_DIRS = (
-    "business-stack",
-    "squad-stack",
-    "tech-stack",
-)
+FORK_ID_HASH_HEX_LEN = 8
+CAPSULE_DIGEST_HEX_LEN = 16
+CAPSULE_HMAC_HEX_LEN = 24
+CAPSULE_ALERT_PREFIX_CHARS = 32
+CAPSULE_BRIEF_PREVIEW_CHARS = 48
+SHA256_BLOCK_BYTES = 32
+ZLIB_MAX_COMPRESSION_LEVEL = 9
+EPOCH_DECIMAL_PLACES = 3
+CHARS_PER_TOKEN_ESTIMATE = 4
+MIN_CODON_WORD_LEN = 4
+CODON_SLUG_MAX_CHARS = 36
+CODON_MAX_SEMANTIC_TAGS = 5
+EXON_HEADING_MAX_CHARS = 160
+EXON_BULLET_MAX_CHARS = 120
+EXON_MAX_BULLETS = 4
+L0_FALLBACK_EST_TOKENS = 20
+L1_FALLBACK_EST_TOKENS = 60
+L2_EXCERPT_MAX_CHARS = 1500
+L2_SECTION_MAX_CHARS = 8000
+L3_EXCERPT_MAX_CHARS = 4000
+MAX_UNFOLDED_L3_LINKS = 5
+MAX_QUERY_GOVERNANCE_MATCHES = 15
+MAX_SURFACE_SECTIONS_PER_RULE = 3
+MAX_BRIEF_INVARIANTS = 8
+SPECIFICITY_WEIGHT_TRAIT = 4
+SPECIFICITY_WEIGHT_SCOPE = 3
+SPECIFICITY_WEIGHT_PLANE = 2
+SPECIFICITY_WEIGHT_GLOB = 1
+MAX_RECOMMENDED_MCP_FANOUT = 3
+DIAGNOSTICS_RECENT_ALERTS_LIMIT = 5
+DIAGNOSTICS_RECENT_EVENTS_LIMIT = 10
+MS_PER_SECOND = 1000
+JSONRPC_PARSE_ERROR = -32700
+JSONRPC_METHOD_NOT_FOUND = -32601
+JSONRPC_INVALID_PARAMS = -32602
+JSONRPC_INTERNAL_ERROR = -32603
+TEMPLATE_STACK_GROUP_DIRS = ("business-stack", "squad-stack", "tech-stack")
 VALID_TEMPLATE_KINDS = (
-    "core-base",
-    "business-stack",
-    "squad-stack",
-    "tech-stack",
-    "stack-starter",
-    "domain-policy-pack",
-    "department-pack",
-    "project-overlay",
-)
+    "core-base", "business-stack", "squad-stack", "tech-stack",
+    "stack-starter", "domain-policy-pack", "department-pack", "project-overlay",
+)  # fmt: skip
 ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
     "domain-policy": 5,
     "corporate": 10,
     "workstation": 10,
     "ephemeral-bot": 15,
+    "bridge": 20,
     "department": 30,
     "squad": 50,
     "service-node": 60,
     "environment-cluster": 70,
+    "project": 80,
 }
 VALID_ARCHITECTURAL_PLANES = (
     "schema",
@@ -189,28 +199,10 @@ PLANE_PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
 )
-STRUCTURAL_PATH_SEGMENTS = frozenset(
-    {
-        "src",
-        "app",
-        "internal",
-        "pkg",
-        "lib",
-        "templates",
-        "static",
-        "partials",
-        "components",
-        "css",
-        "js",
-        "tests",
-        "unit",
-        "imp",
-        "e2e",
-        "docs",
-        "architecture",
-        "reference",
-    }
-)
+STRUCTURAL_PATH_SEGMENTS = frozenset({
+    "src", "app", "internal", "pkg", "lib", "templates", "static", "partials", "components",
+    "css", "js", "tests", "unit", "imp", "e2e", "docs", "architecture", "reference",
+})  # fmt: skip
 CAPSULE_PREFIX = "rcap1"
 VALID_BINDING_MODES = ("authoritative", "transversal")
 VALID_RESOLUTIONS = ("L0", "L1", "L2")
@@ -237,14 +229,9 @@ MCP_PAYLOAD_WARN_BYTES = 16000
 MAX_LOG_FILE_BYTES = 524288
 ALLOWED_READ_PREFIXES = ("docs/", "templates/", "antigravity/", "system/")
 ALLOWED_ROOT_FILES = {
-    "README.md",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "SECURITY.md",
-    "ACCESSIBILITY.md",
-    "CODE_OF_CONDUCT.md",
-    "VERSION",
-}
+    "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
+    "ACCESSIBILITY.md", "CODE_OF_CONDUCT.md", "VERSION",
+}  # fmt: skip
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 KEBAB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 MATERIALIZED_RULE_RE = re.compile(r"^layer-(\d{2})-([a-z0-9-]+)\.md$")
@@ -252,65 +239,23 @@ MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.(?:md|html|j2|css))`")
 BOLD_TERM_RE = re.compile(r"\*\*([^*]{3,40})\*\*")
 WORD_TOKEN_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_-]{2,}")
-CODON_STOPWORDS = frozenset(
-    {
-        "the",
-        "and",
-        "for",
-        "with",
-        "that",
-        "this",
-        "from",
-        "are",
-        "must",
-        "never",
-        "when",
-        "all",
-        "any",
-        "not",
-        "use",
-        "only",
-        "into",
-        "over",
-    }
-)
+CODON_STOPWORDS = frozenset({
+    "the", "and", "for", "with", "that", "this", "from", "are", "must",
+    "never", "when", "all", "any", "not", "use", "only", "into", "over",
+})  # fmt: skip
 CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
-    "list-templates",
-    "apply-project",
-    "sync-layer",
-    "diff-project",
-    "promote-from-project",
-    "check-authority",
-    "inspect-horizon",
-    "start-task",
-    "complete-task",
-    "compare-upstream",
-    "consult-layer",
-    "check-env-promotion",
-    "record-decision",
-)
-VALIDATOR_ALLOWED_OPS: tuple[str, ...] = (
-    "check-env-promotion",
-    "record-decision",
-)
+    "list-templates", "apply-project", "sync-layer", "diff-project", "promote-from-project",
+    "check-authority", "inspect-horizon", "start-task", "complete-task",
+    "compare-upstream", "consult-layer", "check-env-promotion", "record-decision",
+)  # fmt: skip
+VALIDATOR_ALLOWED_OPS: tuple[str, ...] = ("check-env-promotion", "record-decision")
 MAINTAINER_ALLOWED_OPS: tuple[str, ...] = (
-    "scaffold-template",
-    "manage-roster",
-    "configure-git-policy",
-    "delegate-to-child",
-)
+    "scaffold-template", "manage-roster", "configure-git-policy", "delegate-to-child",
+)  # fmt: skip
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
-    "init-fork",
-    "scaffold-template",
-    "register-subtree",
-    "set-authority",
-    "manage-roster",
-    "configure-git-policy",
-    "delegate-to-child",
-    "release",
-    "commit-layer",
-    "push-layer",
-)
+    "init-fork", "scaffold-template", "register-subtree", "set-authority", "manage-roster",
+    "configure-git-policy", "delegate-to-child", "release", "commit-layer", "push-layer",
+)  # fmt: skip
 _WORKSTATION_DEV_TARGETS: tuple[str, ...] = (
     "status", "setup-dev", "verify", "audit", "test", "test-unit",
     "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
@@ -369,40 +314,12 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "delegate": f'{_CLI_RUN} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)"',
     "mcp-test": f"{_CLI_RUN} list-templates $(CURDIR)",
 }
-GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
-    {
-        "root",
-        "corp",
-        "corporate",
-        "dept",
-        "department",
-        "team",
-        "squad",
-        "layer",
-        "base",
-        "pack",
-        "policy",
-        "project",
-        "enterprise",
-        "acme",
-        "demo",
-        "test",
-        "tech",
-        "legal",
-        "finance",
-        "supply",
-        "design",
-        "brand",
-        "marketing",
-        "social",
-        "growth",
-        "safety",
-        "human",
-        "core",
-        "technical",
-        "business",
-    }
-)
+GENERIC_LAYER_TOKENS: frozenset[str] = frozenset({
+    "root", "corp", "corporate", "dept", "department", "team", "squad", "layer", "base",
+    "pack", "policy", "project", "enterprise", "acme", "demo", "test", "tech", "legal",
+    "finance", "supply", "design", "brand", "marketing", "social", "growth", "safety",
+    "human", "core", "technical", "business",
+})  # fmt: skip
 GENERIC_EMAIL_DOMAINS: frozenset[str] = frozenset(
     {"users.noreply.github.com", "example.com", "acme.com", "localhost"}
 )

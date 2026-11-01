@@ -14,6 +14,8 @@ from typing import Any
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
     ANSI_ESCAPE_RE,
+    CHARS_PER_TOKEN_ESTIMATE,
+    MAX_RECOMMENDED_MCP_FANOUT,
     MCP_OPERATING_MODES,
     VALID_ENVIRONMENTS,
 )
@@ -97,7 +99,7 @@ class FederationToolsMixin(MCPNodeBase):
             },
             "channel_3_active_invariants_and_hooks": {
                 "agents_md_bytes": agents_bytes,
-                "agents_md_estimated_tokens": agents_bytes // 4,
+                "agents_md_estimated_tokens": agents_bytes // CHARS_PER_TOKEN_ESTIMATE,
                 "agents_md_budget_cap_bytes": AGENTS_MD_MAX_BYTES,
                 "agents_md_budget_utilization_pct": round(
                     (agents_bytes / AGENTS_MD_MAX_BYTES) * 100, 1
@@ -259,7 +261,7 @@ class FederationToolsMixin(MCPNodeBase):
             mcps = [m for m in mcps if env_arg in m.get("environments", list(VALID_ENVIRONMENTS))]
 
         mcp_warnings: list[dict[str, Any]] = []
-        if len(mcps) > 3 and not filter_role and not env_arg:
+        if len(mcps) > MAX_RECOMMENDED_MCP_FANOUT and not filter_role and not env_arg:
             mcp_warnings.append(
                 self._emit_warning(
                     "WARN",

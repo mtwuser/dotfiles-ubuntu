@@ -15,6 +15,7 @@ from typing import Any
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
     COMMAND_CONSCIOUSNESS_TIERS,
+    DEFAULT_INITIAL_LAYER_VERSION,
     KEBAB_ID_RE,
     LAYER_MAKEFILE_RECIPES,
     LAYER_ROLE_MAKEFILE_TARGETS,
@@ -126,12 +127,20 @@ def register_mounted_subtree(
     sub_m: dict[str, Any] = json.loads(sub_p.read_text(encoding="utf-8")) if sub_p.is_file() else {}
     sub_id = str(sub_m.get("layer_id") or layer_name)
     sub_role = str(sub_m.get("layer_role") or "department")
+    dept_prec, svc_prec = (
+        ROLE_DEFAULT_PRECEDENCE["department"],
+        ROLE_DEFAULT_PRECEDENCE["service-node"],
+    )
     entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role}
-    entry.update(precedence=int(sub_m.get("precedence", 30)), repository=repo_url, branch=branch)
+    entry.update(
+        precedence=int(sub_m.get("precedence", dept_prec)), repository=repo_url, branch=branch
+    )
     raw_layers = root_manifest.get("mounted_layers", [])
     existing = [x for x in raw_layers if isinstance(x, dict) and x.get("name") != layer_name]
     existing.append(entry)
-    existing.sort(key=lambda item: (int(item.get("precedence", 50)), str(item.get("name", ""))))
+    existing.sort(
+        key=lambda item: (int(item.get("precedence", svc_prec)), str(item.get("name", "")))
+    )
     root_manifest["mounted_layers"] = existing
     if not dry_run:
         root_manifest_path.write_text(json.dumps(root_manifest, indent=2) + "\n", encoding="utf-8")
@@ -220,7 +229,9 @@ def bootstrap_layer_workspace(
     if layer_role not in VALID_LAYER_ROLES:
         raise ValueError(f"Invalid layer_role {layer_role!r}")
     effective_prec = (
-        precedence if precedence is not None else ROLE_DEFAULT_PRECEDENCE.get(layer_role, 50)
+        precedence
+        if precedence is not None
+        else ROLE_DEFAULT_PRECEDENCE.get(layer_role, ROLE_DEFAULT_PRECEDENCE["service-node"])
     )
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     parent_manifest_path = effective_parent / "system" / "mcp-layer.json"
@@ -281,17 +292,18 @@ def bootstrap_layer_workspace(
         "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
     )
     chg_hdr = f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
+    init_ver = DEFAULT_INITIAL_LAYER_VERSION
     baseline_files = {
-        "VERSION": "0.1.0\n",
+        "VERSION": f"{init_ver}\n",
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
         "layers/.gitkeep": "",
         "Makefile": _render_layer_makefile(layer_id, layer_role, effective_parent, repo_dir),
         "README.md": _render_layer_onboarding_readme(
             layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
         ),
-        "CHANGELOG.md": f"{chg_hdr}## [0.1.0]\n- Initial layer bootstrap.\n",
+        "CHANGELOG.md": f"{chg_hdr}## [{init_ver}]\n- Initial layer bootstrap.\n",
         "WORKTASK.md": (
-            f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v0.1.0`).\n"
+            f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v{init_ver}`).\n"
             "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
         ),
         "antigravity/.gemini/config/AGENTS.md": ag_rule,
@@ -380,7 +392,7 @@ def inspect_workspace_status(
     is_layer = m_path.is_file()
     m: dict[str, Any] = json.loads(m_path.read_text(encoding="utf-8")) if is_layer else {}
     role, lid = str(m.get("layer_role", "project")), str(m.get("layer_id", ws.name))
-    prec = int(m.get("precedence", 80))
+    prec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE["project"]))
     tpls = [str(x) for x in m.get("default_stack_templates", [])]
     rules = [p.name for p in sorted((ws / ".agents/rules").glob("*.md"))]
     has_tech = bool({"technical-base.md", "coding.md"} & set(rules) or "technical-base" in tpls)

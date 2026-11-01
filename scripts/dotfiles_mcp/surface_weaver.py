@@ -8,7 +8,14 @@ from __future__ import annotations
 import fnmatch
 from typing import Any
 
-from dotfiles_mcp.constants import PLANE_PATH_RULES, STRUCTURAL_PATH_SEGMENTS
+from dotfiles_mcp.constants import (
+    PLANE_PATH_RULES,
+    SPECIFICITY_WEIGHT_GLOB,
+    SPECIFICITY_WEIGHT_PLANE,
+    SPECIFICITY_WEIGHT_SCOPE,
+    SPECIFICITY_WEIGHT_TRAIT,
+    STRUCTURAL_PATH_SEGMENTS,
+)
 
 
 def _infer_plane_from_path(rel_path: str) -> str:
@@ -69,8 +76,8 @@ def _compute_binding_specificity(binding: dict[str, Any]) -> int:
         for t in binding.get("traits", [])
         if str(t).strip() and str(t).strip() != "*"
     ]
-    glob_pts = 1 if (globs and "**" not in globs and "*" not in globs) else 0
-    plane_pts = 2 if (planes and "*" not in planes) else 0
-    scope_pts = 3 if (scopes and "*" not in scopes) else 0
-    trait_pts = 4 * len(traits)
+    glob_pts = SPECIFICITY_WEIGHT_GLOB if (globs and "**" not in globs and "*" not in globs) else 0
+    plane_pts = SPECIFICITY_WEIGHT_PLANE if (planes and "*" not in planes) else 0
+    scope_pts = SPECIFICITY_WEIGHT_SCOPE if (scopes and "*" not in scopes) else 0
+    trait_pts = SPECIFICITY_WEIGHT_TRAIT * len(traits)
     return glob_pts + plane_pts + scope_pts + trait_pts

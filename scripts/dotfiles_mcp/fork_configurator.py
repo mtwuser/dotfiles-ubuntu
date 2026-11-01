@@ -12,8 +12,10 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
+    MCP_LAYER_SCHEMA_VERSION,
     OWNER_WRITABLE_MODE_BIT,
     ROLE_DEFAULT_PRECEDENCE,
+    TEMPLATE_SCHEMA_VERSION,
     TEMPLATE_STACK_GROUP_DIRS,
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
@@ -112,7 +114,7 @@ def configure_fork_manifest(
 
     manifest_path = repo_dir / "system" / "mcp-layer.json"
     manifest: dict[str, Any] = dict(
-        schema_version="1.2",
+        schema_version=MCP_LAYER_SCHEMA_VERSION,
         layer_id=layer_id,
         layer_role=layer_role,
         precedence=eff_precedence,
@@ -136,7 +138,7 @@ def configure_fork_manifest(
             manifest.update(loaded)
 
     manifest.update(
-        schema_version="1.2",
+        schema_version=MCP_LAYER_SCHEMA_VERSION,
         layer_id=layer_id,
         layer_role=layer_role,
         precedence=eff_precedence,
@@ -219,7 +221,7 @@ def scaffold_template_pack(
         "canonical_templates": ([f"{rel_tpl}/assets/canonical_snippet.md"] if not is_tech else []),
     }
     tpl_manifest = {
-        "schema_version": "1.0",
+        "schema_version": TEMPLATE_SCHEMA_VERSION,
         "template_id": template_name,
         "kind": kind,
         "target_role": "domain-policy" if kind == "domain-policy-pack" else "squad",
@@ -300,10 +302,12 @@ def apply_fork_to_project(
 ) -> dict[str, Any]:
     """Materialize template pack and 0..N layer rules/bindings into a target project."""
     root_manifest_path = repo_dir / "system" / "mcp-layer.json"
+    corp_prec = ROLE_DEFAULT_PRECEDENCE["corporate"]
+    svc_prec = ROLE_DEFAULT_PRECEDENCE["service-node"]
     root_manifest: dict[str, Any] = (
         json.loads(root_manifest_path.read_text(encoding="utf-8"))
         if root_manifest_path.is_file()
-        else {"layer_id": "root", "layer_role": "corporate", "precedence": 10}
+        else {"layer_id": "root", "layer_role": "corporate", "precedence": corp_prec}
     )
     layers_dir = repo_dir / "layers"
     candidate_layers: list[tuple[str, Path, dict[str, Any]]] = [("root", repo_dir, root_manifest)]
@@ -315,18 +319,18 @@ def apply_fork_to_project(
             sub_m = (
                 json.loads(sub_m_path.read_text(encoding="utf-8"))
                 if sub_m_path.is_file()
-                else {"layer_id": sub.name, "layer_role": "department", "precedence": 50}
+                else {"layer_id": sub.name, "layer_role": "department", "precedence": svc_prec}
             )
             candidate_layers.append((sub.name, sub, sub_m))
 
     if layers_filter and "all" not in layers_filter:
         allowed = set(layers_filter)
         candidate_layers = [
-            (name, ldir, m)
-            for name, ldir, m in candidate_layers
-            if name in allowed or str(m.get("layer_id")) in allowed
+            (n, ld, m)
+            for n, ld, m in candidate_layers
+            if n in allowed or str(m.get("layer_id")) in allowed
         ]
-    candidate_layers.sort(key=lambda item: (int(item[2].get("precedence", 50)), item[0]))
+    candidate_layers.sort(key=lambda item: (int(item[2].get("precedence", svc_prec)), item[0]))
 
     resolved_templates: list[tuple[str, Path]] = []
     if template_ref:
@@ -419,7 +423,7 @@ def apply_fork_to_project(
 
     lineage_rows: list[str] = []
     for name, ldir, m in candidate_layers:
-        prec, lid = int(m.get("precedence", 50)), str(m.get("layer_id", name))
+        prec, lid = int(m.get("precedence", svc_prec)), str(m.get("layer_id", name))
         role = str(m.get("layer_role", "department"))
         bindings = collect_layer_effective_bindings(ldir, m)
         lineage_rows.append(f"| `{prec}` | `{name}` | `{lid}` | `{role}` | `{len(bindings)}` |")

@@ -21,7 +21,12 @@ from dotfiles_mcp.capsule_engine import (
     _slugify_codon,
 )
 from dotfiles_mcp.constants import (
+    CHARS_PER_TOKEN_ESTIMATE,
+    L1_FALLBACK_EST_TOKENS,
+    L2_EXCERPT_MAX_CHARS,
+    L2_SECTION_MAX_CHARS,
     LEVEL_MIN_TIER,
+    MAX_QUERY_GOVERNANCE_MATCHES,
     NEXT_LEVEL_MAP,
     VALID_ENVIRONMENTS,
     VALID_RESOLUTIONS,
@@ -60,11 +65,11 @@ class CompactionToolsMixin(MCPNodeBase):
         key_required: bool = False,
     ) -> tuple[dict[str, Any], str]:
         l0_summary = f"[{layer_name}] {rel_in_layer} :: {heading}"
-        l3_tokens = sum(int(item["estimated_tokens"]) for item in l3_links) + 60
+        l3_tokens = sum(int(item["estimated_tokens"]) for item in l3_links) + L1_FALLBACK_EST_TOKENS
         cost_map = {
-            "L0": max(1, len(l0_summary) // 4),
-            "L1": max(1, len(l1_skeleton) // 4),
-            "L2": max(1, len(l2_excerpt) // 4),
+            "L0": max(1, len(l0_summary) // CHARS_PER_TOKEN_ESTIMATE),
+            "L1": max(1, len(l1_skeleton) // CHARS_PER_TOKEN_ESTIMATE),
+            "L2": max(1, len(l2_excerpt) // CHARS_PER_TOKEN_ESTIMATE),
             "L3": l3_tokens,
         }
         tags = _extract_codon_tags(heading, l2_excerpt)
@@ -186,10 +191,10 @@ class CompactionToolsMixin(MCPNodeBase):
             ):
                 joined = "\n".join(body)
                 if q_lower in joined.lower() or q_lower in heading.lower():
-                    if resolution == "L2" and len(joined) > 1500:
+                    if resolution == "L2" and len(joined) > L2_EXCERPT_MAX_CHARS:
                         excerpt_truncated = True
-                    l2_excerpt = joined[:1500]
-                    l2_full = joined[:8000]
+                    l2_excerpt = joined[:L2_EXCERPT_MAX_CHARS]
+                    l2_full = joined[:L2_SECTION_MAX_CHARS]
                     l1_skeleton = _extract_axiom_skeleton(heading, body)
                     l3_links = _extract_l3_links(file_path, joined, ldir)
                     rel_in_layer = str(file_path.relative_to(ldir)).replace("\\", "/")
@@ -230,12 +235,12 @@ class CompactionToolsMixin(MCPNodeBase):
                     matches.append(entry)
 
         total_matches = len(matches)
-        returned_matches = matches[:15]
+        returned_matches = matches[:MAX_QUERY_GOVERNANCE_MATCHES]
         returned_tokens = sum(
             int(m["promoter_codon"]["token_estimates"][resolution]) for m in returned_matches
         )
         capsule_overhead_tokens = (
-            sum(len(str(m["capsule_token"])) // 4 for m in returned_matches)
+            sum(len(str(m["capsule_token"])) // CHARS_PER_TOKEN_ESTIMATE for m in returned_matches)
             if include_capsules
             else 0
         )
@@ -248,14 +253,14 @@ class CompactionToolsMixin(MCPNodeBase):
         )
 
         query_warnings: list[dict[str, Any]] = []
-        if total_matches > 15 or excerpt_truncated:
+        if total_matches > MAX_QUERY_GOVERNANCE_MATCHES or excerpt_truncated:
             query_warnings.append(
                 self._emit_warning(
                     "WARN",
                     "RESPONSE_TRUNCATED",
                     f"Query matched {total_matches} section(s) (returning top "
-                    f"{min(total_matches, 15)}). Narrow 'query', 'scope', or 'layer' "
-                    "to inspect full sections without truncation.",
+                    f"{min(total_matches, MAX_QUERY_GOVERNANCE_MATCHES)}). Narrow 'query', "
+                    "'scope', or 'layer' to inspect full sections without truncation.",
                     {
                         "query": query,
                         "total_matches": total_matches,

@@ -16,7 +16,11 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import REPO_DIR, TEMPLATE_STACK_GROUP_DIRS
+from dotfiles_mcp.constants import (
+    FALLBACK_UNKNOWN_VERSION,
+    REPO_DIR,
+    TEMPLATE_STACK_GROUP_DIRS,
+)
 
 
 def _read_version(repo_dir: Path | None = None) -> str:
@@ -24,7 +28,7 @@ def _read_version(repo_dir: Path | None = None) -> str:
     version_file = base_dir / "VERSION"
     if version_file.is_file():
         return version_file.read_text(encoding="utf-8").strip()
-    return "0.0.0"
+    return FALLBACK_UNKNOWN_VERSION
 
 
 def _read_os_pretty_name(os_release: Path | None = None) -> str:

@@ -17,6 +17,7 @@ from dotfiles_mcp.constants import (
     MAX_BRANCH_SLUG_TOKENS,
     MAX_CONSULT_MATCHES,
     MAX_DIFF_PREVIEW_LINES,
+    ROLE_DEFAULT_PRECEDENCE,
     VALID_AGENT_TIERS,
     VALID_TRACKER_FILES,
 )
@@ -116,12 +117,15 @@ def start_task_workflow(
         )
         session_file.write_text(cleaned + active_block, encoding="utf-8")
 
-    out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": layer_id, "layer_role": layer_role}
-    out.update(tracker=tracker, task_query=clean_q, ticket_id=eff_ticket, origin_layer_id=origin_id)
-    out.update(matched_task=matched_body, task_status="in_progress", subtasks=subtasks)
-    out.update(branch_name=branch_name, git_branch_command=git_cmd, session_file=session_rel)
-    out["dry_run"] = dry_run
-    return out
+    out_id = {"workspace_dir": str(ws), "layer_id": layer_id, "layer_role": layer_role}
+    out_tk = {"tracker": tracker, "task_query": clean_q, "ticket_id": eff_ticket}
+    out_st = {
+        "origin_layer_id": origin_id,
+        "matched_task": matched_body,
+        "task_status": "in_progress",
+    }
+    out_br = {"subtasks": subtasks, "branch_name": branch_name, "git_branch_command": git_cmd}
+    return {**out_id, **out_tk, **out_st, **out_br, "session_file": session_rel, "dry_run": dry_run}
 
 
 def complete_task_workflow(
@@ -201,9 +205,12 @@ def complete_task_workflow(
             stg_kw: dict[str, Any] = {
                 "scope_tag": f"to-{origin_id or res_parent.name}",
                 "file_name": f"completion-{eff_ticket.lower()}.md",
+                "content": comp_line,
+                "operation": "complete-task",
+                "dry_run": dry_run,
+                "actor_email": actor_email or "",
+                "reason_code": "UPWARD_COMPLETION_RECEIPT",
             }
-            stg_kw.update(content=comp_line, operation="complete-task", dry_run=dry_run)
-            stg_kw.update(actor_email=actor_email or "", reason_code="UPWARD_COMPLETION_RECEIPT")
             staged_receipt = str(stage_non_destructive_proposal(ws, **stg_kw))
 
     branch_name = f"feature/{eff_ticket}-completed"
@@ -214,12 +221,12 @@ def complete_task_workflow(
         f"cd {t_repo} && git add WORKTASK.md && git commit -m {json.dumps(commit_msg)}",
         f"cd {t_repo} && git push -u origin {branch_name}",
     ]
-    out_c: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": layer_id, "dry_run": dry_run}
-    out_c.update(ticket_id=eff_ticket, origin_layer_id=origin_id, task_status="completed")
-    out_c.update(deliverable=deliverable.strip(), parent_tracker_updated=parent_updated)
-    out_c["staged_completion_receipt"] = staged_receipt
-    out_c["completion_pr_plan"] = {"branch_name": branch_name, "git_pr_commands": pr_cmds}
-    return out_c
+    c_id = {"workspace_dir": str(ws), "layer_id": layer_id, "dry_run": dry_run}
+    c_tk = {"ticket_id": eff_ticket, "origin_layer_id": origin_id, "task_status": "completed"}
+    c_dl = {"deliverable": deliverable.strip(), "parent_tracker_updated": parent_updated}
+    c_pr = {"branch_name": branch_name, "git_pr_commands": pr_cmds}
+    c_rec = {"staged_completion_receipt": staged_receipt, "completion_pr_plan": c_pr}
+    return {**c_id, **c_tk, **c_dl, **c_rec}
 
 
 def _parse_markdown_sections_map(markdown_text: str) -> list[tuple[str, str]]:
@@ -287,18 +294,18 @@ def compare_upstream_templates(
                     if not dry_run:
                         dest_rf.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(up_rf, dest_rf)
-                c_item: dict[str, Any] = {"template": tpl, "rule_file": rel_file}
-                c_item.update(status="upstream_only_file", in_sync_sections=[])
-                c_item.update(upstream_only_sections=up_secs, local_only_sections=[])
-                c_item.update(diverged_sections=[], recommended_action="adopt_upstream_file")
-                file_comparisons.append(c_item)
+                c_head = {"template": tpl, "rule_file": rel_file, "status": "upstream_only_file"}
+                c_secs = {"in_sync_sections": [], "upstream_only_sections": up_secs}
+                c_tail: dict[str, Any] = {"local_only_sections": [], "diverged_sections": []}
+                c_act = {"recommended_action": "adopt_upstream_file"}
+                file_comparisons.append({**c_head, **c_secs, **c_tail, **c_act})
             elif ws_rf is not None and up_rf is None:
                 ws_secs = [h for h, _b in _parse_markdown_sections_map(ws_rf.read_text("utf-8"))]
-                c_item = {"template": tpl, "rule_file": rel_file, "status": "local_only_file"}
-                c_item.update(in_sync_sections=[], upstream_only_sections=[])
-                c_item.update(local_only_sections=ws_secs, diverged_sections=[])
-                c_item["recommended_action"] = "keep_local_or_promote"
-                file_comparisons.append(c_item)
+                c_head = {"template": tpl, "rule_file": rel_file, "status": "local_only_file"}
+                c_secs = {"in_sync_sections": [], "upstream_only_sections": []}
+                c_tail = {"local_only_sections": ws_secs, "diverged_sections": []}
+                c_act = {"recommended_action": "keep_local_or_promote"}
+                file_comparisons.append({**c_head, **c_secs, **c_tail, **c_act})
             else:
                 up_rf, ws_rf = up_rules[rname], ws_rules[rname]
                 up_map = dict(_parse_markdown_sections_map(up_rf.read_text("utf-8")))
@@ -317,10 +324,9 @@ def compare_upstream_templates(
                         lineterm="",
                     )
                     d_dir = "upstream_newer" if up_newer else "local_newer"
-                    d_rec: dict[str, Any] = {"heading": h, "drift_direction": d_dir}
-                    d_rec.update(diff_preview="\n".join(list(u_diff)[:MAX_DIFF_PREVIEW_LINES]))
-                    d_rec["recommended_action"] = "review_and_merge_section"
-                    diverged.append(d_rec)
+                    d_prev = "\n".join(list(u_diff)[:MAX_DIFF_PREVIEW_LINES])
+                    d_head = {"heading": h, "drift_direction": d_dir, "diff_preview": d_prev}
+                    diverged.append({**d_head, "recommended_action": "review_and_merge_section"})
                 if apply_upstream_only and up_only:
                     safe_applied.append(rel_file)
                     if not dry_run:
@@ -337,26 +343,23 @@ def compare_upstream_templates(
                     if status == "in_sync"
                     else ("review_diverged_sections" if diverged else act_alt)
                 )
-                c_item = {"template": tpl, "rule_file": rel_file, "status": status}
-                c_item.update(in_sync_sections=in_sync, upstream_only_sections=up_only)
-                c_item.update(local_only_sections=loc_only, diverged_sections=diverged)
-                c_item["recommended_action"] = rec
-                file_comparisons.append(c_item)
+                c_head = {"template": tpl, "rule_file": rel_file, "status": status}
+                c_secs = {"in_sync_sections": in_sync, "upstream_only_sections": up_only}
+                c_tail = {"local_only_sections": loc_only, "diverged_sections": diverged}
+                file_comparisons.append({**c_head, **c_secs, **c_tail, "recommended_action": rec})
 
     n_up = sum(1 for f in file_comparisons if f["upstream_only_sections"])
     n_loc = sum(1 for f in file_comparisons if f["local_only_sections"])
-    summary: dict[str, Any] = {"files_compared": len(file_comparisons)}
-    summary["in_sync_files"] = sum(1 for f in file_comparisons if f["status"] == "in_sync")
-    summary.update(files_with_upstream_additions=n_up, files_with_local_customizations=n_loc)
-    summary["files_with_diverged_sections"] = sum(
-        1 for f in file_comparisons if f["diverged_sections"]
-    )
-    out_u: dict[str, Any] = {"workspace_dir": str(ws), "upstream_dir": str(up), "dry_run": dry_run}
-    out_u.update(layer_id=str(ws_m.get("layer_id", ws.name)), template_filter=template_filter)
-    out_u.update(upstream_layer_id=str(up_m.get("layer_id", up.name)), summary=summary)
-    out_u.update(apply_upstream_only=apply_upstream_only, safe_applied_files=safe_applied)
-    out_u["file_comparisons"] = file_comparisons
-    return out_u
+    n_sync = sum(1 for f in file_comparisons if f["status"] == "in_sync")
+    n_div = sum(1 for f in file_comparisons if f["diverged_sections"])
+    s_head = {"files_compared": len(file_comparisons), "in_sync_files": n_sync}
+    s_adds = {"files_with_upstream_additions": n_up, "files_with_local_customizations": n_loc}
+    summary = {**s_head, **s_adds, "files_with_diverged_sections": n_div}
+    u_dirs = {"workspace_dir": str(ws), "upstream_dir": str(up), "dry_run": dry_run}
+    u_ids = {"layer_id": str(ws_m.get("layer_id", ws.name)), "template_filter": template_filter}
+    u_up = {"upstream_layer_id": str(up_m.get("layer_id", up.name)), "summary": summary}
+    u_ap = {"apply_upstream_only": apply_upstream_only, "safe_applied_files": safe_applied}
+    return {**u_dirs, **u_ids, **u_up, **u_ap, "file_comparisons": file_comparisons}
 
 
 def consult_layer_ephemeral(
@@ -407,15 +410,13 @@ def consult_layer_ephemeral(
         raise ValueError(f"Target layer or template not found: {clean_layer!r}")
 
     base_manifest = json.loads((eval_root / "system/mcp-layer.json").read_text(encoding="utf-8"))
-    sp_kw: dict[str, Any] = {"bot_role": f"consult-{clean_layer}", "mount_templates": mount_tpls}
-    sp_kw.update(
-        model_tier=clean_tier,
-        access_mode="strictly-read-only",
-        ephemeral_scope="inter-layer",
-        resolution="L2",
+    sp_cfg: dict[str, Any] = {"bot_role": f"consult-{clean_layer}", "mount_templates": mount_tpls}
+    sp_mode: dict[str, Any] = {"model_tier": clean_tier, "access_mode": "strictly-read-only"}
+    sp_sc: dict[str, Any] = {"ephemeral_scope": "inter-layer", "resolution": "L2"}
+    spawned = spawn_ephemeral_fork(
+        eval_root, base_manifest, dry_run=dry_run, **sp_cfg, **sp_mode, **sp_sc
     )
-    spawned = spawn_ephemeral_fork(eval_root, base_manifest, dry_run=dry_run, **sp_kw)
-    res_key = str(spawned.get("session_resonance_key", ""))
+    res_key = str(spawned["session_resonance_key"])
     node_dir = Path(str(spawned["fork_dir"])) if not dry_run else eval_root
     node = SurfaceToolsMixin(repo_dir=node_dir, log_dir=None)
     q_resp = node._tool_query_governance_rules(
@@ -423,8 +424,8 @@ def consult_layer_ephemeral(
     )
     q_payload = json.loads(q_resp["content"][0]["text"])
     s_kw = {"target_path": clean_path, "resolution_override": "L2", "include_capsules": True}
-    s_kw["resonance_key"] = res_key
-    s_payload = json.loads(node._tool_resolve_surface_governance(s_kw)["content"][0]["text"])
+    s_all = {**s_kw, "resonance_key": res_key}
+    s_payload = json.loads(node._tool_resolve_surface_governance(s_all)["content"][0]["text"])
     if not dry_run:
         reap_ephemeral_fork(eval_root, fork_id=str(spawned["fork_id"]))
 
@@ -438,20 +439,22 @@ def consult_layer_ephemeral(
         for m in q_payload.get("matches", [])[:MAX_CONSULT_MATCHES]
     ]
     caps = [m["capsule_token"] for m in q_matches if m["capsule_token"]]
-    ch1: dict[str, Any] = {"target_layer": clean_layer, "access_mode": "strictly-read-only"}
-    ch1.update(layer_id=str(base_manifest.get("layer_id", eval_root.name)))
-    ch1.update(layer_role=str(base_manifest.get("layer_role", "department")))
-    ch1["precedence"] = int(base_manifest.get("precedence", 30))
-    ch2: dict[str, Any] = {"target_path": clean_path}
-    ch2["inferred_plane"] = str(s_payload.get("inferred_plane", "domain"))
-    ch2["matched_bindings_count"] = len(s_payload.get("resolved_bindings", []))
-    ch4: dict[str, Any] = {"handback_contract": "4-channel-digest+rcap1", "capsule_tokens": caps}
-    ch4["match_count"] = int(q_payload.get("match_count", 0))
-    digest: dict[str, Any] = {"channel_1_domain_state": ch1, "channel_2_affected_surface": ch2}
-    digest.update(channel_3_invariants_and_constraints=q_matches, channel_4_actionable_delta=ch4)
-    out_e: dict[str, Any] = {"workspace_dir": str(ws), "target_layer": clean_layer}
-    out_e.update(resolved_target_dir=str(eval_root), ephemeral_fork_id=str(spawned["fork_id"]))
-    out_e.update(access_mode="strictly-read-only", model_tier=clean_tier, query=clean_q)
-    out_e.update(target_path=clean_path, auto_reaped=True, dry_run=dry_run)
-    out_e.update(capsule_matches=q_matches, four_channel_digest=digest)
-    return out_e
+    dept_prec = int(base_manifest.get("precedence", ROLE_DEFAULT_PRECEDENCE["department"]))
+    ch1_id = {"target_layer": clean_layer, "access_mode": "strictly-read-only"}
+    ch1_role = {"layer_id": str(base_manifest.get("layer_id", eval_root.name))}
+    ch1_r2 = {"layer_role": str(base_manifest.get("layer_role", "department"))}
+    ch1 = {**ch1_id, **ch1_role, **ch1_r2, "precedence": dept_prec}
+    inf_plane = str(s_payload.get("inferred_plane", "domain"))
+    ch2_p = {"target_path": clean_path, "inferred_plane": inf_plane}
+    ch2 = {**ch2_p, "matched_bindings_count": len(s_payload.get("resolved_bindings", []))}
+    ch4_c = {"handback_contract": "4-channel-digest+rcap1", "capsule_tokens": caps}
+    ch4 = {**ch4_c, "match_count": int(q_payload.get("match_count", 0))}
+    d_head = {"channel_1_domain_state": ch1, "channel_2_affected_surface": ch2}
+    d_tail = {"channel_3_invariants_and_constraints": q_matches, "channel_4_actionable_delta": ch4}
+    digest = {**d_head, **d_tail}
+    out_head = {"workspace_dir": str(ws), "target_layer": clean_layer}
+    out_fork = {"resolved_target_dir": str(eval_root), "ephemeral_fork_id": str(spawned["fork_id"])}
+    out_mode = {"access_mode": "strictly-read-only", "model_tier": clean_tier, "query": clean_q}
+    out_flags = {"target_path": clean_path, "auto_reaped": True, "dry_run": dry_run}
+    out_res = {"capsule_matches": q_matches, "four_channel_digest": digest}
+    return {**out_head, **out_fork, **out_mode, **out_flags, **out_res}

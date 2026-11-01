@@ -13,7 +13,16 @@ from typing import Any
 
 from dotfiles_mcp.capsule_engine import CapsuleError
 from dotfiles_mcp.catalogs import MCP_TOOLS_CATALOG
-from dotfiles_mcp.constants import MCP_PAYLOAD_WARN_BYTES, PROTOCOL_VERSION
+from dotfiles_mcp.constants import (
+    CHARS_PER_TOKEN_ESTIMATE,
+    JSONRPC_INTERNAL_ERROR,
+    JSONRPC_INVALID_PARAMS,
+    JSONRPC_METHOD_NOT_FOUND,
+    JSONRPC_PARSE_ERROR,
+    MCP_PAYLOAD_WARN_BYTES,
+    MS_PER_SECOND,
+    PROTOCOL_VERSION,
+)
 from dotfiles_mcp.manifest_helpers import (
     _count_result_warnings,
     _extract_compaction_event_fields,
@@ -104,11 +113,11 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
                     "jsonrpc": "2.0",
                     "id": msg_id,
                     "error": {
-                        "code": -32601,
+                        "code": JSONRPC_METHOD_NOT_FOUND,
                         "message": f"Method not found: {method}",
                     },
                 }
-            duration_ms = round((time.perf_counter() - t0) * 1000, 2)
+            duration_ms = round((time.perf_counter() - t0) * MS_PER_SECOND, 2)
             resp: dict[str, Any] = {"jsonrpc": "2.0", "id": msg_id, "result": result}
             resp_bytes = len(json.dumps(resp).encode("utf-8"))
             warning_count = _count_result_warnings(result)
@@ -118,7 +127,8 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
                     "WARN",
                     "LARGE_MCP_PAYLOAD_WARNING",
                     f"MCP response for {method!r} is {resp_bytes} bytes "
-                    f"(~{resp_bytes // 4} tokens > {MCP_PAYLOAD_WARN_BYTES}-byte soft cap).",
+                    f"(~{resp_bytes // CHARS_PER_TOKEN_ESTIMATE} tokens > "
+                    f"{MCP_PAYLOAD_WARN_BYTES}-byte soft cap).",
                     {"method": method, "response_bytes": resp_bytes},
                 )
             target_name = str(params.get("name") or params.get("uri") or method)
@@ -133,14 +143,14 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
                     "duration_ms": duration_ms,
                     "status": "ok",
                     "response_bytes": resp_bytes,
-                    "estimated_tokens": resp_bytes // 4,
+                    "estimated_tokens": resp_bytes // CHARS_PER_TOKEN_ESTIMATE,
                     "warning_count": warning_count,
                     **_extract_compaction_event_fields(target_name, result),
                 },
             )
             return resp
         except (ValueError, FileNotFoundError, KeyError) as exc:
-            duration_ms = round((time.perf_counter() - t0) * 1000, 2)
+            duration_ms = round((time.perf_counter() - t0) * MS_PER_SECOND, 2)
             if not isinstance(exc, CapsuleError):
                 self._emit_warning(
                     "WARN",
@@ -165,13 +175,13 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
             return {
                 "jsonrpc": "2.0",
                 "id": msg_id,
-                "error": {"code": -32602, "message": str(exc)},
+                "error": {"code": JSONRPC_INVALID_PARAMS, "message": str(exc)},
             }
         except Exception as exc:
             return {
                 "jsonrpc": "2.0",
                 "id": msg_id,
-                "error": {"code": -32603, "message": f"Internal error: {exc}"},
+                "error": {"code": JSONRPC_INTERNAL_ERROR, "message": f"Internal error: {exc}"},
             }
 
 
@@ -207,7 +217,7 @@ def run_stdio_loop(server: DotfilesMCPServer) -> None:
             err_resp = {
                 "jsonrpc": "2.0",
                 "id": None,
-                "error": {"code": -32700, "message": f"Parse error: {exc}"},
+                "error": {"code": JSONRPC_PARSE_ERROR, "message": f"Parse error: {exc}"},
             }
             payload = json.dumps(err_resp).encode("utf-8")
             stdout_buf.write(payload + b"\n")

@@ -24,6 +24,8 @@ _MAX_FORCE_CONTINUE_INVOCATIONS = 5
 _AGENTS_MD_MAX_BYTES = 18000
 _TOTAL_RULES_BUDGET_MAX_BYTES = 80000
 _MAX_PYTHON_FILE_LINES = 465
+_MODEL_DECISION_FRONTMATTER_SCAN_CHARS = 300
+_CHARS_PER_TOKEN_ESTIMATE = 4
 _DOTFILES_REPO_DIR = Path(__file__).resolve().parents[4]
 _VENV_DIRS = ("venv", ".venv", "backend/venv", "backend/.venv")
 
@@ -147,12 +149,16 @@ def check_rules_token_budget(
         if rules_dir.is_dir():
             for rf in sorted(rules_dir.glob("*.md")):
                 content = rf.read_text(encoding="utf-8", errors="ignore")
-                if "trigger: model_decision" not in content[:300]:
+                if (
+                    "trigger: model_decision"
+                    not in content[:_MODEL_DECISION_FRONTMATTER_SCAN_CHARS]
+                ):
                     total_bytes += len(content.encode("utf-8"))
     if total_bytes > _TOTAL_RULES_BUDGET_MAX_BYTES:
         warnings.append(
             f"[WORKSPACE_RULES_BUDGET_EXCEEDED] Combined always_on rules total "
-            f"{total_bytes} bytes (~{total_bytes // 4} tokens > 20,000-token budget)"
+            f"{total_bytes} bytes (~{total_bytes // _CHARS_PER_TOKEN_ESTIMATE} tokens "
+            f"> 20,000-token budget)"
         )
     return warnings
 

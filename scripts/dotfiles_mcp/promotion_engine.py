@@ -27,6 +27,7 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     MIN_ROUTING_KEYWORD_LEN,
     OWNER_WRITABLE_MODE_BIT,
+    ROLE_DEFAULT_PRECEDENCE,
     SKILL_MD_MAX_LINES,
     TEMPLATE_STACK_GROUP_DIRS,
     VALID_DELEGATION_DIRS,
@@ -353,7 +354,8 @@ def promote_project_asset_to_layer(
         if is_tracker:
             om = _load_manifest_dict(project_dir)
             oid = str(om.get("layer_id", project_dir.name))
-            orole, oprec = str(om.get("layer_role", "project")), int(om.get("precedence", 50))
+            orole = str(om.get("layer_role", "project"))
+            oprec = int(om.get("precedence", ROLE_DEFAULT_PRECEDENCE["service-node"]))
             hdr = f"## Proposed from `{oid}` (`{orole}`, `precedence: {oprec}`)"
             def_hdr = f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
             cur = dest_file.read_text(encoding="utf-8").rstrip() if dest_file.is_file() else def_hdr

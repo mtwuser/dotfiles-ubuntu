@@ -18,7 +18,9 @@ from dotfiles_mcp.constants import (
     ALLOWED_READ_PREFIXES,
     ALLOWED_ROOT_FILES,
     MAX_LOG_FILE_BYTES,
+    MCP_LAYER_SCHEMA_VERSION,
     REPO_DIR,
+    ROLE_DEFAULT_PRECEDENCE,
 )
 from dotfiles_mcp.fork_configurator import discover_layer_template_names
 from dotfiles_mcp.manifest_helpers import _read_version, _resolve_template_dir
@@ -132,11 +134,16 @@ class MCPNodeBase:
     def _load_layer_manifest(self, target_dir: Path | None = None) -> dict[str, Any]:
         base_dir = (target_dir or self.repo_dir).resolve()
         manifest_path = base_dir / "system" / "mcp-layer.json"
+        default_prec = (
+            ROLE_DEFAULT_PRECEDENCE["workstation"]
+            if base_dir == self.repo_dir
+            else ROLE_DEFAULT_PRECEDENCE["service-node"]
+        )
         data: dict[str, Any] = {
-            "schema_version": "1.2",
+            "schema_version": MCP_LAYER_SCHEMA_VERSION,
             "layer_id": base_dir.name if base_dir != self.repo_dir else "dotfiles-ubuntu-default",
             "layer_role": "workstation",
-            "precedence": 10 if base_dir == self.repo_dir else 50,
+            "precedence": default_prec,
             "description": "Declarative Ubuntu 26.04 LTS & Google Antigravity 2.0 Layer",
             "upstream_layer": {
                 "layer_id": "mtwuser/dotfiles-ubuntu",
@@ -155,10 +162,10 @@ class MCPNodeBase:
             loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 data.update(loaded)
-        if str(data.get("schema_version")) != "1.2":
+        if str(data.get("schema_version")) != MCP_LAYER_SCHEMA_VERSION:
             raise ValueError(
                 f"Unsupported mcp-layer.json schema_version {data.get('schema_version')!r}: "
-                "expected '1.2'"
+                f"expected {MCP_LAYER_SCHEMA_VERSION!r}"
             )
         if base_dir == self.repo_dir:
             if self.layer_id_override:
@@ -189,7 +196,9 @@ class MCPNodeBase:
                     "relative_path": f"layers/{sub.name}",
                     "layer_id": sub_manifest.get("layer_id", sub.name),
                     "layer_role": sub_manifest.get("layer_role", "service-node"),
-                    "precedence": int(sub_manifest.get("precedence", 50)),
+                    "precedence": int(
+                        sub_manifest.get("precedence", ROLE_DEFAULT_PRECEDENCE["service-node"])
+                    ),
                     "surface_binding_count": len(sub_manifest.get("surface_bindings", [])),
                     "version": _read_version(sub),
                     "has_docs": (sub / "docs").is_dir(),

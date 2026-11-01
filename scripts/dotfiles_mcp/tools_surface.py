@@ -16,6 +16,11 @@ from dotfiles_mcp.capsule_engine import (
     _iter_markdown_sections,
 )
 from dotfiles_mcp.constants import (
+    CHARS_PER_TOKEN_ESTIMATE,
+    L2_EXCERPT_MAX_CHARS,
+    L2_SECTION_MAX_CHARS,
+    MAX_SURFACE_SECTIONS_PER_RULE,
+    ROLE_DEFAULT_PRECEDENCE,
     VALID_ARCHITECTURAL_PLANES,
     VALID_BINDING_MODES,
     VALID_ENVIRONMENTS,
@@ -116,7 +121,11 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
             manifest = self._load_layer_manifest(ldir)
             layer_id = str(manifest.get("layer_id", lname))
             layer_role = str(manifest.get("layer_role", "service-node"))
-            default_prec = 10 if ldir == self.repo_dir else 50
+            default_prec = (
+                ROLE_DEFAULT_PRECEDENCE["corporate"]
+                if ldir == self.repo_dir
+                else ROLE_DEFAULT_PRECEDENCE["squad"]
+            )
             layer_prec = int(manifest.get("precedence", default_prec))
             if not (0 <= layer_prec <= 100):
                 raise ValueError(
@@ -254,14 +263,16 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                 lines = rf_path.read_text(encoding="utf-8").splitlines()
                 rel_in_layer = str(rf_path.relative_to(ldir)).replace("\\", "/")
                 all_sections = _iter_markdown_sections(lines, rf_path.name)
-                if len(all_sections) > 3:
+                if len(all_sections) > MAX_SURFACE_SECTIONS_PER_RULE:
                     surface_truncated = True
-                for heading, start_line, end_line, body in all_sections[:3]:
+                for heading, start_line, end_line, body in all_sections[
+                    :MAX_SURFACE_SECTIONS_PER_RULE
+                ]:
                     joined = "\n".join(body)
-                    if res == "L2" and len(joined) > 1500:
+                    if res == "L2" and len(joined) > L2_EXCERPT_MAX_CHARS:
                         surface_truncated = True
-                    l2_excerpt = joined[:1500]
-                    l2_full = joined[:8000]
+                    l2_excerpt = joined[:L2_EXCERPT_MAX_CHARS]
+                    l2_full = joined[:L2_SECTION_MAX_CHARS]
                     l1_skeleton = _extract_axiom_skeleton(heading, body)
                     l3_links = (
                         []
@@ -307,7 +318,7 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                     returned_tokens += int(promoter_codon["token_estimates"][res])
                     baseline_l2_tokens += int(promoter_codon["token_estimates"]["L2"])
                     if include_capsules:
-                        capsule_overhead_tokens += len(capsule_token) // 4
+                        capsule_overhead_tokens += len(capsule_token) // CHARS_PER_TOKEN_ESTIMATE
 
             binding_entry: dict[str, Any] = {
                 "binding_id": binding_id,

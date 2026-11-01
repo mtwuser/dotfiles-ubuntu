@@ -11,6 +11,10 @@ import socket
 from typing import Any
 
 from dotfiles_mcp.catalogs import MCP_RESOURCES_CATALOG
+from dotfiles_mcp.constants import (
+    DIAGNOSTICS_RECENT_ALERTS_LIMIT,
+    DIAGNOSTICS_RECENT_EVENTS_LIMIT,
+)
 from dotfiles_mcp.fork_configurator import discover_templates_catalog
 from dotfiles_mcp.manifest_helpers import (
     _is_running_in_container,
@@ -183,12 +187,12 @@ class ResourcesMixin(MCPNodeBase):
                 "total_events": len(events),
                 "error_events": sum(1 for ev in events if ev.get("status") == "error"),
                 "max_response_bytes": max_bytes,
-                "recent_events": events[-5:],
+                "recent_events": events[-DIAGNOSTICS_RECENT_ALERTS_LIMIT:],
             },
             "alerts_summary": {
                 "total_alerts": len(alerts),
                 "by_code": by_code,
-                "recent_alerts": alerts[-10:],
+                "recent_alerts": alerts[-DIAGNOSTICS_RECENT_EVENTS_LIMIT:],
             },
             "resonance_compaction_summary": {
                 "queries_by_resolution": queries_by_res,
