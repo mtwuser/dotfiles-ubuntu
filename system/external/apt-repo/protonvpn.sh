@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # ProtonVPN — VPN client
 NAME="ProtonVPN"
 DESCRIPTION="Proton VPN desktop client"

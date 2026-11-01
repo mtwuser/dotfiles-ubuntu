@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # AutoFirma — Spanish Government electronic signature
 NAME="AutoFirma"
 DESCRIPTION="Spanish Government electronic signature client"

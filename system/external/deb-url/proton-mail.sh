@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Proton Mail — encrypted email client
 NAME="Proton Mail"
 DESCRIPTION="Proton Mail desktop client"

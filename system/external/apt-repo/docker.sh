@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Docker Engine — container runtime
 NAME="Docker Engine"
 DESCRIPTION="Container runtime and orchestration tools"

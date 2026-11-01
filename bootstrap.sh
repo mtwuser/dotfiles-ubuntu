@@ -258,6 +258,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--external" ] || [ "$MODE" = "interacti
         [ -f "$pkg_file" ] || continue
         is_external_enabled "$pkg_file" || continue
         # Reset variables before sourcing
+        # shellcheck disable=SC2034
         NAME="" DESCRIPTION="" PACKAGES="" CHECK=""
         setup_repo() { :; }
         # shellcheck source=/dev/null
@@ -281,7 +282,8 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--external" ] || [ "$MODE" = "interacti
       for pkg_file in "$EXT_DIR/apt-repo"/*.sh; do
         [ -f "$pkg_file" ] || continue
         is_external_enabled "$pkg_file" || continue
-        NAME="" PACKAGES="" CHECK=""
+        # shellcheck disable=SC2034
+        NAME="" DESCRIPTION="" PACKAGES="" CHECK=""
         setup_repo() { :; }
         # shellcheck source=/dev/null
         source "$pkg_file"
@@ -299,6 +301,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--external" ] || [ "$MODE" = "interacti
       for pkg_file in "$EXT_DIR/deb-url"/*.sh; do
         [ -f "$pkg_file" ] || continue
         is_external_enabled "$pkg_file" || continue
+        # shellcheck disable=SC2034
         NAME="" DESCRIPTION="" URL="" CHECK=""
         # shellcheck source=/dev/null
         source "$pkg_file"
@@ -337,6 +340,7 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--external" ] || [ "$MODE" = "interacti
       for pkg_file in "$EXT_DIR/script"/*.sh; do
         [ -f "$pkg_file" ] || continue
         is_external_enabled "$pkg_file" || continue
+        # shellcheck disable=SC2034
         NAME="" DESCRIPTION="" INSTALL_CMD="" CHECK_CMD=""
         # shellcheck source=/dev/null
         source "$pkg_file"

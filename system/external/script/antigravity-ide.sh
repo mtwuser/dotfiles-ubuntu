@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Antigravity IDE — AI-powered code editor
 NAME="Antigravity IDE"
 DESCRIPTION="Google Antigravity IDE"

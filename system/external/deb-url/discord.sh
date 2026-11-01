@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Discord — chat and voice platform
 NAME="Discord"
 DESCRIPTION="Discord desktop client"

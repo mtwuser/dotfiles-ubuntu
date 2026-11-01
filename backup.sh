@@ -106,6 +106,7 @@ ENABLED_EXT=""
 if [ -d "$EXT_DIR" ]; then
   for pkg_file in "$EXT_DIR"/apt-repo/*.sh "$EXT_DIR"/deb-url/*.sh "$EXT_DIR"/script/*.sh; do
     [ -f "$pkg_file" ] || continue
+    # shellcheck disable=SC2034
     NAME="" DESCRIPTION="" CHECK="" CHECK_CMD="" URL="" PACKAGES="" INSTALL_CMD=""
     setup_repo() { :; }
     # shellcheck source=/dev/null

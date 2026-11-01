@@ -3,7 +3,7 @@
 # Usage: ./scripts/verify-repo.sh [--help | --version]
 
 set -euo pipefail
-export LC_ALL=C
+export LC_ALL=C.UTF-8
 export PYTHONDONTWRITEBYTECODE=1
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -89,6 +89,16 @@ fi
 # 2. Bash Scripts Syntax & Permissions
 echo ""
 echo "[2/8] Shell Scripts Syntax (bash -n), ShellCheck & Permissions"
+resolve_tool() {
+  local tool="$1"
+  if [ -x "$REPO_DIR/venv/bin/$tool" ]; then echo "$REPO_DIR/venv/bin/$tool"
+  elif [ -x "$REPO_DIR/.venv/bin/$tool" ]; then echo "$REPO_DIR/.venv/bin/$tool"
+  else command -v "$tool" || true; fi
+}
+
+RUNTIME_CONTAINER_MODE=false
+[ -f "/.dockerenv" ] && [ ! -d "$REPO_DIR/tests" ] && RUNTIME_CONTAINER_MODE=true
+
 SH_COUNT=0
 SH_FILES=()
 for sh_file in bootstrap.sh backup.sh audit.sh scripts/*.sh system/external/*/*.sh; do
@@ -101,8 +111,13 @@ for exec_sh in bootstrap.sh backup.sh audit.sh scripts/*.sh; do
   [ -x "$exec_sh" ] || fail "$exec_sh is not executable (chmod +x)"
 done
 pass "Verified syntax across $SH_COUNT shell scripts"
-if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck -S warning "${SH_FILES[@]}" >/dev/null && pass "shellcheck passed across $SH_COUNT shell scripts" || fail "shellcheck reported warnings/errors"
+SHELLCHECK_BIN="$(resolve_tool shellcheck)"
+if [ -n "$SHELLCHECK_BIN" ]; then
+  "$SHELLCHECK_BIN" -S warning "${SH_FILES[@]}" >/dev/null && pass "shellcheck passed across $SH_COUNT shell scripts" || fail "shellcheck reported warnings/errors"
+elif [ "$RUNTIME_CONTAINER_MODE" = true ]; then
+  pass "shellcheck skipped in minimal runtime container image (verified at CI/build time)"
+else
+  fail "shellcheck not found (run 'make install' or 'pip install -r requirements-dev.txt')"
 fi
 
 # 3. Python Lifecycle Hooks, MCP Server, Linting & Strict Type Checking
@@ -121,16 +136,6 @@ for pkg_py in scripts/dotfiles_mcp/*.py; do
   python3 -B -c 'import pathlib, sys; compile(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), sys.argv[1], "exec")' "$pkg_py" || fail "Python bytecode compilation failed on $pkg_py"
 done
 pass "Compiled $PY_COUNT Python scripts & package modules cleanly (in-memory bytecode check)"
-
-resolve_tool() {
-  local tool="$1"
-  if [ -x "$REPO_DIR/venv/bin/$tool" ]; then echo "$REPO_DIR/venv/bin/$tool"
-  elif [ -x "$REPO_DIR/.venv/bin/$tool" ]; then echo "$REPO_DIR/.venv/bin/$tool"
-  else command -v "$tool" || true; fi
-}
-
-RUNTIME_CONTAINER_MODE=false
-[ -f "/.dockerenv" ] && [ ! -d "$REPO_DIR/tests" ] && RUNTIME_CONTAINER_MODE=true
 
 RUFF_BIN="$(resolve_tool ruff)"
 if [ -n "$RUFF_BIN" ]; then

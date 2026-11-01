@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Google Cloud CLI — gcloud SDK
 NAME="Google Cloud CLI"
 DESCRIPTION="Google Cloud SDK command-line tools"

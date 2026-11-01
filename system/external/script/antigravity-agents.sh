@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Antigravity Agents — AI agent runtime
 NAME="Antigravity Agents"
 DESCRIPTION="Google Antigravity Agents"

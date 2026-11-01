@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Google Chrome — web browser
 NAME="Google Chrome"
 DESCRIPTION="Google Chrome stable browser"

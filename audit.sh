@@ -90,7 +90,7 @@ done
 
 if [ "$STOW_ISSUES" -eq 0 ]; then
   if [ -L "$HOME/.gemini" ] || [ -L "$HOME/.gemini/config" ] || [ -L "$HOME/.gemini/config/skills" ]; then
-    warn "~/.gemini/config or ~/.gemini/config/skills is a folded symlink instead of a real directory"
+    warn "$HOME/.gemini/config or $HOME/.gemini/config/skills is a folded symlink instead of a real directory"
   else
     ok "All $STOW_OK symlinks healthy (tree-unfolded)"
   fi
@@ -237,6 +237,7 @@ if [ -d "$EXT_DIR" ]; then
     if [ -f "$SYSTEM_DIR/external.txt" ] && ! grep -qxF "$rel_ext" <<< "$MANIFEST_EXT"; then
       IN_MANIFEST=false
     fi
+    # shellcheck disable=SC2034
     NAME="" DESCRIPTION="" CHECK="" CHECK_CMD="" URL="" PACKAGES="" INSTALL_CMD=""
     setup_repo() { :; }
     # shellcheck source=/dev/null
@@ -331,7 +332,7 @@ fi
 if [ -d "$HOME/AppImage" ]; then
   FOUND_RESIDUALS=true
   SIZE="$(du -sh "$HOME/AppImage" 2>/dev/null | cut -f1)"
-  warn "~/AppImage/ exists ($SIZE total):"
+  warn "$HOME/AppImage/ exists ($SIZE total):"
   while IFS= read -r app; do
     [ -z "$app" ] && continue
     APP_SIZE="$(du -sh "$HOME/AppImage/$app" 2>/dev/null | cut -f1)"

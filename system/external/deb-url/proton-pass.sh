@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2034
 # Proton Pass — password manager
 NAME="Proton Pass"
 DESCRIPTION="Proton Pass password manager"

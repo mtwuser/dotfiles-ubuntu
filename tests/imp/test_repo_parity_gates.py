@@ -296,7 +296,7 @@ class TestRepoParityGates:
         )
         extrapolable_technical_targets = [
             REPO_DIR / "templates/technical-base/rules/technical-base.md",
-            REPO_DIR / ".agents/rules/technical-base.md",
+            REPO_DIR / "templates/business-base/rules/business-base.md",
             REPO_DIR / "antigravity/.gemini/config/skills/testing/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/refactoring/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/review/SKILL.md",
@@ -345,9 +345,10 @@ class TestRepoParityGates:
         # Assert
         assert violations == []
         assert scope_violations == []
-        assert (REPO_DIR / "templates/technical-base/rules/technical-base.md").read_text(
-            encoding="utf-8"
-        ) == (REPO_DIR / ".agents/rules/technical-base.md").read_text(encoding="utf-8")
+        assert (
+            "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base"
+            in (REPO_DIR / "Makefile").read_text(encoding="utf-8")
+        )
         for canonical in (
             "promoter_codon",
             "_parse_capsule_envelope",
