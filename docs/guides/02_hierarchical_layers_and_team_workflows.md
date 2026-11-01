@@ -212,6 +212,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
    - **`/enrich`**: Classifies local `.agents/` rules against the 1-hop parent layer, runs `make promote` (upward) or `make sync` (downward) after user approval, and prepares commit/PR blocks.
 2. **In Terminal (Role-Specialized `Makefile` in Every Layer Workspace)**:
    - `make status` — Returns the consolidated `< 0.2s` JSON digest (`workspace_mode`, `session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`).
+   - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task`), and outputs `git checkout -b task/<id>-<slug>`.
    - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
    - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.

@@ -24,11 +24,13 @@ VALID_LAYER_ROLES = (
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 TEMPLATE_STACK_GROUP_DIRS = (
     "business-stack",
+    "squad-stack",
     "tech-stack",
 )
 VALID_TEMPLATE_KINDS = (
     "core-base",
     "business-stack",
+    "squad-stack",
     "tech-stack",
     "stack-starter",
     "domain-policy-pack",
@@ -206,6 +208,7 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "promote-from-project",
     "check-authority",
     "inspect-horizon",
+    "start-task",
 )
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",

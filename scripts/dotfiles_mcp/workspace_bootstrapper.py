@@ -90,10 +90,8 @@ def set_global_agents_profile(
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes = len(composed.encode("utf-8"))
     if composed_bytes > c.AGENTS_MD_MAX_BYTES:
-        raise ValueError(
-            f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds "
-            f"{c.AGENTS_MD_MAX_BYTES}-byte cap"
-        )
+        cap = c.AGENTS_MD_MAX_BYTES
+        raise ValueError(f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds {cap}-byte cap")
 
     target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
     if not dry_run:
@@ -115,21 +113,14 @@ def set_global_agents_profile(
 
 
 def register_mounted_subtree(
-    repo_dir: Path,
-    layer_name: str,
-    repo_url: str,
-    branch: str = "master",
-    *,
-    dry_run: bool = False,
+    repo_dir: Path, layer_name: str, repo_url: str, branch: str = "master", *, dry_run: bool = False
 ) -> dict[str, Any]:
     """Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers."""
     if not c.KEBAB_ID_RE.match(layer_name):
         raise ValueError(f"Invalid layer_name {layer_name!r}")
-
     root_manifest_path = repo_dir / "system" / "mcp-layer.json"
     if not root_manifest_path.is_file():
         raise ValueError(f"Missing root manifest: {root_manifest_path}")
-
     root_manifest: dict[str, Any] = json.loads(root_manifest_path.read_text(encoding="utf-8"))
     sub_p = repo_dir / "layers" / layer_name / "system" / "mcp-layer.json"
     sub_m: dict[str, Any] = json.loads(sub_p.read_text(encoding="utf-8")) if sub_p.is_file() else {}
@@ -139,7 +130,6 @@ def register_mounted_subtree(
     )
     entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role}
     entry.update(precedence=int(sub_m.get("precedence", 30)), repository=repo_url, branch=branch)
-
     raw_layers = root_manifest.get("mounted_layers", [])
     existing = [x for x in raw_layers if isinstance(x, dict) and x.get("name") != layer_name]
     existing.append(entry)
@@ -169,31 +159,37 @@ def _render_layer_makefile(
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status horizon sync diff authority promote delegate mcp-test\n\n"
+        ".PHONY: help status task horizon sync upstream-diff diff authority promote delegate "
+        "mcp-test\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
         '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
+        '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & branch command"\n'
         '\t@echo "  make horizon                      Inspect 1-hop upstream/downstream horizon"\n'
         '\t@echo "  make sync                         Sync inherited templates & .agents/ rules"\n'
+        '\t@echo "  make upstream-diff                Section diff against upstream templates"\n'
         '\t@echo "  make diff                         Verify zero drift against templates/"\n'
         '\t@echo "  make authority                    Verify release authority (git user.email)"\n'
         '\t@echo "  make promote SOURCE=<rel-path>    Promote rule/skill 1-hop upward"\n'
         '\t@echo "  make delegate CHILD=<id> TASK=... Delegate a 1-hop directive to a child"\n'
         '\t@echo "  make mcp-test                     Verify layer templates & topology"\n\n'
-        f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n\n"
-        f"horizon:\n\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)\n\n"
-        f"sync:\n\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)\n\n"
-        f"diff:\n\t@{cli} diff-project $(CURDIR)\n\n"
-        f"authority:\n\t@{cli} check-authority $(CURDIR) --op release\n\n"
+        f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n"
+        'task:\n\t@test -n "$(TASK)" || (echo "Usage: make task TASK=<id>" && exit 1)\n'
+        f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" $(if $(TRACKER),--tracker $(TRACKER),)\n'
+        f"horizon:\n\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)\n"
+        f"sync:\n\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)\n"
+        f"upstream-diff:\n\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)\n"
+        f"diff:\n\t@{cli} diff-project $(CURDIR)\n"
+        f"authority:\n\t@{cli} check-authority $(CURDIR) --op release\n"
         'promote:\n\t@test -n "$(SOURCE)" || '
         '(echo "Usage: make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>]" && exit 1)\n'
         f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
         "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
-        "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)\n\n"
+        "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)\n"
         'delegate:\n\t@test -n "$(CHILD)" && (test -n "$(TASK)" || test -n "$(SOURCE)") || '
         '(echo "Usage: make delegate CHILD=<id> [TASK=...] [SOURCE=...] [SURFACE=...]" && exit 1)\n'
         f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
         '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
-        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),)\n\n"
+        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),)\n"
         f"mcp-test:\n\t@{cli} list-templates $(CURDIR)\n"
     )
 

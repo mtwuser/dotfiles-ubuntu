@@ -74,8 +74,9 @@ class TestResourcesMixin:
         assert "pre-tool-guard" in hooks
         assert skills["count"] == 10
         assert any(s["name"] == "sopen" for s in skills["skills"])
-        assert templates["count"] == 4
+        assert templates["count"] == 5
         assert [t["template_name"] for t in templates["templates"]] == [
+            "agile-task-branch",
             "business-base",
             "fastapi-hexagonal",
             "human-core",

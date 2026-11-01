@@ -66,6 +66,7 @@ When starting work on the next phase in `WORKROAD.md`:
    - Scan active tasks → detect relationships → analyze dependencies → present brief report
 4. **Move** only that phase into `WORKTASK.md` as a `T` item (`T1`, `T2`, etc.)
 5. **Mark** the promoted phase in `WORKROAD.md` as `→ promoted to TN`
+6. **Claim & Start the Task (`make task`)**: Run `./scripts/layer-config.sh start-task . --task "<id-or-text>"` (or `make task TASK="<id-or-text>"`) to mark the item `[/]` in `WORKTASK.md`, record the active task and branch (`task/<id>-<slug>`) in `.agents/SESSION.md`, and emit the canonical Git branch command (`git checkout -b task/<id>-<slug>`).
 
 ### 3. Completion (`WORKTASK.md` → `CHANGELOG.md`)
 

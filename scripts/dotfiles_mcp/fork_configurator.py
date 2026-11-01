@@ -153,7 +153,7 @@ def configure_fork_manifest(
     manifest["upstream_layer"] = upstream
 
     if prune_default_templates:
-        pruned = {"fastapi-hexagonal", "human-core", "technical-base"}
+        pruned = {"agile-task-branch", "fastapi-hexagonal", "human-core", "technical-base"}
         manifest["default_stack_templates"] = [
             t for t in manifest.get("default_stack_templates", []) if t not in pruned
         ]

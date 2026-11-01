@@ -95,7 +95,7 @@ class TestRepoParityGates:
         ]
 
         # Assert
-        assert len(pkg_modules) == 16
+        assert len(pkg_modules) == 17
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
         assert missing_unit_tests == []
@@ -437,8 +437,8 @@ class TestRepoParityGates:
                     blind_subprocess_mocks.append(f"{rel_tp}:{node.lineno}")
 
         # Assert
-        assert len(prod_py) == 24
-        assert len(test_py) == 29
+        assert len(prod_py) == 25
+        assert len(test_py) == 30
         assert pragma_violations == []
         assert unmatched_raises == []
         assert blind_subprocess_mocks == []

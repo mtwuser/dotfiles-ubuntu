@@ -116,16 +116,17 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
 │       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
-├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/*, tech-stack/fastapi-hexagonal)
+├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/*, squad-stack/agile-task-branch, tech-stack/fastapi-hexagonal)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
 │   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (18 modules, < 465 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (19 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
 │   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
 │   │   ├── workspace_bootstrapper.py  ←     Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
+│   │   ├── workflow_engine.py         ←     Squad task-branch onboarding (start-task) & upstream section reconciliation
 │   │   ├── authority_engine.py        ←     Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
 │   │   ├── promotion_engine.py        ←     1-hop horizon (inspect-horizon), diff-project & promote-from-project (incl. Root 0 -> OSS)
 │   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
@@ -174,10 +175,11 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
 ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
 
-# Layer owner vs. consumer authority gates, 1-hop horizon radar & upward promotion (including Root 0 -> OSS):
+# Layer owner vs. consumer authority gates, 1-hop horizon radar, task-branch onboarding & upward promotion:
 ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
+./scripts/layer-config.sh start-task <your-project> --task "LEGAL-2026-004"
 ./scripts/layer-config.sh diff-project <your-project>
 ./scripts/layer-config.sh promote-from-project <your-project> --source .agents/rules/rule.md --create-pr
 
