@@ -53,6 +53,21 @@ Every `1:1:1` unit test must serve **both** the **Human** (who reads the `pytest
    - **1-Line Domain Invariant Docstring**: States *why* the invariant exists (not just *what* function is called), eliminating the need for explanatory inline prose comments inside the test body.
    - **AAA Body (`# Arrange`, `# Act`, `# Assert`)**: Uses DAMP literal values and exact boundary cut-points (`N` vs `N ± 1`).
 
+### Pre-Edit Reading Priority & 3-Tier Case-Deduction Matrix (`E2E -> Imp -> Unit`)
+
+Before modifying any production module or rule, read the `1:1:1` triad in strict descending radius of impact so implementation changes never break outbound cross-perspective contracts:
+1. **Priority 1 — Human Guides & Normative Spec (`docs/guides/` $\rightarrow$ `docs/architecture/<spec>.md`)**: Understand the *WHAT* and *WHY* (human persona journeys, normative invariants, and the `1:1:1` traceability table).
+2. **Priority 2 — Self-Documenting Test Hierarchy (`tests/e2e/` $\rightarrow$ `tests/imp/` $\rightarrow$ `tests/unit/`)**: Read the `Test<Module>` suites, natural-language method names, and 1-line invariant docstrings from outermost workflow (`E2E`) to innermost unit (`Unit`) *before* reading the code.
+3. **Priority 3 — Source Implementation (`src/` / `scripts/`)**: Read and modify the *HOW* with all outbound constraints and edge cases already loaded in context.
+
+Conceptualize and deduce test cases across the 3 tiers without overlapping responsibilities:
+
+| Test Tier | Conceptual Focus | Systematic Case-Deduction Target |
+| :--- | :--- | :--- |
+| **`tests/e2e/` (Human Persona & Vertical Journeys)** | Complete multi-step human workflows from public entrypoint to final state. | **Cross-Perspective / Outbound Cases**: Verify that tightening a rule or state transition in Step A does not restrict a valid downstream workflow in Step B. |
+| **`tests/imp/` (Cross-Dependency, Boundary I/O & Parity)** | Real inter-component contracts (CLI flags/exit codes, stdio/IPC/HTTP protocols, filesystem permissions, and `Spec <-> Code <-> Doc` parity). | **Integration & Drift Cases**: Verify parser flags match guides/Makefiles, read-only boundaries (`$HOME` vs workspace), and cross-surface synchronization. |
+| **`tests/unit/` (`1:1` Algorithmic Exhaustiveness — 4 Quadrants)** | Isolated single-module logic (`Test<Module>`, `100%` isolated branch coverage). | Deduce all **4 Quadrants**: (1) *Nominal Happy Path*, (2) *Exact Boundary Cut-Points (`N` vs `N ± 1`)*, (3) *Bipolar Security/Guard Poles (`Negative -> Positive`)*, and (4) *Outbound/Hostile Environment Failures* (malformed input, missing files, permission errors). |
+
 ### Anti-Characterization Trap & Bipolar Guard Verification — CRITICAL
 
 When adding tests to close coverage gaps or testing security/lifecycle guards:

@@ -98,12 +98,13 @@ Every production file with **executable logic** must have a corresponding unit t
 - [ ] **Patch at consumption** — `@patch('<module>.services.foo.ExternalDep')` not `@patch('external.module.ExternalDep')`
 - [ ] **No real external calls** in unit tests — all mocked
 
-### 2.4 Structure & Human-Agent `1:1:1` Comprehension Symbiosis
+### 2.4 Structure, Reading Priority & Human-Agent `1:1:1` Comprehension Symbiosis
 
+- [ ] **Reading Priority Order (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)** — read normative specs and self-documenting test suites (`E2E` persona journeys $\rightarrow$ `Imp` boundary/parity contracts $\rightarrow$ `Unit` 4-quadrant suites) before inspecting or mutating source code
 - [ ] **Single `Test<Module>` suite/class per file** — 1 class per test file, 0 loose top-level `test_*` functions, and `Specification: docs/architecture/<spec>.md` in the module docstring
 - [ ] **AAA pattern** — `# Arrange` / `# Act` / `# Assert` clearly separated (never merged)
 - [ ] **Self-documenting behavioral test names** — `test_<subject>_<scenario>_<expected>` readable in natural language
-- [ ] **1-line invariant docstrings** — every test class and test method states the functional/security invariant it proves (eliminating inline prose comments)
+- [ ] **1-line invariant docstrings & 4-quadrant unit deduction** — every test class and test method states the functional/security invariant it proves (covering nominal, `N` vs `N ± 1` boundaries, bipolar guards, and outbound failure modes)
 
 ### 2.5 Structural Integrity (Anti-Duplication)
 

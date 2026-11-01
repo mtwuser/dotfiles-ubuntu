@@ -70,6 +70,7 @@ Identify the concrete human archetypes served by the repository and simulate eac
 - [ ] **Modern Stack Currency**: Verify that docs, rules, templates, and code use the target modern stack version consistently (zero outdated version ranges or legacy typing syntax).
 - [ ] **Zero-Backward Law Scan**: Confirm zero `@deprecated` markers, compatibility aliases (`OldName = NewName`), dual CLI flags, or dead transition branches.
 - [ ] **Generic vs. Local Rule Purity**: Confirm that reusable base rules (`technical-base`) and shared skills contain zero hardcoded counts, paths, or assumptions tied to a single repository.
+- [ ] **Outbound / Cross-Perspective Non-Restriction Check**: Confirm that tightening a rule, default, or guard in Perspective A does not restrict or pollute a valid outbound workflow in Perspective B (e.g., non-technical forks, read-only mounts, or downstream consumer repositories).
 
 Record all findings in a structured table (`[P1-01]`, `[P1-02]`, ...) with severity, conflicting perspectives, exact `file:line` evidence, and clean-cutover remediation.
 
@@ -77,7 +78,7 @@ Record all findings in a structured table (`[P1-01]`, `[P1-02]`, ...) with sever
 
 ## Phase 2 — Pass 2: Pragmatic Technical Architecture & Stack Exploitation
 
-Once conceptual and normative requirements from Pass 1 are aligned, audit their **code representation** for engineering excellence:
+Once conceptual and normative requirements from Pass 1 are aligned, audit their **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
 
 1. **Idiomatic Stack Exploitation**:
    - Evaluate whether the implementation leverages modern language features (e.g., native generic syntax, pattern matching, strict protocols/interfaces, zero-copy/stdlib primitives) rather than verbose boilerplate.
@@ -105,6 +106,10 @@ Audit the alignment between **Normative Specifications**, **Executable Source Mo
    - **Test Method Name (`test_<subject>_<scenario_or_condition>_<expected_outcome>`)**: Reads as a natural-language functional proposition for human scanning.
    - **1-Line Invariant Docstring**: States *why* the test exists — the normative invariant, security pole, or boundary cut-point (`N` vs `N ± 1`) proven — eliminating the need for noisy inline narrative comments.
    - **Explicit AAA & Anti-Deception Gates**: Separate `# Arrange`, `# Act`, and `# Assert` comments, 100% isolated unit branch coverage, exact `N` vs `N ± 1` boundary cut-points, bipolar guard verification (negative pole first, positive pole second), explicit error matching (`match=`), and zero blind boundary/subprocess mocks.
+4. **Level 4 — 3-Tier Test Conceptualization & Case-Deduction Matrix (`E2E -> Imp -> Unit`)**:
+   - **`tests/e2e/`**: Human persona journeys and multi-step vertical workflows catching cross-perspective/outbound regressions.
+   - **`tests/imp/`**: Real inter-component boundary contracts (CLI/stdio/IPC/FS) and `Spec <-> Code <-> Doc` parity gates.
+   - **`tests/unit/`**: `1:1` algorithmic exhaustiveness across all 4 quadrants (*Nominal*, *Exact `N` vs `N ± 1` Boundaries*, *Bipolar Guard Poles*, and *Outbound/Hostile Environment Failures*).
 
 ---
 

@@ -99,7 +99,12 @@ class TestForkConfigurator:
                     "schema_version": "1.2",
                     "layer_id": "old-id",
                     "layer_role": "workstation",
-                    "default_stack_templates": ["fastapi-hexagonal", "custom-pack"],
+                    "default_stack_templates": [
+                        "human-core",
+                        "technical-base",
+                        "fastapi-hexagonal",
+                        "custom-pack",
+                    ],
                     "surface_bindings": [
                         "invalid-entry",
                         {

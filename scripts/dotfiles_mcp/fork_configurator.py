@@ -167,10 +167,10 @@ def configure_fork_manifest(
     manifest["upstream_layer"] = upstream
 
     if prune_default_templates:
-        current_tpls = [
-            t for t in manifest.get("default_stack_templates", []) if t != "fastapi-hexagonal"
+        pruned = {"fastapi-hexagonal", "human-core", "technical-base"}
+        manifest["default_stack_templates"] = [
+            t for t in manifest.get("default_stack_templates", []) if t not in pruned
         ]
-        manifest["default_stack_templates"] = current_tpls
         kept_bindings: list[dict[str, Any]] = []
         for b in manifest.get("surface_bindings", []):
             if not isinstance(b, dict):
