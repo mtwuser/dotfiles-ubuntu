@@ -69,19 +69,75 @@ cd ~/dotfiles-ubuntu
 
 ### Path 3: Enterprise & Multi-Tier Human-AI Governance (With or Without MCP)
 
-Orchestrate Human-AI governance across **Open Source (`workstation`) $\leftrightarrow$ Corporate (`Root 0`) $\leftrightarrow$ Department (`domain-policy` / `department`) $\leftrightarrow$ Squad (`squad`) $\leftrightarrow$ Project** tiers (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
+Orchestrate Human-AI governance across **Open Source (`oss-dev` / `oss-readonly-appliance`) $\leftrightarrow$ Corporate (`corporate-root`) $\leftrightarrow$ Department (`domain-policy` / `department`) $\leftrightarrow$ Squad (`squad`) $\leftrightarrow$ Project (`project`)** tiers (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
 
-```
-Open Source Upstream (mtwuser/dotfiles-ubuntu)  ◄── Anonymized PR (promote-from-project --create-pr)
-   │  git fork + ./scripts/layer-subtree.sh sync-upstream
-   ▼
-Corporate Root 0 (layer_role: "corporate", precedence: 10)
-   ├──► Department Forks (layer_role: "domain-policy" | "department", precedence: 5..40)
-   │       └──► Squad Forks (layer_role: "squad", precedence: 50..80)
-   │               └──► Application Projects (<project>/.agents/ projected via apply-project / bootstrap-workspace)
+```mermaid
+flowchart TD
+    SUB["Intrinsic Runtime Substrate\n(C-Backed Python Stdlib · PEP 7 · Ubuntu 26.04 Core)"]
+    OSS["Open Source Upstream & Contributor Clone\n(operating_state: oss-dev · DOTFILES_DEV_REPO_DIR)"]
+    APP["Local Workstation Appliance\n(operating_state: oss-readonly-appliance · ~/dotfiles-ubuntu)"]
+    CORP["Level 1: Corporate Root 0\n(operating_state: corporate-root · precedence: 10 · business-base)"]
+    DEPT["Level 2: Domain-Policy & Department Layers\n(operating_state: domain-policy [5] | department [30])"]
+    SQUAD["Level 3: Delivery Squad Workspaces\n(operating_state: squad · precedence: 50 · agile-task-branch)"]
+    PROJ["Level 4: Application & Service Projects\n(operating_state: project · precedence: 80 · 1:1:1 Spec-Source-Test)"]
+
+    SUB <-->|"C-Backed Primitives &\nOSS-to-OSS Contributions"| OSS
+    OSS -->|"workstation-sync.sh --sync\n(Read-Only $HOME Runtime)"| APP
+    OSS <-->|"Downward: sync-upstream\nUpward: Anonymized PR (/enrich)"| CORP
+    CORP <-->|"Downward: make delegate & make sync\nUpward: make complete & make promote"| DEPT
+    DEPT <-->|"Downward: make delegate & make sync\nHorizontal: make consult (Ephemeral)"| SQUAD
+    SQUAD <-->|"Downward: apply-project & make task\nUpward: make complete & /enrich (1-Hop PR)"| PROJ
 ```
 
 📖 Step-by-step multi-tier commands, authority gates, and IDE vs. Agents workspace isolation: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
+
+---
+
+## Natural Code Evolution, Command Consciousness & Reproducible Metrics
+
+### 1. Structural Evolution Ladder, Command Tiers (`C1/C2/C3`) & Bifurcated Age Loop
+
+```mermaid
+flowchart LR
+    subgraph CMD["Command Consciousness Tiers (make status)"]
+        C1["C1: Auto-Reflexive\n(status · diff · horizon · consult · verify · lint)"]
+        C2["C2: Guided Tactical\n(task · sync · /priority · /continue · /sclose)"]
+        C3["C3: Conscious Human-Gated\n(delegate · complete · promote · env-gate · /release)"]
+        C1 --> C2 --> C3
+    end
+
+    subgraph EVO["5-Stage Structural Evolution (< 465 Lines & O(1) Prefixes)"]
+        S1["1. Inline Expression"] --> S2["2. Pure Function"]
+        S2 --> S3["3. Cohesive Class / @dataclass"]
+        S3 --> S4["4. Catalog (dict) / Protocol"]
+        S4 --> S5["5. 1:1:1 Module\n(tools_* · *_engine · NN_* · test_*)"]
+    end
+
+    subgraph AGE["Bifurcated Age Radar (14d / 90d / 180d)"]
+        TRIG["Prolonged Use Without Edits\n(> 90d Code/Specs · > 180d Policies)"]
+        ALN["Trajectory A: Aligned (0 Drift)\nConsolidate -> Automate (C1) -> /enrich"]
+        DRF["Trajectory B: Drifted / Compressed\nRefactor (5-Stage) -> Align 1:1:1 Spec"]
+        TRIG --> ALN
+        TRIG --> DRF
+    end
+
+    CMD --> EVO --> AGE
+    ALN -.->|"Graduates Manual Steps to"| C1
+    DRF -.->|"Escalates Abstraction in"| EVO
+```
+
+### 2. Value-Added Efficiency Metrics & Reproducible Human-Agent Validation Map
+
+Both human operators and AI agents use this table as a **verifiable conceptual contract** to measure platform ROI and detect architectural drift across any governed repository:
+
+| Dimension / Lifecycle Point | Reproducible Target Metric / Invariant | Human & Architectural Value Added | Agent Deviation / Drift Signal (Validation Gate) |
+| :--- | :--- | :--- | :--- |
+| **1. Session Startup & Orientation (`/sopen` / `make status`)** | **`1` CLI call (`< 0.2s`)** returning `operating_state`, `workspace_mode`, `command_tiers`, `horizon`, and `agent_diff` | Eliminates 6–8 slow shell/git/file probes at session start and prevents blind `brain/` scans | Multi-step manual `git`/`ls` probing on startup or attempting edits in `oss-readonly-appliance` |
+| **2. Context-Window & Compaction (`AGENTS.md` & `rcap1`)** | **`<= 18,000` bytes** global `AGENTS.md` (`human-core` `~10.2 KB`); **`~85%` token savings** at `L1` Exon Skeleton (`40–65` tokens/section) | Zero rule eviction under Antigravity's `20,000`-token inline budget; workspaces load only rules matching their `workspace_mode` | `TOKEN_BUDGET_EXCEEDED` (`> 18 KB`), `WORKSPACE_RULES_BUDGET_EXCEEDED` (`> 80 KB`), or loading code rules in `business` mode |
+| **3. Natural Code Maintainability & Structural Evolution** | **`< 465` lines** hard cap (`<= 400` target), **5-Stage Evolution Ladder**, and **`O(1)` file-prefix taxonomy** (`tools_*`, `*_engine`, `NN_*`, `test_*`) | Prevents God Components and defensive syntactic compression; every file's role and `1:1:1` pair is discoverable in $O(1)$ by filename | File `>= 465` lines (`[max-file-lines]`), cryptic short variable names to save lines, or missing `Specification:` docstring pointer |
+| **4. Bidirectional `1:1:1` Test Symbiosis (`Unit -> Imp -> E2E`)** | **`100.00%` isolated unit statement + branch coverage**, **`< 1s` per unit test**, `# Arrange / # Act / # Assert`, `0-byte` `__init__.py` | Self-documenting executable specs (`Top-Down E2E -> Imp -> Unit` reading; `Bottom-Up Unit -> Imp -> E2E` execution without coverage masking) | Coverage `< 100%`, missing AAA markers (`[missing-aaa]`), non-empty `__init__.py` (`[init-purity]`), or legacy aliases / `@deprecated` |
+| **5. Inter-Layer Governance & Stage Gates (`dev -> tst -> pre -> pro`)** | **Strict 1-hop horizon**, `4`-role authority (`owner`, `maintainer`, `validator`, `member`), and non-destructive `.agents/proposals/` staging | Unifies Business (`Root 0` / `Department` SSoT ledgers & *Lex Superior* `0..100`) and Technical (`Squad` / `Project`) delivery on `feature/<TICKET-ID>-<slug>` | `CROSS_TIER_PROMOTION_BYPASS`, `INHERITED_UPSTREAM_ASSET_IMMUTABLE`, open `P0` in `tst`, or unchecked `WORKVALI.md` items in `pre` |
+| **6. Bifurcated Age & Consolidation Radar (`14d / 90d / 180d`)** | Proposals **`<= 14d`**; Code/Specs reviewed at **`90d`**; Policies/Templates reviewed at **`180d`** | Untouched artifacts **aligned in active use** graduate to `C1` automation or `/enrich`; **drifted** artifacts are refactored before debt compounds | Unresolved `stale_proposals` (`> 14d`), `Source` modified without updating its `1:1:1` `Spec`, or split idioms inside a touched module |
 
 ---
 
