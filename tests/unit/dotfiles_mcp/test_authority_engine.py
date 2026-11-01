@@ -54,22 +54,20 @@ class TestAuthorityEngine:
             from_oserror = resolve_git_user_email(tmp_path)
 
         # Assert
-        assert from_env == "override@acme.com"
-        assert from_git == "gituser@acme.com"
-        assert from_fail == ""
-        assert from_oserror == ""
+        assert (from_env, from_git, from_fail, from_oserror) == (
+            "override@acme.com",
+            "gituser@acme.com",
+            "",
+            "",
+        )
 
-    def test_configure_layer_authority_writes_and_validates_manifest(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    def test_configure_layer_authority_writes_and_validates_manifest(self, tmp_path: Path) -> None:
         """Configure layer_authority block with default or explicit escalation_contact."""
         # Arrange
         layer_dir = tmp_path / "dept-tech"
         (layer_dir / "system").mkdir(parents=True)
         (layer_dir / "system/mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "dept-tech"}),
-            encoding="utf-8",
+            json.dumps({"schema_version": "1.2", "layer_id": "dept-tech"}), encoding="utf-8"
         )
 
         # Act
@@ -92,14 +90,12 @@ class TestAuthorityEngine:
 
         # Assert
         assert dry_res["dry_run"] is True
-        assert (
-            dry_res["layer_authority"]["escalation_contact"]
-            == "Chief Technology Officer (dept-tech) <cto@acme.com>"
+        assert dry_res["layer_authority"]["escalation_contact"] == (
+            "Chief Technology Officer (dept-tech) <cto@acme.com>"
         )
         assert live_res["layer_authority"]["escalation_contact"] == "CTO Office <cto@acme.com>"
-        assert (
-            empty_emails_res["layer_authority"]["escalation_contact"]
-            == "Open Maintainer (dept-tech)"
+        assert empty_emails_res["layer_authority"]["escalation_contact"] == (
+            "Open Maintainer (dept-tech)"
         )
         saved = json.loads((layer_dir / "system/mcp-layer.json").read_text(encoding="utf-8"))
         assert saved["layer_authority"]["owner_role"] == "Chief Technology Officer"
@@ -129,87 +125,70 @@ class TestAuthorityEngine:
             "# Squad\n", encoding="utf-8"
         )
         (squad_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": "1.2",
-                    "layer_id": "squad-web",
-                    "layer_role": "squad",
-                    "upstream_layer": {"layer_id": "dept-tech"},
-                    "default_stack_templates": ["dept-tech", "squad-web"],
-                    "layer_authority": {
-                        "owner_role": "Squad Lead",
-                        "authorized_emails": ["lead@squad.acme.com", "*@managers.acme.com"],
-                        "escalation_contact": "Squad Lead <lead@squad.acme.com>",
-                    },
-                }
-            ),
+            '{"schema_version":"1.2","layer_id":"squad-web","layer_role":"squad",'
+            '"upstream_layer":{"layer_id":"dept-tech"},'
+            '"default_stack_templates":["dept-tech","squad-web"],'
+            '"layer_authority":{"owner_role":"Squad Lead",'
+            '"authorized_emails":["lead@squad.acme.com","*@managers.acme.com"],'
+            '"escalation_contact":"Squad Lead <lead@squad.acme.com>"}}',
             encoding="utf-8",
         )
-        non_dict_dir = tmp_path / "non-dict"
+        non_dict_dir, bad_auth_dir = tmp_path / "non-dict", tmp_path / "bad-auth"
         (non_dict_dir / "system").mkdir(parents=True)
         (non_dict_dir / "system/mcp-layer.json").write_text("[]", encoding="utf-8")
-        bad_auth_dir = tmp_path / "bad-auth"
         (bad_auth_dir / "system").mkdir(parents=True)
         (bad_auth_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "layer_id": "bad-auth",
-                    "upstream_layer": "invalid",
-                    "layer_authority": "invalid",
-                }
-            ),
+            '{"layer_id":"bad-auth","upstream_layer":"invalid","layer_authority":"invalid"}',
             encoding="utf-8",
         )
 
         # Act
-        block_layer_rule = verify_layer_operation_authority(
+        b_lr = verify_layer_operation_authority(
             squad_dir,
             operation="edit-asset",
             target_rel_path="./.agents/rules/layer-25-dept-tech.md",
         )
-        block_tpl_dir = verify_layer_operation_authority(
+        b_td = verify_layer_operation_authority(
             squad_dir, operation="edit-asset", target_rel_path="templates/dept-tech"
         )
-        block_agent_rule = verify_layer_operation_authority(
+        b_ar = verify_layer_operation_authority(
             squad_dir, operation="edit-asset", target_rel_path=".agents/rules/tech.md"
         )
-        block_agent_skill = verify_layer_operation_authority(
+        b_as = verify_layer_operation_authority(
             squad_dir, operation="edit-asset", target_rel_path=".agents/skills/tech-guide/SKILL.md"
         )
-        allow_own_rule = verify_layer_operation_authority(
+        ok_own = verify_layer_operation_authority(
             squad_dir, operation="diff-project", target_rel_path=".agents/rules/squad-web.md"
         )
-        block_unauth_release = verify_layer_operation_authority(squad_dir, operation="release")
-        allow_owner_release = verify_layer_operation_authority(
+        b_rel = verify_layer_operation_authority(squad_dir, operation="release")
+        ok_own_rel = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="lead@squad.acme.com"
         )
-        allow_glob_release = verify_layer_operation_authority(
+        ok_glob = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="director@managers.acme.com"
         )
-        allow_open_layer = verify_layer_operation_authority(
+        ok_open = verify_layer_operation_authority(
             non_dict_dir, operation="release", actor_email="anyone@acme.com"
         )
-        allow_bad_auth = verify_layer_operation_authority(
+        ok_bad = verify_layer_operation_authority(
             bad_auth_dir, operation="release", actor_email="anyone@acme.com"
         )
 
         # Assert
-        assert block_layer_rule["allowed"] is False
-        assert block_layer_rule["reason_code"] == "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
-        assert "promote-from-project" in block_layer_rule["remediation"]
-        assert block_tpl_dir["origin_source"] == "dept-tech"
-        assert block_agent_rule["origin_source"] == "dept-tech"
-        assert block_agent_skill["origin_source"] == "dept-tech"
-        assert allow_own_rule["allowed"] is True
-        assert allow_own_rule["reason_code"] == "CONSUMER_OPERATION_ALLOWED"
-        assert block_unauth_release["allowed"] is False
-        assert block_unauth_release["reason_code"] == "UNAUTHORIZED_ACTOR_EMAIL"
-        assert "Squad Lead <lead@squad.acme.com>" in block_unauth_release["remediation"]
-        assert allow_owner_release["allowed"] is True
-        assert allow_owner_release["reason_code"] == "OWNER_AUTHORIZED"
-        assert allow_glob_release["allowed"] is True
-        assert allow_open_layer["allowed"] is True
-        assert allow_bad_auth["allowed"] is True
+        assert (
+            b_lr["allowed"] is False and b_lr["reason_code"] == "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
+        )
+        assert "promote-from-project" in b_lr["remediation"]
+        assert (b_td["origin_source"], b_ar["origin_source"], b_as["origin_source"]) == (
+            "dept-tech",
+            "dept-tech",
+            "dept-tech",
+        )
+        assert ok_own["allowed"] is True and ok_own["reason_code"] == "CONSUMER_OPERATION_ALLOWED"
+        assert b_rel["allowed"] is False and b_rel["reason_code"] == "UNAUTHORIZED_ACTOR_EMAIL"
+        assert "Squad Lead <lead@squad.acme.com>" in b_rel["remediation"]
+        assert ok_own_rel["reason_code"] == "OWNER_AUTHORIZED"
+        assert all(x["allowed"] for x in (ok_own_rel, ok_glob, ok_open, ok_bad))
 
     def test_build_upward_promotion_pr_plan_captures_child_layer_context(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -268,66 +247,47 @@ class TestAuthorityEngine:
         )
 
         # Assert
-        assert plan["origin_layer_id"] == "squad-shm"
-        assert plan["origin_layer_role"] == "squad"
-        assert plan["proposer_email"] == "member@squad.acme.com"
-        assert plan["target_layer_id"] == "dept-tech"
-        assert plan["reviewer_contact"] == "CTO <cto@acme.com>"
-        assert plan["branch_name"] == "promote/squad-shm/shm-sensor"
-        assert len(plan["git_pr_commands"]) == 4
-        assert "gh pr create" in plan["git_pr_commands"][3]
-        assert fallback_plan["branch_name"] == "promote/plain-project/asset"
-        assert fallback_plan["proposer_email"] == "explicit@acme.com"
-        assert plan["oss_anonymized"] is False
+        assert (plan["origin_layer_id"], plan["origin_layer_role"], plan["proposer_email"]) == (
+            "squad-shm",
+            "squad",
+            "member@squad.acme.com",
+        )
+        assert (plan["target_layer_id"], plan["reviewer_contact"], plan["branch_name"]) == (
+            "dept-tech",
+            "CTO <cto@acme.com>",
+            "promote/squad-shm/shm-sensor",
+        )
+        assert len(plan["git_pr_commands"]) == 4 and "gh pr create" in plan["git_pr_commands"][3]
+        assert (
+            fallback_plan["branch_name"],
+            fallback_plan["proposer_email"],
+            plan["oss_anonymized"],
+        ) == ("promote/plain-project/asset", "explicit@acme.com", False)
 
-    def test_oss_agnosticism_single_hop_and_anonymized_pr_plan(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    def test_oss_agnosticism_single_hop_and_anonymized_pr_plan(self, tmp_path: Path) -> None:
         """Enforce single-hop boundary, OSS agnosticism gate, and OSS PR anonymization."""
         # Arrange
-        oss_root = tmp_path / "oss-root"
-        (oss_root / "system").mkdir(parents=True)
+        oss_root, corp_dir, squad_dir = (
+            tmp_path / "oss-root",
+            tmp_path / "corp-zyxwvut-root",
+            tmp_path / "squad-alpha",
+        )
+        for d in (oss_root, corp_dir, squad_dir):
+            (d / "system").mkdir(parents=True)
         (oss_root / "system/mcp-layer.json").write_text(
-            json.dumps({"layer_id": "root", "layer_role": "root", "precedence": 10}),
-            encoding="utf-8",
+            '{"layer_id":"root","layer_role":"root","precedence":10}', encoding="utf-8"
         )
-        corp_dir = tmp_path / "corp-zyxwvut-root"
-        (corp_dir / "system").mkdir(parents=True)
         (corp_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "layer_id": "corp-zyxwvut-root",
-                    "layer_role": "corporate",
-                    "precedence": 10,
-                    "upstream_layer": {"layer_id": "root"},
-                    "mounted_layers": [
-                        {"name": "dept-quantum", "layer_id": "dept-quantum"},
-                        "invalid",
-                    ],
-                    "layer_authority": {
-                        "owner_role": "CEO",
-                        "authorized_emails": [
-                            "ceo@zyxwvut.io",
-                            "dev@users.noreply.github.com",
-                            "no-at-sign",
-                            123,
-                        ],
-                    },
-                }
-            ),
+            '{"layer_id":"corp-zyxwvut-root","layer_role":"corporate","precedence":10,'
+            '"upstream_layer":{"layer_id":"root"},'
+            '"mounted_layers":[{"name":"dept-quantum","layer_id":"dept-quantum"},"invalid"],'
+            '"layer_authority":{"owner_role":"CEO","authorized_emails":'
+            '["ceo@zyxwvut.io","dev@users.noreply.github.com","no-at-sign",123]}}',
             encoding="utf-8",
         )
-        squad_dir = tmp_path / "squad-alpha"
-        (squad_dir / "system").mkdir(parents=True)
         (squad_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "layer_id": "squad-alpha",
-                    "layer_role": "squad",
-                    "upstream_layer": {"layer_id": "dept-quantum"},
-                }
-            ),
+            '{"layer_id":"squad-alpha","layer_role":"squad",'
+            '"upstream_layer":{"layer_id":"dept-quantum"}}',
             encoding="utf-8",
         )
 
@@ -363,8 +323,10 @@ class TestAuthorityEngine:
             verify_single_hop_upstream(squad_dir, oss_root, actor_email="ceo@zyxwvut.io")
         with pytest.raises(ValueError, match="UNAUTHORIZED_OSS_PROMOTION"):
             verify_single_hop_upstream(corp_dir, oss_root, actor_email="intruder@other.org")
-        assert oss_plan["oss_anonymized"] is True
-        assert oss_plan["origin_layer_id"] == "enterprise-root-0"
+        assert (
+            oss_plan["oss_anonymized"] is True
+            and oss_plan["origin_layer_id"] == "enterprise-root-0"
+        )
         assert oss_plan["proposer_email"] == "oss-contributor"
         assert oss_plan["contributing_org"] == "Anonymous Organization (default)"
         assert oss_plan["branch_name"] == "promote/oss/business-base"
@@ -375,81 +337,68 @@ class TestAuthorityEngine:
         assert "Acme Industrial Group" in credited_plan["pr_body"]
 
     def test_delegate_directive_to_child_appends_and_validates(self, tmp_path: Path) -> None:
-        """Delegate a 1-hop downward directive into a child layer tracker and enforce guards."""
+        """Delegate a 1-hop downward directive or file across all child governance surfaces."""
         # Arrange
-        corp_dir = tmp_path / "corp-root"
-        (corp_dir / "system").mkdir(parents=True)
+        corp_dir, sib_child = tmp_path / "corp-root", tmp_path / "dept-legal"
+        for d in (corp_dir, sib_child):
+            (d / "system").mkdir(parents=True)
         (corp_dir / "system/mcp-layer.json").write_text(
-            json.dumps(
-                {
-                    "layer_id": "corp-root",
-                    "layer_role": "corporate",
-                    "precedence": 10,
-                    "layer_authority": {
-                        "owner_role": "CEO",
-                        "authorized_emails": ["ceo@acme.com"],
-                    },
-                }
-            ),
+            '{"layer_id":"corp-root","layer_role":"corporate","precedence":10,'
+            '"layer_authority":{"owner_role":"CEO","authorized_emails":["ceo@acme.com"]}}',
             encoding="utf-8",
         )
+        (corp_dir / "WORKROAD.md").write_text("# Corp Roadmap\n- Phase 1", encoding="utf-8")
         mnt_child = corp_dir / "layers" / "dept-legal"
         mnt_child.mkdir(parents=True)
-        sib_child = tmp_path / "dept-legal"
-        (sib_child / "system").mkdir(parents=True)
         (sib_child / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
         (sib_child / "WORKTASK.md").write_text("# Tasks", encoding="utf-8")
 
         # Act
-        dry_res = delegate_directive_to_child(
-            corp_dir,
-            child_layer="dept-legal",
-            directive="Audit Q3 compliance ledgers",
-            priority="P0",
-            actor_email="ceo@acme.com",
-            dry_run=True,
-        )
+        def dlg(**kw: object) -> dict[str, object]:
+            return delegate_directive_to_child(
+                corp_dir,
+                child_layer="dept-legal",
+                actor_email="ceo@acme.com",
+                **kw,  # type: ignore[arg-type]
+            )
+
+        dry_res = dlg(directive="Audit Q3 compliance ledgers", priority="P0", dry_run=True)
         dry_existed = (mnt_child / "WORKTASK.md").exists()
-        live_res = delegate_directive_to_child(
-            corp_dir,
-            child_layer="dept-legal",
-            directive="Audit Q3 compliance ledgers",
-            priority="P0",
-            actor_email="ceo@acme.com",
-            dry_run=False,
+        live_res = dlg(
+            directive="Audit Q3 compliance ledgers", source_rel_path="WORKROAD.md", priority="P0"
         )
-        dup_res = delegate_directive_to_child(
-            corp_dir,
-            child_layer="dept-legal",
-            directive="Audit Q3 compliance ledgers",
-            priority="P0",
-            actor_email="ceo@acme.com",
-            dry_run=False,
-        )
+        dup_res = dlg(directive="Audit Q3 compliance ledgers", priority="P0")
+        road_dry = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
+        road_live = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
+        rule_dry = dlg(directive="Enforce GDPR", tracker="rules", dry_run=True)
+        rule_live = dlg(directive="Enforce GDPR", tracker="rules")
 
         # Assert
         assert dry_res["dry_run"] is True and dry_existed is False
-        assert len(live_res["updated_paths"]) == 2
+        assert road_dry["dry_run"] is True and rule_dry["dry_run"] is True
+        assert len(live_res["updated_paths"]) == 2  # type: ignore[arg-type]
         assert "Audit Q3 compliance ledgers" in (mnt_child / "WORKTASK.md").read_text("utf-8")
         assert (sib_child / "WORKTASK.md").read_text("utf-8").count("Audit Q3") == 1
         assert dup_res["delegated_entry"] == live_res["delegated_entry"]
-        with pytest.raises(ValueError, match="must be kebab-case"):
-            delegate_directive_to_child(corp_dir, child_layer="Bad Name", directive="x")
-        with pytest.raises(ValueError, match="directive must be a non-empty"):
-            delegate_directive_to_child(corp_dir, child_layer="dept-legal", directive="  ")
-        with pytest.raises(ValueError, match="Invalid priority"):
-            delegate_directive_to_child(
-                corp_dir, child_layer="dept-legal", directive="x", priority="P9"
-            )
-        with pytest.raises(ValueError, match="Invalid tracker"):
-            delegate_directive_to_child(
-                corp_dir, child_layer="dept-legal", directive="x", tracker="OTHER.md"
-            )
-        with pytest.raises(ValueError, match="DELEGATION_AUTHORITY_DENIED"):
-            delegate_directive_to_child(
-                corp_dir, child_layer="dept-legal", directive="x", actor_email="no@acme.com"
-            )
-        with pytest.raises(ValueError, match="Target 1-hop child layer not found"):
-            delegate_directive_to_child(
-                corp_dir, child_layer="dept-missing", directive="x", actor_email="ceo@acme.com"
-            )
+        assert (sib_child / "roadmaps/WORKROAD.md").is_file() and road_live["tracker"] == "roadmaps"
+        assert (sib_child / ".agents/rules/delegated-item.md").is_file() and rule_live[
+            "tracker"
+        ] == "rules"
+        assert "Delivered to `dept-legal`" in (corp_dir / "WORKROAD.md").read_text("utf-8")
+        for bad_kw, err_pat in (
+            ({"child_layer": "Bad Name", "directive": "x"}, "must be kebab-case"),
+            ({"child_layer": "dept-legal", "directive": "  "}, "directive must be a non-empty"),
+            ({"child_layer": "dept-legal", "source_rel_path": "../x.md"}, "source_rel_path"),
+            ({"child_layer": "dept-legal", "directive": "x", "priority": "P9"}, "Invalid priority"),
+            ({"child_layer": "dept-legal", "directive": "x", "tracker": "X.md"}, "Invalid tracker"),
+            (
+                {"child_layer": "dept-legal", "directive": "x", "actor_email": "no@acme.com"},
+                "DELEGATION_AUTHORITY_DENIED",
+            ),
+            (
+                {"child_layer": "dept-missing", "directive": "x", "actor_email": "ceo@acme.com"},
+                "Target 1-hop child layer not found",
+            ),
+        ):
+            with pytest.raises(ValueError, match=err_pat):
+                delegate_directive_to_child(corp_dir, **bad_kw)  # type: ignore[arg-type]

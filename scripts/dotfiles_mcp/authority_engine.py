@@ -21,7 +21,10 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     OWNER_RESTRICTED_OPS,
 )
-from dotfiles_mcp.manifest_helpers import _resolve_mounted_child_dir
+from dotfiles_mcp.manifest_helpers import (
+    _ensure_rule_file_frontmatter,
+    _resolve_mounted_child_dir,
+)
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -66,17 +69,12 @@ def configure_layer_authority(
     cleaned_emails = [e.strip() for e in authorized_emails if e.strip()]
     manifest = _load_manifest_dict(target_dir)
     layer_id = str(manifest.get("layer_id", target_dir.name))
-    contact = (
-        escalation_contact.strip()
-        if escalation_contact and escalation_contact.strip()
-        else f"{cleaned_role} ({layer_id})" + (f" <{cleaned_emails[0]}>" if cleaned_emails else "")
+    contact = (escalation_contact or "").strip() or (
+        f"{cleaned_role} ({layer_id})" + (f" <{cleaned_emails[0]}>" if cleaned_emails else "")
     )
     auth_blk: dict[str, Any] = {"owner_role": cleaned_role, "authorized_emails": cleaned_emails}
-    auth_blk.update(
-        escalation_contact=contact,
-        consumer_allowed_ops=list(CONSUMER_ALLOWED_OPS),
-        owner_restricted_ops=list(OWNER_RESTRICTED_OPS),
-    )
+    auth_blk.update(escalation_contact=contact, consumer_allowed_ops=list(CONSUMER_ALLOWED_OPS))
+    auth_blk["owner_restricted_ops"] = list(OWNER_RESTRICTED_OPS)
     manifest["layer_authority"] = auth_blk
     if not dry_run:
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -95,30 +93,32 @@ def _detect_inherited_upstream_asset(
     rel = target_rel_path.replace("\\", "/").strip().lstrip("/")
     while rel.startswith("./"):
         rel = rel[2:]
-    own_id = str(manifest.get("layer_id", target_dir.name))
-    parts = Path(rel).parts
-    if len(parts) == 3 and parts[:2] == (".agents", "rules"):
-        m_rule = MATERIALIZED_RULE_RE.match(parts[2])
-        if m_rule:
-            return True, f"layer:{m_rule.group(2)}"
-    stack_tpls = [str(t) for t in manifest.get("default_stack_templates", [])]
-    inherited_tpls = [t for t in stack_tpls if t != own_id]
+    own_id, parts = str(manifest.get("layer_id", target_dir.name)), Path(rel).parts
+    if (
+        len(parts) == 3
+        and parts[:2] == (".agents", "rules")
+        and (m_rule := MATERIALIZED_RULE_RE.match(parts[2]))
+    ):
+        return True, f"layer:{m_rule.group(2)}"
+    inherited_tpls = [
+        str(t) for t in manifest.get("default_stack_templates", []) if str(t) != own_id
+    ]
     if len(parts) >= 2 and parts[0] == "templates" and parts[1] in inherited_tpls:
         return True, parts[1]
     for tpl_name in inherited_tpls:
         tpl_dir = target_dir / "templates" / tpl_name
-        if (
+        is_r = (
             len(parts) == 3
             and parts[:2] == (".agents", "rules")
             and (tpl_dir / "rules" / parts[2]).is_file()
-        ):
-            return True, tpl_name
-        if (
+        )
+        is_s = (
             len(parts) == 4
             and parts[:2] == (".agents", "skills")
             and parts[3] == "SKILL.md"
             and (tpl_dir / "skills" / parts[2] / "SKILL.md").is_file()
-        ):
+        )
+        if is_r or is_s:
             return True, tpl_name
     return False, ""
 
@@ -135,9 +135,8 @@ def verify_layer_operation_authority(
     layer_id = str(manifest.get("layer_id", target_dir.name))
     upstream = manifest.get("upstream_layer", {})
     upstream_id = str(upstream.get("layer_id", "root")) if isinstance(upstream, dict) else "root"
-    auth = manifest.get("layer_authority", {})
-    if not isinstance(auth, dict):
-        auth = {}
+    raw_auth = manifest.get("layer_authority")
+    auth = raw_auth if isinstance(raw_auth, dict) else {}
     owner_role = str(auth.get("owner_role", f"Layer Owner ({layer_id})"))
     authorized_emails = [
         str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()
@@ -146,12 +145,9 @@ def verify_layer_operation_authority(
     eff_email = (
         actor_email.strip() if actor_email is not None else resolve_git_user_email(target_dir)
     )
-
     if target_rel_path:
-        is_inherited, origin_ref = _detect_inherited_upstream_asset(
-            target_dir, manifest, target_rel_path
-        )
-        if is_inherited:
+        is_inh, origin_ref = _detect_inherited_upstream_asset(target_dir, manifest, target_rel_path)
+        if is_inh:
             rem = (
                 f"Blocked: '{target_rel_path}' is an inherited upstream asset "
                 f"(origin: '{origin_ref}', upstream layer: '{upstream_id}'). "
@@ -167,37 +163,31 @@ def verify_layer_operation_authority(
             res.update(reason_code="INHERITED_UPSTREAM_ASSET_IMMUTABLE", actor_email=eff_email)
             res.update(target_rel_path=target_rel_path, origin_source=origin_ref, remediation=rem)
             return res
-
     if operation in CONSUMER_ALLOWED_OPS:
         res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "operation": operation}
         res.update(
             layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None
         )
         return res
-
-    if authorized_emails:
-        email_lower = eff_email.lower()
-        matched = bool(
-            email_lower and any(fnmatchcase(email_lower, pat.lower()) for pat in authorized_emails)
+    if authorized_emails and not (
+        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in authorized_emails)
+    ):
+        rem = (
+            f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
+            f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
+            f"authorized: {', '.join(authorized_emails)}). "
+            f"Process to follow: (1) Keep changes in your own squad/project workspace; "
+            f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
+            f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
+            f"to open a Pull Request from your layer context; "
+            f"(3) Contact {escalation_contact} to review and publish upstream, "
+            f"then inherit via './scripts/layer-config.sh sync-layer'."
         )
-        if not matched:
-            rem = (
-                f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
-                f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
-                f"authorized: {', '.join(authorized_emails)}). "
-                f"Process to follow: (1) Keep changes in your own squad/project workspace; "
-                f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
-                f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
-                f"to open a Pull Request from your layer context; "
-                f"(3) Contact {escalation_contact} to review and publish upstream, "
-                f"then inherit via './scripts/layer-config.sh sync-layer'."
-            )
-            res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
-            res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
-            res.update(owner_role=owner_role, authorized_emails=authorized_emails)
-            res.update(escalation_contact=escalation_contact, remediation=rem)
-            return res
-
+        res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
+        res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
+        res.update(owner_role=owner_role, authorized_emails=authorized_emails)
+        res.update(escalation_contact=escalation_contact, remediation=rem)
+        return res
     res = {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation}
     res.update(layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None)
     return res
@@ -205,37 +195,29 @@ def verify_layer_operation_authority(
 
 def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
     """Return True when manifest represents the Open-Source community root layer."""
-    return str(manifest.get("layer_id", "")) == "root" or str(manifest.get("layer_role", "")) in (
-        "root",
-        "workstation",
-    )
+    role = str(manifest.get("layer_role", ""))
+    return str(manifest.get("layer_id", "")) == "root" or role in ("root", "workstation")
 
 
-def verify_oss_promotion_agnosticism(
-    project_dir: Path,
-    content: str,
-    source_rel: str,
-) -> None:
+def verify_oss_promotion_agnosticism(project_dir: Path, content: str, source_rel: str) -> None:
     """Block promotion to an Open-Source root if content leaks private corporate identifiers."""
     proj_m = _load_manifest_dict(project_dir)
     private_tokens: set[str] = set()
     raw_ids: list[str] = [str(proj_m.get("layer_id", ""))]
     for m_entry in proj_m.get("mounted_layers") or []:
         if isinstance(m_entry, dict):
-            raw_ids.append(str(m_entry.get("name", "")))
-            raw_ids.append(str(m_entry.get("layer_id", "")))
+            raw_ids.extend((str(m_entry.get("name", "")), str(m_entry.get("layer_id", ""))))
     auth = proj_m.get("layer_authority")
-    if isinstance(auth, dict):
-        for pat in auth.get("authorized_emails") or []:
-            if isinstance(pat, str) and "@" in pat:
-                dom = pat.split("@", 1)[1].lstrip("*.").lower()
-                if dom and dom not in GENERIC_EMAIL_DOMAINS:
-                    private_tokens.add(dom)
-                    raw_ids.append(dom)
+    for pat in (auth.get("authorized_emails") or []) if isinstance(auth, dict) else []:
+        if isinstance(pat, str) and "@" in pat:
+            dom = pat.split("@", 1)[1].lstrip("*.").lower()
+            if dom and dom not in GENERIC_EMAIL_DOMAINS:
+                private_tokens.add(dom)
+                raw_ids.append(dom)
     for rid in raw_ids:
-        for tok in re.findall(r"[a-z0-9]{4,}", rid.lower()):
-            if tok not in GENERIC_LAYER_TOKENS:
-                private_tokens.add(tok)
+        private_tokens.update(
+            t for t in re.findall(r"[a-z0-9]{4,}", rid.lower()) if t not in GENERIC_LAYER_TOKENS
+        )
     leaked = sorted(
         tok for tok in private_tokens if re.search(rf"\b{re.escape(tok)}\b", content, re.IGNORECASE)
     )
@@ -248,14 +230,10 @@ def verify_oss_promotion_agnosticism(
 
 
 def verify_single_hop_upstream(
-    project_dir: Path,
-    upstream_dir: Path,
-    *,
-    actor_email: str | None = None,
+    project_dir: Path, upstream_dir: Path, *, actor_email: str | None = None
 ) -> None:
     """Enforce the 1-hop upstream boundary and Root 0 owner gate for Open-Source promotions."""
-    proj_m = _load_manifest_dict(project_dir)
-    up_m = _load_manifest_dict(upstream_dir)
+    proj_m, up_m = _load_manifest_dict(project_dir), _load_manifest_dict(upstream_dir)
     up_cfg = proj_m.get("upstream_layer")
     expected_up_id = str(up_cfg.get("layer_id", "")).strip() if isinstance(up_cfg, dict) else ""
     actual_up_id = str(up_m.get("layer_id", "")).strip()
@@ -272,13 +250,13 @@ def verify_single_hop_upstream(
             f"not '{actual_up_id}'."
         )
     if _is_oss_root_manifest(up_m):
-        verdict = verify_layer_operation_authority(
+        v = verify_layer_operation_authority(
             project_dir, operation="release", actor_email=actor_email
         )
-        if not verdict["allowed"]:
+        if not v["allowed"]:
             raise ValueError(
                 "UNAUTHORIZED_OSS_PROMOTION: Only an authorized Root 0 owner may promote "
-                f"assets to the Open-Source root ({verdict['remediation']})."
+                f"assets to the Open-Source root ({v['remediation']})."
             )
 
 
@@ -304,12 +282,10 @@ def build_upward_promotion_pr_plan(
     )
     source_layer_role = "corporate" if oss_anonymized else str(proj_m.get("layer_role", "project"))
     source_prec = int(proj_m.get("precedence", 50))
-    target_layer_id = str(
-        target_m.get("layer_id", target_layer if target_layer != "root" else target_repo_dir.name)
-    )
-    target_auth = target_m.get("layer_authority", {})
-    if not isinstance(target_auth, dict):
-        target_auth = {}
+    t_fallback = target_layer if target_layer != "root" else target_repo_dir.name
+    target_layer_id = str(target_m.get("layer_id", t_fallback))
+    raw_t_auth = target_m.get("layer_authority")
+    target_auth = raw_t_auth if isinstance(raw_t_auth, dict) else {}
     owner_role = str(target_auth.get("owner_role", f"Layer Owner ({target_layer_id})"))
     escalation_contact = str(
         target_auth.get("escalation_contact", f"{owner_role} ({target_layer_id})")
@@ -330,24 +306,22 @@ def build_upward_promotion_pr_plan(
         f"Multi-layer governance hierarchy ({source_layer_role}, precedence {source_prec})"
     )
     asset_slug = re.sub(r"[^a-z0-9]+", "-", Path(source_rel).stem.lower()).strip("-") or "asset"
+    sname = Path(source_rel).name
     if oss_anonymized:
         branch_name = f"promote/oss/{asset_slug}"
-        commit_msg = f"feat(governance): promote {Path(source_rel).name} from enterprise root-0"
-        pr_title = f"[OSS Promotion -> {target_layer_id}] Promote {Path(source_rel).name}"
+        commit_msg = f"feat(governance): promote {sname} from enterprise root-0"
+        pr_title = f"[OSS Promotion -> {target_layer_id}] Promote {sname}"
     else:
-        safe_source_id = (
+        safe_id = (
             source_layer_id
             if KEBAB_ID_RE.match(source_layer_id)
             else re.sub(r"[^a-z0-9]+", "-", source_layer_id.lower()).strip("-") or "project"
         )
-        branch_name = f"promote/{safe_source_id}/{asset_slug}"
+        branch_name = f"promote/{safe_id}/{asset_slug}"
         commit_msg = (
-            f"feat(governance): promote {Path(source_rel).name} "
-            f"from {source_layer_id} ({source_layer_role})"
+            f"feat(governance): promote {sname} from {source_layer_id} ({source_layer_role})"
         )
-        pr_title = (
-            f"[Promotion: {source_layer_id} -> {target_layer_id}] Promote {Path(source_rel).name}"
-        )
+        pr_title = f"[Promotion: {source_layer_id} -> {target_layer_id}] Promote {sname}"
     pr_body = (
         f"## Upward Governance Promotion (`{source_layer_id}` -> `{target_layer_id}`)\n\n"
         f"- **Origin Layer (Context of Need)**: `{source_layer_id}` "
@@ -376,14 +350,15 @@ def build_upward_promotion_pr_plan(
         f"./scripts/layer-config.sh sync-layer <downstream-workspace> "
         f"--parent-dir {target_repo_dir}\n```\n"
     )
+    gh_cmd = (
+        f"cd {target_repo_dir} && gh pr create --title {json.dumps(pr_title)} "
+        f"--body {json.dumps(pr_body)}"
+    )
     cmds = [
         f"cd {target_repo_dir} && git checkout -b {branch_name}",
         f"cd {target_repo_dir} && git add {dest_rel} && git commit -m {json.dumps(commit_msg)}",
         f"cd {target_repo_dir} && git push -u origin {branch_name}",
-        (
-            f"cd {target_repo_dir} && gh pr create "
-            f"--title {json.dumps(pr_title)} --body {json.dumps(pr_body)}"
-        ),
+        gh_cmd,
     ]
     out: dict[str, Any] = {"origin_layer_id": source_layer_id, "proposer_email": proposer_email}
     out.update(origin_layer_role=source_layer_role, contributing_org=eff_org)
@@ -395,59 +370,92 @@ def build_upward_promotion_pr_plan(
     return out
 
 
+VALID_DELEGATION_SURFACES = (
+    "WORKTASK.md", "BACKLOG.md", "WORKROAD.md", "ROADMAP.md",
+    "WORKVALI.md", "roadmaps", "rules", "corporate",
+)  # fmt: skip
+
+
 def delegate_directive_to_child(
     workspace_dir: Path,
     *,
     child_layer: str,
-    directive: str,
+    directive: str = "",
+    source_rel_path: str | None = None,
     priority: str = "P1",
     tracker: str = "WORKTASK.md",
     actor_email: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Delegate a 1-hop downward directive from <workspace_dir> into <child_layer>/<tracker>."""
+    """Delegate a 1-hop downward directive or governance artifact into <child_layer>/<tracker>."""
     clean_child, clean_dir = child_layer.strip(), directive.strip()
     if not KEBAB_ID_RE.match(clean_child):
         raise ValueError(f"Invalid child_layer {child_layer!r}: must be kebab-case")
-    if not clean_dir:
-        raise ValueError("directive must be a non-empty string")
     if priority not in ("P0", "P1", "P2"):
         raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
-    if tracker not in ("WORKTASK.md", "BACKLOG.md", "WORKROAD.md"):
+    if tracker not in VALID_DELEGATION_SURFACES:
         raise ValueError(
-            f"Invalid tracker {tracker!r}: must be WORKTASK.md, BACKLOG.md, or WORKROAD.md"
+            f"Invalid tracker/surface {tracker!r}: must be one of {VALID_DELEGATION_SURFACES}"
         )
-    ws = workspace_dir.resolve()
+    ws, src_file, src_body = workspace_dir.resolve(), None, ""
+    if source_rel_path:
+        src_file = (ws / source_rel_path.strip().lstrip("/")).resolve()
+        if not src_file.is_relative_to(ws) or not src_file.is_file():
+            raise ValueError(f"Invalid or missing source_rel_path: {source_rel_path!r}")
+        src_body = src_file.read_text(encoding="utf-8").strip()
+    if not clean_dir and not src_body:
+        raise ValueError("directive must be a non-empty string or source_rel_path must be provided")
     verdict = verify_layer_operation_authority(
         ws, operation="delegate-to-child", actor_email=actor_email
     )
     if not verdict["allowed"]:
         raise ValueError(f"DELEGATION_AUTHORITY_DENIED: {verdict['remediation']}")
-    sib_dir = _resolve_mounted_child_dir(ws, clean_child)
-    mnt_dir = ws / "layers" / clean_child
+    sib_dir, mnt_dir = _resolve_mounted_child_dir(ws, clean_child), ws / "layers" / clean_child
     targets = [d for d in (sib_dir, mnt_dir if mnt_dir.is_dir() else None) if d is not None]
     if not targets:
         raise ValueError(f"Target 1-hop child layer not found: {clean_child!r}")
     m = _load_manifest_dict(ws)
-    pid = str(m.get("layer_id", ws.name))
-    prole, pprec = str(m.get("layer_role", "corporate")), int(m.get("precedence", 10))
+    pid, prole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "corporate"))
+    pprec = int(m.get("precedence", 10))
+    eff_text = clean_dir or f"Delivered `{src_file.name if src_file else tracker}`"
     entry = (
         f"- [ ] **[{priority} · Delegated from `{pid}` (`{prole}`, "
-        f"`precedence: {pprec}`)]**: {clean_dir}"
+        f"`precedence: {pprec}`)]**: {eff_text}"
     )
-    updated: list[str] = []
+    fname, updated = src_file.name if src_file is not None else "delegated-item.md", []
     for tdir in targets:
-        tfile = tdir / tracker
-        updated.append(str(tfile))
-        if not dry_run:
-            cur = (
-                tfile.read_text(encoding="utf-8")
-                if tfile.is_file()
-                else f"# Active Work Tasks — {clean_child}\n\n"
-            )
-            if entry not in cur:
-                sep = "" if cur.endswith("\n") else "\n"
-                tfile.write_text(f"{cur}{sep}{entry}\n", encoding="utf-8")
+        if tracker == "rules":
+            ctpl = str(_load_manifest_dict(tdir).get("layer_id") or clean_child)
+            for rp in (tdir / "templates" / ctpl / "rules" / fname, tdir / ".agents/rules" / fname):
+                updated.append(str(rp))
+                if not dry_run:
+                    rp.parent.mkdir(parents=True, exist_ok=True)
+                    rp.write_text((src_body or f"# {eff_text}\n") + "\n", encoding="utf-8")
+                    _ensure_rule_file_frontmatter(rp, sync_in_place=True)
+        elif tracker in ("roadmaps", "corporate"):
+            tfile = tdir / tracker / fname
+            updated.append(str(tfile))
+            if not dry_run:
+                tfile.parent.mkdir(parents=True, exist_ok=True)
+                hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)\n\n"
+                tfile.write_text(f"{hdr}{src_body or eff_text}\n", encoding="utf-8")
+        else:
+            tfile = tdir / tracker
+            updated.append(str(tfile))
+            if not dry_run:
+                cur = (
+                    tfile.read_text(encoding="utf-8")
+                    if tfile.is_file()
+                    else f"# Active Work Tasks — {clean_child}\n\n"
+                )
+                blk = f"{entry}\n\n{src_body}" if (src_body and clean_dir) else entry
+                if entry not in cur:
+                    sep = "" if cur.endswith("\n") else "\n"
+                    tfile.write_text(f"{cur}{sep}{blk}\n", encoding="utf-8")
+    if src_file is not None and src_file.name in VALID_DELEGATION_SURFACES[:5]:
+        note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
+        if not dry_run and note not in src_body:
+            src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
     out: dict[str, Any] = {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run}
     out.update(child_layer=clean_child, priority=priority, tracker=tracker)
     out.update(delegated_entry=entry, updated_paths=updated)

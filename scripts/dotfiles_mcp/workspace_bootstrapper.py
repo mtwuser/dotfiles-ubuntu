@@ -189,10 +189,11 @@ def _render_layer_makefile(
         f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
         "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
         "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)\n\n"
-        'delegate:\n\t@test -n "$(CHILD)" -a -n "$(TASK)" || '
-        '(echo "Usage: make delegate CHILD=<layer-id> TASK=\\"<directive>\\"" && exit 1)\n'
-        f'\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)" '
-        "$(if $(PRIORITY),--priority $(PRIORITY),)\n\n"
+        'delegate:\n\t@test -n "$(CHILD)" && (test -n "$(TASK)" || test -n "$(SOURCE)") || '
+        '(echo "Usage: make delegate CHILD=<id> [TASK=...] [SOURCE=...] [SURFACE=...]" && exit 1)\n'
+        f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
+        '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
+        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),)\n\n"
         f"mcp-test:\n\t@{cli} list-templates $(CURDIR)\n"
     )
 

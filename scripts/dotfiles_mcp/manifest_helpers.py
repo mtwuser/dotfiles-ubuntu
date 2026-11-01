@@ -222,12 +222,23 @@ def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
 
 
 def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | None:
-    """Resolve the live sibling checkout for a mounted child layer."""
+    """Resolve the live sibling checkout for a mounted child layer by folder name or layer_id."""
     ws = workspace_dir.resolve()
-    candidates = (ws.parent / f"{ws.name}-org" / child_name, ws.parent / child_name)
-    for cand in candidates:
+    roots = [ws.parent / f"{ws.name}-org", ws.parent]
+    for r in roots:
+        cand = r / child_name
         if cand.resolve() != ws and (cand / "system" / "mcp-layer.json").is_file():
             return cand.resolve()
+    for r in roots:
+        if not r.is_dir():
+            continue
+        for sub in sorted(r.iterdir()):
+            mf = sub / "system" / "mcp-layer.json"
+            if sub.is_dir() and sub.resolve() != ws and mf.is_file():
+                with contextlib.suppress(json.JSONDecodeError, OSError):
+                    data = json.loads(mf.read_text(encoding="utf-8"))
+                    if isinstance(data, dict) and data.get("layer_id") == child_name:
+                        return sub.resolve()
     return None
 
 
@@ -236,8 +247,11 @@ _CHILD_TRACKED_REL_PATHS: tuple[str, ...] = (
     "system/mcp-layer.json",
     "README.md",
     "CHANGELOG.md",
+    "WORKROAD.md",
+    "ROADMAP.md",
     "WORKTASK.md",
     "BACKLOG.md",
+    "WORKVALI.md",
     "Makefile",
     "VERSION",
 )
@@ -266,7 +280,7 @@ def _inspect_mounted_children_drifts(
                 != hashlib.sha256(dst_f.read_bytes()).hexdigest()
             ):
                 changed_files.append(rel)
-        for sub_name in ("docs", "templates"):
+        for sub_name in ("docs", "templates", "roadmaps", "corporate"):
             sub_dir = child_ws / sub_name
             for src_f in sorted(sub_dir.rglob("*")) if sub_dir.is_dir() else []:
                 if not src_f.is_file():
@@ -308,8 +322,11 @@ def _sync_mounted_children_into_parent(
             src_f, dst_f = child_ws / rel, mounted_dir / rel
             if src_f.is_file():
                 dst_f.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_f, dst_f)
-        for sub_name in ("docs", ".agents", "templates"):
+                if dst_f.is_file() and dst_f.stat().st_mtime_ns > src_f.stat().st_mtime_ns:
+                    shutil.copy2(dst_f, src_f)
+                else:
+                    shutil.copy2(src_f, dst_f)
+        for sub_name in ("docs", ".agents", "templates", "roadmaps", "corporate"):
             src_sub, dst_sub = child_ws / sub_name, mounted_dir / sub_name
             if src_sub.is_dir():
                 shutil.rmtree(dst_sub, ignore_errors=True)

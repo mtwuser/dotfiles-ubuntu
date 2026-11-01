@@ -71,25 +71,34 @@ Always write for the **USER** (or downstream adopter), not internal scratch note
 
 ---
 
-## Part 3 — 1-Hop Downward Directive & Task Delegation (`Root 0 -> Department -> Squad`)
+## Part 3 — Bidirectional 1-Hop Governance Delivery (`Root 0 <-> Department <-> Squad`)
 
-> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, or `Department` (`department`) workspaces when an executive or domain decision requires a concrete action, policy alignment, or deliverable from an immediate 1-hop child layer (`layers/<child-id>` or sibling checkout).
+> **When to use**: Use this procedure in `Root 0` (`corporate`), `domain-policy`, `Department` (`department`), or `Squad` (`squad`) workspaces to deliver directives, rules, roadmaps, validation checklists (`WORKVALI.md`), or corporate ledger artifacts 1 hop downward (`make delegate`) or propose them 1 hop upward via Pull Request (`make promote`).
 
-### Delegation Mechanics (`make delegate` / `delegate-to-child`)
+### 1. Top-Down 1-Hop Delivery (`make delegate` / `delegate-to-child`)
 
 1. **Enforce the 1-Hop Horizon**:
-   - `Root 0` (`corporate`) delegates exclusively to its immediate child `Department` / `domain-policy` layers.
-   - `Department` (`department`) delegates exclusively to its immediate child `Squad` layers.
+   - `Root 0` (`corporate`) delivers exclusively to its immediate child `Department` / `domain-policy` layers.
+   - `Department` (`department`) delivers exclusively to its immediate child `Squad` layers.
    - Never bypass an intermediate layer to inject tasks 2 hops down.
-2. **Execute Deterministic CLI Delegation**:
+2. **Supported Target Governance Surfaces (`SURFACE` / `--surface`)**:
+   - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable entry (`- [ ] **[P1 · Delegated from '<parent-id>' ('<role>', 'precedence: <N>')]**: ...`) into the child's tracker.
+   - **Roadmaps & Corporate Ledgers (`roadmaps`, `corporate`)**: Delivers `--source <rel-path>` into `<child>/roadmaps/<filename>` or `<child>/corporate/<filename>` with a provenance header (`> **Delivered from**: '<parent-id>'`).
+   - **Normative Rules (`rules`)**: Delivers `--source <rel-path>` into `<child>/templates/<child-id>/rules/<filename>` and `<child>/.agents/rules/<filename>` with normalized Antigravity frontmatter.
+3. **Execute Deterministic CLI Delivery**:
    - From a layer workspace with a generated `Makefile`:
      ```bash
-     make delegate CHILD=<child-layer-id> TASK="<clear actionable directive>" [PRIORITY=P0|P1|P2]
+     make delegate CHILD=<child-layer-id> [TASK="<directive>"] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2]
      ```
    - Or directly via `layer-config.sh`:
      ```bash
-     ./scripts/layer-config.sh delegate-to-child [<workspace-dir>] --to-child <child-layer-id> --task "<directive>" [--priority P0|P1|P2] [--tracker WORKTASK.md|BACKLOG.md|WORKROAD.md]
+     ./scripts/layer-config.sh delegate-to-child [<workspace-dir>] --to-child <child-layer-id> [--task "<directive>"] [--source <rel-path>] [--surface <surface>] [--priority P0|P1|P2]
      ```
-3. **Traceable Attribution & Sync**:
-   - The command verifies caller authority (`verify_layer_operation_authority` for `delegate-to-child`) and appends a traceable entry (`- [ ] **[P1 · Delegated from '<parent-id>' ('<role>', 'precedence: <N>')]**: <directive>`) to the child layer's tracker.
-   - When the child layer opens its next session (`/sopen`), `make status` surfaces the delegated directive immediately in `priority_state`.
+
+### 2. Bottom-Up 1-Hop Proposal via Pull Request (`make promote` / `promote-from-project --create-pr`)
+
+- Any child layer (`Squad` -> `Department` -> `Root 0`) can escalate a rule (`.agents/rules/*.md`), skill, roadmap (`roadmaps/*.md`), corporate policy (`corporate/**`), doc (`docs/**`), or governance tracker proposal (`BACKLOG.md`, `WORKROAD.md`, `WORKVALI.md`) 1 hop upward via Pull Request:
+  ```bash
+  make promote SOURCE=<rel-path> [TEMPLATE=<pack>]
+  ```
+- The parent layer's owner (`layer_authority.owner_role`) reviews and validates the PR before merging it into the parent's governance flow.

@@ -41,9 +41,9 @@ Commands:
       Inspect 1-hop downward propagation status and upward promotion candidates.
   status [<target-dir>] [--parent-dir <dir>]
       Return a single-call consolidated status digest (session, git, priority, horizon & diff).
-  delegate-to-child [<target-dir>] --to-child <layer> --task <text> [--priority <P0|P1|P2>]
-                    [--tracker <WORKTASK.md|BACKLOG.md|WORKROAD.md>] [--email <email>]
-      Delegate a 1-hop downward directive into a child layer's task tracker.
+  delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>]
+                    [--priority <P0|P1|P2>] [--surface|--tracker <surface>] [--email <email>]
+      Delegate a 1-hop downward directive or governance artifact into a child layer surface.
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
       Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork.
@@ -364,19 +364,20 @@ if subcmd == "status":
     print(json.dumps(inspect_workspace_status(repo_dir, target_dir, parent_dir=_opt_path(opts, "parent")), indent=2))
     sys.exit(0)
 
-if subcmd == "delegate-to-child":
+if subcmd in ("delegate-to-child", "deliver-to-child"):
     has_pos = bool(rest and not rest[0].startswith("--"))
     target_dir = Path(rest[0]).resolve() if has_pos else repo_dir
     opts = _parse_opts(
         rest[1:] if has_pos else rest,
-        {"--to-child": "child", "--task": "task", "--priority": "prio", "--tracker": "trk", "--email": "email"},
+        {"--to-child": "child", "--task": "task", "--source": "src", "--priority": "prio", "--tracker": "trk", "--surface": "trk", "--email": "email"},
     )
-    if not opts.get("child") or not opts.get("task"):
-        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> --task <text> [--priority P0|P1|P2]")
+    if not opts.get("child") or (not opts.get("task") and not opts.get("src")):
+        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>] [--surface <surface>] [--priority P0|P1|P2]")
     res = delegate_directive_to_child(
         target_dir,
         child_layer=str(opts["child"]),
-        directive=str(opts["task"]),
+        directive=str(opts.get("task", "")),
+        source_rel_path=_opt_str(opts, "src"),
         priority=str(opts.get("prio", "P1")),
         tracker=str(opts.get("trk", "WORKTASK.md")),
         actor_email=_opt_str(opts, "email"),

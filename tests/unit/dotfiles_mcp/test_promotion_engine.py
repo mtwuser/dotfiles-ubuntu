@@ -73,38 +73,41 @@ class TestPromotionEngine:
     ) -> None:
         """Scan root and mounted layers, ignore layer-NN-*.md, and route novel promotions."""
         # Arrange
-        (tmp_path / "system").mkdir(parents=True)
-        (tmp_path / "system/mcp-layer.json").write_text(
-            '{"schema_version":"1.2","layer_id":"acme-corp","layer_role":"corporate",'
-            '"default_stack_templates":["web-starter"]}',
-            encoding="utf-8",
-        )
-        (tmp_path / "templates/web-starter/rules").mkdir(parents=True)
-        (tmp_path / "templates/web-starter/rules/coding.md").write_text(
-            "# Code\n", encoding="utf-8"
-        )
-        (tmp_path / "templates/web-starter/skills/start").mkdir(parents=True)
-        (tmp_path / "templates/web-starter/skills/start/SKILL.md").write_text(
-            "---\nname: start\ndescription: s\n---\n", encoding="utf-8"
-        )
-        (tmp_path / "templates/.hidden").mkdir(parents=True)
-        (tmp_path / "templates/file.txt").write_text("x", encoding="utf-8")
-
-        legal_dir = tmp_path / "layers/dept-legal"
-        (legal_dir / "system").mkdir(parents=True)
-        (legal_dir / "system/mcp-layer.json").write_text(
-            '{"schema_version":"1.2","layer_id":"acme-legal","layer_role":"domain-policy",'
-            '"surface_bindings":[{"binding_id":"gdpr-b","scopes":["*","checkout"],"traits":["*","pii"]}]}',
-            encoding="utf-8",
-        )
-        design_dir = tmp_path / "layers/dept-design"
-        (design_dir / "system").mkdir(parents=True)
-        (design_dir / "templates/brand-ui/rules").mkdir(parents=True)
-        (design_dir / "system/mcp-layer.json").write_text(
-            '{"schema_version":"1.2","layer_id":"ab-sec","layer_role":"department",'
-            '"default_stack_templates":["brand-ui"]}',
-            encoding="utf-8",
-        )
+        for sub in (
+            "system",
+            "templates/web-starter/rules",
+            "templates/web-starter/skills/start",
+            "templates/.hidden",
+            "layers/dept-legal/system",
+            "layers/dept-design/system",
+            "layers/dept-design/templates/brand-ui/rules",
+        ):
+            (tmp_path / sub).mkdir(parents=True)
+        for rel, txt in (
+            (
+                "system/mcp-layer.json",
+                '{"schema_version":"1.2","layer_id":"acme-corp","layer_role":"corporate",'
+                '"default_stack_templates":["web-starter"]}',
+            ),
+            ("templates/web-starter/rules/coding.md", "# Code\n"),
+            (
+                "templates/web-starter/skills/start/SKILL.md",
+                "---\nname: start\ndescription: s\n---\n",
+            ),
+            ("templates/file.txt", "x"),
+            (
+                "layers/dept-legal/system/mcp-layer.json",
+                '{"schema_version":"1.2","layer_id":"acme-legal","layer_role":"domain-policy",'
+                '"surface_bindings":[{"binding_id":"gdpr-b","scopes":["*","checkout"],'
+                '"traits":["*","pii"]}]}',
+            ),
+            (
+                "layers/dept-design/system/mcp-layer.json",
+                '{"schema_version":"1.2","layer_id":"ab-sec","layer_role":"department",'
+                '"default_stack_templates":["brand-ui"]}',
+            ),
+        ):
+            (tmp_path / rel).write_text(txt, encoding="utf-8")
         server = DotfilesMCPServer(repo_dir=tmp_path)
 
         # Act
@@ -158,66 +161,56 @@ class TestPromotionEngine:
     ) -> None:
         """Compare SHA-256 hashes between consumer project .agents/ and fork layers."""
         # Arrange
-        repo_dir = tmp_path / "fork"
-        (repo_dir / "templates/base/rules").mkdir(parents=True)
-        (repo_dir / "templates/base/skills/sopen").mkdir(parents=True)
-        (repo_dir / "templates/base/assets/sub").mkdir(parents=True)
-        (repo_dir / "templates/.hidden").mkdir(parents=True)
-        (repo_dir / "templates/base/rules/coding.md").write_text("v1\n", encoding="utf-8")
-        (repo_dir / "templates/base/rules/testing.md").write_text("t1\n", encoding="utf-8")
-        (repo_dir / "templates/base/assets/sub/snippet.md").write_text(
-            "asset-v1\n", encoding="utf-8"
-        )
-        (repo_dir / "templates/base/skills/sopen/SKILL.md").write_text(
-            "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
-        )
-        (repo_dir / "antigravity/.gemini/config/skills/release").mkdir(parents=True)
-        (repo_dir / "antigravity/.gemini/config/skills/release/SKILL.md").write_text(
-            "---\nname: release\ndescription: r\n---\n", encoding="utf-8"
-        )
-        (repo_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
-            "# Root v1\n", encoding="utf-8"
-        )
-        legal_sub = repo_dir / "layers/dept-legal/antigravity/.gemini/config"
-        legal_sub.mkdir(parents=True)
-        (legal_sub / "AGENTS.md").write_text("# Legal v1\n", encoding="utf-8")
-        (repo_dir / "layers/dept- sync/antigravity/.gemini/config").mkdir(parents=True)
-        (repo_dir / "layers/dept-sync/antigravity/.gemini/config").mkdir(parents=True)
-        (repo_dir / "layers/dept-sync/antigravity/.gemini/config/AGENTS.md").write_text(
-            "# Sync v1\n", encoding="utf-8"
-        )
-        (repo_dir / "layers/.hidden").mkdir(parents=True)
-
-        proj_dir = tmp_path / "proj"
-        (proj_dir / ".agents/rules").mkdir(parents=True)
-        (proj_dir / ".agents/skills/sopen").mkdir(parents=True)
-        (proj_dir / ".agents/rules/coding.md").write_text("v1\n", encoding="utf-8")
-        (proj_dir / ".agents/rules/testing.md").write_text("t2-modified\n", encoding="utf-8")
-        (proj_dir / ".agents/rules/layer-05-dept-legal.md").write_text(
-            "# Legal v2 modified\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/rules/layer-10-root.md").write_text(
-            '---\ntrigger: always_on\ndescription: "Root v1"\n---\n# Root v1\n',
-            encoding="utf-8",
-        )
-        (proj_dir / ".agents/rules/layer-10-dept-sync.md").write_text(
-            "# Sync v1\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/rules/layer-99-unmounted.md").write_text(
-            "# Unmounted\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/rules/brand-new.md").write_text("# Brand new\n", encoding="utf-8")
-        (proj_dir / ".agents/assets/base/sub").mkdir(parents=True)
-        (proj_dir / ".agents/assets/base/sub/snippet.md").write_text(
-            "asset-v2-mod\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/skills/sopen/SKILL.md").write_text(
-            "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/skills/release").mkdir(parents=True)
-        (proj_dir / ".agents/skills/release/SKILL.md").write_text(
-            "---\nname: release\ndescription: r\n---\n", encoding="utf-8"
-        )
+        repo_dir, proj_dir = tmp_path / "fork", tmp_path / "proj"
+        for sub in (
+            "templates/base/rules",
+            "templates/base/skills/sopen",
+            "templates/base/assets/sub",
+            "templates/.hidden",
+            "antigravity/.gemini/config/skills/release",
+            "layers/dept-legal/antigravity/.gemini/config",
+            "layers/dept- sync/antigravity/.gemini/config",
+            "layers/dept-sync/antigravity/.gemini/config",
+            "layers/.hidden",
+        ):
+            (repo_dir / sub).mkdir(parents=True)
+        for rel, txt in (
+            ("templates/base/rules/coding.md", "v1\n"),
+            ("templates/base/rules/testing.md", "t1\n"),
+            ("templates/base/assets/sub/snippet.md", "asset-v1\n"),
+            ("templates/base/skills/sopen/SKILL.md", "---\nname: sopen\ndescription: s\n---\n"),
+            (
+                "antigravity/.gemini/config/skills/release/SKILL.md",
+                "---\nname: release\ndescription: r\n---\n",
+            ),
+            ("antigravity/.gemini/config/AGENTS.md", "# Root v1\n"),
+            ("layers/dept-legal/antigravity/.gemini/config/AGENTS.md", "# Legal v1\n"),
+            ("layers/dept-sync/antigravity/.gemini/config/AGENTS.md", "# Sync v1\n"),
+        ):
+            (repo_dir / rel).write_text(txt, encoding="utf-8")
+        for sub in (
+            ".agents/rules",
+            ".agents/skills/sopen",
+            ".agents/skills/release",
+            ".agents/assets/base/sub",
+        ):
+            (proj_dir / sub).mkdir(parents=True)
+        for rel, txt in (
+            (".agents/rules/coding.md", "v1\n"),
+            (".agents/rules/testing.md", "t2-modified\n"),
+            (".agents/rules/layer-05-dept-legal.md", "# Legal v2 modified\n"),
+            (
+                ".agents/rules/layer-10-root.md",
+                '---\ntrigger: always_on\ndescription: "Root v1"\n---\n# Root v1\n',
+            ),
+            (".agents/rules/layer-10-dept-sync.md", "# Sync v1\n"),
+            (".agents/rules/layer-99-unmounted.md", "# Unmounted\n"),
+            (".agents/rules/brand-new.md", "# Brand new\n"),
+            (".agents/assets/base/sub/snippet.md", "asset-v2-mod\n"),
+            (".agents/skills/sopen/SKILL.md", "---\nname: sopen\ndescription: s\n---\n"),
+            (".agents/skills/release/SKILL.md", "---\nname: release\ndescription: r\n---\n"),
+        ):
+            (proj_dir / rel).write_text(txt, encoding="utf-8")
 
         # Act
         diff = diff_project_against_layers(repo_dir, proj_dir)
@@ -247,93 +240,82 @@ class TestPromotionEngine:
         self,
         tmp_path: Path,
     ) -> None:
-        """Promote rules and skills to root or subtree layers while enforcing budget/frontmatter."""
+        """Promote rules, skills, trackers, and docs while enforcing budget/frontmatter."""
         # Arrange
-        repo_dir = tmp_path / "fork"
-        (repo_dir / "layers/dept-legal").mkdir(parents=True)
-        proj_dir = tmp_path / "proj"
-        (proj_dir / ".agents/rules").mkdir(parents=True)
-        (proj_dir / ".agents/skills/good-skill").mkdir(parents=True)
-        (proj_dir / ".agents/skills/bad-skill").mkdir(parents=True)
-        (proj_dir / ".agents/skills/no-fm").mkdir(parents=True)
-
-        (proj_dir / ".agents/rules/legal.md").write_text("# Legal Rule\n", encoding="utf-8")
-        (proj_dir / ".agents/rules/layer-05-dept-legal.md").write_text(
-            "# Updated Dept Legal\n", encoding="utf-8"
+        repo_dir, proj_dir = tmp_path / "fork", tmp_path / "proj"
+        for sub in (
+            "layers/dept-legal",
+            "layers/dept-own/system",
+            "layers/dept-own/templates/dept-own",
+        ):
+            (repo_dir / sub).mkdir(parents=True)
+        (repo_dir / "layers/dept-own/system/mcp-layer.json").write_text(
+            '{"layer_id":"dept-own","layer_role":"department"}', encoding="utf-8"
         )
-        (proj_dir / ".agents/assets/gdpr-pack").mkdir(parents=True)
-        (proj_dir / ".agents/assets/gdpr-pack/snippet.md").write_text(
-            "<!-- asset -->\n", encoding="utf-8"
-        )
-        (proj_dir / ".agents/rules/huge.md").write_text("X" * 18001, encoding="utf-8")
-        (proj_dir / ".agents/rules/AGENTS.md").write_text("Y" * 18000, encoding="utf-8")
-        (proj_dir / ".agents/skills/good-skill/SKILL.md").write_text(
-            "---\nname: good-skill\ndescription: valid skill\n---\n" + ("# Guide\n" * 496),
-            encoding="utf-8",
-        )
-        (proj_dir / ".agents/skills/long-skill").mkdir(parents=True)
-        (proj_dir / ".agents/skills/long-skill/SKILL.md").write_text(
-            "---\nname: long-skill\ndescription: too long\n---\n" + ("# Guide\n" * 497),
-            encoding="utf-8",
-        )
-        (proj_dir / ".agents/skills/bad-skill/SKILL.md").write_text(
-            "---\nname: BAD_NAME\ndescription: x\n---\n",
-            encoding="utf-8",
-        )
-        (proj_dir / ".agents/skills/no-fm/SKILL.md").write_text("# No FM\n", encoding="utf-8")
+        for sub in (
+            ".agents/rules",
+            ".agents/assets/gdpr-pack",
+            ".agents/skills/good-skill",
+            ".agents/skills/long-skill",
+            ".agents/skills/bad-skill",
+            ".agents/skills/no-fm",
+            "roadmaps",
+        ):
+            (proj_dir / sub).mkdir(parents=True)
+        for rel, txt in (
+            (".agents/rules/legal.md", "# Legal Rule\n"),
+            (".agents/rules/layer-05-dept-legal.md", "# Updated Dept Legal\n"),
+            (".agents/assets/gdpr-pack/snippet.md", "<!-- asset -->\n"),
+            (".agents/rules/huge.md", "X" * 18001),
+            (".agents/rules/AGENTS.md", "Y" * 18000),
+            (
+                ".agents/skills/good-skill/SKILL.md",
+                "---\nname: good-skill\ndescription: valid skill\n---\n" + ("# Guide\n" * 496),
+            ),
+            (
+                ".agents/skills/long-skill/SKILL.md",
+                "---\nname: long-skill\ndescription: too long\n---\n" + ("# Guide\n" * 497),
+            ),
+            (".agents/skills/bad-skill/SKILL.md", "---\nname: BAD_NAME\ndescription: x\n---\n"),
+            (".agents/skills/no-fm/SKILL.md", "# No FM\n"),
+            ("roadmaps/q4.md", "# Q4 Plan\n"),
+            ("BACKLOG.md", "- [ ] Escalated item\n"),
+        ):
+            (proj_dir / rel).write_text(txt, encoding="utf-8")
 
         # Act
-        dry_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/rules/legal.md",
-            target_layer="dept-legal",
-            dry_run=True,
-        )
-        sub_rule_res = promote_project_asset_to_layer(
-            repo_dir, proj_dir, source_rel_path=".agents/rules/legal.md", target_layer="dept-legal"
-        )
-        tpl_rule_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/rules/legal.md",
-            target_template="fastapi-hexagonal",
-        )
-        root_skill_res = promote_project_asset_to_layer(
-            repo_dir, proj_dir, source_rel_path=".agents/skills/good-skill/SKILL.md"
-        )
-        tpl_skill_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/skills/good-skill/SKILL.md",
+        def prom(src: str, **kw: object) -> dict[str, object]:
+            return promote_project_asset_to_layer(
+                repo_dir,
+                proj_dir,
+                source_rel_path=src,
+                **kw,  # type: ignore[arg-type]
+            )
+
+        dry_res = prom(".agents/rules/legal.md", target_layer="dept-legal", dry_run=True)
+        sub_rule_res = prom(".agents/rules/legal.md", target_layer="dept-legal")
+        auto_tpl_res = prom(".agents/rules/legal.md", target_layer="dept-own")
+        tpl_rule_res = prom(".agents/rules/legal.md", target_template="fastapi-hexagonal")
+        root_skill_res = prom(".agents/skills/good-skill/SKILL.md")
+        tpl_skill_res = prom(
+            ".agents/skills/good-skill/SKILL.md",
             target_layer="dept-legal",
             target_template="gdpr-pack",
         )
-        asset_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/assets/gdpr-pack/snippet.md",
-            target_layer="dept-legal",
-        )
-        mat_update_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/rules/layer-05-dept-legal.md",
-            target_layer="dept-legal",
-        )
-        exact_18k_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/rules/AGENTS.md",
+        asset_res = prom(".agents/assets/gdpr-pack/snippet.md", target_layer="dept-legal")
+        mat_update_res = prom(".agents/rules/layer-05-dept-legal.md", target_layer="dept-legal")
+        gov_dir_res = prom("roadmaps/q4.md", target_layer="dept-own")
+        trk_res_1 = prom("BACKLOG.md", target_layer="dept-own")
+        trk_res_2 = prom("BACKLOG.md", target_layer="dept-own")
+        exact_18k_res = prom(
+            ".agents/rules/AGENTS.md",
             target_layer="root",
             prepare_pr=True,
             actor_email="member@squad.acme.com",
             dry_run=True,
         )
-        upstream_res = promote_project_asset_to_layer(
-            repo_dir,
-            proj_dir,
-            source_rel_path=".agents/rules/legal.md",
+        upstream_res = prom(
+            ".agents/rules/legal.md",
             target_layer="dept-legal",
             target_template="gdpr-pack",
             upstream_dir=repo_dir / "layers" / "dept-legal",
@@ -341,53 +323,50 @@ class TestPromotionEngine:
         )
 
         # Assert
-        assert dry_res["dry_run"] is True
+        assert dry_res["dry_run"] is True and sub_rule_res["subtree_push_command"] is not None
         assert (
             sub_rule_res["destination"] == "layers/dept-legal/antigravity/.gemini/config/AGENTS.md"
         )
-        assert (
-            mat_update_res["destination"]
-            == "layers/dept-legal/antigravity/.gemini/config/AGENTS.md"
-        )
+        assert auto_tpl_res["destination"] == "layers/dept-own/templates/dept-own/rules/legal.md"
+        assert mat_update_res["destination"] == sub_rule_res["destination"]
         assert asset_res["destination"] == "layers/dept-legal/templates/gdpr-pack/assets/snippet.md"
-        assert asset_res["target_template"] == "gdpr-pack"
-        assert sub_rule_res["subtree_push_command"] is not None
-        assert tpl_rule_res["destination"] == "templates/fastapi-hexagonal/rules/legal.md"
-        assert tpl_rule_res["subtree_push_command"] is None
-        assert root_skill_res["destination"] == (
-            "antigravity/.gemini/config/skills/good-skill/SKILL.md"
+        assert (
+            asset_res["target_template"] == "gdpr-pack"
+            and tpl_rule_res["subtree_push_command"] is None
         )
-        assert tpl_skill_res["destination"] == (
-            "layers/dept-legal/templates/gdpr-pack/skills/good-skill/SKILL.md"
+        assert gov_dir_res["destination"] == "layers/dept-own/roadmaps/q4.md"
+        assert trk_res_1["destination"] == "layers/dept-own/BACKLOG.md" == trk_res_2["destination"]
+        assert (repo_dir / "layers/dept-own/BACKLOG.md").read_text("utf-8").count(
+            "## Proposed from"
+        ) == 2
+        assert tpl_rule_res["destination"] == "templates/fastapi-hexagonal/rules/legal.md"
+        assert (
+            root_skill_res["destination"] == "antigravity/.gemini/config/skills/good-skill/SKILL.md"
+        )
+        assert (
+            tpl_skill_res["destination"]
+            == "layers/dept-legal/templates/gdpr-pack/skills/good-skill/SKILL.md"
         )
         assert exact_18k_res["destination"] == "antigravity/.gemini/config/AGENTS.md"
-        assert exact_18k_res["promotion_pr_plan"]["proposer_email"] == "member@squad.acme.com"
+        assert exact_18k_res["promotion_pr_plan"]["proposer_email"] == "member@squad.acme.com"  # type: ignore[index]
         assert upstream_res["destination"] == "templates/gdpr-pack/rules/legal.md"
         assert "promotion_pr_plan" in upstream_res
-        for bad_kwargs, err_pat in (
+        for src, bad_kw, err_pat in (
             (
-                {"source_rel_path": ".agents/rules/legal.md", "target_layer": "dept-legal"},
+                ".agents/rules/legal.md",
+                {"target_layer": "dept-legal"},
                 r"Refusing to overwrite existing AGENTS\.md",
             ),
-            ({"source_rel_path": "../outside.md"}, "Invalid or missing project source file"),
-            (
-                {"source_rel_path": ".agents/rules/legal.md", "target_layer": "nonexistent"},
-                "Target layer directory not found",
-            ),
-            (
-                {"source_rel_path": ".agents/rules/huge.md", "target_layer": "root"},
-                "exceeds 18000-byte token budget cap",
-            ),
-            ({"source_rel_path": ".agents/skills/long-skill/SKILL.md"}, "<= 500 lines"),
-            ({"source_rel_path": ".agents/skills/no-fm/SKILL.md"}, "YAML frontmatter"),
-            ({"source_rel_path": ".agents/skills/bad-skill/SKILL.md"}, "kebab-case name"),
-            (
-                {"source_rel_path": ".agents/rules/legal.md", "target_template": "BAD_TEMPLATE"},
-                "Invalid target_template",
-            ),
+            ("../outside.md", {}, "Invalid or missing project source file"),
+            (".agents/rules/legal.md", {"target_layer": "nonexistent"}, "Target layer directory"),
+            (".agents/rules/huge.md", {"target_layer": "root"}, "exceeds 18000-byte"),
+            (".agents/skills/long-skill/SKILL.md", {}, "<= 500 lines"),
+            (".agents/skills/no-fm/SKILL.md", {}, "YAML frontmatter"),
+            (".agents/skills/bad-skill/SKILL.md", {}, "kebab-case name"),
+            (".agents/rules/legal.md", {"target_template": "BAD_TEMPLATE"}, "Invalid target"),
         ):
             with pytest.raises(ValueError, match=err_pat):
-                promote_project_asset_to_layer(repo_dir, proj_dir, **bad_kwargs)  # type: ignore[arg-type]
+                prom(src, **bad_kw)
 
     def test_inspect_layer_horizon_detects_upward_and_downward_drift(
         self,

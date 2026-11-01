@@ -216,18 +216,27 @@ class TestManifestHelpers:
         )
         (mounted_child / "README.md").write_text("# Old\n", encoding="utf-8")
 
-        org_child = tmp_path / "corp-root-org/dept-alpha"
+        org_child = tmp_path / "corp-root-org/dept-alpha-repo"
         (org_child / "system").mkdir(parents=True)
         (org_child / "system/mcp-layer.json").write_text(
             '{"layer_id": "dept-alpha"}', encoding="utf-8"
         )
         (org_child / "README.md").write_text("# New\n", encoding="utf-8")
+        (org_child / "WORKTASK.md").write_text("# Old Task\n", encoding="utf-8")
+        (mounted_child / "WORKTASK.md").write_text("# Delegated Newer Task\n", encoding="utf-8")
+        os.utime(org_child / "WORKTASK.md", ns=(1_000_000_000, 1_000_000_000))
+        os.utime(mounted_child / "WORKTASK.md", ns=(2_000_000_000, 2_000_000_000))
         (org_child / "docs").mkdir(parents=True)
         (org_child / "docs/guide.md").write_text("# Guide\n", encoding="utf-8")
         (org_child / "docs/sub").mkdir(parents=True)
         (org_child / "templates/dept-alpha/rules").mkdir(parents=True)
         (org_child / "templates/dept-alpha/rules/alpha.md").write_text(
             "# Alpha\n", encoding="utf-8"
+        )
+        direct_sib = tmp_path / "dept-direct"
+        (direct_sib / "system").mkdir(parents=True)
+        (direct_sib / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-direct"}', encoding="utf-8"
         )
         mounted_entries: list[object] = [
             "invalid",
@@ -238,6 +247,7 @@ class TestManifestHelpers:
 
         # Act
         missing_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-missing")
+        direct_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-direct")
         drifts_before = manifest_helpers._inspect_mounted_children_drifts(
             parent_ws, mounted_entries
         )
@@ -255,6 +265,7 @@ class TestManifestHelpers:
         assert newer_true is True
         assert newer_equal is False
         assert missing_resolved is None
+        assert direct_resolved == direct_sib.resolve()
         assert len(drifts_before) == 1
         assert "README.md" in drifts_before[0]["drift_files"]
         assert "docs/guide.md" in drifts_before[0]["drift_files"]
@@ -262,6 +273,7 @@ class TestManifestHelpers:
         assert readme_after_dry == "# Old\n"
         assert live_synced == ["dept-alpha"]
         assert (mounted_child / "README.md").read_text(encoding="utf-8") == "# New\n"
+        assert (org_child / "WORKTASK.md").read_text(encoding="utf-8") == "# Delegated Newer Task\n"
         assert (mounted_child / "docs/guide.md").is_file()
         assert drifts_after == []
 
