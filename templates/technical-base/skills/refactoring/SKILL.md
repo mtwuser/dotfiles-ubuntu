@@ -50,10 +50,12 @@ When a component moves from Module A to Module B:
 4. Update **EVERY** docstring and comment reference.
 5. **DELETE the old file** in `Module A` — do not leave a backward compatibility shim, alias, or re-export. Let the code fail loud if an import was missed.
 
-## Naming Protocol
-- Choose the architecturally correct name **in the same changeset**.
-- Never defer naming to a "later rename" task.
-- If the unit has a specific responsibility now, pick naming patterns that match the target module's domain.
+## Naming Protocol & Self-Indexing File Taxonomy (`O(1)` Glob Discovery)
+- Choose the architecturally correct name **in the same changeset** (never defer to a "later rename" task).
+- **Enforce Canonical File Prefixes, Suffixes & Extensions**: Every new or extracted file (Stage 5) MUST use a deterministic role prefix/suffix and extension so `glob`, `find`, and MCP `target_globs` classify its responsibility without reading file contents:
+  - **Code Modules**: `tools_<domain>.py` (MCP/API tool dispatchers), `<domain>_engine.py` (core domain/orchestration engines), `<domain>_helpers.py` / `*_weaver.py` / `*_configurator.py` / `*_bootstrapper.py` (stateless utilities or lifecycle coordinators), `constants.py` / `catalogs.py` (`0-logic` declarative constants), and `test_<module_stem>.py` (`1:1` test suites).
+  - **Governance & Documentation**: `NN_<topic>.md` (`01_`, `02_` reading-order prefix in `docs/guides/` and `docs/architecture/`), `layer-<NN>-<id>.md` (`00..100` precedence prefix in `.agents/rules/`), and `WORK*.md` (`WORKROAD.md`, `WORKTASK.md`, `WORKVALI.md` active root trackers).
+- **Continuous Consistency on Every Edit / Feature**: Whenever modifying a file for a bugfix, concrete change request, or new feature, never introduce split-idiom drift between the new code and older (`> 90d`) or over-compressed surrounding code in that file; align the touched scope atomically or proactively propose refactoring (and capture in `BACKLOG.md`).
 
 ## Code Decommissioning & Obsolete Test Pruning
 

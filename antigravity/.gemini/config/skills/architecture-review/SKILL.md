@@ -80,5 +80,6 @@ When naming architectural concepts:
 - If a term is overloaded (means different things in different contexts),
   create distinct names immediately — don't defer
 - Names should capture **purpose** (what it DOES), not structure (how it's BUILT)
+- **Self-Indexing File Prefix/Suffix & Extension Taxonomy (`O(1)` Glob Discovery)**: File names must encode their architectural role and reading/precedence order via canonical prefixes, suffixes, and extensions (`tools_<domain>.py`, `<domain>_engine.py`, `<domain>_helpers.py`, `constants.py`, `test_<stem>.py`, `NN_<topic>.md`, `layer-<NN>-<id>.md`, `WORK*.md`) so both humans and agents locate and bind surfaces without scanning file contents
 - When renaming, execute a full surgical replacement across ALL files in the
   same changeset (Zero-Backward Law)

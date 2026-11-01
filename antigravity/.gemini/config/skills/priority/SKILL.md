@@ -54,8 +54,8 @@ When starting work on the next phase in `WORKROAD.md`:
    - **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**:
      - Phase 1: Human guides & normative specifications (`docs/guides/`, `docs/architecture/<spec>.md` `1:1:1` tables, and source file in `roadmaps/`)
      - Phase 2: Self-documenting test hierarchy (`tests/e2e/` persona journeys $\rightarrow$ `tests/imp/` boundary implementation $\rightarrow$ `tests/unit/` 4-quadrant `Test<Module>` suites)
-     - Phase 3: Existing source code & precedent analysis (`src/` / `scripts/`)
-     - Phase 4: Naming, outbound non-restriction & convention alignment
+     - Phase 3: Existing source code, staleness (`> 90d`), & consistency analysis (`src/` / `scripts/` — verify new code does not diverge from adjacent existing code; propose atomic refactoring or log in `BACKLOG.md` if touched modules use older idioms or over-compression)
+     - Phase 4: Structural evolution (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), file-prefix/suffix naming (`tools_*`, `*_engine`, `NN_*`, `test_*`), & outbound non-restriction alignment
      - Phase 5: Documentation & `1:1:1` traceability persistence plan
    - **In `business` mode (`business-base` / `business-stack/*` / `Root 0` / `Department`)**:
      - Phase 1: Normative policies, *Lex Superior* hierarchy (`0..100`), and cross-departmental precedence (`5..35`) in `corporate/`, `docs/`, and `.agents/rules/*.md`
