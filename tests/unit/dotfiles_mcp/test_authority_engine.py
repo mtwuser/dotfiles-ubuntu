@@ -130,6 +130,7 @@ class TestAuthorityEngine:
             '"default_stack_templates":["dept-tech","squad-web"],'
             '"layer_authority":{"owner_role":"Squad Lead",'
             '"authorized_emails":["lead@squad.acme.com","*@managers.acme.com"],'
+            '"maintainer_emails":["maint@squad.acme.com"],'
             '"escalation_contact":"Squad Lead <lead@squad.acme.com>"}}',
             encoding="utf-8",
         )
@@ -164,6 +165,9 @@ class TestAuthorityEngine:
         ok_own_rel = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="lead@squad.acme.com"
         )
+        ok_maint = verify_layer_operation_authority(
+            squad_dir, operation="delegate-to-child", actor_email="maint@squad.acme.com"
+        )
         ok_glob = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="director@managers.acme.com"
         )
@@ -188,7 +192,8 @@ class TestAuthorityEngine:
         assert b_rel["allowed"] is False and b_rel["reason_code"] == "UNAUTHORIZED_ACTOR_EMAIL"
         assert "Squad Lead <lead@squad.acme.com>" in b_rel["remediation"]
         assert ok_own_rel["reason_code"] == "OWNER_AUTHORIZED"
-        assert all(x["allowed"] for x in (ok_own_rel, ok_glob, ok_open, ok_bad))
+        assert ok_maint["reason_code"] == "OWNER_AUTHORIZED"
+        assert all(x["allowed"] for x in (ok_own_rel, ok_maint, ok_glob, ok_open, ok_bad))
 
     def test_build_upward_promotion_pr_plan_captures_child_layer_context(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

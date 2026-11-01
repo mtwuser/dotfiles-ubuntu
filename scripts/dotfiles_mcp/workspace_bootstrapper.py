@@ -147,59 +147,59 @@ def _render_layer_makefile(
         if layer_role == "corporate"
         else "TARGET_REPO ?= $(PARENT_DIR)\n"
     )
+    active = c.LAYER_ROLE_MAKEFILE_TARGETS.get(
+        layer_role, c.LAYER_ROLE_MAKEFILE_TARGETS["department"]
+    )
+    all_recipes: dict[str, str] = {
+        "status": f"\t@{cli} status $(CURDIR) $(PARENT_FLAG)",
+        "task": (
+            f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" '
+            "$(if $(TRACKER),--tracker $(TRACKER),) $(if $(TICKET),--ticket $(TICKET),)"
+        ),
+        "complete": (
+            f'\t@{cli} complete-task $(CURDIR) --task "$(TASK)" $(PARENT_FLAG) '
+            '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",)'
+        ),
+        "consult": (
+            f'\t@{cli} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
+            "$(if $(PATH_ARG),--path $(PATH_ARG),)"
+        ),
+        "horizon": f"\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)",
+        "sync": f"\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)",
+        "upstream-diff": f"\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)",
+        "diff": f"\t@{cli} diff-project $(CURDIR)",
+        "authority": f"\t@{cli} check-authority $(CURDIR) --op release",
+        "roster": (
+            f"\t@{cli} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
+            "$(if $(REMOVE),--remove $(REMOVE),) $(if $(ROLE),--role $(ROLE),)"
+        ),
+        "env-gate": f"\t@{cli} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
+        "decision": (
+            f'\t@{cli} record-decision $(CURDIR) --item "$(ITEM)" --decision $(DEC) '
+            '--reason "$(if $(REASON),$(REASON),Reviewed)"'
+        ),
+        "promote": (
+            f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
+            "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
+            "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)"
+        ),
+        "delegate": (
+            f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
+            '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
+            "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),) "
+            "$(if $(TICKET),--ticket $(TICKET),)"
+        ),
+        "mcp-test": f"\t@{cli} list-templates $(CURDIR)",
+    }
+    sel = [t for t in active if t in all_recipes]
+    phony, help_lines = " ".join(["help", *sel]), "\n".join(f'\t@echo "  make {t}"' for t in sel)
+    recipes = "\n".join(f"{t}:\n{all_recipes[t]}" for t in sel)
     return (
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status task complete consult horizon sync upstream-diff diff authority "
-        "roster env-gate promote delegate mcp-test\n"
-        f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
-        '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
-        '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & feature/<ID>-slug"\n'
-        '\t@echo "  make complete TASK=<id>           Complete task & send upward receipt"\n'
-        '\t@echo "  make consult LAYER=<id> QUERY=... Ephemeral read-only layer consultation"\n'
-        '\t@echo "  make horizon                      Inspect 1-hop upstream/downstream horizon"\n'
-        '\t@echo "  make sync                         Sync inherited templates & .agents/ rules"\n'
-        '\t@echo "  make upstream-diff                Section diff against upstream templates"\n'
-        '\t@echo "  make diff                         Verify zero drift against templates/"\n'
-        '\t@echo "  make authority                    Verify release authority (git user.email)"\n'
-        '\t@echo "  make roster [ADD=...] [ROLE=...]  Inspect or update layer roster"\n'
-        '\t@echo "  make env-gate ENV=<tst|pre|pro>   Verify environment promotion gate"\n'
-        '\t@echo "  make promote SOURCE=<rel-path>    Promote rule/skill 1-hop upward"\n'
-        '\t@echo "  make delegate CHILD=<id> TASK=... Delegate a 1-hop directive to a child"\n'
-        '\t@echo "  make mcp-test                     Verify layer templates & topology"\n\n'
-        f"status:\n\t@{cli} status $(CURDIR) $(PARENT_FLAG)\n"
-        'task:\n\t@test -n "$(TASK)" || (echo "Usage: make task TASK=<id>" && exit 1)\n'
-        f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" $(if $(TRACKER),--tracker $(TRACKER),) '
-        "$(if $(TICKET),--ticket $(TICKET),)\n"
-        'complete:\n\t@test -n "$(TASK)" || (echo "Usage: make complete TASK=<id>" && exit 1)\n'
-        f'\t@{cli} complete-task $(CURDIR) --task "$(TASK)" $(PARENT_FLAG) '
-        '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",)\n'
-        'consult:\n\t@test -n "$(LAYER)" && test -n "$(QUERY)" || '
-        '(echo "Usage: make consult LAYER=<id> QUERY=..." && exit 1)\n'
-        f'\t@{cli} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
-        "$(if $(PATH_ARG),--path $(PATH_ARG),)\n"
-        f"horizon:\n\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)\n"
-        f"sync:\n\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)\n"
-        f"upstream-diff:\n\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)\n"
-        f"diff:\n\t@{cli} diff-project $(CURDIR)\n"
-        f"authority:\n\t@{cli} check-authority $(CURDIR) --op release\n"
-        f"roster:\n\t@{cli} manage-roster $(CURDIR) "
-        "$(if $(ADD),--add $(ADD),) $(if $(REMOVE),--remove $(REMOVE),) "
-        "$(if $(ROLE),--role $(ROLE),)\n"
-        f"env-gate:\n\t@{cli} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)\n"
-        'promote:\n\t@test -n "$(SOURCE)" || '
-        '(echo "Usage: make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>]" && exit 1)\n'
-        f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
-        "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
-        "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)\n"
-        'delegate:\n\t@test -n "$(CHILD)" && (test -n "$(TASK)" || test -n "$(SOURCE)") || '
-        '(echo "Usage: make delegate CHILD=<id> [TASK=...] [SOURCE=...] [SURFACE=...]" && exit 1)\n'
-        f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
-        '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
-        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),) "
-        "$(if $(TICKET),--ticket $(TICKET),)\n"
-        f"mcp-test:\n\t@{cli} list-templates $(CURDIR)\n"
+        f".PHONY: {phony}\n"
+        f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n{help_lines}\n\n{recipes}\n'
     )
 
 
@@ -443,17 +443,20 @@ def inspect_workspace_status(
 
     g_stat = _git_lines("status", "--short", "--branch")
     g_log = _git_lines("log", "--oneline", "-5")
-    s_ex, p_ex = "\n".join(s_txt.splitlines()[:35]), "\n".join(trk_txt.splitlines()[:35])
-    last_cid = uuid_m.group(0) if uuid_m else None
+    lim, last_cid = c.STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
+    s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
+    mk_t = list(c.LAYER_ROLE_MAKEFILE_TARGETS.get(role, c.LAYER_ROLE_MAKEFILE_TARGETS["project"]))
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
     out.update(precedence=prec, workspace_mode=mode, active_templates=tpls, active_rules=rules)
+    out.update(available_makefile_targets=mk_t, git_governance=inspect_git_governance_state(ws))
     out["has_project_start_skill"] = (ws / ".agents/skills/start/SKILL.md").is_file()
-    out["session_state"] = dict(
-        exists=s_file.is_file(), last_conversation_id=last_cid, excerpt=s_ex
-    )
-    out["priority_state"] = dict(active_tracker=active_trk, excerpt=p_ex)
-    out["git_state"] = dict(is_git_repo=is_git, status_short=g_stat, recent_commits=g_log)
-    out["git_governance"] = inspect_git_governance_state(ws)
+    out["session_state"] = {
+        "exists": s_file.is_file(),
+        "last_conversation_id": last_cid,
+        "excerpt": s_ex,
+    }
+    out["priority_state"] = {"active_tracker": active_trk, "excerpt": p_ex}
+    out["git_state"] = {"is_git_repo": is_git, "status_short": g_stat, "recent_commits": g_log}
     out["horizon"] = (
         inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None
     )

@@ -15,9 +15,10 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 
 1. **Utility & Pattern Reuse Gate**: Search (`grep` or semantic search) before writing helpers; import and reuse.
 2. **Strict Linter, Compiler & Typing Integrity**: Zero compiler, type-checker, or linter (`ruff`/`mypy --strict`, `tsc --noEmit`, `cargo clippy`, `shellcheck`) warnings/errors. Prefer `unknown`/`Protocol`/`interface` over `Any`/`any`.
-3. **`1:1:1` Symbiosis & Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)**: Read `docs/guides/` and `docs/architecture/<spec>.md` first, then `tests/{e2e,imp,unit}/` (`Test<Module>`), and code last. Executable modules declare `Specification: docs/architecture/<spec>.md`, specs (`< 465` lines) maintain a `1:1:1` table, and changes must not restrict valid outbound workflows.
-4. **Generated Output & Package-Marker Purity**: Verify all `import` packages exist, generated files pass linters, zero ghost placeholders (`my_app`), and package markers stay side-effect-free (`src/**/__init__.py` and `tests/**/__init__.py` MUST remain `0 bytes`).
+3. **`1:1:1` Symbiosis & Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)**: Read `docs/{guides,architecture}/` first, `tests/{e2e,imp,unit}/` (`Test<Module>`) second, and code last. Modules declare `Specification: docs/architecture/<spec>.md`, specs (`< 465` lines) maintain a `1:1:1` table, and changes preserve valid workflows.
+4. **Generated Output & Package-Marker Purity**: Verify `import` packages exist, generated files pass linters, zero placeholders (`my_app`), and `src/**/__init__.py` / `tests/**/__init__.py` remain `0 bytes`.
 5. **Pre-Debug Diagnostic Sweep**: Run `make doctor` / `make verify` before blind-debugging; crystallize repeated checks into `Makefile` targets.
+6. **Domain Cut-Points & Anti-Magic-Number Hygiene**: Never embed magic numbers, arbitrary slices (`[:35]`, `[-20:]`), or positional tuple sub-slices (`SURFACES[:5]`) in executable logic. Extract thresholds, caps, timeouts, and sub-tuples into named constants (`MAX_*`, `MIN_*`, `DEFAULT_*`, `VALID_*`) for `N` vs `N ± 1` boundary clarity.
 
 ---
 

@@ -20,12 +20,6 @@ from dotfiles_mcp.authority_engine import (
     verify_oss_promotion_agnosticism,
     verify_single_hop_upstream,
 )
-from dotfiles_mcp.constants import (
-    AGENTS_MD_MAX_BYTES,
-    KEBAB_ID_RE,
-    MATERIALIZED_RULE_RE,
-    TEMPLATE_STACK_GROUP_DIRS,
-)
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
@@ -36,6 +30,8 @@ from dotfiles_mcp.manifest_helpers import (
     _resolve_template_dest_dir,
     _resolve_template_dir,
 )
+
+from . import constants as c
 
 
 def _sha256_file(path: Path) -> str:
@@ -71,7 +67,7 @@ def _route_novel_item(
 ) -> dict[str, Any]:
     """Recommend the optimal target layer and destination for a novel rule or skill."""
     stem = item_name.removesuffix(".md").lower()
-    tokens = {t for t in re.split(r"[-_.]", stem) if len(t) >= 3}
+    tokens = {t for t in re.split(r"[-_.]", stem) if len(t) >= c.MIN_ROUTING_KEYWORD_LEN}
     for rec in layer_records:
         lname = str(rec["name"])
         if lname != "root" and (lname in stem or bool(tokens & set(rec["keywords"]))):
@@ -122,7 +118,7 @@ def compare_project_patterns_multilayer(
             for sf in (tdir / "skills").glob("*/SKILL.md"):
                 layer_b_skills.update((_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name))
         raw_id = f"{lname}-{manifest.get('layer_id', '')}".lower()
-        kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= 3}
+        kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= c.MIN_ROUTING_KEYWORD_LEN}
         for b in collect_layer_effective_bindings(ldir, manifest):
             for k in ("scopes", "traits"):
                 kw.update(str(v).lower() for v in b.get(k, []) if v != "*")
@@ -131,14 +127,14 @@ def compare_project_patterns_multilayer(
             layer_role=manifest.get("layer_role", "workstation"), templates=tpl_names, keywords=kw
         )
         layer_records.append(rec)
-    materialized_rules = [r for r in project_rules if MATERIALIZED_RULE_RE.match(r)]
-    filtered_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
+    materialized_rules = [r for r in project_rules if c.MATERIALIZED_RULE_RE.match(r)]
+    filtered_rules = [r for r in project_rules if not c.MATERIALIZED_RULE_RE.match(r)]
     novel_rules = sorted(r for r in filtered_rules if r not in layer_b_rules)
     novel_skills = sorted(
         s for s in project_skills if s not in layer_a_skills and s not in layer_b_skills
     )
     root_ag = repo_dir / "antigravity/.gemini/config/AGENTS.md"
-    headroom = max(0, AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
+    headroom = max(0, c.AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
     routing = [
         *(_route_novel_item(r, "rules", layer_records, headroom) for r in novel_rules),
         *(_route_novel_item(s, "skills", layer_records, headroom) for s in novel_skills),
@@ -208,7 +204,7 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
         if not pfile.resolve().is_relative_to(proj_resolved):
             raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
         candidates: list[tuple[str, Path]] = list(layer_sources.get(rel_key, []))
-        if m := MATERIALIZED_RULE_RE.match(pfile.name):
+        if m := c.MATERIALIZED_RULE_RE.match(pfile.name):
             sub_name, rel_ag = m.group(2), "antigravity/.gemini/config/AGENTS.md"
             sub_ag = (repo_dir if sub_name == "root" else repo_dir / "layers" / sub_name) / rel_ag
             if sub_ag.is_file():
@@ -234,7 +230,7 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     return out_d
 
 
-PROMOTABLE_TRACKERS = ("WORKROAD.md", "ROADMAP.md", "WORKTASK.md", "BACKLOG.md", "WORKVALI.md")
+PROMOTABLE_TRACKERS = c.VALID_TRACKER_FILES
 
 
 def promote_project_asset_to_layer(
@@ -273,27 +269,29 @@ def promote_project_asset_to_layer(
         verify_oss_promotion_agnosticism(project_dir.resolve(), content, source_rel_path)
 
     rel_parts = src_file.relative_to(project_dir.resolve()).parts
-    tpl_idx = 2 if len(rel_parts) >= 5 and rel_parts[1] in TEMPLATE_STACK_GROUP_DIRS else 1
+    tpl_idx = 2 if len(rel_parts) >= 5 and rel_parts[1] in c.TEMPLATE_STACK_GROUP_DIRS else 1
     is_tpl_src = (
         len(rel_parts) >= tpl_idx + 3
         and rel_parts[0] == "templates"
         and rel_parts[tpl_idx + 1] in ("rules", "skills", "assets")
     )
-    is_ag_asset = len(rel_parts) >= 4 and rel_parts[:2] == (".agents", "assets")
+    is_ag_asset = (
+        len(rel_parts) >= 4 and rel_parts[: len(c.AGENTS_ASSETS_PREFIX)] == c.AGENTS_ASSETS_PREFIX
+    )
     is_tracker = len(rel_parts) == 1 and rel_parts[0] in PROMOTABLE_TRACKERS
-    is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in ("roadmaps", "corporate", "docs")
+    is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in c.VALID_DELEGATION_DIRS
     inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
     eff_template, parent_lid = target_template or inferred_tpl, str(target_m.get("layer_id", ""))
     if (
         not eff_template
-        and rel_parts[:2] == (".agents", "rules")
+        and rel_parts[: len(c.AGENTS_RULES_PREFIX)] == c.AGENTS_RULES_PREFIX
         and src_file.name != "AGENTS.md"
-        and not MATERIALIZED_RULE_RE.match(src_file.name)
+        and not c.MATERIALIZED_RULE_RE.match(src_file.name)
         and parent_lid
         and _resolve_template_dir(layer_base, parent_lid) is not None
     ):
         eff_template = parent_lid
-    if eff_template and not KEBAB_ID_RE.match(eff_template):
+    if eff_template and not c.KEBAB_ID_RE.match(eff_template):
         raise ValueError(f"Invalid target_template {eff_template!r}: must be kebab-case")
     tpl_dest = _resolve_template_dest_dir(layer_base, str(eff_template)) if eff_template else None
     if is_tracker or is_gov_dir:
@@ -304,10 +302,10 @@ def promote_project_asset_to_layer(
         dest_file = base_d / "assets" / Path(*tail)
     elif src_file.name == "SKILL.md":
         lines = content.splitlines()
-        if len(lines) > 500 or not lines or lines[0].strip() != "---":
+        if len(lines) > c.SKILL_MD_MAX_LINES or not lines or lines[0].strip() != "---":
             raise ValueError("Promoted SKILL.md must have YAML frontmatter and <= 500 lines")
         meta = _parse_skill_frontmatter(src_file, project_dir)
-        if not KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
+        if not c.KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
             raise ValueError("Promoted SKILL.md must have kebab-case name and description")
         sub_p = f"skills/{src_file.parent.name}/SKILL.md"
         dest_file = (
@@ -320,16 +318,16 @@ def promote_project_asset_to_layer(
         if (
             dest_file.is_file()
             and src_file.name != "AGENTS.md"
-            and not MATERIALIZED_RULE_RE.match(src_file.name)
+            and not c.MATERIALIZED_RULE_RE.match(src_file.name)
         ):
             raise ValueError(
                 f"Refusing to overwrite existing AGENTS.md with rule {src_file.name!r}; "
                 "specify target_template or promote AGENTS.md / layer-NN-<name>.md"
             )
-        if len(content.encode("utf-8")) > AGENTS_MD_MAX_BYTES:
+        if len(content.encode("utf-8")) > c.AGENTS_MD_MAX_BYTES:
             raise ValueError(
                 f"Promoted AGENTS.md size ({len(content.encode('utf-8'))} bytes) "
-                f"exceeds {AGENTS_MD_MAX_BYTES}-byte token budget cap"
+                f"exceeds {c.AGENTS_MD_MAX_BYTES}-byte token budget cap"
             )
 
     eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
@@ -360,7 +358,7 @@ def promote_project_asset_to_layer(
         else:
             dest_file.unlink(missing_ok=True)
             shutil.copy2(src_file, dest_file)
-            dest_file.chmod(0o644)
+            dest_file.chmod(c.DEFAULT_PROMOTED_FILE_MODE)
 
     src_rel_str = str(src_file.relative_to(project_dir.resolve()))
     dest_rel_str, sha256_str = str(dest_file.relative_to(repo_resolved)), _sha256_file(src_file)

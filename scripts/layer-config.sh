@@ -55,9 +55,9 @@ Commands:
                     [--ticket <id>] [--priority <P0|P1|P2>] [--surface|--tracker <surface>]
                     [--email <email>] [--force]
       Delegate a 1-hop downward directive or governance artifact into a child layer surface.
-  manage-roster [<target-dir>] [--add <email>] [--remove <email>] [--role <owner|validator|member>]
+  manage-roster [<target-dir>] [--add <email>] [--remove <email>] [--role <owner|maintainer|validator|member>]
                 [--no-codeowners]
-      Inspect or update the layer roster (owners, validators, members) and .github/CODEOWNERS.
+      Inspect or update the layer roster (owners, maintainers, validators, members) and CODEOWNERS.
   configure-git-policy [<target-dir>] [--protected <csv>] [--no-codeowners] [--no-require-pr]
       Configure Git branch protection, process stages, env promotion branches, and CODEOWNERS.
   check-env-promotion [<target-dir>] --to-env <dev|tst|pre|pro> [--branch <branch>] [--email <email>]

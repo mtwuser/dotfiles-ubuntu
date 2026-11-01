@@ -13,22 +13,9 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.constants import (
-    CONSUMER_ALLOWED_OPS,
-    GENERIC_EMAIL_DOMAINS,
-    GENERIC_LAYER_TOKENS,
-    KEBAB_ID_RE,
-    MATERIALIZED_RULE_RE,
-    OWNER_RESTRICTED_OPS,
-)
-from dotfiles_mcp.git_governance_engine import (
-    record_governance_event,
-    stage_non_destructive_proposal,
-)
-from dotfiles_mcp.manifest_helpers import (
-    _ensure_rule_file_frontmatter,
-    _resolve_mounted_child_dir,
-)
+from . import constants as c
+from .git_governance_engine import record_governance_event, stage_non_destructive_proposal
+from .manifest_helpers import _ensure_rule_file_frontmatter, _resolve_mounted_child_dir
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -38,7 +25,9 @@ def resolve_git_user_email(target_dir: Path) -> str:
         return env_email
     try:
         cmd = ["git", "-C", str(target_dir), "config", "user.email"]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=False)  # noqa: S603
+        res = subprocess.run(  # noqa: S603
+            cmd, capture_output=True, text=True, timeout=c.GIT_CMD_TIMEOUT_SECONDS, check=False
+        )
         if res.returncode == 0 and res.stdout.strip():
             return res.stdout.strip()
     except OSError:
@@ -74,8 +63,8 @@ def configure_layer_authority(
         f"{cleaned_role} ({layer_id})" + (f" <{cleaned_emails[0]}>" if cleaned_emails else "")
     )
     auth_blk: dict[str, Any] = {"owner_role": cleaned_role, "authorized_emails": cleaned_emails}
-    auth_blk.update(escalation_contact=contact, consumer_allowed_ops=list(CONSUMER_ALLOWED_OPS))
-    auth_blk["owner_restricted_ops"] = list(OWNER_RESTRICTED_OPS)
+    auth_blk.update(escalation_contact=contact, consumer_allowed_ops=list(c.CONSUMER_ALLOWED_OPS))
+    auth_blk["owner_restricted_ops"] = list(c.OWNER_RESTRICTED_OPS)
     manifest["layer_authority"] = auth_blk
     if not dry_run:
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -90,19 +79,24 @@ def _detect_inherited_upstream_asset(
     """Return (is_inherited, owning_template_or_layer) if target_rel_path is upstream-owned."""
     rel = target_rel_path.replace("\\", "/").strip().lstrip("/")
     while rel.startswith("./"):
-        rel = rel[2:]
+        rel = rel.removeprefix("./")
     own_id, parts = str(manifest.get("layer_id", target_dir.name)), Path(rel).parts
-    is_ag_rule = len(parts) == 3 and parts[:2] == (".agents", "rules")
-    if is_ag_rule and (m_rule := MATERIALIZED_RULE_RE.match(parts[2])):
+    r_len, s_len = len(c.AGENTS_RULES_PREFIX), len(c.AGENTS_SKILLS_PREFIX)
+    is_ag_rule = len(parts) == r_len + 1 and parts[:r_len] == c.AGENTS_RULES_PREFIX
+    if is_ag_rule and (m_rule := c.MATERIALIZED_RULE_RE.match(parts[-1])):
         return True, f"layer:{m_rule.group(2)}"
     inh_tpls = [str(t) for t in manifest.get("default_stack_templates", []) if str(t) != own_id]
-    if len(parts) >= 2 and parts[0] == "templates" and parts[1] in inh_tpls:
+    if len(parts) > 1 and parts[0] == "templates" and parts[1] in inh_tpls:
         return True, parts[1]
-    is_ag_skill = len(parts) == 4 and parts[:2] == (".agents", "skills") and parts[3] == "SKILL.md"
+    is_ag_skill = (
+        len(parts) == s_len + 2
+        and parts[:s_len] == c.AGENTS_SKILLS_PREFIX
+        and parts[-1] == "SKILL.md"
+    )
     for tpl_name in inh_tpls:
         tdir = target_dir / "templates" / tpl_name
-        if (is_ag_rule and (tdir / "rules" / parts[2]).is_file()) or (
-            is_ag_skill and (tdir / "skills" / parts[2] / "SKILL.md").is_file()
+        if (is_ag_rule and (tdir / "rules" / parts[-1]).is_file()) or (
+            is_ag_skill and (tdir / "skills" / parts[s_len] / "SKILL.md").is_file()
         ):
             return True, tpl_name
     return False, ""
@@ -124,6 +118,12 @@ def verify_layer_operation_authority(
     auth = raw_auth if isinstance(raw_auth, dict) else {}
     owner_role = str(auth.get("owner_role", f"Layer Owner ({layer_id})"))
     auth_emails = [str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()]
+    maint_emails = [str(e).strip() for e in auth.get("maintainer_emails", []) if str(e).strip()]
+    allowed_pool = (
+        list(dict.fromkeys([*auth_emails, *maint_emails]))
+        if operation in c.MAINTAINER_ALLOWED_OPS
+        else auth_emails
+    )
     escalation_contact = str(auth.get("escalation_contact", f"{owner_role} ({layer_id})"))
     eff_email = resolve_git_user_email(target_dir) if actor_email is None else actor_email.strip()
     if target_rel_path:
@@ -148,18 +148,18 @@ def verify_layer_operation_authority(
             ev_kw["reason_code"] = "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
             record_governance_event(target_dir, **ev_kw)
             return res
-    if operation in CONSUMER_ALLOWED_OPS:
+    if operation in c.CONSUMER_ALLOWED_OPS:
         res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "remediation": None}
         res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
         res["owner_role"] = owner_role
         return res
-    if auth_emails and not (
-        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in auth_emails)
+    if allowed_pool and not (
+        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in allowed_pool)
     ):
         rem = (
             f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
             f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
-            f"authorized: {', '.join(auth_emails)}). "
+            f"authorized: {', '.join(allowed_pool)}). "
             f"Process to follow: (1) Keep changes in your own squad/project workspace; "
             f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
             f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
@@ -169,7 +169,7 @@ def verify_layer_operation_authority(
         )
         res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
         res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
-        res.update(owner_role=owner_role, authorized_emails=auth_emails)
+        res.update(owner_role=owner_role, authorized_emails=allowed_pool)
         res.update(escalation_contact=escalation_contact, remediation=rem)
         ev_kw = {"operation": operation, "status": "blocked", "actor_email": eff_email}
         ev_kw.update(reason_code="UNAUTHORIZED_ACTOR_EMAIL", message=rem, remediation=rem)
@@ -198,12 +198,13 @@ def verify_oss_promotion_agnosticism(project_dir: Path, content: str, source_rel
     for pat in (auth.get("authorized_emails") or []) if isinstance(auth, dict) else []:
         if isinstance(pat, str) and "@" in pat:
             dom = pat.split("@", 1)[1].lstrip("*.").lower()
-            if dom and dom not in GENERIC_EMAIL_DOMAINS:
+            if dom and dom not in c.GENERIC_EMAIL_DOMAINS:
                 private_tokens.add(dom)
                 raw_ids.append(dom)
+    tok_pat = rf"[a-z0-9]{{{c.MIN_PRIVATE_TOKEN_LEN},}}"
     for rid in raw_ids:
         private_tokens.update(
-            t for t in re.findall(r"[a-z0-9]{4,}", rid.lower()) if t not in GENERIC_LAYER_TOKENS
+            t for t in re.findall(tok_pat, rid.lower()) if t not in c.GENERIC_LAYER_TOKENS
         )
     leaked = sorted(
         tok for tok in private_tokens if re.search(rf"\b{re.escape(tok)}\b", content, re.IGNORECASE)
@@ -224,10 +225,9 @@ def verify_single_hop_upstream(
     up_cfg = proj_m.get("upstream_layer")
     expected_up_id = str(up_cfg.get("layer_id", "")).strip() if isinstance(up_cfg, dict) else ""
     actual_up_id = str(up_m.get("layer_id", "")).strip()
+    is_corp = str(proj_m.get("layer_role", "")) == "corporate"
     both_oss = (
-        str(proj_m.get("layer_role", "")) == "corporate"
-        or expected_up_id == "root"
-        or "dotfiles-ubuntu" in expected_up_id
+        is_corp or expected_up_id == "root" or "dotfiles-ubuntu" in expected_up_id
     ) and _is_oss_root_manifest(up_m)
     if expected_up_id and actual_up_id and expected_up_id != actual_up_id and not both_oss:
         src_id = str(proj_m.get("layer_id", project_dir.name))
@@ -265,7 +265,8 @@ def build_upward_promotion_pr_plan(
     proj_m, target_m = _load_manifest_dict(project_dir), _load_manifest_dict(target_repo_dir)
     oss_anonymized = _is_oss_root_manifest(target_m)
     src_lid = str(proj_m.get("layer_id", project_dir.name))
-    src_role, src_prec = str(proj_m.get("layer_role", "project")), int(proj_m.get("precedence", 50))
+    src_role = str(proj_m.get("layer_role", "project"))
+    src_prec = int(proj_m.get("precedence", c.ROLE_DEFAULT_PRECEDENCE["squad"]))
     source_layer_id = "enterprise-root-0" if oss_anonymized else src_lid
     source_layer_role = "corporate" if oss_anonymized else src_role
     t_fallback = target_layer if target_layer != "root" else target_repo_dir.name
@@ -295,7 +296,7 @@ def build_upward_promotion_pr_plan(
     else:
         safe_id = (
             source_layer_id
-            if KEBAB_ID_RE.match(source_layer_id)
+            if c.KEBAB_ID_RE.match(source_layer_id)
             else re.sub(r"[^a-z0-9]+", "-", source_layer_id.lower()).strip("-") or "project"
         )
         branch_name = f"promote/{safe_id}/{asset_slug}"
@@ -339,12 +340,6 @@ def build_upward_promotion_pr_plan(
     return out
 
 
-VALID_DELEGATION_SURFACES = (
-    "WORKTASK.md", "BACKLOG.md", "WORKROAD.md", "ROADMAP.md",
-    "WORKVALI.md", "roadmaps", "rules", "corporate",
-)  # fmt: skip
-
-
 def delegate_directive_to_child(
     workspace_dir: Path,
     *,
@@ -360,13 +355,13 @@ def delegate_directive_to_child(
 ) -> dict[str, Any]:
     """Delegate a 1-hop downward directive or governance artifact into <child_layer>/<tracker>."""
     clean_child, clean_dir = child_layer.strip(), directive.strip()
-    if not KEBAB_ID_RE.match(clean_child):
+    if not c.KEBAB_ID_RE.match(clean_child):
         raise ValueError(f"Invalid child_layer {child_layer!r}: must be kebab-case")
     if priority not in ("P0", "P1", "P2"):
         raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
-    if tracker not in VALID_DELEGATION_SURFACES:
+    if tracker not in c.VALID_DELEGATION_SURFACES:
         raise ValueError(
-            f"Invalid tracker/surface {tracker!r}: must be in {VALID_DELEGATION_SURFACES}"
+            f"Invalid tracker/surface {tracker!r}: must be in {c.VALID_DELEGATION_SURFACES}"
         )
     ws, src_file, src_body = workspace_dir.resolve(), None, ""
     if source_rel_path:
@@ -387,7 +382,7 @@ def delegate_directive_to_child(
         raise ValueError(f"Target 1-hop child layer not found: {clean_child!r}")
     m = _load_manifest_dict(ws)
     pid, prole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "corporate"))
-    pprec = int(m.get("precedence", 10))
+    pprec = int(m.get("precedence", c.ROLE_DEFAULT_PRECEDENCE["corporate"]))
     eff_text = clean_dir or f"Delivered `{src_file.name if src_file else tracker}`"
     t_match = re.search(r"\b([A-Z]{2,12}-[A-Z0-9-]{2,20})\b", eff_text)
     eff_ticket = (ticket_id or "").strip().upper() or (
@@ -416,7 +411,7 @@ def delegate_directive_to_child(
                         rp.parent.mkdir(parents=True, exist_ok=True)
                         rp.write_text(f"{r_body.rstrip()}\n", encoding="utf-8")
                         _ensure_rule_file_frontmatter(rp, sync_in_place=True)
-        elif tracker in ("roadmaps", "corporate"):
+        elif tracker in c.VALID_DELEGATION_DIRS:
             tfile = tdir / tracker / fname
             hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)"
             hdr_body = f"{hdr}\n\n{src_body or eff_text}"
@@ -449,7 +444,7 @@ def delegate_directive_to_child(
         p_base = p_cur.rstrip() if p_hdr in p_cur else f"{p_cur.rstrip()}\n\n{p_hdr}"
         if p_entry not in p_base:
             p_wt.write_text(f"{p_base}\n{p_entry}\n", encoding="utf-8")
-    if src_file is not None and src_file.name in VALID_DELEGATION_SURFACES[:5]:
+    if src_file is not None and src_file.name in c.VALID_TRACKER_FILES:
         note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
         if not dry_run and note not in src_body:
             src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")

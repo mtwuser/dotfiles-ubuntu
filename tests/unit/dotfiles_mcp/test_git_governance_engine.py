@@ -122,6 +122,7 @@ class TestGitGovernanceEngine:
             ws, add_email="qa@acme.com", member_role="validator", dry_run=True
         )
         r_val = manage_layer_roster(ws, add_email="qa@acme.com", member_role="validator")
+        r_maint = manage_layer_roster(ws, add_email="maint@acme.com", member_role="maintainer")
         r_own = manage_layer_roster(
             ws, add_email="arch@acme.com", member_role="owner", title="CTO", squad="core"
         )
@@ -153,6 +154,7 @@ class TestGitGovernanceEngine:
         assert r_noop["roster"]["owners"] == []
         assert cfg_res["codeowners_owners"] == "lead@acme.com"
         assert r_dry["dry_run"] is True and r_val["validator_emails"] == ["qa@acme.com"]
+        assert r_maint["maintainer_emails"] == ["maint@acme.com"]
         assert "arch@acme.com" in r_own["authorized_emails"]
         assert len(r_mem["roster"]["members"]) == 1
         assert r_rem["roster"]["members"] == []

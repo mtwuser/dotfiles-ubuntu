@@ -44,7 +44,31 @@ DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
     "pro": "main",
 }
 VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
-VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "validator", "member")
+VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "maintainer", "validator", "member")
+VALID_TRACKER_FILES: tuple[str, ...] = (
+    "WORKTASK.md",
+    "BACKLOG.md",
+    "WORKROAD.md",
+    "ROADMAP.md",
+    "WORKVALI.md",
+)
+VALID_DELEGATION_DIRS: tuple[str, ...] = ("roadmaps", "rules", "corporate")
+VALID_DELEGATION_SURFACES: tuple[str, ...] = (*VALID_TRACKER_FILES, *VALID_DELEGATION_DIRS)
+AGENTS_RULES_PREFIX: tuple[str, str] = (".agents", "rules")
+AGENTS_SKILLS_PREFIX: tuple[str, str] = (".agents", "skills")
+AGENTS_ASSETS_PREFIX: tuple[str, str] = (".agents", "assets")
+GIT_CMD_TIMEOUT_SECONDS = 5
+MIN_PRIVATE_TOKEN_LEN = 4
+MIN_ROUTING_KEYWORD_LEN = 3
+MAX_BRANCH_SLUG_TOKENS = 7
+MAX_BRANCH_SLUG_CHARS = 48
+MAX_DIFF_PREVIEW_LINES = 16
+MAX_CONSULT_MATCHES = 5
+AUDIT_LOG_TAIL_LINES = 20
+MAX_RECENT_GOVERNANCE_ALERTS = 5
+STATUS_EXCERPT_MAX_LINES = 35
+SKILL_MD_MAX_LINES = 500
+DEFAULT_PROMOTED_FILE_MODE = 0o644
 TEMPLATE_STACK_GROUP_DIRS = (
     "business-stack",
     "squad-stack",
@@ -238,6 +262,16 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "check-env-promotion",
     "record-decision",
 )
+VALIDATOR_ALLOWED_OPS: tuple[str, ...] = (
+    "check-env-promotion",
+    "record-decision",
+)
+MAINTAINER_ALLOWED_OPS: tuple[str, ...] = (
+    "scaffold-template",
+    "manage-roster",
+    "configure-git-policy",
+    "delegate-to-child",
+)
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",
     "scaffold-template",
@@ -250,6 +284,19 @@ OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "commit-layer",
     "push-layer",
 )
+_FULL_LAYER_TARGETS: tuple[str, ...] = (
+    "status", "task", "complete", "consult", "horizon", "sync", "upstream-diff",
+    "diff", "authority", "roster", "env-gate", "decision", "promote", "delegate", "mcp-test",
+)  # fmt: skip
+LAYER_ROLE_MAKEFILE_TARGETS: dict[str, tuple[str, ...]] = {
+    "corporate": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
+    "domain-policy": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
+    "department": _FULL_LAYER_TARGETS,
+    "squad": _FULL_LAYER_TARGETS,
+    "project": tuple(
+        t for t in _FULL_LAYER_TARGETS if t not in ("delegate", "horizon", "mcp-test")
+    ),
+}
 GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
     {
         "root",
