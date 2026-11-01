@@ -14,10 +14,16 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     AUDIT_LOG_TAIL_LINES,
+    BUSINESS_PHASE_SEMANTICS,
     DEFAULT_ENV_BRANCH_MAP,
     DEFAULT_PROCESS_BRANCH_PREFIXES,
     DEFAULT_PROTECTED_BRANCHES,
     MAX_RECENT_GOVERNANCE_ALERTS,
+    SECONDS_PER_DAY,
+    STALE_MODULE_REVIEW_DAYS,
+    STALE_POLICY_REVIEW_DAYS,
+    STALE_PROPOSAL_MAX_DAYS,
+    TECHNICAL_PHASE_SEMANTICS,
     VALID_ENVIRONMENTS,
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
@@ -28,6 +34,17 @@ def _load_manifest(target_dir: Path) -> dict[str, Any]:
     mpath = target_dir / "system" / "mcp-layer.json"
     loaded = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
     return loaded if isinstance(loaded, dict) else {}
+
+
+def _append_tracker_line(ws: Path, tracker: str, line: str, title_id: str) -> None:
+    trk_file = ws / tracker
+    cur = (
+        trk_file.read_text(encoding="utf-8")
+        if trk_file.is_file()
+        else f"# Active Work Tasks — {title_id}\n\n"
+    )
+    if line not in cur:
+        trk_file.write_text(f"{cur}{'' if cur.endswith('\n') else '\n'}{line}\n", encoding="utf-8")
 
 
 def record_governance_event(
@@ -107,19 +124,11 @@ def stage_non_destructive_proposal(
     if not dry_run:
         staged_file.parent.mkdir(parents=True, exist_ok=True)
         staged_file.write_text(f"{content.rstrip()}\n", encoding="utf-8")
-        trk_file = ws / "WORKTASK.md"
-        cur = (
-            trk_file.read_text(encoding="utf-8")
-            if trk_file.is_file()
-            else f"# Active Work Tasks — {ws.name}\n\n"
-        )
         entry = (
             f"- [ ] **[P0 · Staged Governance Proposal (`{scope_tag}`)]**: "
             f"Review `{staged_rel.as_posix()}` ({reason_code})"
         )
-        if entry not in cur:
-            sep = "" if cur.endswith("\n") else "\n"
-            trk_file.write_text(f"{cur}{sep}{entry}\n", encoding="utf-8")
+        _append_tracker_line(ws, "WORKTASK.md", entry, ws.name)
     record_governance_event(
         ws,
         operation=operation,
@@ -239,11 +248,19 @@ def inspect_git_governance_state(
     )
     alerts = [item for line in raw_lines if (item := json.loads(line)).get("status") != "allowed"]
     proposals_dir = ws / ".agents" / "proposals"
-    staged_files = (
-        [str(p.relative_to(ws)).replace("\\", "/") for p in sorted(proposals_dir.rglob("*.md"))]
-        if proposals_dir.is_dir()
-        else []
-    )
+    p_paths = sorted(proposals_dir.rglob("*.md")) if proposals_dir.is_dir() else []
+    staged_files = [str(p.relative_to(ws)).replace("\\", "/") for p in p_paths]
+    now_ts = datetime.now(UTC).timestamp()
+    stale_props = [
+        str(p.relative_to(ws)).replace("\\", "/")
+        for p in p_paths
+        if (now_ts - p.stat().st_mtime) / SECONDS_PER_DAY > STALE_PROPOSAL_MAX_DAYS
+    ]
+    thresholds = {
+        "proposals": STALE_PROPOSAL_MAX_DAYS,
+        "modules_and_specs": STALE_MODULE_REVIEW_DAYS,
+        "policies": STALE_POLICY_REVIEW_DAYS,
+    }
     return {
         "current_branch": eff_branch,
         "is_protected_branch": is_protected,
@@ -252,6 +269,8 @@ def inspect_git_governance_state(
         "protected_branches": prot,
         "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
         "staged_proposals": staged_files,
+        "stale_proposals": stale_props,
+        "staleness_thresholds_days": thresholds,
         "recent_governance_alerts": alerts[-MAX_RECENT_GOVERNANCE_ALERTS:],
     }
 
@@ -280,21 +299,7 @@ def evaluate_environment_promotion(
         "department",
         "domain-policy",
     ) or "business-base" in manifest.get("default_stack_templates", [])
-    sem_map = (
-        {
-            "dev": "Drafting & Task Execution",
-            "tst": "Department/Squad Peer Analysis",
-            "pre": "Cross-Layer / C-Level Pre-Approval (WORKVALI.md)",
-            "pro": "Ratified Corporate/Departmental Norm",
-        }
-        if is_biz
-        else {
-            "dev": "Feature Coding & Unit Tests",
-            "tst": "Automated Test & Imp Verification",
-            "pre": "Staging E2E & QA Validation (WORKVALI.md)",
-            "pro": "Production Release",
-        }
-    )
+    sem_map = BUSINESS_PHASE_SEMANTICS if is_biz else TECHNICAL_PHASE_SEMANTICS
     failed_gates: list[str] = []
     wt_file, wv_file = ws / "WORKTASK.md", ws / "WORKVALI.md"
     wt_txt = wt_file.read_text(encoding="utf-8") if wt_file.is_file() else ""
@@ -375,13 +380,8 @@ def record_governance_decision(
         f"- [{chk}] **[GOVERNANCE DECISION: {mapped_status.upper()} by "
         f"`{actor_email or lid}` (`{lid}`)]** (`{clean_ref}`): {clean_reason}"
     )
-    trk_file = ws / tracker
     if not dry_run:
-        def_hdr = f"# Active Work Tasks — {lid}\n\n"
-        cur = trk_file.read_text(encoding="utf-8") if trk_file.is_file() else def_hdr
-        if line not in cur:
-            sep = "" if cur.endswith("\n") else "\n"
-            trk_file.write_text(f"{cur}{sep}{line}\n", encoding="utf-8")
+        _append_tracker_line(ws, tracker, line, lid)
     ev_kw: dict[str, Any] = {"operation": "record-decision", "status": mapped_status}
     ev_kw.update(actor_email=actor_email, source_rel_path=clean_ref, dry_run=dry_run)
     ev_kw.update(

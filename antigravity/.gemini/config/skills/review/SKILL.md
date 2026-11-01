@@ -36,6 +36,8 @@ Execute these checks **in order**:
 - [ ] **Import direction** — no downstream module importing from upstream (check project's dependency hierarchy)
 - [ ] **Dead code** — unused imports, unreachable functions, commented-out blocks
 - [ ] **Naming conventions** — models as nouns, services as verbs, consistent suffixes
+- [ ] **Structural Evolution & Anti-Over-Compression (`Inline -> Function -> Class -> Protocol/Polymorphism -> Module`)** — flag defensive syntactic compression (opaque short variable names like `d_rec` / `out_h`, chained `.update()` packing near `< 465` lines), $\ge 3$ functions sharing $\ge 4$ context parameters (*Data Clump* $\rightarrow$ Class/`@dataclass`), or $\ge 3$–$4$ `if/elif` role/surface branches ($\rightarrow$ declarative catalog or `Protocol` polymorphism)
+- [ ] **Temporal Staleness & Obsolescence Radar (`14d / 90d / 180d`)** — check `stale_proposals` (`> 14d`) in `make status`, code/spec modules untouched for `> 90d` while sibling modules evolved (or `Source` newer than its `1:1:1` `Spec`), and policies/templates untouched for `> 180d`
 
 ### 1.2 Models & Serializers
 

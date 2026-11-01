@@ -84,10 +84,10 @@ Once conceptual and normative requirements from Pass 1 are aligned, audit their 
 
 1. **Floor-Version Security & Intrinsic Runtime Substrate Exploitation**:
    - Verify the code uses modern, secure-by-default idioms of the declared language floor version (`requires-python`) and C-backed standard library primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`) over legacy patterns. When `is_oss_dev_workspace: true` (`DOTFILES_DEV_REPO_DIR`), also identify pure-Python hot paths eligible for C-backed stdlib replacement, optional C-accelerators (`PEP 7`), or upstream OSS-to-OSS runtime contributions.
-2. **Functional vs. Object-Oriented Balance**:
-   - Prefer pure, stateless functions for deterministic transformations, parsing, and validation; reserve classes/objects for stateful lifecycle coordination, protocol dispatch, or dependency-injected services.
-3. **Modularity, Reuse & File Size (`< 465` Lines)**:
-   - Identify duplicated helpers across modules or scripts, oversized files ($\ge 465$ lines, target $\le 400$), circular dependencies, or mixed architectural responsibilities.
+2. **Functional vs. Object-Oriented & Polymorphic Evolution Ladder (`Inline -> Function -> Class -> Protocol/Polymorphism -> Module`)**:
+   - Prefer pure functions for stateless transformations, but escalate deterministically when code exhibits defensive syntactic compression (cryptic short identifiers, chained `.update()` packing): extract a **Function** when an inline block repeats $\ge 2$ times; extract a **Class / `@dataclass`** when $\ge 3$ functions share $\ge 4$ context parameters (*Data Clump*); use a **Declarative Catalog (`dict`) or `Protocol` Polymorphism** when `if/elif` chains branch across $\ge 3$–$4$ variants; and extract a **`1:1:1` Sub-Module** when a file crosses `400` lines.
+3. **Modularity, Reuse, File Size (`< 465` Lines) & Temporal Staleness Radar (`14d / 90d / 180d`)**:
+   - Identify duplicated helpers across modules or scripts, oversized files ($\ge 465$ lines, target $\le 400$), circular dependencies, or mixed architectural responsibilities, and audit context-dependent staleness (`> 14d` for staged `.agents/proposals/**` via `stale_proposals` in `make status`, `> 90d` or `Source > Spec` temporal drift for code/tests/`docs/architecture/`, and `> 180d` for `corporate/` and `templates/`).
 4. **Strict Typing & Error Contracts**:
    - Verify explicit parameter and return types on 100% of functions/methods, specific domain exceptions/error codes, and zero linter or type-checker warnings.
 

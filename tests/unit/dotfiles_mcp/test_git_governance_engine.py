@@ -6,7 +6,9 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 from __future__ import annotations
 
 import json
+import os
 import subprocess
+import time
 from pathlib import Path
 
 import pytest
@@ -140,7 +142,7 @@ class TestGitGovernanceEngine:
         st_tst = inspect_git_governance_state(ws, current_branch="env/tst")
         st_pre = inspect_git_governance_state(ws, current_branch="pre/rc1")
         st_pro = inspect_git_governance_state(ws, current_branch="release/v1.0.0")
-        stage_non_destructive_proposal(
+        prop_file = stage_non_destructive_proposal(
             ws,
             scope_tag="to-root",
             file_name="rule.md",
@@ -148,6 +150,9 @@ class TestGitGovernanceEngine:
             operation="promote-from-project",
         )
         st_with_prop = inspect_git_governance_state(ws, current_branch="custom/branch")
+        old_ts = time.time() - (15 * 86_400)
+        os.utime(prop_file, (old_ts, old_ts))
+        st_stale_prop = inspect_git_governance_state(ws, current_branch="custom/branch")
 
         # Assert
         assert dry_cfg["dry_run"] is True and no_co_cfg["codeowners_file"] is None
@@ -176,6 +181,13 @@ class TestGitGovernanceEngine:
         assert st_pre["active_environment"] == "pre"
         assert st_pro["active_environment"] == "pro" and st_pro["is_protected_branch"] is False
         assert st_with_prop["staged_proposals"] == [".agents/proposals/to-root/rule.md"]
+        assert st_with_prop["stale_proposals"] == []
+        assert st_stale_prop["stale_proposals"] == [".agents/proposals/to-root/rule.md"]
+        assert st_stale_prop["staleness_thresholds_days"] == {
+            "proposals": 14,
+            "modules_and_specs": 90,
+            "policies": 180,
+        }
         assert len(st_with_prop["recent_governance_alerts"]) == 1
 
     def test_evaluate_environment_promotion_and_record_decisions(self, tmp_path: Path) -> None:

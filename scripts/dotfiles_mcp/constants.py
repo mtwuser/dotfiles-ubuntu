@@ -341,3 +341,19 @@ GENERIC_LAYER_TOKENS: frozenset[str] = frozenset(
 GENERIC_EMAIL_DOMAINS: frozenset[str] = frozenset(
     {"users.noreply.github.com", "example.com", "acme.com", "localhost"}
 )
+SECONDS_PER_DAY: int = 86_400
+STALE_PROPOSAL_MAX_DAYS: int = 14
+STALE_MODULE_REVIEW_DAYS: int = 90
+STALE_POLICY_REVIEW_DAYS: int = 180
+BUSINESS_PHASE_SEMANTICS: dict[str, str] = {
+    "dev": "Drafting & Task Execution",
+    "tst": "Department/Squad Peer Analysis",
+    "pre": "Cross-Layer / C-Level Pre-Approval (WORKVALI.md)",
+    "pro": "Ratified Corporate/Departmental Norm",
+}
+TECHNICAL_PHASE_SEMANTICS: dict[str, str] = {
+    "dev": "Feature Coding & Unit Tests",
+    "tst": "Automated Test & Imp Verification",
+    "pre": "Staging E2E & QA Validation (WORKVALI.md)",
+    "pro": "Production Release",
+}

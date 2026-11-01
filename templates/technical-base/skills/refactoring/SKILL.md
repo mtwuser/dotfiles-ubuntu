@@ -70,3 +70,21 @@ Unlike pure refactoring (where test count must remain `>=` baseline), **feature 
 3. **Default-Parameter Sensitivity Check (Anti-False-100% Coverage)**:
    - When decommissioning is paired with new fields that carry default values (e.g., `action="accept"`, `source="autonomous"`), 100% statement/branch coverage can be reached even if non-default values are never tested in cryptographic hashes, serialization, or filtering.
    - Always add explicit sensitivity and tampering tests proving that changing each new field alters the resulting hash, state, or filter output.
+
+## 5-Stage Structural Evolution & De-Compression Ladder
+
+While semantic conciseness (clean comprehensions, native stdlib primitives) is desirable in consolidated code, **defensive syntactic compression** (opaque short variable names like `d_rec` or `out_h`, chained `.update()` packing, or dense inline blocks used to stay under `< 465` lines) is a deterministic signal to escalate up the abstraction ladder:
+
+| Stage | Saturation / Over-Compression Signal | Escalation Target | Architectural & Cognitive Benefit |
+| :--- | :--- | :--- | :--- |
+| **1. Inline Compact Expression** | Expression repeats $\ge 2$ times, needs $> 3$ conditions, or forces cryptic short identifiers to save lines. | **$\rightarrow$ Stage 2: Pure Helper Function (`def _verb_noun`)** | Names the intent at the call site while restoring descriptive local variable names inside the isolated function. |
+| **2. Pure Function Cluster** | $\ge 3$ functions thread the same $\ge 4$ context parameters (`repo_dir, target_dir, manifest, dry_run` — *Data Clump*). | **$\rightarrow$ Stage 3: Cohesive Class / `@dataclass(frozen=True)`** | Binds shared state once in `self`, eliminating repetitive parameter threading and grouping cohesive methods. |
+| **3. Branching Function / Class** | `if / elif / else` or `match` chains branching across $\ge 3$–$4$ roles, surfaces, or kinds in multiple places. | **$\rightarrow$ Stage 4: Declarative Catalog (`dict`) or `Protocol` Polymorphism** | Uses O(1) declarative tables (`constants.py`) when data varies, or `typing.Protocol` / polymorphic dispatch when algorithms vary. |
+| **4. Multi-Cluster Module (`> 400` lines)** | File approaches `400–464` lines and relies on horizontal/syntactic compression to avoid `< 465` lines. | **$\rightarrow$ Stage 5: `1:1:1` Sub-Module Extraction** | Extracts a dedicated `<subdomain>.py` (`+ Test<Subdomain> + Spec row`), returning both modules to $\sim 200$–$350$ uncompressed lines. |
+
+## Adaptive Co-Evolution (`Human <-> AI Model <-> Technology Substrate`)
+
+Code representation is a living equilibrium across three evolving surfaces:
+1. **Technology Substrate**: As language floor versions and C-backed standard libraries evolve, replace verbose manual loops/state with native runtime primitives.
+2. **AI Reasoning & Specificity**: As model reasoning and context capabilities advance, favor higher specificity (strict `Protocol` contracts, declarative strategy tables, exact cut-point constants) over repetitive procedural boilerplate.
+3. **Human Comprehension Anchor (`1:1:1`)**: Production code can increase in semantic specificity and execution efficiency as long as **Tier 1–3 Documentation (`README -> Guides -> Architecture Specs`)** and **Self-Documenting `1:1:1` Tests (`test_<subject>_<scenario>_<expected>` + 1-line invariant docstring + AAA)** remain 100% transparent to the human operator, flowing refinements bidirectionally via `/enrich` (upward) and `make sync` (downward).
