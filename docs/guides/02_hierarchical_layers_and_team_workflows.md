@@ -215,6 +215,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
    - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task`), and outputs `git checkout -b task/<id>-<slug>`.
    - `make horizon` — Inspects 1-hop upstream parent and 1-hop downstream `mounted_layers`.
    - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
+   - `make upstream-diff` — Compares rule sections (`#`/`##`) between the upstream parent/Open Source and local templates (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).
    - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
    - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
    - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr`.

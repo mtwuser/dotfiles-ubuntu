@@ -209,6 +209,7 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "check-authority",
     "inspect-horizon",
     "start-task",
+    "compare-upstream",
 )
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",

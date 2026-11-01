@@ -6,7 +6,12 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 from pathlib import Path
 
 import pytest
-from dotfiles_mcp.workflow_engine import _derive_branch_slug, start_task_workflow
+from dotfiles_mcp.workflow_engine import (
+    _derive_branch_slug,
+    _parse_markdown_sections_map,
+    compare_upstream_templates,
+    start_task_workflow,
+)
 
 
 class TestWorkflowEngine:
@@ -78,3 +83,79 @@ class TestWorkflowEngine:
         ):
             with pytest.raises(ValueError, match=err_pat):
                 start_task_workflow(ws, **bad_kw)  # type: ignore[arg-type]
+
+    def test_parse_markdown_sections_map_and_compare_upstream_templates(
+        self, tmp_path: Path
+    ) -> None:
+        """Compare upstream vs local sections and safely apply upstream-only additions."""
+        # Arrange
+        up_dir, ws_dir = tmp_path / "upstream", tmp_path / "workspace"
+        for d, lid in ((up_dir, "oss-root"), (ws_dir, "corp-root")):
+            (d / "system").mkdir(parents=True)
+            (d / "system/mcp-layer.json").write_text(
+                f'{{"layer_id":"{lid}","default_stack_templates":["business-base","missing-tpl"]}}',
+                encoding="utf-8",
+            )
+            (d / "templates/business-base/rules").mkdir(parents=True)
+        (up_dir / "templates/business-base/rules/sync.md").write_text(
+            "---\ntrigger: always_on\n---\n# Sync\nSame body\n", encoding="utf-8"
+        )
+        (ws_dir / "templates/business-base/rules/sync.md").write_text(
+            "# Sync\nSame body\n", encoding="utf-8"
+        )
+        (up_dir / "templates/business-base/rules/up-only.md").write_text(
+            "Preamble line\n# New Upstream File\nBody\n", encoding="utf-8"
+        )
+        (ws_dir / "templates/business-base/rules/loc-only.md").write_text(
+            "# Local File\nLocal body\n", encoding="utf-8"
+        )
+        (up_dir / "templates/business-base/rules/mixed.md").write_text(
+            "# Core\nSame\n\n## Diverged\nUpstream v2\n\n## Upstream Added\nNew rule\n",
+            encoding="utf-8",
+        )
+        (ws_dir / "templates/business-base/rules/mixed.md").write_text(
+            "# Core\nSame\n\n## Diverged\nLocal v1\n\n## Local Custom\nCustom rule\n",
+            encoding="utf-8",
+        )
+        (up_dir / "templates/business-base/rules/add-only.md").write_text(
+            "# Base\nSame\n\n## Extra\nAdded\n", encoding="utf-8"
+        )
+        (ws_dir / "templates/business-base/rules/add-only.md").write_text(
+            "# Base\nSame\n", encoding="utf-8"
+        )
+        (up_dir / "templates/business-base/rules/loc-sec.md").write_text(
+            "# Base\nSame\n", encoding="utf-8"
+        )
+        (ws_dir / "templates/business-base/rules/loc-sec.md").write_text(
+            "# Base\nSame\n\n## Local Sec\nCustom\n", encoding="utf-8"
+        )
+
+        # Act
+        empty_secs = _parse_markdown_sections_map("")
+        ro_cmp = compare_upstream_templates(up_dir, ws_dir, apply_upstream_only=False)
+        dry_cmp = compare_upstream_templates(
+            up_dir,
+            ws_dir,
+            template_filter="business-base",
+            apply_upstream_only=True,
+            dry_run=True,
+        )
+        dry_up_existed = (ws_dir / "templates/business-base/rules/up-only.md").exists()
+        live_cmp = compare_upstream_templates(
+            up_dir, ws_dir, apply_upstream_only=True, dry_run=False
+        )
+
+        # Assert
+        assert empty_secs == [] and ro_cmp["safe_applied_files"] == []
+        assert dry_cmp["dry_run"] is True and dry_up_existed is False
+        assert live_cmp["summary"]["files_compared"] == 6
+        assert live_cmp["summary"]["in_sync_files"] == 1
+        assert (ws_dir / "templates/business-base/rules/up-only.md").is_file()
+        mixed_txt = (ws_dir / "templates/business-base/rules/mixed.md").read_text(encoding="utf-8")
+        assert "## Upstream Added" in mixed_txt and "## Local Custom" in mixed_txt
+        assert "Local v1" in mixed_txt
+        by_file = {f["rule_file"].split("/")[-1]: f for f in live_cmp["file_comparisons"]}
+        assert by_file["sync.md"]["recommended_action"] == "none"
+        assert by_file["mixed.md"]["recommended_action"] == "review_diverged_sections"
+        assert by_file["add-only.md"]["recommended_action"] == "adopt_upstream_sections"
+        assert by_file["loc-sec.md"]["recommended_action"] == "keep_local_or_promote"

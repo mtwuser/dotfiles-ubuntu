@@ -48,9 +48,11 @@ Layer A — Universal Global Baseline (dotfiles-ubuntu)
 > [!IMPORTANT]
 > Before evaluating any upward promotion, `/enrich` MUST ensure the active workspace is synchronized with the latest rules from its hierarchical ancestors (`Open Source Layer A` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `Department` $\rightarrow$ `Squad` $\rightarrow$ `Project`).
 
-1. **Run `make horizon` and `make diff`** in the active workspace (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`).
-2. **Inspect Version, Upstream & Mounted Child Sync Status (`downward_sync_needed` & `child_sync_needed`)**:
-   - Check `oss_root_version` (`~/dotfiles-ubuntu/VERSION`), `upstream_version` (`1-hop parent VERSION`), `workspace_version`, `downward_sync_needed` (`shared_template_drifts` with `drift_direction: "upstream_newer"`), and `child_sync_needed` (`downstream_layer_drifts` across mounted `layers/*` children).
+1. **Run `make horizon`, `make upstream-diff`, and `make diff`** in the active workspace (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>` and `compare-upstream <PROJECT_ROOT>`).
+2. **Inspect Version, Section-Level Upstream Additions & Mounted Child Sync Status (`downward_sync_needed` & `child_sync_needed`)**:
+   - Check `oss_root_version` (`~/dotfiles-ubuntu/VERSION`), `upstream_version` (`1-hop parent VERSION`), `workspace_version`, `downward_sync_needed` (`shared_template_drifts` with `drift_direction: "upstream_newer"`), `child_sync_needed` (`downstream_layer_drifts` across mounted `layers/*` children), and `make upstream-diff` (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).
+   - **If `make upstream-diff` reports `upstream_only_sections` alongside `local_only_sections`**:
+     - Run `./scripts/layer-config.sh compare-upstream . --apply-safe` to adopt new upstream sections without overwriting local custom sections, then review any `diverged_sections` (`diff_preview`) with the user.
    - **If `downward_sync_needed: true`, `child_sync_needed: true`, or `make diff` reports `modified_in_project`**:
      1. Run **`make sync`** (`downward_sync_command`) FIRST so the workspace absorbs both the latest 1-hop upstream templates (while preserving any newer locally promoted templates) and all updated 1-hop downstream mounted child layers (`layers/*`) into `.agents/`.
      2. Verify `make diff` reports `0` drift (`modified_in_project: []`) and `make horizon` reports `downward_sync_needed: false`.

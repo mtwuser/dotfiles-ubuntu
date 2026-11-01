@@ -179,6 +179,7 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
+./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
 ./scripts/layer-config.sh start-task <your-project> --task "LEGAL-2026-004"
 ./scripts/layer-config.sh diff-project <your-project>
 ./scripts/layer-config.sh promote-from-project <your-project> --source .agents/rules/rule.md --create-pr
