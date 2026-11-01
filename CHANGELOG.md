@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Single-Command Consolidated Workspace Status (`layer-config.sh status` / `make status`) & Automatic `.agents/SESSION.md` Seeding (`scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/dotfiles_mcp/fork_configurator.py`, `scripts/layer-config.sh`, `Makefile`, `antigravity/.gemini/config/skills/sopen/SKILL.md`)**:
+  - Added [`inspect_workspace_status`](scripts/dotfiles_mcp/workspace_bootstrapper.py) (`./scripts/layer-config.sh status [<dir>] [--parent-dir <dir>]` and `make status` in layer and root `Makefile`s) returning `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `has_project_start_skill`, `session_state` (`exists`, `last_conversation_id`, `excerpt`), `priority_state` (`active_tracker`, `excerpt`), `git_state` (`status_short`, `recent_commits`), `horizon`, and `agent_diff` in a single `< 0.2s` JSON call.
+  - Updated [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) to auto-seed `.agents/SESSION.md` when not provided by a template's `governance/SESSION.md`, and upgraded [`skills/sopen/SKILL.md`](antigravity/.gemini/config/skills/sopen/SKILL.md) to use the single `layer-config.sh status` digest and skip `brain/` scanning whenever `last_conversation_id` is `null`.
+
 ### Changed
 - **Grouped `business-stack` / `tech-stack` Template Taxonomy, Base Auto-Inheritance & Technical Skill Relocation (`templates/`, `antigravity/.gemini/config/skills/`, `scripts/dotfiles_mcp/*`, `scripts/workstation-sync.sh`, `scripts/verify-repo.sh`, `docs/`, `tests/`)**:
   - Reorganized `templates/` into the 3 foundational governance pillars (`templates/human-core/`, `templates/business-base/`, `templates/technical-base/` with `kind: "core-base"`) plus the 2 grouped stack directories (`templates/business-stack/` and `templates/tech-stack/fastapi-hexagonal/` with `kind: "tech-stack"`, `extends: "technical-base"`), and added `_iter_layer_template_dirs`, `_resolve_template_dir`, and `_resolve_template_dest_dir` in [`manifest_helpers.py`](scripts/dotfiles_mcp/manifest_helpers.py) so all MCP and CLI engines resolve short names (`fastapi-hexagonal`) and grouped paths (`tech-stack/fastapi-hexagonal`) transparently while auto-inheriting `technical-base` / `business-base` in `apply_fork_to_project`.

@@ -9,43 +9,40 @@ description: restore session state and initialize workspace — first command in
 
 ---
 
-## 0. Global Config Sync (Pre-Recovery)
+## 0. Single-Shot Global Sync & Consolidated Workspace Status
 
 // delegate: flash
-1. **Locate `dotfiles-ubuntu`** — check if `~/dotfiles-ubuntu/` exists (or resolve from workspace metadata)
-2. **If found** — run `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync` (or `cd ~/dotfiles-ubuntu && git pull --ff-only` if `workstation-sync.sh` is absent)
-   - `workstation-sync.sh --sync` fast-forwards `~/dotfiles-ubuntu`, re-stows `antigravity/.gemini/config/` into `$HOME`, and re-locks the `$HOME` appliance in read-only mode
-   - If sync fails (conflicts) → notify user: "dotfiles-ubuntu has conflicts. Resolve manually before continuing."
-   - Do NOT auto-resolve conflicts in shared config
-   - If `~/dotfiles-ubuntu/layers/` has mounted subtrees (`./scripts/layer-subtree.sh list`) or `~/dotfiles-ubuntu/logs/mcp_alerts.jsonl` contains recent `CRITICAL`/`WARN` entries, surface a one-line note in the session header.
-   - If the active workspace contains `system/mcp-layer.json` (corporate, department, squad, or app layer), run `make horizon` (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>`) and `make diff` to detect 1-hop upstream (`shared_template_drifts`), 1-hop downstream mounted child updates (`child_sync_needed` / `downstream_layer_drifts`), or local `.agents/` promotion candidates automatically. If `downward_sync_needed: true` (or `child_sync_needed: true`) or `modified_in_project` is non-empty, recommend or run `make sync` so the workspace absorbs both parent templates and mounted child layers (`layers/*`) into `.agents/`.
-3. **If not found** → skip silently (user may not use dotfiles on this machine)
+1. **Run ONE combined command** in `<PROJECT_ROOT>` to fast-forward `~/dotfiles-ubuntu` and collect the entire workspace status digest in `< 0.2s`:
+   ```bash
+   ~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync 2>/dev/null || true
+   ~/dotfiles-ubuntu/scripts/layer-config.sh status "<PROJECT_ROOT>"
+   ```
+   *(If `Makefile` defines `status:`, `make status` runs `layer-config.sh status` with `PARENT_DIR` automatically.)*
+2. **Parse the returned JSON digest** — it provides in a single call:
+   - `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `layer_id`, `layer_role`, `precedence`, `active_templates`, `active_rules`
+   - `has_project_start_skill` (`bool` — if `false`, do NOT search for `.agents/skills/start/SKILL.md`)
+   - `session_state` (`exists`, `last_conversation_id`, and `excerpt` of `.agents/SESSION.md`)
+   - `priority_state` (`active_tracker` and `excerpt` of `WORKTASK.md` / `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` / `README.md`)
+   - `git_state` (`is_git_repo`, `status_short` including branch and ahead/behind status, `recent_commits`)
+   - `horizon` (`oss_root_version`, `upstream_version`, `workspace_version`, `downward_sync_needed`, `child_sync_needed`, `shared_template_drifts`, `downstream_layer_drifts`, `upward_promotion_suggestions`)
+   - `agent_diff` (`in_sync`, `modified_in_project`, `novel_in_project`)
+3. **If `horizon.downward_sync_needed` or `horizon.child_sync_needed` is `true`**, run `make sync` (or `~/dotfiles-ubuntu/scripts/layer-config.sh sync-layer "<PROJECT_ROOT>"`) so `.agents/` absorbs upstream templates and mounted child layers (`layers/*`).
 
 > [!NOTE]
-> This step ensures that rules and skills modified on another machine
-> are available before the agent loads them. It runs ONCE at session start.
+> This single-command pre-flight replaces separate calls to `make horizon`, `make diff`, `git status`, `git log`, `.agents/SESSION.md`, and tracker file probes.
 
 ---
 
 ## 1. Recover Conversation Context (Tier 1 — richest source)
 
 // delegate: flash
-1. **Identify current machine** — resolve the hostname from the system (e.g., workspace metadata or `hostname` command). This is used to match Session Log entries to this machine.
-2. **List `~/.gemini/antigravity/brain/`** to find all conversation directories
-3. **Read `.agents/SESSION.md`** — find **two** conversation IDs:
-   - **Last session (any machine)** — the top (most recent) Session Log entry
-   - **Last session (this machine)** — the most recent entry where `**Machine**` matches the current hostname
-   - If both are the same → single recovery path. If different → dual recovery (see below)
-4. **Match** each relevant conversation ID to brain/ directories and **read** artifacts:
-   - `task.md` — what was being worked on and its completion state
-   - `walkthrough.md` — what was verified and delivered
-   - `implementation_plan.md` — what was planned (may reveal in-progress work)
-5. **If no matching brain/ directory**, scan the 2-3 most recent brain/ directories (by modification time) and read their `task.md` files
+1. **Check `session_state.last_conversation_id`** from the Step 0 JSON digest:
+   - **If `last_conversation_id` is non-null**: read `~/.gemini/antigravity/brain/<last_conversation_id>/task.md` (and `walkthrough.md` / `implementation_plan.md` if present) directly by path.
+   - **If `last_conversation_id` is `null`** (fresh workspace or `.agents/SESSION.md` was just initialized): **skip `brain/` scanning completely** — do NOT run `ls -lt ~/.gemini/antigravity/brain/` or inspect conversations belonging to other workspaces.
+2. **If `.agents/SESSION.md` lists a separate entry for the current hostname**, read that conversation's `brain/<id>/task.md` directly as well.
 
 > [!IMPORTANT]
-> This tier is the **primary source of truth** for what was actually done.
-> SESSION.md may be stale if the session closed unexpectedly (no `/sclose` was run).
-> **NEVER deduce** — always read artifacts before presenting state.
+> When `last_conversation_id` is present in `.agents/SESSION.md`, `brain/<last_conversation_id>/` is the **primary source of truth** for what was done in the previous session. Never blind-scan unrelated `brain/` directories when `last_conversation_id` is `null`.
 
 > [!NOTE]
 > **New machine / fresh clone**: If `brain/` is empty or doesn't contain the conversation
@@ -58,7 +55,7 @@ description: restore session state and initialize workspace — first command in
 ## 2. Read Session State (Tier 2 — portable cross-device)
 
 // delegate: flash
-1. **Read `.agents/SESSION.md`** — extract from the cumulative format:
+1. **Use `session_state.excerpt` from Step 0** (or read `.agents/SESSION.md` in full only if the excerpt is truncated):
    - **Top Session Log entry** — most recent session: conversation ID, machine, completed items
    - **Last entry for this machine** — if different from top entry, read it too (reveals this machine's last known state)
    - If any entry has a **Resume from** note → this is the exact continuation point
@@ -70,40 +67,17 @@ description: restore session state and initialize workspace — first command in
 > [!CAUTION]
 > **Historical `Uncommitted` fields are snapshots, not current state.** Each Session Log entry
 > records what was uncommitted *at the time of session close*. After the user commits manually,
-> these lines become stale but remain in the log (append-only). **Only Tier 3 (`git status`)
+> these lines become stale but remain in the log (append-only). **Only Tier 3 (`git_state`)
 > determines current uncommitted state.** Never treat a past entry's `Uncommitted` field as
 > actionable — always verify against git.
 
 ---
 
-## 3. Verify Against Code (Tier 3 — ground truth)
+## 3. Verify Against Code & Priority (Tier 3 — ground truth)
 
 // delegate: flash
-3. **Check git state across all repos** in a single command.
-   Resolve the project root from the workspace metadata (the root workspace folder path).
-   Dynamically detect sub-repos and run ONE combined command:
-
-   ```bash
-   PROJECT_ROOT="<PROJECT_ROOT>"  # Resolve from workspace metadata
-   # Find all git repos: root + immediate subdirectories with .git
-   REPOS="$PROJECT_ROOT"
-   for d in "$PROJECT_ROOT"/*/; do
-     [ -d "$d/.git" ] && REPOS="$REPOS $d"
-   done
-   for repo in $REPOS; do
-     echo "=== $(basename "$repo") ==="
-     cd "$repo"
-     git status --short
-     git log --oneline -3
-     BRANCH=$(git branch --show-current)
-     echo "unpushed:" && git log --oneline origin/$BRANCH..HEAD 2>/dev/null
-     BEHIND=$(git rev-list --count HEAD..origin/$BRANCH 2>/dev/null)
-     [ "$BEHIND" -gt 0 ] 2>/dev/null && echo "BEHIND origin by $BEHIND commits"
-   done
-   ```
-
-   Parse the output to identify: uncommitted changes, unpushed commits, and behind-origin status.
-   If any repo is behind origin → flag explicitly with count and recommendation.
+1. **Use `git_state` and `priority_state` from the Step 0 JSON digest** (`status_short`, `recent_commits`, `active_tracker`, and `excerpt`). Do NOT re-run `git status`, `git log`, or probe `WORKTASK.md` / `WORKROAD.md` / `BACKLOG.md` separately for a single-repo workspace.
+2. **Multi-Repo Parent Workspace Only**: If `<PROJECT_ROOT>` is a parent folder containing multiple independent git repositories (`*/.git`), run a single loop across sub-repos to check `git status --short --branch` and `git log --oneline -3`.
 
 4. **Resolve conflicts** — when SESSION.md and git disagree:
    - SESSION.md says "pending commits" but git is clean → already committed, SESSION.md stale (historical snapshot — not an error)

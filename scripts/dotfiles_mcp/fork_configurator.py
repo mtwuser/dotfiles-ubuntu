@@ -41,21 +41,12 @@ def _inspect_single_template_dir(
     meta_file = tpl_dir / "template.json"
     loaded = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.is_file() else {}
     meta: dict[str, Any] = loaded if isinstance(loaded, dict) else {}
-    rules = [
-        str(p.relative_to(layer_dir))
-        for p in sorted((tpl_dir / "rules").glob("*.md"))
-        if p.is_file()
-    ]
+    rules = [str(p.relative_to(layer_dir)) for p in sorted((tpl_dir / "rules").glob("*.md"))]
     skills = [
         _parse_skill_frontmatter(p, layer_dir)
         for p in sorted((tpl_dir / "skills").glob("*/SKILL.md"))
-        if p.is_file()
     ]
-    gov = [
-        str(p.relative_to(layer_dir))
-        for p in sorted((tpl_dir / "governance").glob("*.md"))
-        if p.is_file()
-    ]
+    gov = [str(p.relative_to(layer_dir)) for p in sorted((tpl_dir / "governance").glob("*.md"))]
     assets_dir = tpl_dir / "assets"
     assets = (
         [str(p.relative_to(layer_dir)) for p in sorted(assets_dir.rglob("*")) if p.is_file()]
@@ -445,13 +436,19 @@ def apply_fork_to_project(
                 _ensure_rule_file_frontmatter(dest_rule)
                 dest_rule.chmod(0o644)
 
-    lineage_dest = agents_dir / "LAYER_LINEAGE.md"
-    copied_files.append(str(lineage_dest.relative_to(target_project_dir)))
+    lineage_dest, session_dest = agents_dir / "LAYER_LINEAGE.md", agents_dir / "SESSION.md"
+    copied_files.extend([str(lineage_dest.relative_to(target_project_dir)), ".agents/SESSION.md"])
     if not dry_run:
         lineage_dest.parent.mkdir(parents=True, exist_ok=True)
         lineage_dest.write_text(
             _render_lineage_markdown(resolved_tpl_name, lineage_rows), encoding="utf-8"
         )
+        if not session_dest.exists():
+            tpl_tag = resolved_tpl_name or "default"
+            session_dest.write_text(
+                f"# Session State Log\n\n## Session Log\n\n- Initialized (`{tpl_tag}`).\n",
+                encoding="utf-8",
+            )
 
     return dict(
         target_project_dir=str(target_project_dir),

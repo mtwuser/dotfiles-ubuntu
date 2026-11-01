@@ -14,6 +14,7 @@ import pytest
 from dotfiles_mcp.constants import AGENTS_MD_MAX_BYTES
 from dotfiles_mcp.workspace_bootstrapper import (
     bootstrap_layer_workspace,
+    inspect_workspace_status,
     register_mounted_subtree,
     set_global_agents_profile,
     sync_layer_workspace,
@@ -264,6 +265,12 @@ class TestWorkspaceBootstrapper:
         sync_bare_add = sync_layer_workspace(
             repo_dir, bare_layer, templates=["business-base"], dry_run=False
         )
+        (target_dir / ".agents/SESSION.md").write_text(
+            "## Session Log\n- Conv: 3fcd5708-4b9b-4d2b-b187-f224a76165de\n",
+            encoding="utf-8",
+        )
+        dept_status = inspect_workspace_status(repo_dir, target_dir)
+        proj_status = inspect_workspace_status(repo_dir, tmp_path / "empty-proj")
 
         # Assert
         assert dry_res["dry_run"] is True
@@ -276,10 +283,12 @@ class TestWorkspaceBootstrapper:
         assert "VERSION" not in live_res["baseline_files_created"]
         assert "Makefile" in live_res["baseline_files_created"]
         assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
+        assert "make status" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert str(target_dir.resolve()) in (squad_dir / "Makefile").read_text(encoding="utf-8")
         assert "CONTRIB_REPO ?=" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert ".agents/rules/business-base.md" in live_res["files_materialized"]
         assert ".agents/rules/dept-legal-ip.md" in live_res["files_materialized"]
+        assert ".agents/SESSION.md" in live_res["files_materialized"]
         assert ".agents/rules/layer-05-root.md" not in live_res["files_materialized"]
         assert squad_res["precedence"] == 50
         assert squad_res["manifest"]["upstream_layer"]["layer_id"] == "dept-legal-ip"
@@ -299,6 +308,17 @@ class TestWorkspaceBootstrapper:
         )
         assert sync_bare["synced_templates"] == []
         assert sync_bare_add["synced_templates"] == ["business-base"]
+        assert dept_status["workspace_mode"] == "business"
+        assert dept_status["git_state"]["is_git_repo"] is True
+        assert dept_status["session_state"]["last_conversation_id"] == (
+            "3fcd5708-4b9b-4d2b-b187-f224a76165de"
+        )
+        assert dept_status["priority_state"]["active_tracker"] == "WORKTASK.md"
+        assert dept_status["horizon"] is not None
+        assert proj_status["workspace_mode"] == "technical"
+        assert proj_status["git_state"]["is_git_repo"] is False
+        assert proj_status["session_state"]["last_conversation_id"] is None
+        assert proj_status["horizon"] is None
         with pytest.raises(ValueError, match="Missing target layer manifest"):
             sync_layer_workspace(repo_dir, tmp_path / "missing-layer")
         with pytest.raises(ValueError, match="Invalid layer_id"):

@@ -163,6 +163,9 @@ class TestCLIScripts:
             text=True,
         )
         boot_proc = subprocess.run(boot_cmd, cwd=REPO_DIR, capture_output=True, text=True)
+        status_proc = subprocess.run(
+            [script, "status"], cwd=REPO_DIR, capture_output=True, text=True
+        )
 
         # Assert
         assert list_proc.returncode == 0
@@ -177,6 +180,7 @@ class TestCLIScripts:
         )
         assert prof_proc.returncode == 0 and '"profile": "full"' in prof_proc.stdout
         assert boot_proc.returncode == 0 and '"layer_id": "dept-legal-ip"' in boot_proc.stdout
+        assert status_proc.returncode == 0 and '"workspace_mode":' in status_proc.stdout
 
     def test_layer_subtree_script_supports_dry_run_and_list_commands(self) -> None:
         """Verify layer-subtree.sh list, pull-all, add, pull, push, and sync-upstream commands."""

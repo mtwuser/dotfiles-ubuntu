@@ -1,4 +1,4 @@
-.PHONY: help venv install install-dev install-runtime setup-dev workstation-setup workstation-sync workstation-status test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
+.PHONY: help status venv install install-dev install-runtime setup-dev workstation-setup workstation-sync workstation-status test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -52,6 +52,9 @@ workstation-sync:
 
 workstation-status:
 	./scripts/workstation-sync.sh --status
+
+status:
+	./scripts/layer-config.sh status $(CURDIR)
 
 install-runtime:
 	$(PYTHON) -m venv $(VENV_DIR)
