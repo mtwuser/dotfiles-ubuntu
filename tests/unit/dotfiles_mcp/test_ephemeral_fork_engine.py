@@ -177,6 +177,35 @@ class TestEphemeralForkEngine:
             spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", model_tier="ultra")
         with pytest.raises(ValueError, match="Invalid access_mode"):
             spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", access_mode="root-all")
+        with pytest.raises(ValueError, match="Invalid ephemeral_scope"):
+            spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", ephemeral_scope="cross-galaxy")
+        with pytest.raises(ValueError, match="Invalid actor_role"):
+            spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", actor_role="guest")
+        with pytest.raises(ValueError, match="Inter-layer ephemeral forks must use"):
+            spawn_ephemeral_fork(
+                repo,
+                {},
+                bot_role="ok-bot",
+                ephemeral_scope="inter-layer",
+                access_mode="read-write-scoped",
+            )
+        with pytest.raises(ValueError, match="Validator actor_role cannot use"):
+            spawn_ephemeral_fork(
+                repo,
+                {},
+                bot_role="ok-bot",
+                actor_role="validator",
+                access_mode="read-write-scoped",
+            )
+        (repo / ".workstation-state.json").write_text('{"mode": "readonly"}', encoding="utf-8")
+        with pytest.raises(ValueError, match="Read-only workstation appliance"):
+            spawn_ephemeral_fork(
+                repo,
+                {"layer_role": "workstation"},
+                bot_role="ok-bot",
+                access_mode="read-and-test-trigger",
+            )
+        (repo / ".workstation-state.json").unlink()
         with pytest.raises(ValueError, match="Invalid resolution"):
             spawn_ephemeral_fork(repo, {}, bot_role="ok-bot", resolution="L9")
         with pytest.raises(ValueError, match="Invalid ttl_seconds"):

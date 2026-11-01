@@ -18,6 +18,7 @@ from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
     LAYER_MAKEFILE_RECIPES,
     LAYER_ROLE_MAKEFILE_TARGETS,
+    MCP_OPERATING_MODES,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
     VALID_LAYER_ROLES,
@@ -421,11 +422,13 @@ def inspect_workspace_status(
             else ("corporate-root" if role == "corporate" else role)
         )
     )
+    mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
     cmd_tiers = {k: [t for t in v if t in mk_t] for k, v in COMMAND_CONSCIOUSNESS_TIERS.items()}
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
-    out.update(operating_state=op_state, precedence=prec, workspace_mode=mode)
-    out.update(is_oss_dev_workspace=op_state == "oss-dev", command_tiers=cmd_tiers)
-    out.update(active_templates=tpls, active_rules=rules, available_makefile_targets=mk_t)
+    out.update(operating_state=op_state, mcp_operating_mode=mcp_mode, precedence=prec)
+    out.update(workspace_mode=mode, is_oss_dev_workspace=op_state == "oss-dev")
+    out.update(command_tiers=cmd_tiers, active_templates=tpls, active_rules=rules)
+    out["available_makefile_targets"] = mk_t
     out.update(git_governance=inspect_git_governance_state(ws))
     out["has_project_start_skill"] = (ws / ".agents/skills/start/SKILL.md").is_file()
     out["session_state"] = {

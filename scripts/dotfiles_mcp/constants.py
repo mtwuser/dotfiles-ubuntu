@@ -34,6 +34,18 @@ VALID_OPERATING_STATES: tuple[str, ...] = (
     "ephemeral-bot",
     "project",
 )
+MCP_OPERATING_MODES: dict[str, str] = {
+    "oss-readonly-appliance": "workstation-baseline-provider",
+    "oss-dev": "self-test-and-dev-only",
+    "corporate-root": "enterprise-governance-hub",
+    "domain-policy": "departmental-policy-hub",
+    "department": "departmental-policy-hub",
+    "squad": "squad-execution-hub",
+    "service-node": "infrastructure-node-provider",
+    "environment-cluster": "infrastructure-node-provider",
+    "ephemeral-bot": "scoped-ephemeral-sandbox",
+    "project": "project-consumer-only",
+}
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
     "main",
@@ -205,6 +217,7 @@ VALID_RESOLUTIONS = ("L0", "L1", "L2")
 VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
 VALID_AGENT_TIERS = ("flash", "inherit", "pro")
 VALID_EPHEMERAL_ACTIONS = ("spawn", "inspect", "evaluate", "reap")
+VALID_EPHEMERAL_SCOPES: tuple[str, ...] = ("inter-layer", "intra-layer")
 VALID_EPHEMERAL_ACCESS_MODES = (
     "strictly-read-only",
     "read-and-test-trigger",

@@ -49,6 +49,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
                     "bot_role": str(entry.get("bot_role", "")),
                     "model_tier": str(entry.get("model_tier", "flash")),
                     "access_mode": str(entry.get("access_mode", "strictly-read-only")),
+                    "ephemeral_scope": str(entry.get("ephemeral_scope", "intra-layer")),
+                    "actor_role": str(entry.get("actor_role", "member")),
                     "remaining_ttl_seconds": rem,
                     "default_stack_templates": list(man.get("default_stack_templates", [])),
                 }
@@ -91,6 +93,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
         target_path = str(arguments.get("target_path") or "").strip()
         model_tier = str(arguments.get("model_tier") or "flash").strip().lower()
         access_mode = str(arguments.get("access_mode") or "strictly-read-only").strip().lower()
+        ephemeral_scope = str(arguments.get("ephemeral_scope") or "").strip().lower() or None
+        actor_role = str(arguments.get("actor_role") or "member").strip().lower()
         resolution = str(arguments.get("resolution") or "L2").strip().upper()
         ttl_seconds = int(arguments.get("ttl_seconds") or DEFAULT_EPHEMERAL_TTL_SECONDS)
         one_shot = bool(arguments.get("one_shot", True))
@@ -155,6 +159,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
                         mount_project_rules_from=project_bridge_path,
                         model_tier=model_tier,
                         access_mode=access_mode,
+                        ephemeral_scope=ephemeral_scope,
+                        actor_role=actor_role,
                         resolution=resolution,
                         ttl_seconds=ttl_seconds,
                     )
@@ -179,6 +185,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
                         mount_project_rules_from=project_bridge_path,
                         model_tier=model_tier,
                         access_mode=access_mode,
+                        ephemeral_scope=ephemeral_scope,
+                        actor_role=actor_role,
                         resolution=resolution,
                         ttl_seconds=ttl_seconds,
                         dry_run=True,
@@ -218,6 +226,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
                         "bot_role": str(meta_existing.get("bot_role", bot_role)),
                         "model_tier": str(meta_existing.get("model_tier", model_tier)),
                         "access_mode": str(meta_existing.get("access_mode", access_mode)),
+                        "ephemeral_scope": str(meta_existing.get("ephemeral_scope", "intra-layer")),
+                        "actor_role": str(meta_existing.get("actor_role", actor_role)),
                         "ttl_seconds": int(meta_existing.get("ttl_seconds", ttl_seconds)),
                         "expires_at_epoch": float(meta_existing.get("expires_at_epoch", 0.0)),
                         "session_resonance_key": str(
@@ -313,6 +323,8 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
             "action": "evaluate",
             "fork_id": spawned["fork_id"],
             "bot_role": spawned["bot_role"],
+            "ephemeral_scope": spawned.get("ephemeral_scope", "intra-layer"),
+            "actor_role": spawned.get("actor_role", actor_role),
             "auto_reaped": auto_reaped,
             "session_resonance_key": spawned["session_resonance_key"],
             "bridged_project_files": spawned["bridged_project_files"],

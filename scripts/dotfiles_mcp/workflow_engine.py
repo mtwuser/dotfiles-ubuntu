@@ -408,16 +408,22 @@ def consult_layer_ephemeral(
 
     base_manifest = json.loads((eval_root / "system/mcp-layer.json").read_text(encoding="utf-8"))
     sp_kw: dict[str, Any] = {"bot_role": f"consult-{clean_layer}", "mount_templates": mount_tpls}
-    sp_kw.update(model_tier=clean_tier, access_mode="strictly-read-only", resolution="L2")
+    sp_kw.update(
+        model_tier=clean_tier,
+        access_mode="strictly-read-only",
+        ephemeral_scope="inter-layer",
+        resolution="L2",
+    )
     spawned = spawn_ephemeral_fork(eval_root, base_manifest, dry_run=dry_run, **sp_kw)
+    res_key = str(spawned.get("session_resonance_key", ""))
     node_dir = Path(str(spawned["fork_dir"])) if not dry_run else eval_root
     node = SurfaceToolsMixin(repo_dir=node_dir, log_dir=None)
     q_resp = node._tool_query_governance_rules(
-        {"query": clean_q, "resolution": "L1", "layer": "root"}
+        {"query": clean_q, "resolution": "L1", "layer": "root", "resonance_key": res_key}
     )
     q_payload = json.loads(q_resp["content"][0]["text"])
     s_kw = {"target_path": clean_path, "resolution_override": "L2", "include_capsules": True}
-    s_kw["resonance_key"] = str(spawned.get("session_resonance_key", ""))
+    s_kw["resonance_key"] = res_key
     s_payload = json.loads(node._tool_resolve_surface_governance(s_kw)["content"][0]["text"])
     if not dry_run:
         reap_ephemeral_fork(eval_root, fork_id=str(spawned["fork_id"]))

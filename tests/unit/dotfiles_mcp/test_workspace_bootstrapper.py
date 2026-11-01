@@ -279,18 +279,23 @@ class TestWorkspaceBootstrapper:
 
         # Assert
         assert ws_status["operating_state"] == "oss-dev"
+        assert ws_status["mcp_operating_mode"] == "self-test-and-dev-only"
         assert ws_status["is_oss_dev_workspace"] is True
         assert "setup-dev" in ws_status["available_makefile_targets"]
         assert "verify" in ws_status["command_tiers"]["auto_reflexive"]
         assert "setup-dev" in ws_status["command_tiers"]["guided_tactical"]
         assert ro_status["operating_state"] == "oss-readonly-appliance"
+        assert ro_status["mcp_operating_mode"] == "workstation-baseline-provider"
         assert ro_status["is_oss_dev_workspace"] is False
         assert corp_status["operating_state"] == "corporate-root"
+        assert corp_status["mcp_operating_mode"] == "enterprise-governance-hub"
         assert "delegate" in corp_status["command_tiers"]["conscious_human_gated"]
         assert dept_status["operating_state"] == "domain-policy"
+        assert dept_status["mcp_operating_mode"] == "departmental-policy-hub"
         assert dept_status["is_oss_dev_workspace"] is False
         assert "setup-dev" not in dept_status["available_makefile_targets"]
         assert proj_status["operating_state"] == "project"
+        assert proj_status["mcp_operating_mode"] == "project-consumer-only"
         assert dry_res["dry_run"] is True
         assert squad_pre_git["dry_run"] is True
         assert dry_res["scaffolded_template"] is None

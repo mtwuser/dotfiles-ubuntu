@@ -12,6 +12,8 @@ from dotfiles_mcp.constants import (
     VALID_ARCHITECTURAL_PLANES,
     VALID_EPHEMERAL_ACCESS_MODES,
     VALID_EPHEMERAL_ACTIONS,
+    VALID_EPHEMERAL_SCOPES,
+    VALID_ROSTER_ROLES,
 )
 
 MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
@@ -325,6 +327,17 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "enum": list(VALID_EPHEMERAL_ACCESS_MODES),
                     "default": "strictly-read-only",
                     "description": "Capability boundary for the ephemeral Department Bot.",
+                },
+                "ephemeral_scope": {
+                    "type": "string",
+                    "enum": list(VALID_EPHEMERAL_SCOPES),
+                    "description": "Collaboration scope ('inter-layer' or 'intra-layer').",
+                },
+                "actor_role": {
+                    "type": "string",
+                    "enum": list(VALID_ROSTER_ROLES),
+                    "default": "member",
+                    "description": "Participant role spawning the bot ('owner'..'member').",
                 },
                 "resolution": {
                     "type": "string",

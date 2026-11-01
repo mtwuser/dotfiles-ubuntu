@@ -59,10 +59,35 @@ Any `surface_binding` in `system/mcp-layer.json` (or `template.json` `recommende
 | `trigger` | `"on_surface_match"` \| `"on_high_complexity"` \| `"on_demand"` | Advisory trigger condition reported in `ephemeral_delegation_advisories` |
 | `model_tier` | `"flash"` \| `"inherit"` \| `"pro"` | Target subagent model tier per `AGENTS.md §12` |
 | `access_mode` | `"strictly-read-only"` \| `"read-and-test-trigger"` \| `"read-write-scoped"` | Operational capability boundary enforced in the subagent brief |
+| `ephemeral_scope` | `"inter-layer"` \| `"intra-layer"` (default `"intra-layer"`) | Distinguishes cross-layer read-only consultations (`"inter-layer"`) from within-layer participant/bot execution (`"intra-layer"`) |
+| `actor_role` | `"owner"` \| `"maintainer"` \| `"validator"` \| `"member"` (default `"member"`) | Layer roster role of the participant spawning the ephemeral fork |
 | `mount_templates` | `list[str]` | Subset of template packs activated in the ephemeral fork's `default_stack_templates` |
 | `resolution` | `"L0"` \| `"L1"` \| `"L2"` | Default context resolution for the bot's authoritative surface |
 | `ttl_seconds` | Integer `10..3600` (default `300`) | Time-to-live before automatic garbage collection (`reap_expired_ephemeral_forks`) |
 | `handback_contract` | `"4-channel-digest+rcap1"` | Enforces `AGENTS.md §12` 4-Channel Executive Digest + sealed `rcap1` capsule |
+
+---
+
+## 3B. Bounded `operating_state × mcp_operating_mode` Matrix & Dual Ephemeral Scope (`inter-layer` vs. `intra-layer`)
+
+To prevent operational ambiguity between the **Non-MCP Static Plane** (`layer-config.sh` / `make`) and the **Contextual MCP Plane** (`dotfiles_mcp_server.py`), every repository `operating_state` maps to a bounded **`mcp_operating_mode`** (`MCP_OPERATING_MODES` in `constants.py`), surfaced identically by `inspect_workspace_status` (`make status`) and `get_layer_overview`:
+
+| `operating_state` | `mcp_operating_mode` | Non-MCP Plane (`layer-config.sh` / `make`) | Contextual MCP Plane (`dotfiles_mcp_server.py`) | Allowed `ephemeral_scope` & `access_mode` Boundary |
+|---|---|---|---|---|
+| **`oss-dev`** (`DOTFILES_DEV_REPO_DIR`) | `"self-test-and-dev-only"` | Human-agent collaborative OSS authoring (`make verify`, `make setup-dev`, `make promote`) | Bounded to `--self-test` and CI verification (`make mcp-test`); **not** a live multi-tenant governance hub | Self-test / CI verification sandboxes only |
+| **`oss-readonly-appliance`** (`~/dotfiles-ubuntu`) | `"workstation-baseline-provider"` | Read-only `$HOME` Stow runtime (`dotfiles-sync`) | Local workstation baseline provider (`AGENTS.md` + `system/*`) | Strictly locked to `access_mode="strictly-read-only"` |
+| **`corporate-root`** (`Root 0`) | `"enterprise-governance-hub"` | C-level SSoT ledgers (`make delegate`, `make promote`, `make env-gate`) | Enterprise `0..N` surface weaver & `rcap1` (`kr: true`) authority hub | `inter-layer` (`strictly-read-only`) + `intra-layer` (`owner`/`maintainer`/`validator`/`member`) |
+| **`domain-policy` / `department`** | `"departmental-policy-hub"` | Departmental policy & stack packs (`make sync`, `make delegate`, `make consult`) | Departmental MCP hub & specialist bot provider | `inter-layer` (`strictly-read-only`) + `intra-layer` role-gated bots |
+| **`squad`** | `"squad-execution-hub"` | Agile task-branch delivery (`make task`, `make complete`, `make consult`) | Squad execution & cross-project bridge hub (`mount_project_rules_from`) | `inter-layer` (`strictly-read-only`) + `intra-layer` (`read-write-scoped` for `owner`/`maintainer`/`member`) |
+| **`project`** | `"project-consumer-only"` | Static `.agents/` consumer (`apply-project`, `diff-project`, `make task`) | Consumer of parent Squad/Department MCP or `make consult`; does not host multi-layer `layers/*` | Calls parent `consult-layer` (`inter-layer`, `strictly-read-only`) |
+
+Furthermore, `spawn_ephemeral_fork` and `orchestrate_ephemeral_fork` enforce two orthogonal **Ephemeral Collaboration Scopes (`VALID_EPHEMERAL_SCOPES`)**:
+1. **`ephemeral_scope="inter-layer"` (Cross-Layer Consultation Bridge — e.g., `make consult` / `consult_layer_ephemeral`)**:
+   - Enables a downstream `Project`, `Squad`, or sibling `Department` to query an upstream/sibling layer's rules and surface bindings with `session_resonance_key`-sealed `rcap1` capsules (`kr: true`).
+   - **Hard Immutability Invariant**: `inter-layer` forks **MUST** use `access_mode="strictly-read-only"` (any other `access_mode` raises `ValueError`).
+2. **`ephemeral_scope="intra-layer"` (Within-Layer Participant & Specialist Bot Collaboration)**:
+   - Enables participants within the same layer (`actor_role` in `owner`, `maintainer`, `validator`, `member`) to spawn specialist bots for parallel domain analysis, QA verification (`WORKVALI.md`), or scoped refactoring.
+   - **Participant Role Guardrail**: `actor_role="validator"` is restricted to `"strictly-read-only"` or `"read-and-test-trigger"` (raising `ValueError` on `"read-write-scoped"`), and `oss-readonly-appliance` only permits `"strictly-read-only"`.
 
 ---
 

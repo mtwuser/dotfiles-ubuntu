@@ -200,6 +200,11 @@ class TestFederationToolsMixin:
         assert len(discovered) == 1
         assert discovered[0]["layer_id"] == "acme-dept-data"
         assert overview_sub["channel_1_node_and_system_state"]["layer_id"] == "acme-dept-data"
+        assert overview_sub["channel_1_node_and_system_state"]["operating_state"] == "department"
+        assert (
+            overview_sub["channel_1_node_and_system_state"]["mcp_operating_mode"]
+            == "departmental-policy-hub"
+        )
         assert overview_sub["channel_3_active_invariants_and_hooks"]["agents_md_bytes"] == 0
         assert "Partition by date" in doc_sub
         assert query_all["match_count"] == 1

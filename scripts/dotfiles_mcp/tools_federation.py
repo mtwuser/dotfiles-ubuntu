@@ -14,6 +14,7 @@ from typing import Any
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
     ANSI_ESCAPE_RE,
+    MCP_OPERATING_MODES,
     VALID_ENVIRONMENTS,
 )
 from dotfiles_mcp.fork_configurator import discover_layer_template_names
@@ -57,11 +58,25 @@ class FederationToolsMixin(MCPNodeBase):
         agents_file = target_dir / "antigravity/.gemini/config/AGENTS.md"
         agents_bytes = agents_file.stat().st_size if agents_file.is_file() else 0
         warnings = self._evaluate_layer_warnings(target_dir, agents_bytes)
+        role = str(manifest.get("layer_role") or "project")
+        is_ro = role == "workstation" and (target_dir / ".workstation-state.json").is_file()
+        op_state = (
+            "oss-readonly-appliance"
+            if is_ro
+            else (
+                "oss-dev"
+                if role == "workstation"
+                else ("corporate-root" if role == "corporate" else role)
+            )
+        )
+        mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
         digest = {
             "channel_1_node_and_system_state": {
                 "version": _read_version(target_dir),
                 "layer_id": manifest.get("layer_id"),
-                "layer_role": manifest.get("layer_role"),
+                "layer_role": role,
+                "operating_state": op_state,
+                "mcp_operating_mode": mcp_mode,
                 "hostname": socket.gethostname(),
                 "in_container": _is_running_in_container(),
                 "os_pretty_name": _read_os_pretty_name(),
