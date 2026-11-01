@@ -82,8 +82,8 @@ Once conceptual and normative requirements from Pass 1 are aligned, audit their 
 - **In `business` mode (`Root 0` / `Department` / `business-base`)**: Audit (1) **Single Source of Truth (SSoT) Ledger Consolidation** (`corporate/` tables vs. prose duplication), (2) **Cross-Departmental Precedence (`5..35`) & Surface Binding Coverage**, (3) **Cross-Surface Cascade (`surfaces/{web,forms,print}/`) & `< 465`-Line Modularity**, and (4) **IP Firewall & Crisis Escalation SLAs (`P0/P1/P2`)**.
 - **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**, audit the **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
 
-1. **Idiomatic Stack Exploitation**:
-   - Evaluate whether the implementation leverages modern language features (e.g., native generic syntax, pattern matching, strict protocols/interfaces, zero-copy/stdlib primitives) rather than verbose boilerplate.
+1. **Floor-Version Security & Intrinsic Runtime Substrate Exploitation**:
+   - Verify the code uses modern, secure-by-default idioms of the declared language floor version (`requires-python`) and C-backed standard library primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`) over legacy patterns. When `is_oss_dev_workspace: true` (`DOTFILES_DEV_REPO_DIR`), also identify pure-Python hot paths eligible for C-backed stdlib replacement, optional C-accelerators (`PEP 7`), or upstream OSS-to-OSS runtime contributions.
 2. **Functional vs. Object-Oriented Balance**:
    - Prefer pure, stateless functions for deterministic transformations, parsing, and validation; reserve classes/objects for stateful lifecycle coordination, protocol dispatch, or dependency-injected services.
 3. **Modularity, Reuse & File Size (`< 465` Lines)**:

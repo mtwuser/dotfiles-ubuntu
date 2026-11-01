@@ -170,3 +170,24 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
   - All `tests/**/__init__.py` files must be **0 bytes** (package marker purity).
   - `make test-cov` enforces **100.00% statement and branch coverage** (`--cov-branch --cov-fail-under=100`).
   - `make lint` enforces `ruff check` and `mypy --strict` with 0 errors across all source and test files.
+
+---
+
+## 7. Intrinsic Runtime Substrate vs. Zero Third-Party Dependencies & OSS-to-OSS Evolution (`DOTFILES_DEV_REPO_DIR` Scope)
+
+While `dotfiles-ubuntu` enforces **Zero Third-Party Runtime Dependencies (`dependencies = []`)** to eliminate external supply-chain attack surface, it relies on a well-defined **Intrinsic Runtime Substrate**:
+
+| Substrate Tier | Canonical Name | Scope & Components |
+| :--- | :--- | :--- |
+| **Tier 0** | **Native C & OS Core Substrate** | `CPython` C interpreter, compiled C accelerator modules (`Modules/_json.c`, `_hashlib.c`, `posixmodule.c`, `_io`), Linux/POSIX syscalls, and system binaries (`git`, `bash`, `gnu-stow`). |
+| **Tier 1** | **Language Standard Library (`Stdlib`)** | First-party modules shipped inside Python (`pathlib`, `stat`, `hashlib`, `json`, `subprocess`, `shutil`, `ast`, `re`, `tomllib`, `sqlite3`, `urllib`). |
+| **Tier 2** | **Declared Primary Stack (`tech-stack/*`)** | Framework dependencies declared explicitly by Level 4 consumer application repositories (e.g., `FastAPI`, `Pydantic`/`pydantic-core`). |
+
+### Strict Separation Between `/enrich` and `DOTFILES_DEV_REPO_DIR` OSS-to-OSS Substrate Evolution
+
+1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates**:
+   - `/enrich` operates along the `Project -> Squad -> Department -> Root 0 -> dotfiles-ubuntu` governance hierarchy and never exposes internal runtime or C-substrate workflows to `Root 0`, `Department`, `Squad`, or `~/dotfiles-ubuntu` (`readonly` appliance) workspaces.
+2. **OSS-to-OSS Substrate Evolution is Scoped Exclusively to `DOTFILES_DEV_REPO_DIR` (`layer_role: "workstation"`, `is_oss_dev_workspace: true`)**:
+   - When `make status` reports `"is_oss_dev_workspace": true` inside `DOTFILES_DEV_REPO_DIR`, `/full-audit` evaluates:
+     1. **Floor-Version Security & C-Backed Stdlib Primitives First**: Replacing pure-Python loops or legacy patterns with C-backed `Python 3.14` stdlib primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`, `os.scandir`).
+     2. **Optional C-Accelerators (`PEP 7`) or Upstream OSS Contributions**: When a core architectural hot path (`pre_tool_guard.py`, `rcap1` capsule hashing, or multi-layer tree diffing) reaches the limits of pure Python, isolating an optional C accelerator (with a 1:1 pure-Python fallback) or proposing upstream OSS-to-OSS improvements to `CPython` / primary stack repositories.

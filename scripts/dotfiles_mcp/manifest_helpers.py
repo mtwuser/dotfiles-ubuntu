@@ -257,6 +257,12 @@ _CHILD_TRACKED_REL_PATHS: tuple[str, ...] = (
 )
 
 
+def _sha256_file(path: Path) -> str:
+    """Compute SHA-256 hex digest using C-backed hashlib.file_digest without heap-loading."""
+    with path.open("rb") as f:
+        return hashlib.file_digest(f, "sha256").hexdigest()
+
+
 def _inspect_mounted_children_drifts(
     workspace_dir: Path, mounted_layers: list[Any]
 ) -> list[dict[str, Any]]:
@@ -275,9 +281,7 @@ def _inspect_mounted_children_drifts(
         for rel in _CHILD_TRACKED_REL_PATHS:
             src_f, dst_f = child_ws / rel, mounted_dir / rel
             if src_f.is_file() and (
-                not dst_f.is_file()
-                or hashlib.sha256(src_f.read_bytes()).hexdigest()
-                != hashlib.sha256(dst_f.read_bytes()).hexdigest()
+                not dst_f.is_file() or _sha256_file(src_f) != _sha256_file(dst_f)
             ):
                 changed_files.append(rel)
         for sub_name in ("docs", "templates", "roadmaps", "corporate"):
@@ -287,10 +291,7 @@ def _inspect_mounted_children_drifts(
                     continue
                 rel_d = str(src_f.relative_to(child_ws)).replace("\\", "/")
                 dst_f = mounted_dir / rel_d
-                if not dst_f.is_file() or (
-                    hashlib.sha256(src_f.read_bytes()).hexdigest()
-                    != hashlib.sha256(dst_f.read_bytes()).hexdigest()
-                ):
+                if not dst_f.is_file() or _sha256_file(src_f) != _sha256_file(dst_f):
                     changed_files.append(rel_d)
         if changed_files:
             drifts.append(

@@ -5,7 +5,6 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 
 from __future__ import annotations
 
-import hashlib
 import json
 import re
 import shutil
@@ -42,11 +41,8 @@ from dotfiles_mcp.manifest_helpers import (
     _resolve_oss_contrib_repo_dir,
     _resolve_template_dest_dir,
     _resolve_template_dir,
+    _sha256_file,
 )
-
-
-def _sha256_file(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def collect_layer_effective_bindings(

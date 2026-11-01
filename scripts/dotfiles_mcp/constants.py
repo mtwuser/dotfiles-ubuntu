@@ -286,11 +286,16 @@ OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "commit-layer",
     "push-layer",
 )
+_WORKSTATION_DEV_TARGETS: tuple[str, ...] = (
+    "status", "setup-dev", "verify", "audit", "test", "test-unit",
+    "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
+)  # fmt: skip
 _FULL_LAYER_TARGETS: tuple[str, ...] = (
     "status", "task", "complete", "consult", "horizon", "sync", "upstream-diff",
     "diff", "authority", "roster", "env-gate", "decision", "promote", "delegate", "mcp-test",
 )  # fmt: skip
 LAYER_ROLE_MAKEFILE_TARGETS: dict[str, tuple[str, ...]] = {
+    "workstation": _WORKSTATION_DEV_TARGETS,
     "corporate": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
     "domain-policy": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
     "department": _FULL_LAYER_TARGETS,

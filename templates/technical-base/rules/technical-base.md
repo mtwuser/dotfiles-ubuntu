@@ -13,7 +13,7 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 - **Description**: Strict typing, `1:1:1` traceability, generated code verification, and diagnostic sweeps
 - **Applies**: All software engineering, scripting, and technical repositories
 
-1. **Utility, Native Stdlib & Import Gate**: Search (`grep`/semantic) before writing helpers, use native stdlib symbols (`stat.S_IWUSR`, `HTTPStatus`) over raw bitmasks/codes, and enforce explicit absolute imports (zero `import ... as c` aliases).
+1. **Utility, Stdlib & Import Gate**: Search (`grep`/semantic) before writing helpers, use floor-version C-backed stdlib symbols (`hashlib.file_digest`, `stat.S_IWUSR`, `HTTPStatus`) over raw bitmasks/codes, and use explicit absolute imports (zero `import ... as c` aliases).
 2. **Strict Linter, Compiler & Typing Integrity**: Zero compiler, type-checker, or linter (`ruff`/`mypy --strict`, `tsc --noEmit`, `cargo clippy`, `shellcheck`) warnings/errors. Prefer `unknown`/`Protocol`/`interface` over `Any`/`any`.
 3. **`1:1:1` Symbiosis & Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)**: Read `docs/{guides,architecture}/` first, `tests/{e2e,imp,unit}/` (`Test<Module>`) second, and code last. Modules declare `Specification: docs/architecture/<spec>.md` and specs (`< 465` lines) keep a `1:1:1` table.
 4. **Generated Output & Package-Marker Purity**: Verify `import` packages exist, generated files pass linters, zero placeholders (`my_app`), and `src/**/__init__.py` / `tests/**/__init__.py` remain `0 bytes`.

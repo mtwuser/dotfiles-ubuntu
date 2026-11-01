@@ -269,10 +269,15 @@ class TestWorkspaceBootstrapper:
             "## Session Log\n- Conv: 3fcd5708-4b9b-4d2b-b187-f224a76165de\n",
             encoding="utf-8",
         )
+        ws_status = inspect_workspace_status(repo_dir, repo_dir)
         dept_status = inspect_workspace_status(repo_dir, target_dir)
         proj_status = inspect_workspace_status(repo_dir, tmp_path / "empty-proj")
 
         # Assert
+        assert ws_status["is_oss_dev_workspace"] is True
+        assert "setup-dev" in ws_status["available_makefile_targets"]
+        assert dept_status["is_oss_dev_workspace"] is False
+        assert "setup-dev" not in dept_status["available_makefile_targets"]
         assert dry_res["dry_run"] is True
         assert squad_pre_git["dry_run"] is True
         assert dry_res["scaffolded_template"] is None

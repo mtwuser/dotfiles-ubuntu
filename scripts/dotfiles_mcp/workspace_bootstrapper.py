@@ -431,9 +431,11 @@ def inspect_workspace_status(
     lim, last_cid = STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
     mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
+    is_oss_dev = role == "workstation" and not (ws / ".workstation-state.json").is_file()
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
-    out.update(precedence=prec, workspace_mode=mode, active_templates=tpls, active_rules=rules)
-    out.update(available_makefile_targets=mk_t, git_governance=inspect_git_governance_state(ws))
+    out.update(precedence=prec, workspace_mode=mode, is_oss_dev_workspace=is_oss_dev)
+    out.update(active_templates=tpls, active_rules=rules, available_makefile_targets=mk_t)
+    out.update(git_governance=inspect_git_governance_state(ws))
     out["has_project_start_skill"] = (ws / ".agents/skills/start/SKILL.md").is_file()
     out["session_state"] = {
         "exists": s_file.is_file(),
