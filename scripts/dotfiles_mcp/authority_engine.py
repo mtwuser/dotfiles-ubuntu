@@ -21,6 +21,10 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     OWNER_RESTRICTED_OPS,
 )
+from dotfiles_mcp.git_governance_engine import (
+    record_governance_event,
+    stage_non_destructive_proposal,
+)
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _resolve_mounted_child_dir,
@@ -44,11 +48,8 @@ def resolve_git_user_email(target_dir: Path) -> str:
 
 def _load_manifest_dict(target_dir: Path) -> dict[str, Any]:
     mpath = target_dir / "system" / "mcp-layer.json"
-    if mpath.is_file():
-        loaded = json.loads(mpath.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            return loaded
-    return {}
+    loaded = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def configure_layer_authority(
@@ -78,12 +79,9 @@ def configure_layer_authority(
     manifest["layer_authority"] = auth_blk
     if not dry_run:
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    return {
-        "target_dir": str(target_dir),
-        "layer_id": layer_id,
-        "layer_authority": auth_blk,
-        "dry_run": dry_run,
-    }
+    out: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run}
+    out["layer_authority"] = auth_blk
+    return out
 
 
 def _detect_inherited_upstream_asset(
@@ -138,13 +136,9 @@ def verify_layer_operation_authority(
     raw_auth = manifest.get("layer_authority")
     auth = raw_auth if isinstance(raw_auth, dict) else {}
     owner_role = str(auth.get("owner_role", f"Layer Owner ({layer_id})"))
-    authorized_emails = [
-        str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()
-    ]
+    auth_emails = [str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()]
     escalation_contact = str(auth.get("escalation_contact", f"{owner_role} ({layer_id})"))
-    eff_email = (
-        actor_email.strip() if actor_email is not None else resolve_git_user_email(target_dir)
-    )
+    eff_email = resolve_git_user_email(target_dir) if actor_email is None else actor_email.strip()
     if target_rel_path:
         is_inh, origin_ref = _detect_inherited_upstream_asset(target_dir, manifest, target_rel_path)
         if is_inh:
@@ -162,20 +156,23 @@ def verify_layer_operation_authority(
             res: dict[str, Any] = {"allowed": False, "operation": operation, "layer_id": layer_id}
             res.update(reason_code="INHERITED_UPSTREAM_ASSET_IMMUTABLE", actor_email=eff_email)
             res.update(target_rel_path=target_rel_path, origin_source=origin_ref, remediation=rem)
+            ev_kw: dict[str, Any] = {"operation": operation, "status": "blocked", "message": rem}
+            ev_kw.update(actor_email=eff_email, source_rel_path=target_rel_path, remediation=rem)
+            ev_kw["reason_code"] = "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
+            record_governance_event(target_dir, **ev_kw)
             return res
     if operation in CONSUMER_ALLOWED_OPS:
-        res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "operation": operation}
-        res.update(
-            layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None
-        )
+        res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "remediation": None}
+        res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
+        res["owner_role"] = owner_role
         return res
-    if authorized_emails and not (
-        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in authorized_emails)
+    if auth_emails and not (
+        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in auth_emails)
     ):
         rem = (
             f"Blocked: Git user.email '{eff_email or '<unset>'}' is not authorized "
             f"to run '{operation}' on layer '{layer_id}' (owner: {owner_role}; "
-            f"authorized: {', '.join(authorized_emails)}). "
+            f"authorized: {', '.join(auth_emails)}). "
             f"Process to follow: (1) Keep changes in your own squad/project workspace; "
             f"(2) Run './scripts/layer-config.sh promote-from-project <your-workspace> "
             f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr' "
@@ -185,8 +182,11 @@ def verify_layer_operation_authority(
         )
         res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
         res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
-        res.update(owner_role=owner_role, authorized_emails=authorized_emails)
+        res.update(owner_role=owner_role, authorized_emails=auth_emails)
         res.update(escalation_contact=escalation_contact, remediation=rem)
+        ev_kw = {"operation": operation, "status": "blocked", "actor_email": eff_email}
+        ev_kw.update(reason_code="UNAUTHORIZED_ACTOR_EMAIL", message=rem, remediation=rem)
+        record_governance_event(target_dir, **ev_kw)
         return res
     res = {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation}
     res.update(layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None)
@@ -277,40 +277,34 @@ def build_upward_promotion_pr_plan(
     """Build a Pull Request plan anchored in the originating child layer's context."""
     proj_m, target_m = _load_manifest_dict(project_dir), _load_manifest_dict(target_repo_dir)
     oss_anonymized = _is_oss_root_manifest(target_m)
-    source_layer_id = (
-        "enterprise-root-0" if oss_anonymized else str(proj_m.get("layer_id", project_dir.name))
-    )
-    source_layer_role = "corporate" if oss_anonymized else str(proj_m.get("layer_role", "project"))
-    source_prec = int(proj_m.get("precedence", 50))
+    src_lid = str(proj_m.get("layer_id", project_dir.name))
+    src_role, src_prec = str(proj_m.get("layer_role", "project")), int(proj_m.get("precedence", 50))
+    source_layer_id = "enterprise-root-0" if oss_anonymized else src_lid
+    source_layer_role = "corporate" if oss_anonymized else src_role
     t_fallback = target_layer if target_layer != "root" else target_repo_dir.name
     target_layer_id = str(target_m.get("layer_id", t_fallback))
     raw_t_auth = target_m.get("layer_authority")
     target_auth = raw_t_auth if isinstance(raw_t_auth, dict) else {}
     owner_role = str(target_auth.get("owner_role", f"Layer Owner ({target_layer_id})"))
-    escalation_contact = str(
-        target_auth.get("escalation_contact", f"{owner_role} ({target_layer_id})")
-    )
-    raw_email = (
-        actor_email.strip() if actor_email is not None else resolve_git_user_email(project_dir)
-    )
+    esc = str(target_auth.get("escalation_contact", f"{owner_role} ({target_layer_id})"))
+    raw_email = resolve_git_user_email(project_dir) if actor_email is None else actor_email.strip()
     proposer_email = "oss-contributor" if oss_anonymized else raw_email
-    eff_org = (contributing_org or "").strip() or (
-        "Anonymous Organization (default)" if oss_anonymized else source_layer_id
-    )
-    eff_contributors = (contributors or "").strip() or (
+    def_org = "Anonymous Organization (default)" if oss_anonymized else source_layer_id
+    eff_org = (contributing_org or "").strip() or def_org
+    def_ctb = (
         "Principal Enterprise Architect / Domain Leads"
         if oss_anonymized
         else (proposer_email or "unspecified")
     )
-    eff_context = (validation_context or "").strip() or (
-        f"Multi-layer governance hierarchy ({source_layer_role}, precedence {source_prec})"
-    )
+    eff_contrib = (contributors or "").strip() or def_ctb
+    def_ctx = f"Multi-layer governance hierarchy ({source_layer_role}, precedence {src_prec})"
+    eff_ctx = (validation_context or "").strip() or def_ctx
     asset_slug = re.sub(r"[^a-z0-9]+", "-", Path(source_rel).stem.lower()).strip("-") or "asset"
     sname = Path(source_rel).name
     if oss_anonymized:
         branch_name = f"promote/oss/{asset_slug}"
-        commit_msg = f"feat(governance): promote {sname} from enterprise root-0"
         pr_title = f"[OSS Promotion -> {target_layer_id}] Promote {sname}"
+        commit_msg = f"feat(governance): promote {sname} from enterprise root-0"
     else:
         safe_id = (
             source_layer_id
@@ -324,31 +318,20 @@ def build_upward_promotion_pr_plan(
         pr_title = f"[Promotion: {source_layer_id} -> {target_layer_id}] Promote {sname}"
     pr_body = (
         f"## Upward Governance Promotion (`{source_layer_id}` -> `{target_layer_id}`)\n\n"
-        f"- **Origin Layer (Context of Need)**: `{source_layer_id}` "
-        f"(role: `{source_layer_role}`, precedence: `{source_prec}`)\n"
-        f"- **Proposer Git Identity**: `{proposer_email or 'unspecified'}`\n"
-        f"- **Target Layer & Authority**: `{target_layer_id}` (`{escalation_contact}`)\n"
-        f"- **Target Template Pack**: `{target_template or 'layer-root'}`\n"
-        f"- **Source Path**: `{source_rel}` -> **Destination**: `{dest_rel}`\n"
-        f"- **SHA-256 Digest**: `{sha256}`\n\n"
+        f"- **Origin Layer**: `{source_layer_id}` (`{source_layer_role}`, `{src_prec}`)\n"
+        f"- **Proposer**: `{proposer_email or 'unspecified'}` · **Authority**: `{esc}`\n"
+        f"- **Template**: `{target_template or 'layer-root'}` · **SHA-256**: `{sha256}`\n"
+        f"- **Path**: `{source_rel}` -> `{dest_rel}`\n\n"
         f"### Community Attribution & Real-World Validation (Optional)\n"
-        f"| Field | Value (Edit or leave anonymous) |\n| :--- | :--- |\n"
-        f"| **Contributing Organization / Company** | `{eff_org}` |\n"
-        f"| **Contributors / Roles Involved** | `{eff_contributors}` |\n"
-        f"| **Real-World Validation Topology** | `{eff_context}` |\n"
-        f"| **Public Release Credit Preference** | "
-        f"`[ ] Credit organization/contributors in CHANGELOG.md` / `[x] Keep anonymous` |\n\n"
+        f"| Field | Value |\n| :--- | :--- |\n"
+        f"| **Contributing Organization** | `{eff_org}` |\n"
+        f"| **Contributors / Roles** | `{eff_contrib}` |\n"
+        f"| **Validation Topology** | `{eff_ctx}` |\n\n"
         f"### Open-Source Governance & Agnosticism Checklist\n"
-        f"- [x] Passed `OSS_AGNOSTICISM_VIOLATION` zero-leak gate "
-        f"(no private brand, domain, or internal codename literals).\n"
-        f"- [x] Validated in a live multi-tier governance hierarchy "
-        f"(`Root 0 <-> Department <-> Squad`).\n"
+        f"- [x] Passed `OSS_AGNOSTICISM_VIOLATION` gate (`Root 0 <-> Department <-> Squad`).\n"
         f"- [x] Preserves `< 465` line file gate and `18,000`-byte `AGENTS.md` token budget.\n\n"
-        f"### Post-Merge Downstream Inheritance\n"
-        f"Once reviewed and merged by `{owner_role}`, downstream workspaces inherit "
-        f"this update via:\n```bash\n"
-        f"./scripts/layer-config.sh sync-layer <downstream-workspace> "
-        f"--parent-dir {target_repo_dir}\n```\n"
+        f"### Post-Merge Downstream Inheritance\n```bash\n"
+        f"./scripts/layer-config.sh sync-layer <workspace> --parent-dir {target_repo_dir}\n```\n"
     )
     gh_cmd = (
         f"cd {target_repo_dir} && gh pr create --title {json.dumps(pr_title)} "
@@ -362,11 +345,10 @@ def build_upward_promotion_pr_plan(
     ]
     out: dict[str, Any] = {"origin_layer_id": source_layer_id, "proposer_email": proposer_email}
     out.update(origin_layer_role=source_layer_role, contributing_org=eff_org)
-    out.update(contributors=eff_contributors, validation_context=eff_context)
+    out.update(contributors=eff_contrib, validation_context=eff_ctx, reviewer_contact=esc)
     out.update(target_layer_id=target_layer_id, target_owner_role=owner_role)
-    out.update(reviewer_contact=escalation_contact, oss_anonymized=oss_anonymized)
-    out.update(branch_name=branch_name, commit_message=commit_msg, pr_title=pr_title)
-    out.update(pr_body=pr_body, git_pr_commands=cmds)
+    out.update(oss_anonymized=oss_anonymized, branch_name=branch_name, commit_message=commit_msg)
+    out.update(pr_title=pr_title, pr_body=pr_body, git_pr_commands=cmds)
     return out
 
 
@@ -385,6 +367,7 @@ def delegate_directive_to_child(
     priority: str = "P1",
     tracker: str = "WORKTASK.md",
     actor_email: str | None = None,
+    force_overwrite: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Delegate a 1-hop downward directive or governance artifact into <child_layer>/<tracker>."""
@@ -422,32 +405,42 @@ def delegate_directive_to_child(
         f"- [ ] **[{priority} · Delegated from `{pid}` (`{prole}`, "
         f"`precedence: {pprec}`)]**: {eff_text}"
     )
-    fname, updated = src_file.name if src_file is not None else "delegated-item.md", []
+    fname, updated, staged = src_file.name if src_file is not None else "delegated-item.md", [], []
+    stg_kw: dict[str, Any] = {"scope_tag": f"from-{pid}", "file_name": fname, "dry_run": dry_run}
+    stg_kw.update(operation="delegate-to-child", actor_email=actor_email or "")
     for tdir in targets:
         if tracker == "rules":
             ctpl = str(_load_manifest_dict(tdir).get("layer_id") or clean_child)
-            for rp in (tdir / "templates" / ctpl / "rules" / fname, tdir / ".agents/rules" / fname):
-                updated.append(str(rp))
-                if not dry_run:
-                    rp.parent.mkdir(parents=True, exist_ok=True)
-                    rp.write_text((src_body or f"# {eff_text}\n") + "\n", encoding="utf-8")
-                    _ensure_rule_file_frontmatter(rp, sync_in_place=True)
+            r_dest, r_body = (
+                tdir / "templates" / ctpl / "rules" / fname,
+                src_body or f"# {eff_text}\n",
+            )
+            if r_dest.is_file() and not force_overwrite:
+                staged.append(str(stage_non_destructive_proposal(tdir, content=r_body, **stg_kw)))
+            else:
+                for rp in (r_dest, tdir / ".agents/rules" / fname):
+                    updated.append(str(rp))
+                    if not dry_run:
+                        rp.parent.mkdir(parents=True, exist_ok=True)
+                        rp.write_text(f"{r_body.rstrip()}\n", encoding="utf-8")
+                        _ensure_rule_file_frontmatter(rp, sync_in_place=True)
         elif tracker in ("roadmaps", "corporate"):
             tfile = tdir / tracker / fname
-            updated.append(str(tfile))
-            if not dry_run:
-                tfile.parent.mkdir(parents=True, exist_ok=True)
-                hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)\n\n"
-                tfile.write_text(f"{hdr}{src_body or eff_text}\n", encoding="utf-8")
+            hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)"
+            hdr_body = f"{hdr}\n\n{src_body or eff_text}"
+            if tfile.is_file() and not force_overwrite:
+                staged.append(str(stage_non_destructive_proposal(tdir, content=hdr_body, **stg_kw)))
+            else:
+                updated.append(str(tfile))
+                if not dry_run:
+                    tfile.parent.mkdir(parents=True, exist_ok=True)
+                    tfile.write_text(f"{hdr_body}\n", encoding="utf-8")
         else:
             tfile = tdir / tracker
             updated.append(str(tfile))
             if not dry_run:
-                cur = (
-                    tfile.read_text(encoding="utf-8")
-                    if tfile.is_file()
-                    else f"# Active Work Tasks — {clean_child}\n\n"
-                )
+                def_hdr = f"# Active Work Tasks — {clean_child}\n\n"
+                cur = tfile.read_text(encoding="utf-8") if tfile.is_file() else def_hdr
                 blk = f"{entry}\n\n{src_body}" if (src_body and clean_dir) else entry
                 if entry not in cur:
                     sep = "" if cur.endswith("\n") else "\n"
@@ -458,5 +451,5 @@ def delegate_directive_to_child(
             src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
     out: dict[str, Any] = {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run}
     out.update(child_layer=clean_child, priority=priority, tracker=tracker)
-    out.update(delegated_entry=entry, updated_paths=updated)
+    out.update(delegated_entry=entry, updated_paths=updated, staged_proposals=staged)
     return out

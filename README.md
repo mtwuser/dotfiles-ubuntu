@@ -121,12 +121,13 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
 │   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (19 modules, < 465 lines each)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (20 modules, < 465 lines each)
 │   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter & telemetry helpers
 │   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
 │   │   ├── workspace_bootstrapper.py  ←     Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
-│   │   ├── workflow_engine.py         ←     Squad task-branch onboarding (start-task) & upstream section reconciliation
+│   │   ├── workflow_engine.py         ←     Squad task-branch onboarding (start-task), upstream reconciliation & consult-layer
+│   │   ├── git_governance_engine.py   ←     Git branch policy, dev->tst->pre->pro env gates, non-destructive staging & audit ledger
 │   │   ├── authority_engine.py        ←     Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
 │   │   ├── promotion_engine.py        ←     1-hop horizon (inspect-horizon), diff-project & promote-from-project (incl. Root 0 -> OSS)
 │   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
@@ -178,6 +179,9 @@ Corporate Root 0 (layer_role: "corporate", precedence: 10)
 # Layer owner vs. consumer authority gates, 1-hop horizon radar, task-branch onboarding & upward promotion:
 ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
+./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
+./scripts/layer-config.sh check-env-promotion <your-project> --to-env pre --email "clo@acme.com"
+./scripts/layer-config.sh record-decision <your-project> --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
 ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
 ./scripts/layer-config.sh start-task <your-project> --task "LEGAL-2026-004"

@@ -22,6 +22,27 @@ VALID_LAYER_ROLES = (
     "workstation",
 )
 VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
+DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
+    "main",
+    "master",
+    "env/tst",
+    "env/pre",
+    "env/pro",
+)
+DEFAULT_PROCESS_BRANCH_PREFIXES: dict[str, str] = {
+    "task": "task/",
+    "analysis": "analysis/",
+    "validate": "validate/",
+    "promote": "promote/",
+    "directive": "directive/",
+}
+DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
+    "dev": "task/*",
+    "tst": "env/tst",
+    "pre": "env/pre",
+    "pro": "main",
+}
+VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
 TEMPLATE_STACK_GROUP_DIRS = (
     "business-stack",
     "squad-stack",
@@ -211,12 +232,15 @@ CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "start-task",
     "compare-upstream",
     "consult-layer",
+    "check-env-promotion",
+    "record-decision",
 )
 OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork",
     "scaffold-template",
     "register-subtree",
     "set-authority",
+    "configure-git-policy",
     "delegate-to-child",
     "release",
     "commit-layer",

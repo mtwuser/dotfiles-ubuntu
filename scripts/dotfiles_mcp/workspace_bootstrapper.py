@@ -18,6 +18,7 @@ from .fork_configurator import (
     configure_fork_manifest,
     scaffold_template_pack,
 )
+from .git_governance_engine import inspect_git_governance_state
 from .manifest_helpers import (
     _is_dest_template_newer,
     _iter_layer_template_dirs,
@@ -70,29 +71,23 @@ def set_global_agents_profile(
 ) -> dict[str, Any]:
     """Compose antigravity/.gemini/config/AGENTS.md from modular base templates."""
     if profile not in VALID_GLOBAL_PROFILES:
-        raise ValueError(
-            f"Invalid global profile {profile!r}; must be one of {VALID_GLOBAL_PROFILES}"
-        )
-
+        raise ValueError(f"Invalid global profile {profile!r}; must be in {VALID_GLOBAL_PROFILES}")
     sections, source_files = [], []
     for idx, (tpl_id, rule_filename) in enumerate(PROFILE_TEMPLATE_CHAIN[profile]):
         rule_path = repo_dir / "templates" / tpl_id / "rules" / rule_filename
         if not rule_path.is_file():
-            raise ValueError(
-                f"Missing profile template rule file: {rule_path.relative_to(repo_dir)}"
-            )
+            rel_r = rule_path.relative_to(repo_dir)
+            raise ValueError(f"Missing profile template rule file: {rel_r}")
         source_files.append(str(rule_path.relative_to(repo_dir)))
         raw_text = rule_path.read_text(encoding="utf-8").strip()
-        sections.append(
-            _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
-        )
+        sec = _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
+        sections.append(sec)
 
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes = len(composed.encode("utf-8"))
     if composed_bytes > c.AGENTS_MD_MAX_BYTES:
         cap = c.AGENTS_MD_MAX_BYTES
         raise ValueError(f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds {cap}-byte cap")
-
     target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
     if not dry_run:
         target_agents.parent.mkdir(parents=True, exist_ok=True)
@@ -106,9 +101,8 @@ def set_global_agents_profile(
     headroom = c.AGENTS_MD_MAX_BYTES - composed_bytes
     res: dict[str, Any] = {"profile": profile, "source_files": source_files, "dry_run": dry_run}
     res.update(target_file=str(target_agents.relative_to(repo_dir)), size_bytes=composed_bytes)
-    res.update(
-        budget_max_bytes=c.AGENTS_MD_MAX_BYTES, headroom_bytes=headroom, stow_executed=stow_executed
-    )
+    res.update(budget_max_bytes=c.AGENTS_MD_MAX_BYTES, headroom_bytes=headroom)
+    res["stow_executed"] = stow_executed
     return res
 
 
@@ -159,8 +153,8 @@ def _render_layer_makefile(
         f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
         f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
         "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        ".PHONY: help status task consult horizon sync upstream-diff diff authority promote "
-        "delegate mcp-test\n"
+        ".PHONY: help status task consult horizon sync upstream-diff diff authority env-gate "
+        "promote delegate mcp-test\n"
         f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n'
         '\t@echo "  make status                       Consolidated session, git & horizon digest"\n'
         '\t@echo "  make task TASK=<id>               Claim WORKTASK.md item & branch command"\n'
@@ -170,6 +164,7 @@ def _render_layer_makefile(
         '\t@echo "  make upstream-diff                Section diff against upstream templates"\n'
         '\t@echo "  make diff                         Verify zero drift against templates/"\n'
         '\t@echo "  make authority                    Verify release authority (git user.email)"\n'
+        '\t@echo "  make env-gate ENV=<tst|pre|pro>   Verify environment promotion gate"\n'
         '\t@echo "  make promote SOURCE=<rel-path>    Promote rule/skill 1-hop upward"\n'
         '\t@echo "  make delegate CHILD=<id> TASK=... Delegate a 1-hop directive to a child"\n'
         '\t@echo "  make mcp-test                     Verify layer templates & topology"\n\n'
@@ -185,6 +180,7 @@ def _render_layer_makefile(
         f"upstream-diff:\n\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)\n"
         f"diff:\n\t@{cli} diff-project $(CURDIR)\n"
         f"authority:\n\t@{cli} check-authority $(CURDIR) --op release\n"
+        f"env-gate:\n\t@{cli} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)\n"
         'promote:\n\t@test -n "$(SOURCE)" || '
         '(echo "Usage: make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>]" && exit 1)\n'
         f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
@@ -419,10 +415,8 @@ def inspect_workspace_status(
     is_layer = m_path.is_file()
     m: dict[str, Any] = json.loads(m_path.read_text(encoding="utf-8")) if is_layer else {}
     role, lid = str(m.get("layer_role", "project")), str(m.get("layer_id", ws.name))
-    prec, tpls = (
-        int(m.get("precedence", 80)),
-        [str(x) for x in m.get("default_stack_templates", [])],
-    )
+    prec = int(m.get("precedence", 80))
+    tpls = [str(x) for x in m.get("default_stack_templates", [])]
     rules = [p.name for p in sorted((ws / ".agents/rules").glob("*.md"))]
     has_tech = bool({"technical-base.md", "coding.md"} & set(rules) or "technical-base" in tpls)
     has_biz = bool("business-base.md" in rules or "business-base" in tpls or role == "corporate")
@@ -443,8 +437,10 @@ def inspect_workspace_status(
         )
         return proc.stdout.splitlines()
 
-    g_stat = _git_lines("status", "--short", "--branch")
-    g_log = _git_lines("log", "--oneline", "-5")
+    g_stat, g_log = (
+        _git_lines("status", "--short", "--branch"),
+        _git_lines("log", "--oneline", "-5"),
+    )
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:35]), "\n".join(trk_txt.splitlines()[:35])
     last_cid = uuid_m.group(0) if uuid_m else None
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
@@ -455,6 +451,7 @@ def inspect_workspace_status(
     )
     out["priority_state"] = dict(active_tracker=active_trk, excerpt=p_ex)
     out["git_state"] = dict(is_git_repo=is_git, status_short=g_stat, recent_commits=g_log)
+    out["git_governance"] = inspect_git_governance_state(ws)
     out["horizon"] = (
         inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None
     )

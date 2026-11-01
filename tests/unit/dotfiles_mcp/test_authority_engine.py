@@ -370,8 +370,12 @@ class TestAuthorityEngine:
         dup_res = dlg(directive="Audit Q3 compliance ledgers", priority="P0")
         road_dry = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
         road_live = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
+        road_staged = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
+        road_forced = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", force_overwrite=True)
         rule_dry = dlg(directive="Enforce GDPR", tracker="rules", dry_run=True)
         rule_live = dlg(directive="Enforce GDPR", tracker="rules")
+        rule_staged = dlg(directive="Enforce GDPR v2", tracker="rules")
+        rule_forced = dlg(directive="Enforce GDPR v2", tracker="rules", force_overwrite=True)
 
         # Assert
         assert dry_res["dry_run"] is True and dry_existed is False
@@ -381,9 +385,13 @@ class TestAuthorityEngine:
         assert (sib_child / "WORKTASK.md").read_text("utf-8").count("Audit Q3") == 1
         assert dup_res["delegated_entry"] == live_res["delegated_entry"]
         assert (sib_child / "roadmaps/WORKROAD.md").is_file() and road_live["tracker"] == "roadmaps"
+        assert len(road_staged["staged_proposals"]) == 2  # type: ignore[arg-type]
+        assert len(road_forced["updated_paths"]) == 2  # type: ignore[arg-type]
         assert (sib_child / ".agents/rules/delegated-item.md").is_file() and rule_live[
             "tracker"
         ] == "rules"
+        assert len(rule_staged["staged_proposals"]) == 2  # type: ignore[arg-type]
+        assert len(rule_forced["updated_paths"]) == 4  # type: ignore[arg-type]
         assert "Delivered to `dept-legal`" in (corp_dir / "WORKROAD.md").read_text("utf-8")
         for bad_kw, err_pat in (
             ({"child_layer": "Bad Name", "directive": "x"}, "must be kebab-case"),

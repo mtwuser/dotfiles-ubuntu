@@ -314,6 +314,12 @@ class TestPromotionEngine:
             actor_email="member@squad.acme.com",
             dry_run=True,
         )
+        staged_pr_res = prom(
+            ".agents/rules/legal.md",
+            target_template="fastapi-hexagonal",
+            prepare_pr=True,
+            actor_email="member@squad.acme.com",
+        )
         upstream_res = prom(
             ".agents/rules/legal.md",
             target_layer="dept-legal",
@@ -340,6 +346,8 @@ class TestPromotionEngine:
             "## Proposed from"
         ) == 2
         assert tpl_rule_res["destination"] == "templates/fastapi-hexagonal/rules/legal.md"
+        assert staged_pr_res["staged_proposal"] is not None
+        assert "promotion_pr_plan" in staged_pr_res
         assert (
             root_skill_res["destination"] == "antigravity/.gemini/config/skills/good-skill/SKILL.md"
         )

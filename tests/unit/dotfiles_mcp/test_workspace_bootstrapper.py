@@ -284,6 +284,7 @@ class TestWorkspaceBootstrapper:
         assert "Makefile" in live_res["baseline_files_created"]
         assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert "make status" in (target_dir / "Makefile").read_text(encoding="utf-8")
+        assert "make env-gate" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert str(target_dir.resolve()) in (squad_dir / "Makefile").read_text(encoding="utf-8")
         assert "CONTRIB_REPO ?=" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert ".agents/rules/business-base.md" in live_res["files_materialized"]
@@ -314,6 +315,7 @@ class TestWorkspaceBootstrapper:
             "3fcd5708-4b9b-4d2b-b187-f224a76165de"
         )
         assert dept_status["priority_state"]["active_tracker"] == "WORKTASK.md"
+        assert dept_status["git_governance"]["active_environment"] == "dev"
         assert dept_status["horizon"] is not None
         assert proj_status["workspace_mode"] == "technical"
         assert proj_status["git_state"]["is_git_repo"] is False

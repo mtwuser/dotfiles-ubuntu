@@ -219,8 +219,9 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
    - `make upstream-diff` — Compares rule sections (`#`/`##`) between the upstream parent/Open Source and local templates (`in_sync_sections`, `upstream_only_sections`, `local_only_sections`, `diverged_sections`).
    - `make diff` — Verifies zero drift between `.agents/` projections and `templates/`.
    - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
-   - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr`.
-   - `make delegate CHILD=<layer-id> TASK="<directive>" [PRIORITY=P0|P1|P2]` — Appends a traceable 1-hop downward directive into the child layer's `WORKTASK.md`.
+   - `make env-gate ENV=<tst|pre|pro>` — Evaluates intrinsic `dev -> tst -> pre -> pro` promotion invariants (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` for `pre`, `CHANGELOG.md` + `layer_authority` for `pro`).
+   - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr` (staging non-destructively at `.agents/proposals/to-<layer>/` when target files already exist or caller lacks direct release authority, unless `--force` is passed).
+   - `make delegate CHILD=<layer-id> TASK="<directive>" [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface (staging existing `rules`/`roadmaps`/`corporate` files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed, and logging alerts to `logs/governance_audit.jsonl` and `.agents/SESSION.md`).
    - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
 
 ---

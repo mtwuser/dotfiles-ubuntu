@@ -26,6 +26,7 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     TEMPLATE_STACK_GROUP_DIRS,
 )
+from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _inspect_mounted_children_drifts,
@@ -88,10 +89,8 @@ def _route_novel_item(
             return res
     root_rec, root_tpls = layer_records[0], list(layer_records[0]["templates"])
     if item_kind == "rules" and root_tpls:
-        dest, scope = (
-            f"templates/{root_tpls[0]}/rules/{item_name}",
-            f"template-pack:root:{root_tpls[0]}",
-        )
+        dest = f"templates/{root_tpls[0]}/rules/{item_name}"
+        scope = f"template-pack:root:{root_tpls[0]}"
     elif item_kind == "skills":
         dest, scope = f"antigravity/.gemini/config/skills/{stem}/SKILL.md", "global-skills-root"
     else:
@@ -111,9 +110,7 @@ def compare_project_patterns_multilayer(
     target_dirs: list[tuple[str, Path, dict[str, Any]]],
 ) -> dict[str, Any]:
     """Compare consumer project rules/skills across 1..N layers and route promotions."""
-    layer_a_skills: set[str] = set()
-    layer_b_rules: set[str] = set()
-    layer_b_skills: set[str] = set()
+    layer_a_skills, layer_b_rules, layer_b_skills = set[str](), set[str](), set[str]()
     layer_records: list[dict[str, Any]] = []
     for lname, ldir, manifest in target_dirs:
         for sf in (ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md"):
@@ -157,10 +154,14 @@ def compare_project_patterns_multilayer(
     out["materialized_layer_rules"] = sorted(materialized_rules)
     out["already_in_layer_a_skills"] = sorted(s for s in project_skills if s in layer_a_skills)
     out["already_in_layer_b_templates"] = {"rules": in_b_rules, "skills": in_b_skills}
-    cands = {"novel_rules": novel_rules, "novel_skills": novel_skills}
-    out["candidates_for_upward_promotion"] = cands
-    miss_b = {"rules": miss_rules, "skills": miss_skills}
-    out["available_in_layer_b_but_missing_in_project"] = miss_b
+    out["candidates_for_upward_promotion"] = {
+        "novel_rules": novel_rules,
+        "novel_skills": novel_skills,
+    }
+    out["available_in_layer_b_but_missing_in_project"] = {
+        "rules": miss_rules,
+        "skills": miss_skills,
+    }
     return out
 
 
@@ -168,15 +169,12 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     """Compare SHA-256 digests between <project_dir>/.agents/ and fork layers/templates."""
     layer_sources: dict[str, list[tuple[str, Path]]] = {}
     agents_dir, proj_resolved = project_dir / ".agents", project_dir.resolve()
-    search_layers: list[tuple[str, Path]] = [
-        ("root", repo_dir),
-        *(
-            (s.name, s)
-            for s in sorted((repo_dir / "layers").glob("*"))
-            if s.is_dir() and not s.name.startswith(".")
-        ),
+    sub_layers = [
+        (s.name, s)
+        for s in sorted((repo_dir / "layers").glob("*"))
+        if s.is_dir() and not s.name.startswith(".")
     ]
-    for lname, ldir in search_layers:
+    for lname, ldir in [("root", repo_dir), *sub_layers]:
         for tname, tdir in _iter_layer_template_dirs(ldir):
             tag = f"{lname}:{tname}"
             for rf in sorted((tdir / "rules").glob("*.md")):
@@ -196,19 +194,17 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
             )
 
     in_sync, modified_in_project, novel_in_project = [], [], []
-    proj_files: list[tuple[str, Path]] = [
-        *((f"rules/{rf.name}", rf) for rf in sorted((agents_dir / "rules").glob("*.md"))),
-        *(
-            (f"skills/{sf.parent.name}/SKILL.md", sf)
-            for sf in sorted((agents_dir / "skills").glob("*/SKILL.md"))
-        ),
-        *(
-            (str(af.relative_to(agents_dir)).replace("\\", "/"), af)
-            for af in sorted((agents_dir / "assets").rglob("*"))
-            if af.is_file()
-        ),
+    r_files = [(f"rules/{rf.name}", rf) for rf in sorted((agents_dir / "rules").glob("*.md"))]
+    s_files = [
+        (f"skills/{sf.parent.name}/SKILL.md", sf)
+        for sf in sorted((agents_dir / "skills").glob("*/SKILL.md"))
     ]
-    for rel_key, pfile in proj_files:
+    a_files = [
+        (str(af.relative_to(agents_dir)).replace("\\", "/"), af)
+        for af in sorted((agents_dir / "assets").rglob("*"))
+        if af.is_file()
+    ]
+    for rel_key, pfile in [*r_files, *s_files, *a_files]:
         if not pfile.resolve().is_relative_to(proj_resolved):
             raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
         candidates: list[tuple[str, Path]] = list(layer_sources.get(rel_key, []))
@@ -254,6 +250,7 @@ def promote_project_asset_to_layer(
     contributing_org: str | None = None,
     contributors: str | None = None,
     validation_context: str | None = None,
+    force_overwrite: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Promote a rule, skill, doc, or tracker from <project_dir> into a parent layer or template."""
@@ -286,8 +283,7 @@ def promote_project_asset_to_layer(
     is_tracker = len(rel_parts) == 1 and rel_parts[0] in PROMOTABLE_TRACKERS
     is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in ("roadmaps", "corporate", "docs")
     inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
-    eff_template = target_template or inferred_tpl
-    parent_lid = str(target_m.get("layer_id", ""))
+    eff_template, parent_lid = target_template or inferred_tpl, str(target_m.get("layer_id", ""))
     if (
         not eff_template
         and rel_parts[:2] == (".agents", "rules")
@@ -300,15 +296,12 @@ def promote_project_asset_to_layer(
     if eff_template and not KEBAB_ID_RE.match(eff_template):
         raise ValueError(f"Invalid target_template {eff_template!r}: must be kebab-case")
     tpl_dest = _resolve_template_dest_dir(layer_base, str(eff_template)) if eff_template else None
-    if is_tracker:
-        dest_file = layer_base / rel_parts[0]
-    elif is_gov_dir:
+    if is_tracker or is_gov_dir:
         dest_file = layer_base / Path(*rel_parts)
     elif is_ag_asset or (is_tpl_src and rel_parts[tpl_idx + 1] == "assets"):
         tail = rel_parts[3:] if is_ag_asset else rel_parts[tpl_idx + 2 :]
-        dest_file = (
-            (tpl_dest or (layer_base / "templates" / str(eff_template))) / "assets" / Path(*tail)
-        )
+        base_d = tpl_dest or (layer_base / "templates" / str(eff_template))
+        dest_file = base_d / "assets" / Path(*tail)
     elif src_file.name == "SKILL.md":
         lines = content.splitlines()
         if len(lines) > 500 or not lines or lines[0].strip() != "---":
@@ -339,25 +332,36 @@ def promote_project_asset_to_layer(
                 f"exceeds {AGENTS_MD_MAX_BYTES}-byte token budget cap"
             )
 
-    if not dry_run:
+    eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
+    auth_v = verify_layer_operation_authority(
+        layer_base, operation="release", actor_email=actor_email
+    )
+    auth_ok, staged_path = bool(auth_v["allowed"]), None
+    if (
+        not is_tracker
+        and not force_overwrite
+        and (not auth_ok or (prepare_pr and dest_file.is_file()))
+    ):
+        stg_kw: dict[str, Any] = {"scope_tag": f"to-{eff_layer}", "file_name": dest_file.name}
+        stg_kw.update(content=content, operation="promote-from-project", dry_run=dry_run)
+        stg_kw.update(actor_email=actor_email or "", reason_code="TARGET_PROTECTED_OR_PR_MODE")
+        staged_path = str(stage_non_destructive_proposal(project_dir.resolve(), **stg_kw))
+        prepare_pr = True
+    elif not dry_run:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         if is_tracker:
             om = _load_manifest_dict(project_dir)
             oid = str(om.get("layer_id", project_dir.name))
             orole, oprec = str(om.get("layer_role", "project")), int(om.get("precedence", 50))
             hdr = f"## Proposed from `{oid}` (`{orole}`, `precedence: {oprec}`)"
-            cur = (
-                dest_file.read_text(encoding="utf-8").rstrip()
-                if dest_file.is_file()
-                else f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
-            )
+            def_hdr = f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
+            cur = dest_file.read_text(encoding="utf-8").rstrip() if dest_file.is_file() else def_hdr
             dest_file.write_text(f"{cur}\n\n{hdr}\n\n{content.strip()}\n", encoding="utf-8")
         else:
             dest_file.unlink(missing_ok=True)
             shutil.copy2(src_file, dest_file)
             dest_file.chmod(0o644)
 
-    eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
     src_rel_str = str(src_file.relative_to(project_dir.resolve()))
     dest_rel_str, sha256_str = str(dest_file.relative_to(repo_resolved)), _sha256_file(src_file)
     push_cmd = (
@@ -367,20 +371,15 @@ def promote_project_asset_to_layer(
     )
     result: dict[str, Any] = {"source": src_rel_str, "target_layer": eff_layer, "dry_run": dry_run}
     result.update(target_template=eff_template, destination=dest_rel_str, sha256=sha256_str)
-    result["subtree_push_command"] = push_cmd
+    result.update(subtree_push_command=push_cmd, staged_proposal=staged_path)
     if prepare_pr or upstream_dir is not None:
+        dest_rel_lb = str(dest_file.relative_to(layer_base))
+        pr_kw: dict[str, Any] = {"source_rel": src_rel_str, "dest_rel": dest_rel_lb}
+        pr_kw.update(target_layer=eff_layer, target_template=eff_template, sha256=sha256_str)
+        pr_kw.update(actor_email=actor_email, contributing_org=contributing_org)
+        pr_kw.update(contributors=contributors, validation_context=validation_context)
         result["promotion_pr_plan"] = build_upward_promotion_pr_plan(
-            project_dir,
-            layer_base,
-            source_rel=src_rel_str,
-            dest_rel=str(dest_file.relative_to(layer_base)),
-            target_layer=eff_layer,
-            target_template=eff_template,
-            sha256=sha256_str,
-            actor_email=actor_email,
-            contributing_org=contributing_org,
-            contributors=contributors,
-            validation_context=validation_context,
+            project_dir, layer_base, **pr_kw
         )
     return result
 
