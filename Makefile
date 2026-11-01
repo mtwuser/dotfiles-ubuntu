@@ -42,6 +42,7 @@ venv install install-dev: $(VENV_BIN)/pytest
 
 setup-dev: $(VENV_BIN)/pytest
 	./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base
+	mkdir -p $(CURDIR)/.agents/skills && cp -rf $(CURDIR)/antigravity/.gemini/config/skills/* $(CURDIR)/.agents/skills/
 
 workstation-setup:
 	./scripts/workstation-sync.sh --setup

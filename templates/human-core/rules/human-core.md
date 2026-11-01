@@ -109,9 +109,9 @@ Verify these mandates before proposing solutions or modifying files in any works
 2. **ONE single commit per repo** using Conventional Commits (`feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`).
 3. **Independent repos**: Deliver a separate commit block per modified repo (`cd <REPO_PATH> && git add ... && git commit -m "..."`).
 4. **Task tracking sync is MANDATORY** before delivering any commit block (`skills/continue/SKILL.md`).
-5. **Force-tracked `.gitignore` files**: Use `git add -u` (plus `git add -f <new_file>`) so tracked governance files (`WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md`, `ROADMAP.md`) are never left unstaged.
-6. **Working Commits vs. Releases (`[Unreleased]` Standard)**: During active iteration, **NEVER** bump `VERSION`/`pyproject.toml`/`README.md` badges, append `(vX.Y.Z)` to commits, or chain `git push` by default. Log under `## [Unreleased]` in `CHANGELOG.md` and cut releases only via `/release` (`skills/release/SKILL.md`).
+5. **Force-tracked `.gitignore` files**: Use `git add -u` (plus `git add -f <new_file>`) so tracked governance files (`WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md`) stay staged.
+6. **Working Commits vs. Releases (`[Unreleased]` Standard)**: During iteration, **NEVER** bump `VERSION`/`pyproject.toml`/`README.md`, append `(vX.Y.Z)`, or chain `git push`. Log under `## [Unreleased]` in `CHANGELOG.md` and release only via `/release` (`skills/release/SKILL.md`).
 
 ### Priority Chain & Global Config Persistence
 - **Priority Chain**: (1) `WORKTASK.md` $\rightarrow$ (2) `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` $\rightarrow$ (3) `roadmaps/`. Never suggest ad-hoc work from memory.
-- **Global Config Persistence (`dotfiles-ubuntu`)**: `~/dotfiles-ubuntu` in `$HOME` is a read-only appliance (`workstation-sync.sh --sync`); author changes in `DOTFILES_DEV_REPO_DIR` (`make promote`).
+- **Global Config & Workspace-First Skills (`dotfiles-ubuntu`)**: `$HOME/dotfiles-ubuntu` is read-only (`workstation-sync.sh --sync`); author in `DOTFILES_DEV_REPO_DIR` (`make setup-dev`/`promote`) and prefer workspace `.agents/skills/` or `antigravity/.gemini/config/skills/` over `~/.gemini/config/skills/`.

@@ -171,7 +171,10 @@ class TestPromotionEngine:
         (repo_dir / "templates/base/skills/sopen/SKILL.md").write_text(
             "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
         )
-        (repo_dir / "antigravity/.gemini/config").mkdir(parents=True)
+        (repo_dir / "antigravity/.gemini/config/skills/release").mkdir(parents=True)
+        (repo_dir / "antigravity/.gemini/config/skills/release/SKILL.md").write_text(
+            "---\nname: release\ndescription: r\n---\n", encoding="utf-8"
+        )
         (repo_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
             "# Root v1\n", encoding="utf-8"
         )
@@ -211,6 +214,10 @@ class TestPromotionEngine:
         (proj_dir / ".agents/skills/sopen/SKILL.md").write_text(
             "---\nname: sopen\ndescription: s\n---\n", encoding="utf-8"
         )
+        (proj_dir / ".agents/skills/release").mkdir(parents=True)
+        (proj_dir / ".agents/skills/release/SKILL.md").write_text(
+            "---\nname: release\ndescription: r\n---\n", encoding="utf-8"
+        )
 
         # Act
         diff = diff_project_against_layers(repo_dir, proj_dir)
@@ -228,6 +235,7 @@ class TestPromotionEngine:
         assert "rules/layer-10-root.md" in in_sync_files
         assert "rules/layer-10-dept-sync.md" in in_sync_files
         assert "skills/sopen/SKILL.md" in in_sync_files
+        assert "skills/release/SKILL.md" in in_sync_files
         assert "rules/testing.md" in mod_files
         assert "rules/layer-05-dept-legal.md" in mod_files
         assert "assets/base/sub/snippet.md" in mod_files

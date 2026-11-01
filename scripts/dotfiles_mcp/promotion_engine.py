@@ -146,22 +146,21 @@ def compare_project_patterns_multilayer(
             )
         )
     materialized_rules = [r for r in project_rules if MATERIALIZED_RULE_RE.match(r)]
-    filtered_proj_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
-    novel_rules = sorted(r for r in filtered_proj_rules if r not in layer_b_rules)
+    filtered_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
+    novel_rules = sorted(r for r in filtered_rules if r not in layer_b_rules)
     novel_skills = sorted(
         s for s in project_skills if s not in layer_a_skills and s not in layer_b_skills
     )
-    root_agents = repo_dir / "antigravity/.gemini/config/AGENTS.md"
-    agents_sz = root_agents.stat().st_size if root_agents.is_file() else 0
-    headroom = max(0, AGENTS_MD_MAX_BYTES - agents_sz)
+    root_ag = repo_dir / "antigravity/.gemini/config/AGENTS.md"
+    headroom = max(0, AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
     routing = [
         *(_route_novel_item(r, "rules", layer_records, headroom) for r in novel_rules),
         *(_route_novel_item(s, "skills", layer_records, headroom) for s in novel_skills),
     ]
     primary_id = target_dirs[0][2].get("layer_id") if len(target_dirs) == 1 else "all"
-    in_b_rules = sorted(r for r in filtered_proj_rules if r in layer_b_rules)
+    in_b_rules = sorted(r for r in filtered_rules if r in layer_b_rules)
     in_b_skills = sorted(s for s in project_skills if s in layer_b_skills)
-    miss_rules = sorted(r for r in layer_b_rules if r not in filtered_proj_rules)
+    miss_rules = sorted(r for r in layer_b_rules if r not in filtered_rules)
     miss_skills = sorted(s for s in layer_b_skills if s not in project_skills)
     return dict(
         compared_against_layer=primary_id,
@@ -179,6 +178,7 @@ def compare_project_patterns_multilayer(
 def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, Any]:
     """Compare SHA-256 digests between <project_dir>/.agents/ and fork layers/templates."""
     layer_sources: dict[str, tuple[str, Path]] = {}
+    agents_dir, proj_resolved = project_dir / ".agents", project_dir.resolve()
     search_layers: list[tuple[str, Path]] = [
         ("root", repo_dir),
         *(
@@ -196,16 +196,17 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 layer_sources.setdefault(f"rules/{rf.name}", (tag, rf))
             for sf in sorted((tdir / "skills").glob("*/SKILL.md")):
                 layer_sources.setdefault(f"skills/{sf.parent.name}/SKILL.md", (tag, sf))
-            assets_dir = tdir / "assets"
-            for af in sorted(assets_dir.rglob("*")):
+            for af in sorted((tdir / "assets").rglob("*")):
                 if af.is_file():
-                    rel_a = str(af.relative_to(assets_dir)).replace("\\", "/")
+                    rel_a = str(af.relative_to(tdir / "assets")).replace("\\", "/")
                     layer_sources.setdefault(f"assets/{tdir.name}/{rel_a}", (tag, af))
+        for sf in sorted((ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md")):
+            k, v = f"skills/{sf.parent.name}/SKILL.md", (f"layer:{lname}", sf)
+            layer_sources[k] = v if proj_resolved == repo_dir.resolve() else layer_sources.get(k, v)
 
     in_sync: list[dict[str, str]] = []
     modified_in_project: list[dict[str, str]] = []
     novel_in_project: list[str] = []
-    agents_dir, proj_resolved = project_dir / ".agents", project_dir.resolve()
     proj_files: list[tuple[str, Path]] = [
         *((f"rules/{rf.name}", rf) for rf in sorted((agents_dir / "rules").glob("*.md"))),
         *(
@@ -241,12 +242,12 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 )
         else:
             novel_in_project.append(rel_key)
-    return dict(
-        project_dir=str(project_dir),
-        in_sync=in_sync,
-        modified_in_project=modified_in_project,
-        novel_in_project=novel_in_project,
-    )
+    return {
+        "project_dir": str(project_dir),
+        "in_sync": in_sync,
+        "modified_in_project": modified_in_project,
+        "novel_in_project": novel_in_project,
+    }
 
 
 def promote_project_asset_to_layer(
@@ -342,22 +343,21 @@ def promote_project_asset_to_layer(
 
     eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
     src_rel_str = str(src_file.relative_to(project_dir.resolve()))
-    dest_rel_str = str(dest_file.relative_to(repo_resolved))
-    sha256_str = _sha256_file(src_file)
+    dest_rel_str, sha256_str = str(dest_file.relative_to(repo_resolved)), _sha256_file(src_file)
     push_cmd = (
         f"./scripts/layer-subtree.sh push {eff_layer} feat/promote-{src_file.stem}"
         if eff_layer != "root"
         else None
     )
-    result: dict[str, Any] = {
-        "source": src_rel_str,
-        "target_layer": eff_layer,
-        "target_template": eff_template,
-        "destination": dest_rel_str,
-        "sha256": sha256_str,
-        "subtree_push_command": push_cmd,
-        "dry_run": dry_run,
-    }
+    result: dict[str, Any] = dict(
+        source=src_rel_str,
+        target_layer=eff_layer,
+        target_template=eff_template,
+        destination=dest_rel_str,
+        sha256=sha256_str,
+        subtree_push_command=push_cmd,
+        dry_run=dry_run,
+    )
     if prepare_pr or upstream_dir is not None:
         result["promotion_pr_plan"] = build_upward_promotion_pr_plan(
             project_dir,
