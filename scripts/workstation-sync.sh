@@ -12,9 +12,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RUNTIME_DIR="${DOTFILES_RUNTIME_DIR:-$REPO_DIR}"
-RUNTIME_DIR="$(cd "$RUNTIME_DIR" && pwd)"
-VERSION_STR="$({ tr -d '[:space:]' < "$RUNTIME_DIR/VERSION"; } 2>/dev/null || echo "unknown")"
+if [ -n "${DOTFILES_RUNTIME_DIR:-}" ]; then
+  RUNTIME_DIR="$(cd "$DOTFILES_RUNTIME_DIR" && pwd)"
+else
+  REPO_BASE="$(basename "$REPO_DIR")"
+  if [[ "$REPO_BASE" == dev-* ]] && [ -d "$HOME/${REPO_BASE#dev-}" ]; then
+    RUNTIME_DIR="$(cd "$HOME/${REPO_BASE#dev-}" && pwd)"
+  else
+    RUNTIME_DIR="$REPO_DIR"
+  fi
+fi
+VERSION_STR="$({ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown")"
 
 CONFIG_FILE="${DOTFILES_WORKSTATION_CONF:-$HOME/.config/dotfiles-ubuntu/workstation.conf}"
 STAMP_DIR="${XDG_RUNTIME_DIR:-/tmp}"
@@ -71,7 +79,20 @@ detect_dev_repo() {
 
 apply_push_guard() {
   local mode="$1"
-  if [ ! -d "$RUNTIME_DIR/.git" ]; then
+  local dev_dir
+  dev_dir="$(detect_dev_repo)"
+  for candidate_dev in "$dev_dir" "$REPO_DIR"; do
+    if [ -n "$candidate_dev" ] && [ -d "$candidate_dev/.git" ]; then
+      if [ "$candidate_dev" = "$dev_dir" ] || [[ "$(basename "$candidate_dev")" == dev-* ]]; then
+        local dev_guard
+        dev_guard="$(git -C "$candidate_dev" config --get remote.origin.pushurl 2>/dev/null || true)"
+        if [ "$dev_guard" = "$READONLY_PUSH_GUARD" ]; then
+          git -C "$candidate_dev" config --unset remote.origin.pushurl 2>/dev/null || true
+        fi
+      fi
+    fi
+  done
+  if [ ! -d "$RUNTIME_DIR/.git" ] || [ "$RUNTIME_DIR" = "$dev_dir" ] || [[ "$(basename "$RUNTIME_DIR")" == dev-* ]]; then
     return 0
   fi
   if [ "$mode" = "readonly" ]; then

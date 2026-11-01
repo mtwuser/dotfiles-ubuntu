@@ -391,3 +391,65 @@ class TestCLIScripts:
         assert '"mode": "readonly"' in status_proc.stdout
         assert '"profile": "human-core"' in status_proc.stdout
         assert '"boot_synced": true' in status_proc.stdout
+
+    def test_workstation_sync_never_locks_dev_repo_pushurl_and_heals_stale_guard(
+        self, tmp_path: Path
+    ) -> None:
+        """Ensure workstation-sync.sh routes dev-* clones to runtime and heals dev pushurl."""
+        # Arrange
+        script = str(REPO_DIR / "scripts" / "workstation-sync.sh")
+        runtime_dir = tmp_path / "sample-repo"
+        dev_dir = tmp_path / "Projects" / "dev-sample-repo"
+        (runtime_dir / "system").mkdir(parents=True)
+        (dev_dir / "system").mkdir(parents=True)
+        (runtime_dir / "VERSION").write_text("2.4.0\n", encoding="utf-8")
+        (dev_dir / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
+        for rdir in (runtime_dir, dev_dir):
+            subprocess.run(["/usr/bin/git", "init", "-q"], cwd=rdir, check=True)
+            subprocess.run(
+                ["/usr/bin/git", "remote", "add", "origin", "https://example.com/repo.git"],
+                cwd=rdir,
+                check=True,
+            )
+        subprocess.run(
+            [
+                "/usr/bin/git",
+                "config",
+                "remote.origin.pushurl",
+                "VALIDATION_BLOCKED_READONLY_RUNTIME",
+            ],
+            cwd=dev_dir,
+            check=True,
+        )
+        env = {
+            "PATH": "/usr/bin:/bin",
+            "HOME": str(tmp_path),
+            "DOTFILES_RUNTIME_DIR": str(runtime_dir),
+            "DOTFILES_WORKSTATION_CONF": str(tmp_path / "workstation.conf"),
+            "XDG_RUNTIME_DIR": str(tmp_path / "rt"),
+            "DOTFILES_SKIP_PULL": "1",
+            "DOTFILES_SKIP_STOW": "1",
+        }
+
+        # Act
+        sync_proc = subprocess.run(
+            [script, "--sync"], cwd=dev_dir, env=env, capture_output=True, text=True
+        )
+        rt_pushurl = subprocess.run(
+            ["/usr/bin/git", "config", "--get", "remote.origin.pushurl"],
+            cwd=runtime_dir,
+            capture_output=True,
+            text=True,
+        )
+        dev_pushurl = subprocess.run(
+            ["/usr/bin/git", "config", "--get", "remote.origin.pushurl"],
+            cwd=dev_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        # Assert
+        assert sync_proc.returncode == 0
+        assert rt_pushurl.stdout.strip() == "VALIDATION_BLOCKED_READONLY_RUNTIME"
+        assert dev_pushurl.returncode != 0
+        assert dev_pushurl.stdout.strip() == ""

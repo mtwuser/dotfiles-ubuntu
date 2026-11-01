@@ -202,7 +202,7 @@ When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` 
 
 ```dockerfile
 # Inside checkout-api/Dockerfile:
-FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.3.0 AS governance-layer
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.4.0 AS governance-layer
 
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
