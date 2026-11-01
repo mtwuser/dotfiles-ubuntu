@@ -12,6 +12,7 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
+    OWNER_WRITABLE_MODE_BIT,
     ROLE_DEFAULT_PRECEDENCE,
     TEMPLATE_STACK_GROUP_DIRS,
     VALID_LAYER_ROLES,
@@ -388,7 +389,7 @@ def apply_fork_to_project(
                         shutil.copy2(src_file, dest)
                         if sub_name == "rules" and dest.suffix == ".md":
                             _ensure_rule_file_frontmatter(dest)
-                        dest.chmod(0o644)
+                        dest.chmod(dest.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
         gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
             for gfile in [*sorted(gov_src.glob("*.md")), *sorted(gov_src.glob("Makefile"))]:
@@ -402,7 +403,7 @@ def apply_fork_to_project(
                     if not dry_run:
                         dest_g.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(gfile, dest_g)
-                        dest_g.chmod(0o644)
+                        dest_g.chmod(dest_g.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
         assets_src = tpl_dir / "assets"
         if assets_src.is_dir():
             for afile in sorted(assets_src.rglob("*")):
@@ -414,7 +415,7 @@ def apply_fork_to_project(
                     dest_a.parent.mkdir(parents=True, exist_ok=True)
                     dest_a.unlink(missing_ok=True)
                     shutil.copy2(afile, dest_a)
-                    dest_a.chmod(0o644)
+                    dest_a.chmod(dest_a.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
 
     lineage_rows: list[str] = []
     for name, ldir, m in candidate_layers:
@@ -434,7 +435,7 @@ def apply_fork_to_project(
                 dest_rule.unlink(missing_ok=True)
                 shutil.copy2(layer_agents, dest_rule)
                 _ensure_rule_file_frontmatter(dest_rule)
-                dest_rule.chmod(0o644)
+                dest_rule.chmod(dest_rule.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
 
     lineage_dest, session_dest = agents_dir / "LAYER_LINEAGE.md", agents_dir / "SESSION.md"
     copied_files.extend([str(lineage_dest.relative_to(target_project_dir)), ".agents/SESSION.md"])

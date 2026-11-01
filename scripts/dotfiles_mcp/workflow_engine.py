@@ -11,6 +11,15 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.authority_engine import verify_layer_operation_authority
+from dotfiles_mcp.constants import (
+    KEBAB_ID_RE,
+    MAX_BRANCH_SLUG_CHARS,
+    MAX_BRANCH_SLUG_TOKENS,
+    MAX_CONSULT_MATCHES,
+    MAX_DIFF_PREVIEW_LINES,
+    VALID_AGENT_TIERS,
+    VALID_TRACKER_FILES,
+)
 from dotfiles_mcp.ephemeral_fork_engine import reap_ephemeral_fork, spawn_ephemeral_fork
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
@@ -20,9 +29,7 @@ from dotfiles_mcp.manifest_helpers import (
 )
 from dotfiles_mcp.tools_surface import SurfaceToolsMixin
 
-from . import constants as c
-
-VALID_TASK_TRACKERS: tuple[str, ...] = c.VALID_TRACKER_FILES
+VALID_TASK_TRACKERS: tuple[str, ...] = VALID_TRACKER_FILES
 _TASK_LINE_RE = re.compile(r"^(\s*-\s*\[)([ /xX])(\]\s+)(.+)$")
 _ACTIVE_TASK_SECTION_RE = re.compile(r"\n*## Active Task\n[\s\S]*$", re.MULTILINE)
 _HEADING_RE = re.compile(r"^#{1,3}\s+.+$")
@@ -37,7 +44,7 @@ def _derive_branch_slug(task_text: str, *, strip_ticket: str = "") -> str:
         plain = re.sub(rf"\b{re.escape(strip_ticket)}\b", "", plain, flags=re.IGNORECASE)
         plain = re.sub(r"^\s*\[?\s*P[012]\s*·?\s*\]?\s*:?\s*", "", plain, flags=re.IGNORECASE)
     tokens = [tok for tok in re.split(r"[^a-z0-9]+", plain.lower()) if tok]
-    slug = "-".join(tokens[: c.MAX_BRANCH_SLUG_TOKENS])[: c.MAX_BRANCH_SLUG_CHARS].strip("-")
+    slug = "-".join(tokens[:MAX_BRANCH_SLUG_TOKENS])[:MAX_BRANCH_SLUG_CHARS].strip("-")
     return slug or "work-item"
 
 
@@ -311,7 +318,7 @@ def compare_upstream_templates(
                     )
                     d_dir = "upstream_newer" if up_newer else "local_newer"
                     d_rec: dict[str, Any] = {"heading": h, "drift_direction": d_dir}
-                    d_rec.update(diff_preview="\n".join(list(u_diff)[: c.MAX_DIFF_PREVIEW_LINES]))
+                    d_rec.update(diff_preview="\n".join(list(u_diff)[:MAX_DIFF_PREVIEW_LINES]))
                     d_rec["recommended_action"] = "review_and_merge_section"
                     diverged.append(d_rec)
                 if apply_upstream_only and up_only:
@@ -364,14 +371,14 @@ def consult_layer_ephemeral(
 ) -> dict[str, Any]:
     """Run a zero-residue, one-shot strictly-read-only ephemeral consultation against a layer."""
     clean_layer, clean_q = target_layer.strip(), query.strip()
-    if not c.KEBAB_ID_RE.match(clean_layer):
+    if not KEBAB_ID_RE.match(clean_layer):
         raise ValueError(f"Invalid target_layer {target_layer!r}")
     if not clean_q:
         raise ValueError("query must be a non-empty string")
     clean_tier = model_tier.strip().lower() or "flash"
     clean_path = target_path.strip() or "corporate/policy.md"
-    if clean_tier not in c.VALID_AGENT_TIERS:
-        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {c.VALID_AGENT_TIERS}")
+    if clean_tier not in VALID_AGENT_TIERS:
+        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {VALID_AGENT_TIERS}")
 
     ws, root = workspace_dir.resolve(), repo_dir.resolve()
     layer_cands = [
@@ -422,7 +429,7 @@ def consult_layer_ephemeral(
             "excerpt": str(m.get("excerpt", "")),
             "capsule_token": str(m.get("capsule_token") or ""),
         }
-        for m in q_payload.get("matches", [])[: c.MAX_CONSULT_MATCHES]
+        for m in q_payload.get("matches", [])[:MAX_CONSULT_MATCHES]
     ]
     caps = [m["capsule_token"] for m in q_matches if m["capsule_token"]]
     ch1: dict[str, Any] = {"target_layer": clean_layer, "access_mode": "strictly-read-only"}

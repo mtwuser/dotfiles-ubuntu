@@ -12,7 +12,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from . import constants as c
+from dotfiles_mcp.constants import (
+    AUDIT_LOG_TAIL_LINES,
+    DEFAULT_ENV_BRANCH_MAP,
+    DEFAULT_PROCESS_BRANCH_PREFIXES,
+    DEFAULT_PROTECTED_BRANCHES,
+    MAX_RECENT_GOVERNANCE_ALERTS,
+    VALID_ENVIRONMENTS,
+    VALID_GOVERNANCE_DECISIONS,
+    VALID_ROSTER_ROLES,
+)
 
 
 def _load_manifest(target_dir: Path) -> dict[str, Any]:
@@ -139,13 +148,13 @@ def configure_git_governance_policy(
         raise ValueError(f"Missing layer manifest: {mpath}")
     manifest = _load_manifest(ws)
     layer_id = str(manifest.get("layer_id", ws.name))
-    prot = [b.strip() for b in (protected_branches or c.DEFAULT_PROTECTED_BRANCHES) if b.strip()]
+    prot = [b.strip() for b in (protected_branches or DEFAULT_PROTECTED_BRANCHES) if b.strip()]
     git_gov: dict[str, Any] = {
         "protected_branches": prot,
         "require_pr_on_protected": require_pr_on_protected,
-        "process_branch_prefixes": dict(c.DEFAULT_PROCESS_BRANCH_PREFIXES),
-        "environment_branches": dict(c.DEFAULT_ENV_BRANCH_MAP),
-        "environment_promotion_order": list(c.VALID_ENVIRONMENTS),
+        "process_branch_prefixes": dict(DEFAULT_PROCESS_BRANCH_PREFIXES),
+        "environment_branches": dict(DEFAULT_ENV_BRANCH_MAP),
+        "environment_promotion_order": list(VALID_ENVIRONMENTS),
     }
     manifest["git_governance"] = git_gov
     raw_auth = manifest.get("layer_authority")
@@ -193,8 +202,8 @@ def inspect_git_governance_state(
     manifest = _load_manifest(ws)
     raw_gg = manifest.get("git_governance")
     gg = raw_gg if isinstance(raw_gg, dict) else {}
-    prot = [str(b) for b in gg.get("protected_branches", c.DEFAULT_PROTECTED_BRANCHES)]
-    prefixes = {**c.DEFAULT_PROCESS_BRANCH_PREFIXES, **(gg.get("process_branch_prefixes") or {})}
+    prot = [str(b) for b in gg.get("protected_branches", DEFAULT_PROTECTED_BRANCHES)]
+    prefixes = {**DEFAULT_PROCESS_BRANCH_PREFIXES, **(gg.get("process_branch_prefixes") or {})}
 
     branch = (current_branch or "").strip()
     if not branch and (ws / ".git").exists():
@@ -224,7 +233,7 @@ def inspect_git_governance_state(
 
     audit_file = ws / "logs" / "governance_audit.jsonl"
     raw_lines = (
-        audit_file.read_text("utf-8").splitlines()[-c.AUDIT_LOG_TAIL_LINES :]
+        audit_file.read_text("utf-8").splitlines()[-AUDIT_LOG_TAIL_LINES:]
         if audit_file.is_file()
         else []
     )
@@ -243,7 +252,7 @@ def inspect_git_governance_state(
         "protected_branches": prot,
         "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
         "staged_proposals": staged_files,
-        "recent_governance_alerts": alerts[-c.MAX_RECENT_GOVERNANCE_ALERTS :],
+        "recent_governance_alerts": alerts[-MAX_RECENT_GOVERNANCE_ALERTS:],
     }
 
 
@@ -257,10 +266,8 @@ def evaluate_environment_promotion(
 ) -> dict[str, Any]:
     """Verify intrinsic promotion gates for transitioning to dev, tst, pre, or pro."""
     clean_env = target_env.strip().lower()
-    if clean_env not in c.VALID_ENVIRONMENTS:
-        raise ValueError(
-            f"Invalid target_env {target_env!r}: must be one of {c.VALID_ENVIRONMENTS}"
-        )
+    if clean_env not in VALID_ENVIRONMENTS:
+        raise ValueError(f"Invalid target_env {target_env!r}: must be one of {VALID_ENVIRONMENTS}")
     ws = workspace_dir.resolve()
     manifest = _load_manifest(ws)
     raw_auth = manifest.get("layer_authority")
@@ -311,7 +318,7 @@ def evaluate_environment_promotion(
                 f"layer_authority.authorized_emails ({', '.join(auth_emails)})."
             )
 
-    allowed, req_branch = len(failed_gates) == 0, c.DEFAULT_ENV_BRANCH_MAP[clean_env]
+    allowed, req_branch = len(failed_gates) == 0, DEFAULT_ENV_BRANCH_MAP[clean_env]
     git_state = inspect_git_governance_state(ws, current_branch=current_branch)
     if not allowed:
         record_governance_event(
@@ -348,9 +355,9 @@ def record_governance_decision(
 ) -> dict[str, Any]:
     """Record a human governance review decision (approve, reject, defer, blocked) in tracker."""
     clean_dec = decision.strip().lower()
-    if clean_dec not in c.VALID_GOVERNANCE_DECISIONS:
+    if clean_dec not in VALID_GOVERNANCE_DECISIONS:
         raise ValueError(
-            f"Invalid decision {decision!r}: must be one of {c.VALID_GOVERNANCE_DECISIONS}"
+            f"Invalid decision {decision!r}: must be one of {VALID_GOVERNANCE_DECISIONS}"
         )
     clean_ref, clean_reason = item_ref.strip(), reason.strip()
     if not clean_ref or not clean_reason:
@@ -404,9 +411,9 @@ def manage_layer_roster(
     if not mpath.is_file():
         raise ValueError(f"Missing layer manifest: {mpath}")
     clean_role = member_role.strip().lower()
-    if clean_role not in c.VALID_ROSTER_ROLES:
+    if clean_role not in VALID_ROSTER_ROLES:
         raise ValueError(
-            f"Invalid member_role {member_role!r}: must be one of {c.VALID_ROSTER_ROLES}"
+            f"Invalid member_role {member_role!r}: must be one of {VALID_ROSTER_ROLES}"
         )
     manifest = _load_manifest(ws)
     layer_id = str(manifest.get("layer_id", ws.name))

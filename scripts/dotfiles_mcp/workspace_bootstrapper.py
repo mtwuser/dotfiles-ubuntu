@@ -12,14 +12,21 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from . import constants as c
-from .fork_configurator import (
+from dotfiles_mcp.constants import (
+    AGENTS_MD_MAX_BYTES,
+    KEBAB_ID_RE,
+    LAYER_ROLE_MAKEFILE_TARGETS,
+    ROLE_DEFAULT_PRECEDENCE,
+    STATUS_EXCERPT_MAX_LINES,
+    VALID_LAYER_ROLES,
+)
+from dotfiles_mcp.fork_configurator import (
     apply_fork_to_project,
     configure_fork_manifest,
     scaffold_template_pack,
 )
-from .git_governance_engine import inspect_git_governance_state
-from .manifest_helpers import (
+from dotfiles_mcp.git_governance_engine import inspect_git_governance_state
+from dotfiles_mcp.manifest_helpers import (
     _is_dest_template_newer,
     _iter_layer_template_dirs,
     _merge_unique_strings,
@@ -28,14 +35,12 @@ from .manifest_helpers import (
     _resolve_template_dir,
     _sync_mounted_children_into_parent,
 )
-from .promotion_engine import diff_project_against_layers, inspect_layer_horizon
+from dotfiles_mcp.promotion_engine import diff_project_against_layers, inspect_layer_horizon
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
-_HC, _TB, _BB = (
-    ("human-core", "human-core.md"),
-    ("technical-base", "technical-base.md"),
-    ("business-base", "business-base.md"),
-)
+_HC = ("human-core", "human-core.md")
+_TB = ("technical-base", "technical-base.md")
+_BB = ("business-base", "business-base.md")
 PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
     "human-core": (_HC,),
     "technical": (_HC, _TB),
@@ -84,7 +89,7 @@ def set_global_agents_profile(
         sections.append(sec)
 
     composed = "\n\n---\n\n".join(sections) + "\n"
-    composed_bytes, cap = len(composed.encode("utf-8")), c.AGENTS_MD_MAX_BYTES
+    composed_bytes, cap = len(composed.encode("utf-8")), AGENTS_MD_MAX_BYTES
     if composed_bytes > cap:
         raise ValueError(f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds {cap}-byte cap")
     target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
@@ -108,7 +113,7 @@ def register_mounted_subtree(
     repo_dir: Path, layer_name: str, repo_url: str, branch: str = "master", *, dry_run: bool = False
 ) -> dict[str, Any]:
     """Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers."""
-    if not c.KEBAB_ID_RE.match(layer_name):
+    if not KEBAB_ID_RE.match(layer_name):
         raise ValueError(f"Invalid layer_name {layer_name!r}")
     root_manifest_path = repo_dir / "system" / "mcp-layer.json"
     if not root_manifest_path.is_file():
@@ -147,49 +152,30 @@ def _render_layer_makefile(
         if layer_role == "corporate"
         else "TARGET_REPO ?= $(PARENT_DIR)\n"
     )
-    active = c.LAYER_ROLE_MAKEFILE_TARGETS.get(
-        layer_role, c.LAYER_ROLE_MAKEFILE_TARGETS["department"]
-    )
+    active = LAYER_ROLE_MAKEFILE_TARGETS.get(layer_role, LAYER_ROLE_MAKEFILE_TARGETS["department"])
+    run, pf = f"\t@{cli}", "$(CURDIR) $(PARENT_FLAG)"
     all_recipes: dict[str, str] = {
-        "status": f"\t@{cli} status $(CURDIR) $(PARENT_FLAG)",
-        "task": (
-            f'\t@{cli} start-task $(CURDIR) --task "$(TASK)" '
-            "$(if $(TRACKER),--tracker $(TRACKER),) $(if $(TICKET),--ticket $(TICKET),)"
-        ),
-        "complete": (
-            f'\t@{cli} complete-task $(CURDIR) --task "$(TASK)" $(PARENT_FLAG) '
-            '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",)'
-        ),
-        "consult": (
-            f'\t@{cli} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
-            "$(if $(PATH_ARG),--path $(PATH_ARG),)"
-        ),
-        "horizon": f"\t@{cli} inspect-horizon $(CURDIR) $(PARENT_FLAG)",
-        "sync": f"\t@{cli} sync-layer $(CURDIR) $(PARENT_FLAG)",
-        "upstream-diff": f"\t@{cli} compare-upstream $(CURDIR) $(PARENT_FLAG)",
-        "diff": f"\t@{cli} diff-project $(CURDIR)",
-        "authority": f"\t@{cli} check-authority $(CURDIR) --op release",
+        "status": f"{run} status {pf}",
+        "task": f'{run} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)',
+        "complete": f'{run} complete-task {pf} --task "$(TASK)"',
+        "consult": f'{run} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)"',
+        "horizon": f"{run} inspect-horizon {pf}",
+        "sync": f"{run} sync-layer {pf}",
+        "upstream-diff": f"{run} compare-upstream {pf}",
+        "diff": f"{run} diff-project $(CURDIR)",
+        "authority": f"{run} check-authority $(CURDIR) --op release",
         "roster": (
-            f"\t@{cli} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
-            "$(if $(REMOVE),--remove $(REMOVE),) $(if $(ROLE),--role $(ROLE),)"
+            f"{run} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
+            "$(if $(ROLE),--role $(ROLE),)"
         ),
-        "env-gate": f"\t@{cli} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
+        "env-gate": f"{run} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
         "decision": (
-            f'\t@{cli} record-decision $(CURDIR) --item "$(ITEM)" --decision $(DEC) '
-            '--reason "$(if $(REASON),$(REASON),Reviewed)"'
+            f'{run} record-decision $(CURDIR) --item "$(ITEM)" '
+            '--decision $(DEC) --reason "$(REASON)"'
         ),
-        "promote": (
-            f"\t@{cli} promote-from-project $(CURDIR) --source $(SOURCE) "
-            "$(if $(TEMPLATE),--to-template $(TEMPLATE),) "
-            "$(if $(TARGET_REPO),--target-repo $(TARGET_REPO),) $(PR_FLAGS)"
-        ),
-        "delegate": (
-            f"\t@{cli} delegate-to-child $(CURDIR) --to-child $(CHILD) "
-            '$(if $(TASK),--task "$(TASK)",) $(if $(SOURCE),--source $(SOURCE),) '
-            "$(if $(SURFACE),--surface $(SURFACE),) $(if $(PRIORITY),--priority $(PRIORITY),) "
-            "$(if $(TICKET),--ticket $(TICKET),)"
-        ),
-        "mcp-test": f"\t@{cli} list-templates $(CURDIR)",
+        "promote": f"{run} promote-from-project $(CURDIR) --source $(SOURCE) $(PR_FLAGS)",
+        "delegate": f'{run} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)"',
+        "mcp-test": f"{run} list-templates $(CURDIR)",
     }
     sel = [t for t in active if t in all_recipes]
     phony, help_lines = " ".join(["help", *sel]), "\n".join(f'\t@echo "  make {t}"' for t in sel)
@@ -253,13 +239,12 @@ def bootstrap_layer_workspace(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """One-shot initializer for a corporate, domain-policy, department, or squad workspace."""
-    if not c.KEBAB_ID_RE.match(layer_id):
+    if not KEBAB_ID_RE.match(layer_id):
         raise ValueError(f"Invalid layer_id {layer_id!r}")
-    if layer_role not in c.VALID_LAYER_ROLES:
+    if layer_role not in VALID_LAYER_ROLES:
         raise ValueError(f"Invalid layer_role {layer_role!r}")
-
     effective_prec = (
-        precedence if precedence is not None else c.ROLE_DEFAULT_PRECEDENCE.get(layer_role, 50)
+        precedence if precedence is not None else ROLE_DEFAULT_PRECEDENCE.get(layer_role, 50)
     )
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     parent_manifest_path = effective_parent / "system" / "mcp-layer.json"
@@ -443,9 +428,9 @@ def inspect_workspace_status(
 
     g_stat = _git_lines("status", "--short", "--branch")
     g_log = _git_lines("log", "--oneline", "-5")
-    lim, last_cid = c.STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
+    lim, last_cid = STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
-    mk_t = list(c.LAYER_ROLE_MAKEFILE_TARGETS.get(role, c.LAYER_ROLE_MAKEFILE_TARGETS["project"]))
+    mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
     out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
     out.update(precedence=prec, workspace_mode=mode, active_templates=tpls, active_rules=rules)
     out.update(available_makefile_targets=mk_t, git_governance=inspect_git_governance_state(ws))

@@ -20,6 +20,19 @@ from dotfiles_mcp.authority_engine import (
     verify_oss_promotion_agnosticism,
     verify_single_hop_upstream,
 )
+from dotfiles_mcp.constants import (
+    AGENTS_ASSETS_PREFIX,
+    AGENTS_MD_MAX_BYTES,
+    AGENTS_RULES_PREFIX,
+    KEBAB_ID_RE,
+    MATERIALIZED_RULE_RE,
+    MIN_ROUTING_KEYWORD_LEN,
+    OWNER_WRITABLE_MODE_BIT,
+    SKILL_MD_MAX_LINES,
+    TEMPLATE_STACK_GROUP_DIRS,
+    VALID_DELEGATION_DIRS,
+    VALID_TRACKER_FILES,
+)
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
@@ -30,8 +43,6 @@ from dotfiles_mcp.manifest_helpers import (
     _resolve_template_dest_dir,
     _resolve_template_dir,
 )
-
-from . import constants as c
 
 
 def _sha256_file(path: Path) -> str:
@@ -67,7 +78,7 @@ def _route_novel_item(
 ) -> dict[str, Any]:
     """Recommend the optimal target layer and destination for a novel rule or skill."""
     stem = item_name.removesuffix(".md").lower()
-    tokens = {t for t in re.split(r"[-_.]", stem) if len(t) >= c.MIN_ROUTING_KEYWORD_LEN}
+    tokens = {t for t in re.split(r"[-_.]", stem) if len(t) >= MIN_ROUTING_KEYWORD_LEN}
     for rec in layer_records:
         lname = str(rec["name"])
         if lname != "root" and (lname in stem or bool(tokens & set(rec["keywords"]))):
@@ -118,7 +129,7 @@ def compare_project_patterns_multilayer(
             for sf in (tdir / "skills").glob("*/SKILL.md"):
                 layer_b_skills.update((_parse_skill_frontmatter(sf, ldir)["name"], sf.parent.name))
         raw_id = f"{lname}-{manifest.get('layer_id', '')}".lower()
-        kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= c.MIN_ROUTING_KEYWORD_LEN}
+        kw = {t for t in re.split(r"[-_]", raw_id) if len(t) >= MIN_ROUTING_KEYWORD_LEN}
         for b in collect_layer_effective_bindings(ldir, manifest):
             for k in ("scopes", "traits"):
                 kw.update(str(v).lower() for v in b.get(k, []) if v != "*")
@@ -127,14 +138,14 @@ def compare_project_patterns_multilayer(
             layer_role=manifest.get("layer_role", "workstation"), templates=tpl_names, keywords=kw
         )
         layer_records.append(rec)
-    materialized_rules = [r for r in project_rules if c.MATERIALIZED_RULE_RE.match(r)]
-    filtered_rules = [r for r in project_rules if not c.MATERIALIZED_RULE_RE.match(r)]
+    materialized_rules = [r for r in project_rules if MATERIALIZED_RULE_RE.match(r)]
+    filtered_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
     novel_rules = sorted(r for r in filtered_rules if r not in layer_b_rules)
     novel_skills = sorted(
         s for s in project_skills if s not in layer_a_skills and s not in layer_b_skills
     )
     root_ag = repo_dir / "antigravity/.gemini/config/AGENTS.md"
-    headroom = max(0, c.AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
+    headroom = max(0, AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
     routing = [
         *(_route_novel_item(r, "rules", layer_records, headroom) for r in novel_rules),
         *(_route_novel_item(s, "skills", layer_records, headroom) for s in novel_skills),
@@ -145,19 +156,15 @@ def compare_project_patterns_multilayer(
     miss_rules = sorted(r for r in layer_b_rules if r not in filtered_rules)
     miss_skills = sorted(s for s in layer_b_skills if s not in project_skills)
     out: dict[str, Any] = {"compared_against_layer": primary_id, "promotion_routing": routing}
-    out.update(layers_scanned=[r["name"] for r in layer_records])
-    out["mounted_layers_count"] = len(mounted_layers)
-    out["materialized_layer_rules"] = sorted(materialized_rules)
-    out["already_in_layer_a_skills"] = sorted(s for s in project_skills if s in layer_a_skills)
-    out["already_in_layer_b_templates"] = {"rules": in_b_rules, "skills": in_b_skills}
-    out["candidates_for_upward_promotion"] = {
-        "novel_rules": novel_rules,
-        "novel_skills": novel_skills,
-    }
-    out["available_in_layer_b_but_missing_in_project"] = {
-        "rules": miss_rules,
-        "skills": miss_skills,
-    }
+    out.update(
+        layers_scanned=[r["name"] for r in layer_records],
+        mounted_layers_count=len(mounted_layers),
+        materialized_layer_rules=sorted(materialized_rules),
+        already_in_layer_a_skills=sorted(s for s in project_skills if s in layer_a_skills),
+        already_in_layer_b_templates={"rules": in_b_rules, "skills": in_b_skills},
+        candidates_for_upward_promotion={"novel_rules": novel_rules, "novel_skills": novel_skills},
+        available_in_layer_b_but_missing_in_project={"rules": miss_rules, "skills": miss_skills},
+    )
     return out
 
 
@@ -204,7 +211,7 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
         if not pfile.resolve().is_relative_to(proj_resolved):
             raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
         candidates: list[tuple[str, Path]] = list(layer_sources.get(rel_key, []))
-        if m := c.MATERIALIZED_RULE_RE.match(pfile.name):
+        if m := MATERIALIZED_RULE_RE.match(pfile.name):
             sub_name, rel_ag = m.group(2), "antigravity/.gemini/config/AGENTS.md"
             sub_ag = (repo_dir if sub_name == "root" else repo_dir / "layers" / sub_name) / rel_ag
             if sub_ag.is_file():
@@ -230,7 +237,7 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     return out_d
 
 
-PROMOTABLE_TRACKERS = c.VALID_TRACKER_FILES
+PROMOTABLE_TRACKERS = VALID_TRACKER_FILES
 
 
 def promote_project_asset_to_layer(
@@ -269,29 +276,29 @@ def promote_project_asset_to_layer(
         verify_oss_promotion_agnosticism(project_dir.resolve(), content, source_rel_path)
 
     rel_parts = src_file.relative_to(project_dir.resolve()).parts
-    tpl_idx = 2 if len(rel_parts) >= 5 and rel_parts[1] in c.TEMPLATE_STACK_GROUP_DIRS else 1
+    tpl_idx = 2 if len(rel_parts) >= 5 and rel_parts[1] in TEMPLATE_STACK_GROUP_DIRS else 1
     is_tpl_src = (
         len(rel_parts) >= tpl_idx + 3
         and rel_parts[0] == "templates"
         and rel_parts[tpl_idx + 1] in ("rules", "skills", "assets")
     )
     is_ag_asset = (
-        len(rel_parts) >= 4 and rel_parts[: len(c.AGENTS_ASSETS_PREFIX)] == c.AGENTS_ASSETS_PREFIX
+        len(rel_parts) >= 4 and rel_parts[: len(AGENTS_ASSETS_PREFIX)] == AGENTS_ASSETS_PREFIX
     )
     is_tracker = len(rel_parts) == 1 and rel_parts[0] in PROMOTABLE_TRACKERS
-    is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in c.VALID_DELEGATION_DIRS
+    is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in VALID_DELEGATION_DIRS
     inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
     eff_template, parent_lid = target_template or inferred_tpl, str(target_m.get("layer_id", ""))
     if (
         not eff_template
-        and rel_parts[: len(c.AGENTS_RULES_PREFIX)] == c.AGENTS_RULES_PREFIX
+        and rel_parts[: len(AGENTS_RULES_PREFIX)] == AGENTS_RULES_PREFIX
         and src_file.name != "AGENTS.md"
-        and not c.MATERIALIZED_RULE_RE.match(src_file.name)
+        and not MATERIALIZED_RULE_RE.match(src_file.name)
         and parent_lid
         and _resolve_template_dir(layer_base, parent_lid) is not None
     ):
         eff_template = parent_lid
-    if eff_template and not c.KEBAB_ID_RE.match(eff_template):
+    if eff_template and not KEBAB_ID_RE.match(eff_template):
         raise ValueError(f"Invalid target_template {eff_template!r}: must be kebab-case")
     tpl_dest = _resolve_template_dest_dir(layer_base, str(eff_template)) if eff_template else None
     if is_tracker or is_gov_dir:
@@ -302,10 +309,10 @@ def promote_project_asset_to_layer(
         dest_file = base_d / "assets" / Path(*tail)
     elif src_file.name == "SKILL.md":
         lines = content.splitlines()
-        if len(lines) > c.SKILL_MD_MAX_LINES or not lines or lines[0].strip() != "---":
+        if len(lines) > SKILL_MD_MAX_LINES or not lines or lines[0].strip() != "---":
             raise ValueError("Promoted SKILL.md must have YAML frontmatter and <= 500 lines")
         meta = _parse_skill_frontmatter(src_file, project_dir)
-        if not c.KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
+        if not KEBAB_ID_RE.match(meta["name"]) or not meta["description"]:
             raise ValueError("Promoted SKILL.md must have kebab-case name and description")
         sub_p = f"skills/{src_file.parent.name}/SKILL.md"
         dest_file = (
@@ -318,16 +325,16 @@ def promote_project_asset_to_layer(
         if (
             dest_file.is_file()
             and src_file.name != "AGENTS.md"
-            and not c.MATERIALIZED_RULE_RE.match(src_file.name)
+            and not MATERIALIZED_RULE_RE.match(src_file.name)
         ):
             raise ValueError(
                 f"Refusing to overwrite existing AGENTS.md with rule {src_file.name!r}; "
                 "specify target_template or promote AGENTS.md / layer-NN-<name>.md"
             )
-        if len(content.encode("utf-8")) > c.AGENTS_MD_MAX_BYTES:
+        if len(content.encode("utf-8")) > AGENTS_MD_MAX_BYTES:
             raise ValueError(
                 f"Promoted AGENTS.md size ({len(content.encode('utf-8'))} bytes) "
-                f"exceeds {c.AGENTS_MD_MAX_BYTES}-byte token budget cap"
+                f"exceeds {AGENTS_MD_MAX_BYTES}-byte token budget cap"
             )
 
     eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
@@ -358,7 +365,7 @@ def promote_project_asset_to_layer(
         else:
             dest_file.unlink(missing_ok=True)
             shutil.copy2(src_file, dest_file)
-            dest_file.chmod(c.DEFAULT_PROMOTED_FILE_MODE)
+            dest_file.chmod(dest_file.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
 
     src_rel_str = str(src_file.relative_to(project_dir.resolve()))
     dest_rel_str, sha256_str = str(dest_file.relative_to(repo_resolved)), _sha256_file(src_file)
@@ -437,18 +444,16 @@ def inspect_layer_horizon(
         f"--source .agents/{rel} --upstream-dir {contrib_dir} --create-pr"
         for rel in local_diff["novel_in_project"]
     ]
-    ws_lid = str(ws_m.get("layer_id", ws.name))
+    ws_lid, up_lid = str(ws_m.get("layer_id", ws.name)), str(up_m.get("layer_id", up.name))
     out_h: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": ws_lid}
     out_h.update(layer_role=str(ws_m.get("layer_role", "project")), is_oss_community_horizon=is_oss)
-    out_h["actor_is_layer_owner"] = bool(auth_v["allowed"])
-    out_h["actor_is_upstream_owner"] = bool(up_auth_v["allowed"])
-    out_h["immediate_upstream_dir"] = str(up)
-    out_h["immediate_upstream_id"] = str(up_m.get("layer_id", up.name))
-    out_h["immediate_upstream_role"] = str(up_m.get("layer_role", "unknown"))
+    out_h.update(actor_is_layer_owner=bool(auth_v["allowed"]), immediate_upstream_dir=str(up))
+    out_h.update(actor_is_upstream_owner=bool(up_auth_v["allowed"]), immediate_upstream_id=up_lid)
+    out_h.update(immediate_upstream_role=str(up_m.get("layer_role", "unknown")))
     out_h.update(oss_contrib_dir=str(contrib_dir) if is_oss else None, oss_root_version=oss_ver)
     out_h.update(upstream_version=up_ver, workspace_version=ws_ver, downward_sync_needed=need_sync)
     out_h.update(child_sync_needed=bool(child_drifts), shared_template_drifts=drifts)
-    out_h["downward_sync_command"] = f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}"
+    out_h.update(downward_sync_command=f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}")
     out_h["downstream_layer_drifts"] = child_drifts
     out_h["upward_promotion_suggestions"] = (
         [d for d in up_drifts if d["oss_agnostic"]]

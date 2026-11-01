@@ -6,6 +6,7 @@ Specification: docs/architecture/03_contextual_mcp_and_federation.md
 from __future__ import annotations
 
 import re
+import stat
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
@@ -68,7 +69,8 @@ AUDIT_LOG_TAIL_LINES = 20
 MAX_RECENT_GOVERNANCE_ALERTS = 5
 STATUS_EXCERPT_MAX_LINES = 35
 SKILL_MD_MAX_LINES = 500
-DEFAULT_PROMOTED_FILE_MODE = 0o644
+OWNER_WRITABLE_MODE_BIT = stat.S_IWUSR
+OWNER_DIR_RWX_BITS = stat.S_IRWXU
 TEMPLATE_STACK_GROUP_DIRS = (
     "business-stack",
     "squad-stack",

@@ -15,7 +15,19 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp import constants as c
+from dotfiles_mcp.constants import (
+    DEFAULT_EPHEMERAL_TTL_SECONDS,
+    KEBAB_ID_RE,
+    MAX_ACTIVE_EPHEMERAL_FORKS,
+    MAX_EPHEMERAL_TTL_SECONDS,
+    MIN_EPHEMERAL_TTL_SECONDS,
+    OWNER_DIR_RWX_BITS,
+    ROLE_DEFAULT_PRECEDENCE,
+    VALID_AGENT_TIERS,
+    VALID_ARCHITECTURAL_PLANES,
+    VALID_EPHEMERAL_ACCESS_MODES,
+    VALID_RESOLUTIONS,
+)
 from dotfiles_mcp.manifest_helpers import _resolve_template_dir
 
 
@@ -61,7 +73,7 @@ def extract_ephemeral_advisories(
                 access_mode=str(policy.get("access_mode", "strictly-read-only")),
                 mount_templates=[str(t) for t in policy.get("mount_templates", [])],
                 resolution=str(policy.get("resolution", "L2")),
-                ttl_seconds=int(policy.get("ttl_seconds", c.DEFAULT_EPHEMERAL_TTL_SECONDS)),
+                ttl_seconds=int(policy.get("ttl_seconds", DEFAULT_EPHEMERAL_TTL_SECONDS)),
                 handback_contract=str(policy.get("handback_contract", "4-channel-digest+rcap1")),
                 recommended_mcp_call={"tool": "orchestrate_ephemeral_fork", "arguments": call_args},
             )
@@ -99,7 +111,7 @@ def reap_expired_ephemeral_forks(
 
 def _ensure_dirs_writable(root: Path) -> None:
     for d in (root, *(p for p in root.rglob("*") if p.is_dir(follow_symlinks=False))):
-        d.chmod(0o755)
+        d.chmod(d.stat().st_mode | OWNER_DIR_RWX_BITS)
 
 
 def _copy_zero_copy(src: Path, dst: Path) -> None:
@@ -135,7 +147,7 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
         sections.append(f"## Rule: {rf.name}\n\n{rf.read_text(encoding='utf-8').strip()}\n")
         bridged_files.append(f".agents/rules/{rf.name}")
     w = ["*"]
-    binding = {
+    binding: dict[str, Any] = {
         "binding_id": "ephemeral-project-bridge-rules",
         "description": f"Bridged workspace rules from {proj.name}",
         "mode": "authoritative",
@@ -148,18 +160,12 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
         "rule_files": ["antigravity/.gemini/config/AGENTS.md"],
         "canonical_templates": [],
     }
-    bridge_manifest: dict[str, Any] = {
-        "schema_version": "1.2",
-        "layer_id": f"bridge-{proj.name.lower().replace('_', '-')}",
-        "layer_role": "squad",
-        "precedence": 20,
-        "description": f"Ephemeral cross-project rule bridge from {proj.name}",
-        "default_stack_templates": [],
-        "baseline_guardrails": [f"Cross-project bridge active from {proj.name}"],
-        "surface_bindings": [binding],
-        "environments": {},
-        "federated_mcps": [],
-    }
+    lid = f"bridge-{proj.name.lower().replace('_', '-')}"
+    bridge_manifest: dict[str, Any] = {"schema_version": "1.2", "layer_id": lid}
+    bridge_manifest.update(layer_role="squad", precedence=20, default_stack_templates=[])
+    bridge_manifest["description"] = f"Ephemeral cross-project rule bridge from {proj.name}"
+    bridge_manifest["baseline_guardrails"] = [f"Cross-project bridge active from {proj.name}"]
+    bridge_manifest.update(surface_bindings=[binding], environments={}, federated_mcps=[])
     return bridged_files, "\n".join(sections), bridge_manifest
 
 
@@ -176,7 +182,7 @@ def spawn_ephemeral_fork(
     model_tier: str = "flash",
     access_mode: str = "strictly-read-only",
     resolution: str = "L2",
-    ttl_seconds: int = c.DEFAULT_EPHEMERAL_TTL_SECONDS,
+    ttl_seconds: int = DEFAULT_EPHEMERAL_TTL_SECONDS,
     ephemeral_root: Path | None = None,
     now_epoch: float | None = None,
     dry_run: bool = False,
@@ -187,31 +193,31 @@ def spawn_ephemeral_fork(
         list(architectural_planes or ["*"]),
         list(target_globs or ["*"]),
     )
-    if not c.KEBAB_ID_RE.match(role_clean):
+    if not KEBAB_ID_RE.match(role_clean):
         raise ValueError(f"Invalid bot_role {role_clean!r}: must be kebab-case")
-    if model_tier not in c.VALID_AGENT_TIERS:
-        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {c.VALID_AGENT_TIERS}")
-    if access_mode not in c.VALID_EPHEMERAL_ACCESS_MODES:
+    if model_tier not in VALID_AGENT_TIERS:
+        raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {VALID_AGENT_TIERS}")
+    if access_mode not in VALID_EPHEMERAL_ACCESS_MODES:
         raise ValueError(f"Invalid access_mode {access_mode!r}")
-    if resolution not in c.VALID_RESOLUTIONS:
-        raise ValueError(f"Invalid resolution {resolution!r}: must be one of {c.VALID_RESOLUTIONS}")
-    if not (c.MIN_EPHEMERAL_TTL_SECONDS <= ttl_seconds <= c.MAX_EPHEMERAL_TTL_SECONDS):
+    if resolution not in VALID_RESOLUTIONS:
+        raise ValueError(f"Invalid resolution {resolution!r}: must be one of {VALID_RESOLUTIONS}")
+    if not (MIN_EPHEMERAL_TTL_SECONDS <= ttl_seconds <= MAX_EPHEMERAL_TTL_SECONDS):
         raise ValueError(f"Invalid ttl_seconds {ttl_seconds}")
     for p in planes:
-        if p != "*" and p not in c.VALID_ARCHITECTURAL_PLANES:
+        if p != "*" and p not in VALID_ARCHITECTURAL_PLANES:
             raise ValueError(f"Invalid architectural_plane {p!r}")
     for kind, items in (("mount_template", mount_templates), ("mount_layer", mount_layers)):
         for item in items or []:
-            if not c.KEBAB_ID_RE.match(item):
+            if not KEBAB_ID_RE.match(item):
                 raise ValueError(f"Invalid {kind} {item!r}: must be kebab-case")
 
     reaped = reap_expired_ephemeral_forks(repo_dir, ephemeral_root, now_epoch=now_epoch)
     root = default_ephemeral_root(repo_dir, ephemeral_root)
     active_dirs = [d for d in root.iterdir() if d.is_dir()] if root.is_dir() else []
-    if len(active_dirs) >= c.MAX_ACTIVE_EPHEMERAL_FORKS:
+    if len(active_dirs) >= MAX_ACTIVE_EPHEMERAL_FORKS:
         raise ValueError(
             f"EPHEMERAL_FORK_LIMIT_REACHED: active ephemeral forks ({len(active_dirs)}) "
-            f"reached maximum capacity ({c.MAX_ACTIVE_EPHEMERAL_FORKS}). Reap unused forks first."
+            f"reached maximum capacity ({MAX_ACTIVE_EPHEMERAL_FORKS}). Reap unused forks first."
         )
 
     created_at = round(now_epoch if now_epoch is not None else time.time(), 3)
@@ -296,7 +302,7 @@ def spawn_ephemeral_fork(
         "schema_version": "1.2",
         "layer_id": fork_id,
         "layer_role": "ephemeral-bot",
-        "precedence": c.ROLE_DEFAULT_PRECEDENCE["ephemeral-bot"],
+        "precedence": ROLE_DEFAULT_PRECEDENCE["ephemeral-bot"],
         "description": f"Ephemeral Department Bot ({role_clean}) scoped to {globs}",
         "upstream_layer": {
             "layer_id": parent_id,
@@ -404,7 +410,7 @@ def reap_ephemeral_fork(
                     _ensure_dirs_writable(child)
                     shutil.rmtree(child, ignore_errors=True)
         return {"dry_run": dry_run, "reaped_forks": reaped}
-    if not c.KEBAB_ID_RE.match(fork_id):
+    if not KEBAB_ID_RE.match(fork_id):
         raise ValueError(f"Invalid fork_id {fork_id!r}: must be kebab-case or 'all'")
     target = (root / fork_id).resolve()
     if not target.is_relative_to(root) or not target.is_dir():
@@ -444,15 +450,12 @@ def build_subagent_invocation_brief(
         *(f"  {ch}" for ch in channels),
         *([f"Sealed Context Capsule (rcap1): {capsule_token[:48]}..."] if capsule_token else []),
     ]
-    return {
-        "subagent_type": "research" if access_mode == "strictly-read-only" else "self",
-        "model_tier": model_tier,
-        "role": f"Department Bot ({bot_role})",
-        "access_mode": access_mode,
-        "target_path": target_path or "*",
-        "effective_invariants": invariants,
-        "canonical_templates": list(surface_projection.get("canonical_templates", [])),
-        "handback_channels": channels,
-        "capsule_token": capsule_token,
-        "prompt": "\n".join(prompt_lines),
-    }
+    s_type = "research" if access_mode == "strictly-read-only" else "self"
+    out: dict[str, Any] = {"subagent_type": s_type, "model_tier": model_tier}
+    out.update(role=f"Department Bot ({bot_role})", access_mode=access_mode)
+    out.update(target_path=target_path or "*", effective_invariants=invariants)
+    out["canonical_templates"] = list(surface_projection.get("canonical_templates", []))
+    out.update(
+        handback_channels=channels, capsule_token=capsule_token, prompt="\n".join(prompt_lines)
+    )
+    return out
