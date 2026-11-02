@@ -91,11 +91,46 @@ flowchart TD
 
 📖 Step-by-step multi-tier commands, authority gates, and IDE vs. Agents workspace isolation: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
 
-#### Why This Matters for Business & Functional Teams: Cross-Departmental Composition
+#### Real-World Business View: 1 Company, 3 Departments & Specialized Squad Members
 
-In traditional organizations, when a business department (Legal, Marketing, Finance, Operations) needs software or automation, it faces a false choice between **IT Bottlenecks** (handing off requirements to IT and losing domain nuance) and **Shadow IT** (building ungoverned scripts or bots without testing, architecture, or security).
+Imagine a company with **Corporate Direction (`Root 0`)** and **3 core departments** (**Legal**, **Engineering/Tech**, and **Brand/Marketing**). Instead of working in isolated silos, each department defines its rules once (`precedence: 0..100`, where lower numbers carry higher authority), and **any squad member combines the exact specialties their task requires** inside Google Antigravity:
 
-`dotfiles-ubuntu` resolves both by turning every department's rules into **composable building blocks with mathematical authority (`precedence: 0..100`, *Lex Superior*)**, all unified through the same **Google Antigravity** workflow (`/sopen` $\rightarrow$ `WORKTASK.md` $\rightarrow$ `make verify` $\rightarrow$ `/sclose`):
+```mermaid
+flowchart TD
+    CORP["🏢 Company Direction (Root 0 · Precedence 10)\nShared identity, security & Single Source of Truth (SSoT) ledgers"]
+
+    subgraph Depts["3 Core Departments (Each Owns Its Specialty Rules)"]
+        LEG["⚖️ Dept 1: Legal & IP (Precedence 5)\nPrivacy (GDPR), Patent Gates, Call Consent & Zero-Greenwashing"]
+        TECH["⚙️ Dept 2: Engineering / Tech (Precedence 25)\nClean Architecture, 100% Automated Tests & API Security"]
+        MKT["🎨 Dept 3: Brand & Marketing (Precedence 30..35)\nVisual Identity, Tone of Voice, Campaigns & Social Channels"]
+    end
+
+    CORP --> LEG & TECH & MKT
+
+    subgraph Workspaces["How Squad Members Combine Specialties for Real Tasks (via Antigravity)"]
+        CASE1["👩‍⚖️ Case 1: LegalTech Member\n(Builds a Contract & Patent Auditor MCP)\nOrder: Legal (5) -> Corp (10) -> Tech (25)\nResult: 100% tested code that never leaks a trade secret"]
+        CASE2["📣 Case 2: Growth & Social Media Member\n(Builds an Automated Social Campaign Hub)\nOrder: Legal (5) -> Corp (10) -> Tech (25) -> Brand (30) -> Mkt (35)\nResult: Fast social publishing with OAuth safety, Brand lock & 0 Greenwashing"]
+        CASE3["📞 Case 3: Transversal VoIP Service Team\n(Builds Company-Wide Telephony & Voice AI)\nOrder: Legal (5, call recording consent) -> Tech (25, SIP/SLA)\nResult: Shared VoIP service safely reusable by Legal, Sales & Support"]
+    end
+
+    LEG & TECH -->|"Combined in"| CASE1
+    LEG & TECH & MKT -->|"Combined in"| CASE2
+    LEG & TECH -->|"Combined in"| CASE3
+    CASE3 -.->|"Consumed back as a governed capability by"| LEG & MKT
+```
+
+##### Comparing Outcomes: Traditional Silos vs. Cross-Departmental Composition
+
+When a business need crosses specialties (for example, *Legal needs a software tool* or *Marketing needs a social media bot*), organizations can compare what happens across approaches:
+
+| Approach | How the Task Is Executed | What Happens in Practice (Functional Outcome) |
+| :--- | :--- | :--- |
+| **❌ Traditional Way A: Hand Off to IT Silo** | Business writes a PDF specification and waits for IT to build it. | **Slow & Context-Blind**: Weeks of alignment meetings; IT delivers working code that misses subtle legal, patent, or brand rules. |
+| **❌ Traditional Way B: Unmanaged "Shadow IT"** | Legal or Marketing builds a script/bot on their own with generic AI prompts. | **Fragile & Risky**: Solves the immediate business goal, but with zero tests, hardcoded API keys, and high security/compliance risk. |
+| **✅ `dotfiles-ubuntu` Way 1: Business-Led (`--parent-dir <dept>` or `make setup-dev`)** | A specialist inside **Legal** or **Marketing** builds the tool in their workspace while injecting **Tech (`25`)** rules. | **Domain-Driven & Engineered**: The business department keeps full ownership and speed, while Antigravity enforces `100%` tests, clean architecture, and security automatically. |
+| **✅ `dotfiles-ubuntu` Way 2: Tech-Led (`layer-subtree.sh add <dept>`)** | The **Engineering** squad builds the tool (or a transversal service like **`VoIP`**) while mounting **Legal (`5`)** and **Brand (`30`)** rules. | **Platform-Grade & Compliant**: Engineers build scalable infrastructure where Antigravity blocks any code change that violates Legal (`5`) or Brand (`30`) rules before commit. |
+
+##### Summary of the 6 Reusable Organizational Patterns
 
 | Business / Functional Need | Who Owns the Workspace | Combined Rule Order (`0..100` *Lex Superior*) | How It Activates (`1` Command) | Effective Antigravity Agent Profile |
 | :--- | :--- | :--- | :--- | :--- |
