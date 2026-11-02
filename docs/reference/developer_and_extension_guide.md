@@ -150,7 +150,7 @@ When extending the optional Contextual Layer & System MCP Server ([`docs/archite
 
 ## 6. Python Virtual Environment (`venv`), Automated Testing (`tests/{unit,imp,e2e}`) & 100% Coverage Gate
 
-`dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/fastapi-hexagonal/` prescribe:
+`dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/tech-stack/fastapi-hexagonal/` prescribe:
 
 ### 6.1. Layered Dependency Separation (`requirements.txt` $\leftarrow$ `requirements-dev.txt` & Environment Profiles)
 - **Base Runtime ([`requirements.txt`](../../requirements.txt) — Zero External Dependencies in Upstream)**: Every script executed during normal workstation, container, or remote server operation (`bootstrap.sh`, `backup.sh`, `audit.sh`, `antigravity/.gemini/config/scripts/*.py`, and `scripts/dotfiles_mcp_server.py`) uses **only the Python 3.14 standard library** and runs directly on Ubuntu 26.04 LTS's native `/usr/bin/python3` (`Python 3.14`). Consequently, `requirements.txt` contains zero packages in the upstream base repository, so users cloning `dotfiles-ubuntu` do **not** need a `venv` at runtime.

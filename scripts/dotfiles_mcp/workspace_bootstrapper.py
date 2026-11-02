@@ -14,6 +14,8 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
+    BUSINESS_MODE_RULE_FILES,
+    BUSINESS_MODE_TEMPLATES,
     COMMAND_CONSCIOUSNESS_TIERS,
     KEBAB_ID_RE,
     LAYER_MAKEFILE_RECIPES,
@@ -21,6 +23,8 @@ from dotfiles_mcp.constants import (
     MCP_OPERATING_MODES,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
+    TECHNICAL_MODE_RULE_FILES,
+    TECHNICAL_MODE_TEMPLATES,
     VALID_LAYER_ROLES,
 )
 from dotfiles_mcp.fork_configurator import (
@@ -397,10 +401,12 @@ def inspect_workspace_status(
     prec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE["project"]))
     tpls = [str(x) for x in m.get("default_stack_templates", [])]
     rules = [p.name for p in sorted((ws / ".agents/rules").glob("*.md"))]
-    has_tech = bool({"technical-base.md", "coding.md"} & set(rules) or "technical-base" in tpls)
+    has_tech = bool(
+        set(TECHNICAL_MODE_RULE_FILES) & set(rules) or set(TECHNICAL_MODE_TEMPLATES) & set(tpls)
+    )
     has_biz = bool(
-        "business-base.md" in rules
-        or "business-base" in tpls
+        set(BUSINESS_MODE_RULE_FILES) & set(rules)
+        or set(BUSINESS_MODE_TEMPLATES) & set(tpls)
         or role in ("corporate", "domain-policy")
         or (ws / "corporate").is_dir()
     )

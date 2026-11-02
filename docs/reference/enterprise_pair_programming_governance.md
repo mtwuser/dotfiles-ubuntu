@@ -41,7 +41,7 @@ flowchart TD
     end
 
     subgraph Squads["Tier 2B — Squad & Stack Forks (layer_role: squad, precedence: 50..80)"]
-        SQUAD_BE["acme-squad-backend\n• templates/fastapi-hexagonal/ (Hexagonal DDD + HTMX)\n• Mounts layers/dept-security & layers/dept-data via git subtree"]
+        SQUAD_BE["acme-squad-backend\n• templates/tech-stack/fastapi-hexagonal/ (FastAPI + Hexagonal DDD)\n• Mounts layers/dept-security & layers/dept-data via git subtree"]
         SQUAD_FE["acme-squad-frontend\n• templates/web-islands/ (Core Web Vitals & a11y)\n• Mounts layers/dept-security via git subtree"]
     end
 
@@ -78,8 +78,8 @@ flowchart TD
 |---------------------|-----------------------------|-----------------------|----------------------------------------------------------|-------------|
 | **Tier 0: Open-Source Upstream** | `workstation` (default `10`) | `mtwuser/dotfiles-ubuntu` | Core Ubuntu 26.04 engine (`bootstrap.sh`, `backup.sh`, `audit.sh`, `workstation-sync.sh`), 3 base profiles (`human-core`, `technical-base`, `business-base`), 4 Python lifecycle hooks, 13 global skills, `layer-config.sh`, `layer-subtree.sh`, and `dotfiles_mcp_server.py`. | Open-Source Community |
 | **Tier 1: Corporate Reference (`Root 0`)** | `corporate` (`precedence: 10`) | Company fork (`acme-corp/dotfiles-ubuntu`) | Organization-wide rules, security boundaries, authority gates (`layer_authority`), and corporate `baseline_guardrails`. Can mount `Tier 2A` departments and `Tier 2B` squads under `layers/*` via `git subtree` for 360° governance and bidirectional `make sync`. | Architecture Board / Principal Architect |
-| **Tier 2A: Departmental / Domain Policy** | `domain-policy` (`5`) or `department` (`15..40`) | Departmental forks (`acme-dept-legal`, `acme-dept-security`, `acme-dept-data`) | Cross-cutting compliance rules, domain templates (`templates/<dept>/`), reference `docs/`, and departmental MCP servers (`dev/tst/pre/pro`). Consumed either as a parent layer (`--parent-dir`) or mounted into `Tier 1` / `Tier 2B` under `layers/<dept>/` via `git subtree`. | Legal/IP, Security, Finance, Data, SRE Leads |
-| **Tier 2B: Squad & Stack** | `squad` (`precedence: 50..80`) | Squad fork (`acme-squad-backend`) & `templates/<stack>/` | Stack-specific architectures and starter blueprints (e.g., `templates/fastapi-hexagonal/`), plus any `Tier 2A` departmental subtrees (`layers/dept-*`) mounted by that squad. Can also be mounted into `Tier 1` or `Tier 2A` under `layers/squad-*`. | Staff Engineers / Squad Leads |
+| **Tier 2A: Departmental / Domain Policy** | `domain-policy` (`5`) or `department` (`15..40`) | Departmental forks (`acme-dept-legal`, `acme-dept-security`, `acme-dept-data`) | Cross-cutting compliance rules, business-stack templates (e.g., `templates/business-stack/corporate-ops-ledger/`), reference `docs/`, and departmental MCP servers (`dev/tst/pre/pro`). Consumed either as a parent layer (`--parent-dir`) or mounted into `Tier 1` / `Tier 2B` under `layers/<dept>/` via `git subtree`. | Legal/IP, Security, Finance, Data, SRE Leads |
+| **Tier 2B: Squad & Stack** | `squad` (`precedence: 50..80`) | Squad fork (`acme-squad-backend`) & `templates/{squad-stack,tech-stack}/*` | Stack-specific architectures and starter blueprints (e.g., `templates/tech-stack/fastapi-hexagonal/`, `templates/squad-stack/agile-task-branch/`), plus any `Tier 2A` departmental subtrees (`layers/dept-*`) mounted by that squad. Can also be mounted into `Tier 1` or `Tier 2A` under `layers/squad-*`. | Staff Engineers / Squad Leads |
 | **Tier 3: Project Repository** | Consumer project (`.agents/`) | `<project-repo>/.agents/` + `docs/` + `WORKTASK.md` | Domain-specific invariants, bounded-context rules projected via `apply-project` (`.agents/rules/layer-<NN>-<name>.md` + `.agents/LAYER_LINEAGE.md`), active task tracking (`WORKROAD.md` $\rightarrow$ `WORKTASK.md` $\rightarrow$ `CHANGELOG.md`), and `SESSION.md`. | Product Squad / Application Developers |
 
 ---
@@ -103,7 +103,7 @@ Organizations can start with **Perspective A** on Day 1 and enable **Perspective
 
 #### Phase 2 — Create Departmental & Squad Layers (`Tier 2A` & `Tier 2B`)
 1. **Departmental Forks (`Tier 2A`)**: Cross-cutting departments (e.g., Cybersecurity, Data Platform, SRE) fork `acme-corp/dotfiles-ubuntu` (`layer_role: "department"`), document their domain standards in `docs/`, and declare their departmental MCP servers and `dev/tst/pre/pro` guardrails in `system/mcp-layer.json`.
-2. **Squad Forks (`Tier 2B`)**: Product/engineering squads fork `acme-corp/dotfiles-ubuntu` (`layer_role: "squad"`), add or customize their stack starter templates under `templates/<stack>/` (e.g., `templates/fastapi-hexagonal/`), and optionally mount the Departmental forks they depend on under `layers/<dept>/`:
+2. **Squad Forks (`Tier 2B`)**: Product/engineering squads fork `acme-corp/dotfiles-ubuntu` (`layer_role: "squad"`), add or customize their stack starter templates under `templates/{tech-stack,squad-stack}/<stack>/` (e.g., `templates/tech-stack/fastapi-hexagonal/`), and optionally mount the Departmental forks they depend on under `layers/<dept>/`:
    ```bash
    # Inside acme-squad-backend:
    # 1. Stay synchronized vertically with the Corporate Reference Layer:
@@ -403,7 +403,7 @@ Consider a technology company (**Acme Corp**) with 150 engineers across Backend,
    - As architectural changes are made, the agent updates `docs/architecture/` in lockstep with the code.
 4. **Promoting a Discovery to the Whole Company (`/enrich` $\rightarrow$ `/sclose`)**:
    - During the sprint, the squad discovers a new security validation pattern for webhook signatures and codifies it in `checkout-service/.agents/rules/coding.md`.
-   - At the end of the milestone, the tech lead runs `/enrich`, promotes the webhook validation rule upstream to the Backend Squad template (`templates/fastapi-hexagonal/`) and the universal test-pruning rule to the Corporate `AGENTS.md`, and closes the session with `/sclose`.
+   - At the end of the milestone, the tech lead runs `/enrich`, promotes the webhook validation rule upstream to the Backend Squad template (`templates/tech-stack/fastapi-hexagonal/`) and the universal test-pruning rule to the Corporate `AGENTS.md`, and closes the session with `/sclose`.
    - On the next morning's `/sopen`, every squad in the company automatically inherits the improved standard.
 
 ---

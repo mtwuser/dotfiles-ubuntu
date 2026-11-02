@@ -62,7 +62,7 @@ flowchart TD
     end
 
     subgraph Tier2["Tier 2: Squad / Domain Forks"]
-        BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/fastapi-hexagonal/\n• API & Database Migration Standards"]
+        BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/tech-stack/fastapi-hexagonal/\n• API & Database Migration Standards"]
         DataMCP["📡 mcp: dotfiles-squad-data\n(layer_role: squad)\n• templates/gcp-data-platform/\n• Pipeline & FinOps Guardrails"]
     end
 

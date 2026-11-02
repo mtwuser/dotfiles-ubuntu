@@ -14,6 +14,7 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     AUDIT_LOG_TAIL_LINES,
+    BUSINESS_MODE_TEMPLATES,
     BUSINESS_PHASE_SEMANTICS,
     DEFAULT_ENV_BRANCH_MAP,
     DEFAULT_PROCESS_BRANCH_PREFIXES,
@@ -282,7 +283,7 @@ def evaluate_environment_promotion(
         "corporate",
         "department",
         "domain-policy",
-    ) or "business-base" in manifest.get("default_stack_templates", [])
+    ) or bool(set(BUSINESS_MODE_TEMPLATES) & set(manifest.get("default_stack_templates", [])))
     sem_map = BUSINESS_PHASE_SEMANTICS if is_biz else TECHNICAL_PHASE_SEMANTICS
     failed_gates: list[str] = []
     wt_file, wv_file = ws / "WORKTASK.md", ws / "WORKVALI.md"

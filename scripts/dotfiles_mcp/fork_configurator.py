@@ -14,6 +14,7 @@ from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
     LAYER_MANIFEST_CONTRACT_REV,
     OWNER_WRITABLE_MODE_BIT,
+    PRUNABLE_STARTER_TEMPLATES,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
     TEMPLATE_MANIFEST_CONTRACT_REV,
@@ -150,9 +151,10 @@ def configure_fork_manifest(
     manifest["upstream_layer"] = upstream
 
     if prune_default_templates:
-        pruned = {"agile-task-branch", "fastapi-hexagonal", "human-core", "technical-base"}
         manifest["default_stack_templates"] = [
-            t for t in manifest.get("default_stack_templates", []) if t not in pruned
+            t
+            for t in manifest.get("default_stack_templates", [])
+            if t not in PRUNABLE_STARTER_TEMPLATES
         ]
         kept_bindings: list[dict[str, Any]] = []
         for b in manifest.get("surface_bindings", []):

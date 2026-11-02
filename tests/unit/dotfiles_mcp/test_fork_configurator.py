@@ -384,7 +384,7 @@ class TestForkConfigurator:
         minimal_res = apply_fork_to_project(
             bare_fork,
             tmp_path / "minimal_proj",
-            template_ref="minimal-tpl,agile-task-branch",
+            template_ref="minimal-tpl,agile-task-branch,fastapi-hexagonal,corporate-ops-ledger",
             include_layer_defaults=False,
             dry_run=False,
         )
@@ -423,7 +423,15 @@ class TestForkConfigurator:
         assert second_res["applied_template"] == "gdpr-pack"
         assert by_name_res["applied_template"] == "web-starter"
         assert bare_res["applied_template"] is None
-        assert minimal_res["applied_template"] == "minimal-tpl,agile-task-branch"
+        assert (
+            minimal_res["applied_template"]
+            == "minimal-tpl,agile-task-branch,fastapi-hexagonal,corporate-ops-ledger"
+        )
+        assert (tmp_path / "minimal_proj/.agents/skills/testing/SKILL.md").is_file()
+        assert (tmp_path / "minimal_proj/.agents/skills/fastapi-testing/SKILL.md").is_file()
+        assert (tmp_path / "minimal_proj/.agents/rules/business-base.md").is_file()
+        assert (tmp_path / "minimal_proj/.agents/rules/ops-ledger-architecture.md").is_file()
+        assert (tmp_path / "minimal_proj/.agents/skills/ledger-surface-audit/SKILL.md").is_file()
         assert inc_def_res["applied_template"] == "web-starter,gdpr-pack"
 
         with pytest.raises(ValueError, match="not found in selected layers"):
