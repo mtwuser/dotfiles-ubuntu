@@ -27,6 +27,31 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 ---
 
+## Audit Cadence Strategy (`C0 -> C3`) & Specialized Lenses (`/full-audit [lens]`)
+
+To maximize analytical depth per iteration without context dilution or unnecessary token spend, align audit execution with the **4-Tier Cadence & Consciousness Matrix**:
+
+| Tier & Cadence | Trigger / Moment | Command / Mechanism | Analytical Focus & Efficiency |
+| :--- | :--- | :--- | :--- |
+| **`C0` — Reflexive (Per-Edit)** | Every file edit / turn end (`PostToolUse`, `PostInvocation`, `Stop`) | Lifecycle Hooks (`post_edit_format.py`, `post_invocation_lint.py`, `stop_verify_tests.py`) | `< 1s`, `0` LLM tokens: enforces `< 465` lines, `Specification:` header, AAA test markers, token budgets ($\le 18\text{ KB}$ / $80\text{ KB}$), and affected unit tests on modified files. |
+| **`C1` — Tactical (Per-Task)** | Completing a task or touching a specific module, doc, or layer | **`/review <scope>`** (`<module>`, `1:1:1`, `docs`, `layer`, `corporate`, `imports`, `residue`) | `~5–15s`: fast, read-only check of the touched surface using `// delegate: flash` for mechanical scans. |
+| **`C2` — Convergent (Lens or Pre-Release)** | Deepening a specific dimension (`/full-audit <lens>`) or certifying before `/release` (`/full-audit`) | **`/full-audit [all \| docs \| architecture \| 1:1:1 \| layers]`** | Closed-World Probes (`Probe A..D`) + focused or full multi-pass elimination toward **`Regime 0 (0 findings)`**. |
+| **`C3` — Evolutionary (Post-`Regime 0`)** | Strictly **after** `Regime 0` is certified (`0` compliance gaps) | **`/enrich`** (`C -> B -> A`), **`/architecture-review` + `refactoring`**, **`oss-contribute`** (`Tier -1`) | Cross-layer governance promotion, orthogonal architectural redesign, or conscious C-substrate profiling & external `OSS-to-OSS` upstream PRs. |
+
+### Specialized Audit Lenses (`/full-audit <lens>`)
+
+When invoked with an optional lens argument, concentrate 100% of reasoning depth on that specific dimension and its paired Phase-0 deterministic probe; when invoked without arguments (`/full-audit` or `/full-audit all`), execute all 4 passes in sequence:
+
+| Lens Invocation | Paired Phase-0 Probes | Active Pass & Focused Surface |
+| :--- | :--- | :--- |
+| **`/full-audit`** *(or `/full-audit all`)* | **Probes `A + B + C + D`** | **Full 4-Phase Repository Convergence**: Executes Phase 0 $\rightarrow$ Pass 1 $\rightarrow$ Pass 2 $\rightarrow$ Pass 3 $\rightarrow$ Phase 4 across 100% of the repository before `/release`. |
+| **`/full-audit docs`** | **Probe `C` (`5-Link Ripple`)** | **Pass 1 Lens — 3-Tier Documentation & 5-Persona Walkthroughs**: Audits `README.md` $\rightarrow$ `docs/guides/` $\rightarrow$ `docs/architecture/` & `docs/reference/`, relative links, Mermaid diagrams, CLI flag parity across all 5 ripple links, and verbatim human persona journeys (`P1..P5`). |
+| **`/full-audit architecture`** | **Probe `B` (`AST & Constants Graph`)** | **Pass 2 Lens — Code/Ledger Architecture & Modularity (`< 465` Lines)**: Audits `technical` code representation (floor-version stdlib compliance, 5-Stage Evolution Ladder, data symmetry, bidirectional constants, `[WIRE]/[CONSOLIDATE]/[PRUNE]`) or `business` SSoT ledgers (`corporate/`, *Lex Superior* `5..35`, `surfaces/{web,forms,print}/`, IP firewall). |
+| **`/full-audit 1:1:1`** | **Probe `D` (`1:1:1 Spec Tables`)** | **Pass 3 Lens — `Spec <-> Source <-> Test` Symbiosis & Mutation Kill**: Audits `docs/architecture/` `1:1:1` tables (or `Policy <-> Ledger <-> Sign-Off Gate`), `Test<Module>` containers, 1-line invariant docstrings, explicit AAA, `100%` isolated unit branch coverage (`Unit -> Imp -> E2E`), and Zero-Dependency Mutation Probes. |
+| **`/full-audit layers`** | **Probe `A` (`Live Verify & Status`)** | **Federation & Layer Topology Lens**: Audits `system/mcp-layer.json` (`mcp-layer-v1`), `templates/**/template.json` (`template-pack-v1`), `surface_bindings` precedence/specificity, `layer_authority` & roster gates, `make horizon`, `make upstream-diff`, `make diff`, and `layers/*` subtree alignment. |
+
+---
+
 ## Phase 0 — Closed-World Context, Stack & Deterministic Probe Discovery
 
 // delegate: flash

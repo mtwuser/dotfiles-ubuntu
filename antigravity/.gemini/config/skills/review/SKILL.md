@@ -20,9 +20,12 @@ Check `operating_state` and `workspace_mode` from `make status` (or `.agents/rul
 | `/review <module>` | Full module audit (Technical §1–§5) or Corporate/Department pack audit (Business §6) |
 | `/review <module>/tests` | Test-only audit: classification, file mapping, coverage, patterns (Technical §2) |
 | `/review <module>/services` | Service layer audit: boundaries, dead code, naming, dependencies (Technical §3) |
+| `/review 1:1:1` | Bidirectional `Spec <-> Source <-> Test` (`Test<Module>`, 1-line invariant docstrings, AAA, isolated unit coverage) or `Policy <-> Ledger <-> Sign-Off Gate` symbiosis (§2.2, §2.4 & §6) |
+| `/review docs` | 3-Tier documentation coherence (`README -> guides -> architecture/reference`), relative links, Mermaid diagrams & 5-Link Change-Ripple parity (§7) |
+| `/review layer` | Multi-layer topology, `system/mcp-layer.json` (`mcp-layer-v1`), `templates/**/template.json`, `surface_bindings`, `layer_authority`, `make diff` & `make horizon` (§8) |
 | `/review corporate` | Business & normative ledger audit: *Lex Superior*, SSoT ledgers, Traceable IDs, 3-part verification, IP firewall (Business §6) |
 | `/review imports` | Cross-module import direction audit (Technical §4) |
-| `/review residue` | Zero-residue scan: shims, deprecated markers, backward compat aliases (§5) |
+| `/review residue` | Zero-residue scan: shims, deprecated markers, backward compat aliases, and `[WIRE]/[CONSOLIDATE]/[PRUNE]` forensics (§5) |
 
 ---
 
@@ -197,6 +200,30 @@ When operating in `Root 0` (`corporate`), `domain-policy`, or `Department` (`bus
 - [ ] **4. Three-Part Functional Verification Structure** — every normative document in `corporate/**/*.md`, `templates/**/rules/*.md`, and `docs/**/*.md` contains: (1) `# Scope & Surface Target`, (2) `# Normative Invariants`, and (3) `# Verification & Sign-Off Gates` (with `- [ ]` checklists).
 - [ ] **5. IP & Confidentiality Firewall & Crisis Escalation SLAs (`P0/P1/P2`)** — zero restricted formulas, supplier margins, or internal codenames leaked into public/external surfaces; crisis response playbooks define explicit `P0`/`P1`/`P2` SLAs and named owner roles.
 - [ ] **6. Cross-Surface Cascade & Modularity (`< 465` Lines)** — changes in `corporate/` cascade across `surfaces/web/`, `surfaces/forms/`, and `surfaces/print/`, and every `.md` file stays strictly `< 465` lines (`make diff` reports zero drift).
+
+---
+
+## 7. Documentation & 5-Link Change-Ripple Audit (`/review docs`)
+
+// delegate: flash
+
+Use this fast tactical scope after modifying CLI flags, `Makefile` targets, architecture specs, or user guides:
+
+- [ ] **1. 3-Tier Progressive Disclosure & `< 465`-Line Gate** — `README.md` ($\le 400$ lines target), `docs/guides/*.md`, `docs/architecture/*.md`, and `docs/reference/*.md` stay strictly `< 465` lines and match actual disk trees (`find` / `ls`).
+- [ ] **2. 5-Link Change-Ripple Parity** — every touched capability is synchronized across all 5 links: `1. Engine/Service Function <-> 2. CLI/Router Parser <-> 3. Makefile Recipe / Hook <-> 4. Spec Table (docs/architecture/) <-> 5. Root/Guide Docs & Parity Tests`.
+- [ ] **3. Relative Links, Mermaid Syntax & Language Purity** — 100% of relative Markdown links (`[label](path.md)`) resolve on disk, Mermaid node labels containing `()` or `[]` are double-quoted, and repository docs remain in 100% pure technical English.
+
+---
+
+## 8. Multi-Layer Topology, Manifest & Horizon Audit (`/review layer`)
+
+// delegate: flash
+
+Use this tactical scope when validating or aligning a `Root 0`, `domain-policy`, `department`, `squad`, or consumer `project` workspace:
+
+- [ ] **1. Manifest & Template Contract Validity (`mcp-layer-v1` & `template-pack-v1`)** — `system/mcp-layer.json` declares valid `schema_version`, `layer_id`, `layer_role`, numeric `precedence` (`0..100`), `default_stack_templates`, and `surface_bindings` whose `rule_files` and `canonical_templates` exist on disk.
+- [ ] **2. Horizon, Upstream Section Diff & Projection Sync (`make status`, `make horizon`, `make upstream-diff`, `make diff`)** — check `makefile_outdated`, `manifest_contracts_outdated`, `downward_sync_needed`, `child_sync_needed`, and `.agents/proposals/`; confirm `make diff` reports `0` unintended `modified_in_project` drift and `.agents/LAYER_LINEAGE.md` is current.
+- [ ] **3. Layer Authority, Roster & Environment Promotion Readiness (`make authority`)** — verify `layer_authority` (`authorized_emails`, `maintainer_emails`, `validator_emails`) and `git_governance` (`protected_branches`, `.github/CODEOWNERS`) match the organizational tier's ownership policy.
 
 ---
 
