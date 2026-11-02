@@ -23,17 +23,23 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 ---
 
-## Phase 0 — Context, Stack & Rule-Scope Discovery
+## Phase 0 — Closed-World Context, Stack & Deterministic Probe Discovery
 
 // delegate: flash
 
+To provide **human-grade certainty through closed-world elimination** (never heuristic attention-window sampling), Phase 0 MUST enumerate and probe the entire repository universe upfront:
+
 1. **Discover Stack, Operating State, Workspace Mode & Toolchain**:
    - Run `make status` (or `./scripts/layer-config.sh status`) and inspect project manifests (`system/mcp-layer.json`, `pyproject.toml`, `package.json`, `Cargo.toml`, `go.mod`, `Makefile`, `Dockerfile`, CI workflows) to determine `operating_state` (`"oss-readonly-appliance"`, `"oss-dev"`, `"corporate-root"`, `"domain-policy"`, `"department"`, `"squad"`, or `"project"`), `workspace_mode` (`"business"`, `"technical"`, or `"hybrid"`), `command_tiers`, target language versions, linters, type-checkers, and test runners.
-2. **Classify Active Rules by Scope**:
+2. **Classify Active Rules by Scope & Enumerate 100% of the File Universe**:
    - Read `.agents/rules/*.md`, `.agents/LAYER_LINEAGE.md`, and `docs/architecture/*.md` (or `corporate/**/*.md`).
+   - Enumerate all root community/governance files (`README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `ACCESSIBILITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`), `docs/**`, `templates/**`, `scripts/**`, and `tests/**` so zero files are omitted from terminology, link, or parity scans.
    - Separate **generic inherited rules** (`technical-base`, `business-base`) from **stack-specific rules** (`business-stack/*`, `tech-stack/*`) and **repository-local specs**; flag any leak where repository-local counts or single-stack literals contaminate a generic rule or skill.
-3. **Establish Baseline Health**:
-   - Run the repository's non-mutating diagnostic/verification command (`make verify`, `make doctor`, `make diff`, or equivalent) to record baseline status.
+3. **Execute the 4 Closed-World Deterministic Probes**:
+   - **Probe A — Live Verification & Host Audit Suite**: Run `make verify` (or `make doctor` / `make diff`) **AND** live workstation/environment audit scripts (`NO_COLOR=1 ./audit.sh`, `./scripts/audit-global-config.sh` when applicable) from the active workspace to catch cross-clone or environment-boundary false positives immediately.
+   - **Probe B — Bidirectional AST Symbol, Constant & Docstring Graph**: Parse all production and test modules via AST to verify: (i) 100% explicit return annotations and 100% docstrings on public functions/methods (`not name.startswith("_") or name == "__init__"`), (ii) zero `.update(k=v)` keyword packing or raw integer slices (`> 2`), and (iii) **bidirectional constant wiring** (every constant in `constants.py` / `catalogs.py` is referenced by a consumer module or test, and every policy tuple is disjoint/consistent).
+   - **Probe C — 5-Link Change-Ripple Matrix**: For every CLI subcommand, Makefile target, or engine capability, verify parity across all **5 ripple links**: `1. Engine Function <-> 2. CLI Parser <-> 3. Makefile Recipe / Hook <-> 4. Normative Spec Table (docs/architecture/01..NN) <-> 5. Root/Guide Docs & Parity Tests`.
+   - **Probe D — `1:1:1` Spec Table Completeness**: Verify that every specification in `docs/architecture/01..NN` (`< 465` lines) contains an explicit `1:1:1` traceability table and that every referenced source and test file exists on disk.
 
 ---
 
@@ -88,8 +94,9 @@ Once conceptual and normative requirements from Pass 1 are aligned, audit their 
    - Prefer pure functions for stateless transformations, but escalate deterministically when code exhibits defensive syntactic compression (cryptic short identifiers, chained `.update()` packing) or structural data asymmetry (mixing `.get()` and `d["k"]` on the same internal dict, inline schema versions like `"1.2"`, or raw numeric slices like `[:24]`): extract a **Function** when an inline block repeats $\ge 2$ times; extract a **Class / `@dataclass`** when $\ge 3$ functions share $\ge 4$ context parameters (*Data Clump*); use a **Declarative Catalog (`dict`) or `Protocol` Polymorphism** when `if/elif` chains branch across $\ge 3$–$4$ variants; and extract a **`1:1:1` Sub-Module** when a file crosses `400` lines.
 3. **Modularity, Reuse, File Size (`< 465` Lines) & Bifurcated Age Radar (`14d / 90d / 180d`)**:
    - Identify duplicated helpers across modules or scripts, oversized files ($\ge 465$ lines, target $\le 400$), circular dependencies, or mixed architectural responsibilities, and evaluate context-dependent age (`> 14d` for staged `.agents/proposals/**` via `stale_proposals` in `make status`, `> 90d` for code/tests/`docs/architecture/`, and `> 180d` for `corporate/` and `templates/`): if **aligned in active use (`0` drift)**, propose **consolidation, `C1` automation, or upward `/enrich`**; if **drifted** (diverges from newer idioms or `Source > Spec`), propose **refactoring, adjustment, or decommissioning**.
-4. **Strict Typing & Error Contracts**:
-   - Verify explicit parameter and return types on 100% of functions/methods, specific domain exceptions/error codes, and zero linter or type-checker warnings.
+4. **Strict Typing, Public Docstrings & Forensic Intent Resolution (`[WIRE]` vs. `[CONSOLIDATE]` vs. `[PRUNE]`)**:
+   - Verify explicit parameter and return types on 100% of functions/methods, 1-line docstrings on 100% of public functions/methods, specific domain exceptions/error codes, and zero linter or type-checker warnings.
+   - **Never prune an unreferenced constant, helper, or test by reflex**: inspect `git log -S <symbol> -p` and `docs/architecture/` first and classify it explicitly as **`[WIRE]`** (*unconnected design intent* $\rightarrow$ wire into its consumer engine and add bipolar tests), **`[CONSOLIDATE]`** (*duplicate SSoT* $\rightarrow$ merge into the canonical dict/catalog without losing values), or **`[PRUNE]`** (*proven obsolete residue* $\rightarrow$ remove cleanly).
 
 Record all technical improvements in a structured table (`[P2-01]`, `[P2-02]`, ...) with `file:line` references and concrete refactoring actions.
 
@@ -124,5 +131,6 @@ Before executing fixes, evaluate the total approved scope to prevent rushed exec
 
 | Regime | Threshold | Mandatory Orchestration Flow |
 | :--- | :--- | :--- |
-| **Regime A — Atomic In-Session Execution** | $\le 15$ cohesive findings completable within the current session with 100% verification | 1. Present the **Master Audit Plan** artifact with a Pre-Edit Scope Blueprint.<br>2. Upon user approval, execute in ordered batches (`P0 Runtime/Hooks` $\rightarrow$ `P1 Rules/Skills` $\rightarrow$ `P2 Docs/Templates` $\rightarrow$ `P3 1:1:1 Tests & Gates`).<br>3. Run full verification (`make verify`) after each batch and close via `/continue`. |
+| **Regime 0 — Closed-World Convergence (`0` Findings)** | All 4 Phase-0 probes and Pass 1–3 matrices return **`0` discrepancies** | 1. **Anti-Searcher-Bias Rule**: Never invent cosmetic churn, artificial refactors, or unnecessary deletions when all closed-world invariants pass.<br>2. Present the **Step-by-Step Closed-World Elimination Table (`Surface Checked -> Invariant Verified -> Status: ✅ 0 Discrepancies`)**.<br>3. Declare **`CONVERGENCE REACHED (0 findings)`** so the human operator has complete, auditable certainty that the repository is ready for commit or `/release`. |
+| **Regime A — Atomic In-Session Execution** | $1\text{–}15$ cohesive findings completable within the current session with 100% verification | 1. Present the **Master Audit Plan** with a Pre-Edit Scope Blueprint (and `[WIRE]` / `[CONSOLIDATE]` / `[PRUNE]` classification for any unreferenced symbols).<br>2. Upon user approval, execute in ordered batches (`P0 Runtime/Hooks` $\rightarrow$ `P1 Rules/Skills` $\rightarrow$ `P2 Docs/Templates` $\rightarrow$ `P3 1:1:1 Tests & Gates`), walking all **5 ripple links** on every change.<br>3. Run full verification (`make verify` + Phase-0 probes) after execution to confirm **`0` residual findings** in the same turn, then close via `/continue`. |
 | **Regime B — Multi-Phase Governance Spillover** | $> 15$ findings, cross-cutting architectural refactors, or multi-session scope | 1. Crystallize the full audit blueprint into `roadmaps/audit_<YYYY_MM_DD>.md`.<br>2. Register the ordered audit phases (`RA.1`, `RA.2`, ...) in `WORKROAD.md` and capture independent backlog items in `BACKLOG.md`.<br>3. Promote **only the first phase (`RA.1` $\rightarrow$ `T1`)** into `WORKTASK.md` per `/priority` and `/governance`.<br>4. Execute and verify `T1` atomically, then checkpoint via `/continue` so zero findings are ever left half-done across sessions. |

@@ -42,13 +42,19 @@ Follow this sequence strictly to ensure no behavioral changes are introduced.
 5. **Final verification**: Ensure the test count is identical (or higher), isolated unit and full coverage are 100%, and every source, test, and `docs/**/*.md` file is `< 465` lines.
 6. **Commit**: One atomic commit per logical change.
 
-## Move Protocol Between Modules
-When a component moves from Module A to Module B:
+## Move Protocol & 5-Link Change-Ripple Matrix
+When a component moves from Module A to Module B (or when a function signature, CLI flag, or domain constant changes):
 1. Create the new file in the target module (`Module B`).
 2. Update **EVERY** import across the entire codebase (`grep` for the old path).
 3. Update **EVERY** `@patch()` target in test files.
 4. Update **EVERY** docstring and comment reference.
 5. **DELETE the old file** in `Module A` — do not leave a backward compatibility shim, alias, or re-export. Let the code fail loud if an import was missed.
+6. **Walk the 5-Link Change-Ripple Chain in the Same Turn**: Whenever adding or modifying a parameter, CLI option, or policy constant, verify and update all 5 links atomically so a fix in Link 1–2 never leaves drift in Link 3–5:
+   - **Link 1**: Core Engine / Service Function (`scripts/**` or `src/**`)
+   - **Link 2**: CLI / Entrypoint Parser (`scripts/*.sh` or router/handler)
+   - **Link 3**: Generated `Makefile` Recipe (`LAYER_MAKEFILE_RECIPES`) & Lifecycle Hooks
+   - **Link 4**: Normative `1:1:1` Table & CLI Matrix in `docs/architecture/<spec>.md`
+   - **Link 5**: Root/Guide Documentation (`README.md`, `CONTRIBUTING.md`, `docs/guides/`) & Parity Tests
 
 ## Naming Protocol & Self-Indexing File Taxonomy (`O(1)` Glob Discovery)
 - Choose the architecturally correct name **in the same changeset** (never defer to a "later rename" task).
@@ -57,11 +63,16 @@ When a component moves from Module A to Module B:
   - **Governance & Documentation**: `NN_<topic>.md` (`01_`, `02_` reading-order prefix in `docs/guides/` and `docs/architecture/`), `layer-<NN>-<id>.md` (`00..100` precedence prefix in `.agents/rules/`), and `WORK*.md` (`WORKROAD.md`, `WORKTASK.md`, `WORKVALI.md` active root trackers).
 - **Continuous Consistency on Every Edit / Feature**: Whenever modifying a file for a bugfix, concrete change request, or new feature, never introduce split-idiom drift between the new code and older (`> 90d`) or over-compressed surrounding code in that file; align the touched scope atomically or proactively propose refactoring (and capture in `BACKLOG.md`).
 
-## Code Decommissioning & Obsolete Test Pruning
+## Forensic Intent Resolution (`[WIRE]` vs. `[CONSOLIDATE]` vs. `[PRUNE]`) & Code Decommissioning
 
-> **When to use**: Whenever a feature, module, class, endpoint, or behavior is intentionally **removed or replaced** (as opposed to a behavior-preserving refactor).
+> **When to use**: Whenever an unreferenced constant/symbol is detected or a feature, module, class, endpoint, or behavior is intentionally **removed or replaced**.
 
-Unlike pure refactoring (where test count must remain `>=` baseline), **feature decommissioning requires decreasing or replacing obsolete tests** so dead test files and trivial assertions never accumulate:
+Before deleting any unreferenced constant, helper, or test, **NEVER prune by reflex**. Execute a **Forensic Intent Check** (`git log -S <symbol> -p` + cross-check `docs/architecture/`) and classify the symbol into one of three categories:
+- **`[WIRE]` — Unconnected Design Intent**: The constant or helper represents a legitimate domain capability or role gate (e.g., `VALIDATOR_ALLOWED_OPS`) that was declared in `constants.py` / specs but not yet wired into its consumer engine. **Action**: Wire it into the consumer logic and add bipolar unit tests.
+- **`[CONSOLIDATE]` — Duplicate Single Source of Truth (SSoT)**: The constant duplicates values already governed by an adjacent canonical dictionary or catalog (e.g., a standalone tuple duplicating the keys of `MCP_OPERATING_MODES`). **Action**: Consolidate into a single SSoT without losing a single domain value.
+- **`[PRUNE]` — Proven Dead Residue**: Forensics confirm the symbol was superseded or never applied to the active algorithm. **Action**: Execute the 3-step pruning audit below.
+
+Unlike pure refactoring (where test count must remain `>=` baseline), **feature decommissioning (`[PRUNE]`) requires decreasing or replacing obsolete tests** so dead test files and trivial assertions never accumulate:
 
 1. **1:1 Test File Mapping Audit (`orphan-test-file`)**:
    - Every unit test file (`tests/unit/**/test_<name>.py`) must correspond to an existing source module in `src/`.
