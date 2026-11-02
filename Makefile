@@ -20,7 +20,7 @@ help:
 	@echo "  make install-runtime    Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
-	@echo "  make test-imp         Run implementation/integration tests (tests/imp/)"
+	@echo "  make test-imp         Run implementation tests (tests/imp/)"
 	@echo "  make test-e2e         Run end-to-end chained MCP & hook lifecycle tests (tests/e2e/)"
 	@echo "  make test-cov         Run full test suite with 100% branch coverage gate"
 	@echo "  make lint             Run ruff check and mypy --strict"

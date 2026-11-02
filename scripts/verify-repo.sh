@@ -320,8 +320,8 @@ fi
 # 7. Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest
 echo ""
 echo "[7/8] Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest"
-if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib, sys; sys.path.insert(0, "scripts"); from dotfiles_mcp.constants import LAYER_MANIFEST_CONTRACT_REV; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); assert d.get("schema_version") == LAYER_MANIFEST_CONTRACT_REV and "federated_mcps" in d and "environments" in d and "surface_bindings" in d'; then
-  pass "system/mcp-layer.json is valid JSON and matches LAYER_MANIFEST_CONTRACT_REV (with precedence, surface_bindings, environments & federated_mcps)"
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib, sys; sys.path.insert(0, "scripts"); from dotfiles_mcp.constants import LAYER_MANIFEST_CONTRACT_REV, TEMPLATE_MANIFEST_CONTRACT_REV; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); tpls = list(pathlib.Path("templates").rglob("template.json")); assert d.get("schema_version") == LAYER_MANIFEST_CONTRACT_REV and "federated_mcps" in d and "environments" in d and "surface_bindings" in d and len(tpls) >= 5 and all(json.loads(p.read_text()).get("schema_version") == TEMPLATE_MANIFEST_CONTRACT_REV for p in tpls)'; then
+  pass "system/mcp-layer.json (LAYER_MANIFEST_CONTRACT_REV) & templates/**/template.json (TEMPLATE_MANIFEST_CONTRACT_REV) contracts verified"
 else
   fail "system/mcp-layer.json is missing or invalid"
 fi
