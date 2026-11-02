@@ -134,6 +134,111 @@ From there, each application repository (`checkout-service`, `inventory-platform
 
 ---
 
+### 2.3. Cross-Departmental & Multi-Specialty Composition Matrix: LegalTech, Governed Marketing & Transversal Platforms (`VoIP`)
+
+In traditional enterprises, whenever a business or functional department (Legal, Marketing, Finance, Operations) needs to build software, automate workflows, or integrate with another specialty, two structural failures emerge:
+1. **The IT Bottleneck (Context Loss)**: Business writes static handoff specs for IT; engineers build technically sound code that inadvertently misses legal, brand, or financial nuances because those domain rules live in separate silos.
+2. **Shadow IT (Engineering Drift)**: The business department builds its own scripts, bots, or connectors outside IT; it solves the immediate domain need, but without `1:1:1` architecture, `100%` test coverage, type safety, or corporate security guards.
+
+`dotfiles-ubuntu` eliminates both failure modes by turning organizational departments and technical stacks into a **3-Axis Compositional Matrix ("Contextual Algebra")** where **Google Antigravity** acts as the universal execution surface:
+
+```mermaid
+flowchart LR
+    subgraph Axis1["Axis 1: Deontic Precedence Order (0..100 Lex Superior)"]
+        P5["Legal / IP (5)\nStatutory & Trade-Secret Gates"]
+        P10["Corporate Root 0 (10)\nEnterprise Identity & SSoT Ledgers"]
+        P15["Finance (15) / Ops (20)\nUnit Economics, HSE & SLAs"]
+        P25["Engineering / Tech (25)\n1:1:1 Specs, 100% Tests & Strict Typing"]
+        P30["Brand (30) -> Marketing (35)\nVisual Tokens, Tone & Growth"]
+        P50["Squad / Project (50..80)\nBounded-Context Implementation"]
+        P5 --> P10 --> P15 --> P25 --> P30 --> P50
+    end
+
+    subgraph Axis2["Axis 2: 4 Cross-Layer Weaving Mechanisms"]
+        W1["A. In-Situ Dev Overlay\n(make setup-dev <-> make sync)"]
+        W2["B. Parent-Governed Project\n(--parent-dir <dept> --template <stack>)"]
+        W3["C. Horizontal Subtree Mount\n(layer-subtree.sh add layers/<dept>)"]
+        W4["D. Ephemeral rcap1 Consult\n(make consult / spawn-ephemeral)"]
+    end
+
+    subgraph Axis3["Axis 3: Homogenized Antigravity Experience"]
+        AG["Unified Workspace (.agents/)\n• Same commands (/sopen, /review, /continue, /sclose)\n• Same lifecycle (WORKTASK -> verify -> CHANGELOG)\n• Rules woven in exact 0..100 deontic order"]
+    end
+
+    Axis1 --> Axis2 --> Axis3
+```
+
+1. **Order Defines Authority (*Lex Superior* `0..100`)**:
+   - Combining **Legal (`5`) + Tech (`25`)** is not an unordered bag of prompts: because `5 < 25`, `.agents/rules/layer-05-dept-legal.md` takes deontic precedence over `layer-25-dept-tech.md`. The AI agent enforces `100%` unit test coverage and hexagonal architecture (`25`) *in service of* statutory IP and confidentiality invariants (`5`), never allowing a technical shortcut to bypass a legal gate.
+2. **Infinite Specialized Profiles, Zero Cognitive Overhead**:
+   - Whether the resulting workspace is a *LegalTech MCP Engineer*, a *Governed Growth & Social Automation Specialist*, or a *Transversal VoIP Platform Architect*, the human operator interacts with the exact same Antigravity commands (`/sopen`, `make status`, `make verify`, `/review`, `/sclose`) while `inspect_workspace_status` (`C1 / C2 / C3` command tiers) filters out irrelevant commands.
+
+#### The 6 Cross-Specialty Enterprise Archetypes
+
+| Enterprise Scenario | Workspace Owner | Woven Rule Chain (`0..100` *Lex Superior*) | 1-Command Activation | Effective Antigravity Profile |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Pure Business Governance** *(Policies, Patents, Financial Ledgers)* | `Root 0` (`10`) or `Department` (`5..20`) | `human-core` + `business-base` (`10`) + `templates/<dept>/` (`5..20`) | `bootstrap-workspace` / `make sync` | **Normative & SSoT Ledger Auditor** (`workspace_mode: business`) |
+| **2. In-Department Tooling** *(Scripts/validators inside a business repo)* | `Department` (`Legal`, `Finance`, `Ops`) | `<dept>` (`5..20`) + `business-base` (`10`) + **`technical-base` (`25`, temporary)** | `make setup-dev` *(reverts to `business` via `make sync`)* | **In-Situ Domain Automation Engineer** (`workspace_mode: hybrid`) |
+| **3. Department-Owned Tech Product** *(e.g., **LegalTech Patent/Contract MCP**)* | `Legal` (`5`) or Embedded Legal Squad | **`Legal` (`5`)** $\rightarrow$ `Root 0` (`10`) $\rightarrow$ **`Tech` + `FastAPI` (`25..50`)** | `apply-project <app> --parent-dir <dept> --template <stack>` | **Software Architect Subordinated to Department Law** (`hybrid`) |
+| **4. Multi-Departmental Intersection** *(e.g., **Marketing + Social Media Hub**)* | `Marketing` / `Growth` Squad (`35`) | **`Legal/GDPR` (`5`)** $\rightarrow$ `Root 0` (`10`) $\rightarrow$ **`Tech` (`25`)** $\rightarrow$ **`Brand` (`30`)** $\rightarrow$ **`Marketing` (`35`)** | `--parent-dir dept-marketing` + `layer-subtree.sh add` (`legal`, `brand`) | **Full-Stack Growth Engineer Governed by Legal, Brand & Security** |
+| **5. Transversal Enterprise Platform** *(e.g., **Company-Wide `VoIP` Service**)* | Platform `service-node` / `squad` (`25`) | **Inward**: `Legal` (`5`) $\rightarrow$ `Root 0` (`10`) $\rightarrow$ `Ops` (`20`) $\rightarrow$ `Tech/VoIP` (`25`)<br/>**Outward**: Exports `templates/voip-pack` + `federated_mcps` | Consumers mount `layers/voip-platform` or apply `--template voip-pack` | **Critical Infrastructure Builder (inward) / Governed Service Provider (outward)** |
+| **6. Punctual Cross-Departmental Audit** *(e.g., Design checks Patent Gate with Legal)* | Any consumer workspace | Active workspace + **Ephemeral `rcap1` Capsule (`L0..L2`, `kr: true`)** | `make consult LAYER=dept-legal QUERY="..."` | **Zero-Residue Read-Only Inter-Departmental Advisor** (`inter-layer`) |
+
+---
+
+#### Concrete Walkthroughs of the 3 Cross-Specialty Cases
+
+##### Case A — When the Legal Department Builds Technology (e.g., a LegalTech Patent & Contract Auditor MCP)
+
+Suppose the **Legal & IP Department (`dept-legal-ip`, `precedence: 5`)** needs a custom Model Context Protocol (MCP) server or microservice to audit supplier contracts and patent claims against `corporate/` ledgers. The enterprise can execute this in two ways depending on team structure:
+
+- **Option A1 — Embedded Technical Development Under Legal (`--parent-dir` or `make setup-dev`)**:
+  - A technical specialist working directly for Legal scaffolds `legal-contract-mcp/` governed by `dept-legal-ip`:
+    ```bash
+    ./scripts/layer-config.sh apply-project ~/Projects/legal-contract-mcp \
+      --parent-dir ~/Projects/dept-legal-ip \
+      --template technical-base,fastapi-hexagonal
+    ```
+  - *(Or, if authoring automation scripts directly inside `~/Projects/dept-legal-ip`, runs `make setup-dev` to overlay `technical-base` onto `business-base` + `dept-legal-ip`, and `make sync` when finished).*
+  - **Resulting Agent Behavior**: Antigravity enforces `mypy --strict`, `ruff`, hexagonal ports/adapters, and `100.00%` isolated unit branch coverage from `technical-base` (`25`), while `dept-legal-ip` (`5`) acts as supreme law — blocking any tool output or test fixture from exposing unpatented inventions (*World Novelty Gate*) or trade secrets (`<TS-ID>`) outside sealed `rcap1` (`kr: true`) capsules.
+- **Option A2 — Delegated to the Engineering Department (`dept-tech`) with Legal Mounted**:
+  - Legal delegates the build to Engineering via `./scripts/layer-config.sh delegate-to-child ~/Projects/corporate-root --to-child dept-tech --task "Build Patent Audit MCP" --ticket LEG-2026-009`.
+  - The engineering squad mounts `layers/dept-legal-ip/` (`./scripts/layer-subtree.sh add dept-legal-ip <url>`). Because `dept-legal-ip` carries `precedence: 5` and `dept-tech` carries `precedence: 25`, `resolve_surface_governance` enforces the exact same `Legal (5) > Corporate (10) > Tech (25)` hierarchy.
+
+##### Case B — When Marketing Connects to Social Media (Multi-Departmental Intersection)
+
+Suppose **Marketing (`dept-marketing`, `precedence: 35`)** wants to build an automated omnichannel campaign engine connected to LinkedIn, X, and Instagram APIs (`marketing-social-hub/`). In a governed enterprise, a social media automation tool touches **four distinct specialties simultaneously**:
+1. **Legal & Compliance (`precedence: 5`)**: Enforces GDPR privacy, embargo dates (*World Novelty Gate*), and **Zero-Greenwashing** (every sustainability or unit-economics claim in a post must cite an audited `Batch #NNN` ledger in `corporate/`).
+2. **Corporate Root 0 (`precedence: 10`)**: Enforces secret isolation and executive crisis SLAs (`P0 < 1h`).
+3. **Engineering / Tech (`precedence: 25`)**: Enforces OAuth token security, idempotent retry queues, rate-limiting, and `100%` `AAA` unit test coverage.
+4. **Brand & Design (`precedence: 30`)**: Locks corporate casing, phonetic standards, color contrast (`WCAG >= 4.5:1`), and visual tokens so Marketing (`35`) cannot alter brand identity.
+5. **Marketing (`precedence: 35`)**: Defines campaign hooks, audience segmentation, UTM attribution, and posting cadences.
+
+- **How It Is Configured**:
+  ```bash
+  # Inside dept-marketing (or the marketing-social-hub squad fork):
+  ./scripts/layer-subtree.sh add dept-legal ~/Projects/dept-legal-ip master
+  ./scripts/layer-subtree.sh add dept-brand ~/Projects/dept-brand-design master
+  ./scripts/layer-config.sh apply-project ~/Projects/marketing-social-hub \
+    --parent-dir ~/Projects/dept-marketing \
+    --template technical-base,fastapi-hexagonal \
+    --layers all
+  ```
+- **Resulting Agent Behavior**: A single developer or technical marketer in Antigravity operates with all five layers woven in `.agents/rules/` (`layer-05-dept-legal.md`, `layer-10-root.md`, `layer-30-dept-brand.md`, `layer-35-dept-marketing.md`, `technical-base.md`, `fastapi-hexagonal.md`). Any code or campaign template generated by the AI automatically satisfies Legal, Brand, Security, and Growth constraints in a single pass.
+
+##### Case C — When a Service Is Transversal to the Entire Company (e.g., Enterprise `VoIP` / Unified Communications)
+
+Suppose the organization operates a transversal **`VoIP` & Unified Communications Platform (`voip-platform`)** used across Customer Support, Sales/Marketing, Legal counsel lines, and Executive communications. A transversal platform has a **dual inward/outward architecture**:
+
+1. **Inward Perspective (Building & Operating the `VoIP` Core)**:
+   - `voip-platform` is bootstrapped as a `service-node` (or platform `squad`) at `precedence: 25` with `technical-base` + `fastapi-hexagonal`, mounting **`dept-legal` (`5`)** (telephony recording consent laws, wiretap compliance, audio retention TTLs) and **`dept-ops` (`20`)** (`< 1h` P0 incident SLA, emergency failover routing).
+   - It declares its runtime MCP server (`voip-sip-controller`) under `federated_mcps` in `system/mcp-layer.json` with explicit `required_guardrails` (e.g., *"Never initiate call recording or transcript export without a verified consent token; `pro` environment restricted to read-only telemetry"*), and packages a reusable client template at `templates/voip-client-pack/`.
+2. **Outward Perspective (Consuming `VoIP` Across Any Department or Squad)**:
+   - Whenever **Customer Support**, **Sales/Marketing**, or **Legal** builds a workspace that integrates voice calls or AI voice agents, they mount `layers/voip-platform/` (or run `apply-project --template voip-client-pack`).
+   - Their Antigravity agents immediately discover the `voip-sip-controller` MCP via `discover_federated_mcps(layer="all")` **pre-loaded with the combined `effective_guardrails` of Legal (`5`) + Corporate (`10`) + Ops (`20`) + VoIP (`25`)**, guaranteeing uniform compliance across every department that touches telephony.
+
+---
+
 ## 3. Bidirectional Organic Knowledge Evolution (`Downward` & `Upward`)
 
 Static corporate coding guidelines fail because they are written top-down and quickly become disconnected from daily engineering reality. In `dotfiles-ubuntu`, knowledge is **organic and bidirectional**:

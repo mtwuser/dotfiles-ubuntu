@@ -91,6 +91,23 @@ flowchart TD
 
 📖 Step-by-step multi-tier commands, authority gates, and IDE vs. Agents workspace isolation: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
 
+#### Why This Matters for Business & Functional Teams: Cross-Departmental Composition
+
+In traditional organizations, when a business department (Legal, Marketing, Finance, Operations) needs software or automation, it faces a false choice between **IT Bottlenecks** (handing off requirements to IT and losing domain nuance) and **Shadow IT** (building ungoverned scripts or bots without testing, architecture, or security).
+
+`dotfiles-ubuntu` resolves both by turning every department's rules into **composable building blocks with mathematical authority (`precedence: 0..100`, *Lex Superior*)**, all unified through the same **Google Antigravity** workflow (`/sopen` $\rightarrow$ `WORKTASK.md` $\rightarrow$ `make verify` $\rightarrow$ `/sclose`):
+
+| Business / Functional Need | Who Owns the Workspace | Combined Rule Order (`0..100` *Lex Superior*) | How It Activates (`1` Command) | Effective Antigravity Agent Profile |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Pure Departmental Governance** *(Contracts, Patents, Ledgers, SOPs)* | `Root 0` or `Department` (`Legal`, `Finance`) | `human-core` + `business-base` (`10`) + `<dept>` (`5..20`) | `bootstrap-workspace` / `make sync` | **Normative & SSoT Ledger Auditor** (`workspace_mode: business`) |
+| **2. In-Department Automation** *(Scripts/tools inside a business repo)* | `Department` (`Legal`, `Finance`, `Ops`) | `<dept>` (`5..20`) + `business-base` (`10`) + **`technical-base` (`25`)** | `make setup-dev` *(reversible via `make sync`)* | **In-Situ Domain Automation Engineer** (`workspace_mode: hybrid`) |
+| **3. Department-Owned Tech Product** *(e.g., **LegalTech Patent/Contract MCP**)* | `Legal` (`5`) or Embedded Tech Squad | **`Legal` (`5`)** $\rightarrow$ `Corp` (`10`) $\rightarrow$ **`Tech` + `FastAPI` (`25..50`)** | `apply-project <app> --parent-dir <dept> --template <stack>` | **Software Architect Subordinated to Statutory/IP Law** (`hybrid`) |
+| **4. Multi-Departmental Solution** *(e.g., **Marketing + Social Media Hub**)* | `Marketing` / `Growth` Squad (`35`) | **`Legal/GDPR` (`5`)** $\rightarrow$ `Corp` (`10`) $\rightarrow$ **`Tech` (`25`)** $\rightarrow$ **`Brand` (`30`)** $\rightarrow$ **`Marketing` (`35`)** | `--parent-dir dept-marketing` + `layer-subtree.sh add` (`legal`, `brand`) | **Full-Stack Growth Engineer Governed by Legal, Brand & Security** |
+| **5. Transversal Enterprise Platform** *(e.g., **Company-Wide `VoIP` Service**)* | Platform `service-node` / `squad` (`25`) | **Inward**: `Legal` (`5`, call consent) $\rightarrow$ `Ops` (`20`, SLA) $\rightarrow$ `Tech/VoIP` (`25`)<br/>**Outward**: Exports `templates/voip-pack` + `federated_mcps` | Any department mounts `layers/voip-platform` or applies `voip-pack` | **Critical Infrastructure Provider (inward) / Governed Capability (outward)** |
+| **6. Punctual Cross-Departmental Audit** *(e.g., Design checks Patent Gate with Legal)* | Any consumer layer | Active workspace + **Ephemeral `rcap1` Capsule (`kr: true`)** | `make consult LAYER=dept-legal QUERY="..."` | **Zero-Residue Read-Only Inter-Departmental Advisor** (`inter-layer`) |
+
+📖 Full business & architectural walkthroughs (**LegalTech MCP**, **Marketing Social Media Engine**, and **Transversal `VoIP` Platform**): **[`docs/reference/enterprise_pair_programming_governance.md §2.3`](docs/reference/enterprise_pair_programming_governance.md#23-cross-departmental--multi-specialty-composition-matrix-legaltech-governed-marketing--transversal-platforms-voip)**.
+
 ---
 
 ## Natural Code Evolution, Command Consciousness & Reproducible Metrics
@@ -165,7 +182,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   ├── architecture/                  ←   Tier 3A: Normative technical specifications (1:1:1 with code & unit tests)
 │   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
 │   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 10 global + 3 tech skills
-│   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (v1.2)
+│   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (mcp-layer-v1)
 │   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver, authority & promotion
 │   │   └── 05_ephemeral_forks_and_department_bots.md       ← Ephemeral Department Bot forks, project bridges & TTL GC
 │   └── reference/                     ←   Tier 3B: Enterprise use cases & maintainer extension guides
