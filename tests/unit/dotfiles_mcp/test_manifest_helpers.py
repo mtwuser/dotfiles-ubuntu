@@ -310,6 +310,8 @@ class TestManifestHelpers:
         env_resolved = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
         src_tech_tpl = tmp_path / "src_repo/templates/tech-stack/fastapi-hexagonal"
         src_tech_tpl.mkdir(parents=True)
+        (tmp_path / "src_repo/templates/tech-stack/.gitkeep").write_text("", encoding="utf-8")
+        iter_tpls = manifest_helpers._iter_layer_template_dirs(tmp_path / "src_repo")
         empty_resolved = manifest_helpers._resolve_template_dir(up_repo, "tech-stack")
         dest_from_src = manifest_helpers._resolve_template_dest_dir(
             up_repo, "fastapi-hexagonal", src_tpl=src_tech_tpl
@@ -329,6 +331,7 @@ class TestManifestHelpers:
         assert fallback_contrib == up_repo
         assert sibling_contrib == dev_sibling.resolve()
         assert env_resolved == env_contrib.resolve()
+        assert iter_tpls == [("fastapi-hexagonal", src_tech_tpl)]
         assert empty_resolved is None
         assert dest_from_src == up_repo / "templates/tech-stack/fastapi-hexagonal"
         assert dest_from_kind == up_repo / "templates/business-stack/crm-ops"

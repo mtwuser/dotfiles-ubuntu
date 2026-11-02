@@ -1,106 +1,43 @@
 ---
 name: start
-description: {PROJECT_NAME}-specific governance, architecture reference, and smart start sequence — run at the beginning of every session
+description: {PROJECT_NAME} FastAPI + Hexagonal DDD architecture orientation and verification command reference
 ---
-# Start — {PROJECT_NAME}
+# Skill: FastAPI Hexagonal Orientation (`start`)
 
-## Purpose
-
-This skill fires at the beginning of every session. It establishes context
-and identifies the next work item.
-
-## Startup Sequence
-
-### 1. Read active state
-```
-Read: WORKTASK.md             → Current in-progress items
-Read: WORKROAD.md             → Next pending items
-Read: CHANGELOG.md            → Recent completed work
-Read: BACKLOG.md              → Pending tech debt observations
-Read: WORKVALI.md             → Pending manual validations
-Read: .agents/SESSION.md      → Previous session context (if any)
-```
-
-### 2. Identify next work item (Priority Chain & Pre-Edit Reading Order)
-1. **Priority Chain**: `WORKTASK.md` (in-progress first) $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/`.
-2. **Pre-Edit Reading Priority (`1:1:1`)**: Before modifying any module, read (1) `docs/guides/` & `docs/architecture/<spec>.md` $\rightarrow$ (2) `tests/{e2e,imp,unit}/` (`Test<Module>`) $\rightarrow$ (3) source code in `src/`.
-
-### 3. Report to user
-Summarize: what was last done, what is next, any blockers.
+> Complements the global `/sopen` session-opening skill with **{PROJECT_NAME}**'s Hexagonal Bounded Context map and FastAPI verification commands.
 
 ---
 
-## Architecture Quick Reference
+## 1. Hexagonal Bounded Context Orientation
 
-### {PROJECT_NAME} Layers
+Before modifying any Bounded Context under `src/<context>/`, follow the `1:1:1` reading order (`technical-base.md` Rule 3):
+1. **Bounded Context Spec**: `docs/architecture/<context>.md`
+2. **Context Tests (`E2E -> Imp -> Unit`)**: `src/<context>/tests/imp/` $\rightarrow$ `src/<context>/tests/unit/`
+3. **Hexagonal Rings (`Inner -> Outer`)**:
+   ```text
+   src/<context>/
+   ├── domain/          # Inner hexagon: entities, value_objects, services, exceptions, ports (Protocol)
+   ├── application/     # Use case ring: use_cases (constructor-injected ports), dto
+   └── infrastructure/  # Outer hexagon: persistence (SQLAlchemy), api (FastAPI router/schemas/dependencies)
+   ```
 
-| Layer | Name | Purpose |
-|:-----:|------|---------|
-| L0 | Data Schema | Semantic types, domain primitives, wire↔domain mapping |
-| L1 | Domain | Hexagonal DDD, bounded contexts, ports/adapters |
-| L2 | Processing | Async Continuum (5 tiers: asyncio → Celery Canvas) |
-| L3 | Presentation | Zone Architecture (Z1–Z4: HTML → HTMX → Islands → Dedicated) |
-| L4 | Communication | HTTP, SSE, WebSocket, Polling |
+---
 
-### Bounded Context Structure
+## 2. FastAPI + Hexagonal Invariant Checklist
 
-```
-src/{context}/
-├── domain/          # Inner hexagon (zero I/O)
-├── application/     # Use cases (orchestration)
-├── infrastructure/  # Outer hexagon (FastAPI, SQLAlchemy, Jinja2)
-└── tests/           # unit/ + imp/
-```
+- **Dependency Direction**: `infrastructure -> application -> domain` (`domain/` has zero I/O and zero FastAPI/SQLAlchemy/Pydantic imports).
+- **Runtime Annotations**: Never put `from __future__ import annotations` in FastAPI `router.py` or `dependencies.py` modules.
+- **Zero-Touch Migrations**: Never run `alembic` or edit `alembic/versions/*.py`; update SQLAlchemy models and hand the `alembic` commands to the user.
 
-### Key Documentation
+---
 
-| Document | Content |
-|----------|---------|
-| `ARCHITECTURE.md` | High-level system architecture and bounded contexts |
-| `docs/architecture/` | Technical specifications per layer and domain |
-| `README.md` | Project setup, directory structure, and quickstart |
-
-### Smart Commands
+## 3. Canonical Commands (`./venv`)
 
 | Action | Command |
 |--------|---------|
-| Run backend dev | `source ./venv/bin/activate && uvicorn main:app --reload` |
-| Run unit tests | `source ./venv/bin/activate && make test-unit` |
-| Run coverage | `source ./venv/bin/activate && make test-all` |
-| Type check | `source ./venv/bin/activate && mypy --strict src/` |
-| Lint check | `source ./venv/bin/activate && ruff check .` |
-| Auto-format | `source ./venv/bin/activate && ruff format .` |
-| Alembic migrate (user-run) | `source ./venv/bin/activate && alembic upgrade head` |
-| Alembic autogen (user-run) | `source ./venv/bin/activate && alembic revision --autogenerate -m "desc"` |
-
----
-
-## Governance Rules
-
-### Commit Discipline
-1. **NEVER auto-run** `git add`, `git commit`, `git push`
-2. **ONE commit per repo** — never split
-3. **Conventional commits**: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`, `docs:`
-4. **Independent repos** — each repo gets its own commit block
-5. **WORKTASK sync is MANDATORY** before ANY commit
-
-### Lifecycle Tiers
-- Pending work ONLY: `roadmaps/` → `WORKROAD.md` → `WORKTASK.md`
-- Completed work ONLY: `CHANGELOG.md`
-- Manual validation: `WORKVALI.md` (parallel, continuous)
-- Tech debt capture: `BACKLOG.md` (persistent)
-
-### Mode Discipline
-> **"Capture, don't act."** Observations go to `BACKLOG.md`, not inline fixes.
-
-### Agent Rules Reference
-| Rule | Content |
-|------|---------|
-| `coding.md` | Hexagonal architecture, zones, async, quality standards |
-| `governance.md` | Work lifecycle, mode discipline, documentation convention |
-| `testing.md` | Test tiers, FastAPI patterns, coverage gate |
-| `environment.md` | Workspace layout, venv, commands |
-
-### Full-Stack Analysis
-When scoping changes, analyze ALL relevant layers (backend + frontend).
-"Not built" only when ALL layers lack it.
+| **Run dev server** | `source ./venv/bin/activate && uvicorn main:app --reload` |
+| **Run unit tests** | `source ./venv/bin/activate && pytest src/ tests/unit/ -v` |
+| **Run 100% coverage** | `source ./venv/bin/activate && pytest --cov=src --cov-branch --cov-fail-under=100` |
+| **Run imp tests** | `source ./venv/bin/activate && pytest src/*/tests/imp/ tests/imp/ -v` |
+| **Type check** | `source ./venv/bin/activate && mypy --strict src/` |
+| **Lint & format** | `source ./venv/bin/activate && ruff check . && ruff format --check .` |

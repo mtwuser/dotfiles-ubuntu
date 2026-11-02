@@ -1,71 +1,46 @@
 ---
 trigger: always_on
-description: Project paths, workspace structure, and command execution for {PROJECT_NAME}
+description: "{PROJECT_NAME} Python virtual environment, FastAPI/Uvicorn, Pytest, Mypy, Ruff, and user-gated Alembic workflow."
 ---
-# Environment Rules — {PROJECT_NAME}
 
-## Workspace Layout
+# {PROJECT_NAME} — Environment & Tooling Rules (`fastapi-hexagonal`)
 
-```
-{PROJECT_PATH}/                        ← Project root (governance + hexagonal contexts)
-├── src/{context}/                     ← Hexagonal bounded contexts (domain, application, infrastructure)
-├── tests/                             ← Global test suites (or src/{context}/tests/{unit,imp}/)
-├── venv/                              ← Python >= 3.14 virtualenv (or backend/venv/ in multi-repo setups)
-├── docs/                              ← 3-tier documentation (guides/, architecture/, reference/)
-├── roadmaps/                          ← Domain roadmaps
-├── .agents/                           ← Workspace rules, skills, LAYER_LINEAGE.md, SESSION.md
-├── Makefile                           ← Standard verification & layer-sync targets (make verify, make test-unit)
-├── WORKTASK.md / WORKROAD.md / WORKVALI.md / BACKLOG.md / CHANGELOG.md
-└── .gitignore
+---
+
+## 1. Python Virtual Environment (`./venv`)
+
+All Python, FastAPI, test, and linter commands MUST run inside the project virtual environment:
+
+```bash
+source ./venv/bin/activate && <command>
 ```
 
-> [!NOTE]
-> If your project splits `backend/` and `frontend/` into nested subdirectories or sub-repos, place the virtualenv at `{PROJECT_PATH}/backend/venv` (supported automatically by workstation lifecycle hooks).
+Never install packages globally or run system `pytest` / `mypy` / `ruff` outside `./venv`.
 
-## Tech Stack
+---
 
-| Layer | Technology | Notes |
-|-------|-----------|-------|
-| **Backend** | Python >= 3.14 (FastAPI) | Hexagonal architecture (ports/adapters), PEP 695 generics, `StrEnum` |
-| **Frontend** | Server HTML + HTMX + Islands | Zone Architecture: Z1 (static), Z2 (HTMX), Z3 (Preact/Vue islands), Z4 (dedicated libs) |
-| **Async** | Celery / FastAPI BackgroundTasks | Async Continuum Tiers 1-5 |
-| **Database** | PostgreSQL | Primary persistence |
-| **Templates** | Jinja2 | Server-side rendering for Z1/Z2 |
-| **Streaming** | SSE (sse-starlette) | Real-time communication for Z3 |
+## 2. Canonical Development & Verification Commands
 
-## Virtual Environment
+| Task | Command |
+|------|---------|
+| **Run FastAPI dev server** | `source ./venv/bin/activate && uvicorn main:app --reload` |
+| **Run isolated unit tests** | `source ./venv/bin/activate && pytest src/ tests/unit/ -v` |
+| **Run 100% coverage gate** | `source ./venv/bin/activate && pytest --cov=src --cov-branch --cov-fail-under=100` |
+| **Run implementation tests (`imp`)** | `source ./venv/bin/activate && pytest src/*/tests/imp/ tests/imp/ -v` |
+| **Strict type checking** | `source ./venv/bin/activate && mypy --strict src/` |
+| **Linter & import sorting** | `source ./venv/bin/activate && ruff check .` |
+| **Auto-format** | `source ./venv/bin/activate && ruff format .` |
 
-- **Python requirement**: Python >= 3.14
-- **Path**: `./venv/bin/activate` (or `./backend/venv/bin/activate` in nested `backend/` layouts)
-- **Absolute**: `{PROJECT_PATH}/venv/bin/activate`
-- **ALWAYS activate before ANY Python/FastAPI command**:
-  ```bash
-  cd {PROJECT_PATH} && source ./venv/bin/activate && <command>
-  ```
-- Never use system Python. Never use `python3` without activating venv first.
+---
 
-## Project & Backend Commands
+## 3. Zero-Touch Alembic Migration Gate (`pre_tool_guard.py`)
 
-All commands run from the project root (or `backend/` if using a nested `backend/` directory) with venv activated:
+Database schema migrations are **strictly human-operated** (enforced by workstation `pre_tool_guard.py`):
 
-| Action | Command |
-|--------|---------|
-| Run dev server | `source ./venv/bin/activate && uvicorn main:app --reload` |
-| Run unit tests | `source ./venv/bin/activate && make test-unit` |
-| Run context tests | `source ./venv/bin/activate && python -m pytest src/{context}/tests/ --tb=short -q` |
-| Coverage all | `source ./venv/bin/activate && make test-all` |
-| Type check | `source ./venv/bin/activate && mypy --strict src/` |
-| Lint check | `source ./venv/bin/activate && ruff check .` |
-| Auto-format | `source ./venv/bin/activate && ruff format .` |
-
-## Frontend Commands (once scaffolded)
-
-Frontend is zero-build by design. No `npm install`, no webpack, no Vite.
-Static assets are served directly. Vendor libraries are committed as single files.
-
-## Command Execution Safety
-
-- **NEVER auto-run** `git`, `rm -rf`, or destructive commands
-- Commands that only READ (grep, ls, cat, pytest) are safe to auto-run
-- Always use `--tb=short -q` for pytest to keep output manageable
-- Always `| tail -N` for long-output commands
+1. **Agent Responsibility**: Create or update SQLAlchemy 2.0 `Mapped[...]` models in `src/<context>/infrastructure/persistence/models.py` and register them in `alembic/env.py` metadata.
+2. **Forbidden for Agent**: NEVER run `alembic revision`, `alembic upgrade`, `alembic downgrade`, or create/edit files inside `alembic/versions/*.py`.
+3. **Human Handoff**: Provide the exact commands for the user to run in their terminal:
+   ```bash
+   source ./venv/bin/activate && alembic revision --autogenerate -m "<concise_schema_change>"
+   source ./venv/bin/activate && alembic upgrade head
+   ```

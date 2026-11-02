@@ -1,51 +1,54 @@
-# Template: FastAPI Hexagonal
+# Project Template: FastAPI + Hexagonal DDD (`fastapi-hexagonal`)
 
-Project starter template for **FastAPI + Hexagonal Architecture (DDD) + HTMX/Islands** projects.
+Ready-to-apply **Layer 2/3 Tech-Stack Template Pack** (`kind: "tech-stack"`, `extends: "technical-base"`) for Python **FastAPI + Hexagonal Architecture (Domain-Driven Design / Ports & Adapters)** projects.
 
-## Usage
+> **Clean Inheritance Design**:
+> - Universal workflow, commit discipline, and `< 465`-line modularity come from **`human-core`** (`~/.gemini/config/AGENTS.md`).
+> - Stack-general `1:1:1` traceability (`Spec <-> Test <-> Code`), `AAA` testing, `100%` branch coverage, and `0-byte __init__.py` rules come automatically from **`technical-base`** (`extends: "technical-base"`).
+> - This pack focuses **exclusively** on **pure, idiomatic FastAPI + Hexagonal DDD architecture** (Bounded Contexts, `typing.Protocol` ports, constructor-injected use cases, SQLAlchemy Async + Alembic zero-touch safety, Pydantic v2 DTO boundaries, `httpx.AsyncClient` + `ASGITransport` + `app.dependency_overrides`, and optional standard Jinja2/HTMX server-rendered views). Higher-level application frameworks can extend `fastapi-hexagonal` cleanly without inheriting framework-coupled boilerplate.
+
+---
+
+## Quick Setup (Deterministic CLI)
 
 ```bash
-# Recommended (Scaffolding CLI — projects template + 0..N mounted layers + LAYER_LINEAGE.md):
-~/dotfiles-ubuntu/scripts/layer-config.sh apply-project <your-project> \
-  --template fastapi-hexagonal \
-  --layers all
-
-# Manual alternative:
-# 1. Copy template rules, skills & session template to your project's .agents/ directory
-mkdir -p <your-project>/.agents
-cp -r ~/dotfiles-ubuntu/templates/technical-base/{rules,skills} <your-project>/.agents/
-cp -r ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/{rules,skills} <your-project>/.agents/
-cp ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/governance/SESSION.md <your-project>/.agents/SESSION.md
-
-# 2. Copy root governance files (used by /sopen, /continue, /priority, /sclose)
-cp ~/dotfiles-ubuntu/templates/tech-stack/fastapi-hexagonal/governance/{WORKTASK,WORKROAD,WORKVALI,BACKLOG,CHANGELOG}.md <your-project>/
-
-# 3. Customize placeholders:
-#    - Update .agents/rules/environment.md with your project paths
-#    - Update .agents/skills/start/SKILL.md with your documentation references
-#    - Adjust .agents/rules/coding.md bounded context pipeline when contexts are defined
+# Materialize technical-base + fastapi-hexagonal into a target project
+./scripts/layer-config.sh apply-project /path/to/your-project --template fastapi-hexagonal --layers all
 ```
 
-## What's Included
+Then replace `{PROJECT_NAME}` placeholders in `.agents/rules/` and `.agents/skills/` with your project name:
 
+```bash
+PROJECT_NAME="YourProject"
+find /path/to/your-project/.agents -name "*.md" -exec sed -i "s/{PROJECT_NAME}/$PROJECT_NAME/g" {} +
+```
+
+---
+
+## Template Pack Contents
+
+### Rules (`.agents/rules/`)
+| File | Scope (`fastapi-hexagonal` Delta over `technical-base`) |
+|------|---------------------------------------------------------|
+| `rules/coding.md` | Hexagonal Bounded Context structure (`domain/`, `application/`, `infrastructure/`), `Protocol` ports, FastAPI `Depends()` & `from __future__ import annotations` guard, Pydantic v2 boundaries, async I/O, and optional Jinja2/HTMX SSR |
+| `rules/testing.md` | Hexagonal 4-layer testing matrix (`Domain` pure unit, `Application` mocked ports, `API Router` via `httpx.AsyncClient` + `ASGITransport` + `dependency_overrides`, `Repository` `tests/imp/` against real async DB) |
+| `rules/environment.md` | Python `./venv` execution, `uvicorn`, `pytest`, `mypy --strict`, `ruff`, and user-gated `alembic` commands |
+| `rules/governance.md` | Bounded Context `1:1:1` specification mapping (`docs/architecture/<context>.md` $\leftrightarrow$ `src/<context>/`) and hexagonal full-slice vertical delivery |
+
+### Skills (`.agents/skills/`)
+| File | Skill Name & Purpose |
+|------|----------------------|
+| `skills/start/SKILL.md` | `start` — Hexagonal bounded-context orientation and FastAPI command cheat-sheet |
+| `skills/fastapi-testing/SKILL.md` | `fastapi-testing` — Concrete FastAPI + Hexagonal test recipes (coexists alongside `technical-base`'s `skills/testing/SKILL.md`) |
+| `skills/database/SKILL.md` | `database-migrations` — SQLAlchemy 2.0 Async models, Domain $\leftrightarrow$ ORM mappers, and human-gated Alembic workflow |
+| `skills/frontend/SKILL.md` | `frontend-patterns` — Standard FastAPI/Starlette `Jinja2Templates`, progressive HTMX partial rendering (`HX-Request`), and Web Components |
+
+### Governance Ledgers (`governance/` $\rightarrow$ Project Root)
 | File | Purpose |
 |------|---------|
-| `rules/coding.md` | Hexagonal DDD, `0-byte` `__init__.py` purity, Zone Architecture (Z1–Z4), Async Continuum, SOLID |
-| `rules/environment.md` | Workspace layout template with placeholders |
-| `rules/governance.md` | 4-Phase Work Lifecycle, Mode Discipline, Cognitive & Agent Governance (`trigger: model_decision`) |
-| `rules/testing.md` | Explicit 3-comment AAA (`# Arrange`, `# Act`, `# Assert`), `httpx` async test patterns, Human-Agent `1:1:1` comprehension symbiosis |
-| `skills/database/SKILL.md` | Zero-touch Alembic migration policy (`name: fastapi-database`) |
-| `skills/frontend/SKILL.md` | HTMX + Islands conventions Z1–Z4 (`name: fastapi-frontend`) |
-| `skills/testing/SKILL.md` | FastAPI testing patterns per hexagonal layer (`name: fastapi-testing`) |
-| `skills/start/SKILL.md` | Project startup sequence template (`name: start`) |
-| `governance/*.md` | Root governance trackers (`WORKTASK.md`, `WORKROAD.md`, `WORKVALI.md`, `BACKLOG.md`, `CHANGELOG.md`) + `.agents/SESSION.md` |
-
-## Placeholders
-
-Files use these placeholders that you should replace:
-
-| Placeholder | Replace with |
-|-------------|-------------|
-| `{PROJECT_NAME}` | Your project name (e.g., `CheckoutService`, `MyApp`) |
-| `{PROJECT_PATH}` | Absolute path (e.g., `/home/<user>/Projects/MyApp`) |
-| `{USERNAME}` | Your system username |
+| `governance/WORKROAD.md` | Active release/milestone plan |
+| `governance/WORKTASK.md` | Current in-progress vertical-slice tasks |
+| `governance/BACKLOG.md` | Captured technical debt (`Capture, don't act`) |
+| `governance/WORKVALI.md` | Manual QA & API/UI validation checklist |
+| `governance/CHANGELOG.md` | Completed work history (`Keep a Changelog`) |
+| `governance/SESSION.md` | `.agents/SESSION.md` cross-session handoff state |

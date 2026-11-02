@@ -9,4 +9,4 @@
 
 ### V-BASE: Application Baseline
 - [ ] `GET /health` returns HTTP 200 with healthy status
-- [ ] `GET /` renders landing page (`Z1` server HTML) without console errors
+- [ ] OpenAPI schema (`/docs` / `/openapi.json`) or landing view renders without errors

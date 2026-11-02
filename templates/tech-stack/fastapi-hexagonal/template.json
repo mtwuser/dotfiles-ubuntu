@@ -5,11 +5,11 @@
   "stack_group": "tech-stack",
   "extends": "technical-base",
   "target_role": "squad",
-  "description": "FastAPI + Hexagonal DDD + HTMX starter rules, skills, and governance templates",
+  "description": "Pure FastAPI + Hexagonal DDD (Ports & Adapters, Bounded Contexts, SQLAlchemy Async, Pydantic v2, httpx.AsyncClient) stack rules, skills, and governance templates",
   "recommended_surface_bindings": [
     {
       "binding_id": "hexagonal-and-presentation-architecture",
-      "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
+      "description": "Hexagonal bounded contexts, Protocol ports & adapters, FastAPI dependency injection, and async persistence boundaries",
       "mode": "transversal",
       "target_globs": ["src/**", "tests/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
       "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure", "testing"],
@@ -17,18 +17,20 @@
       "traits": ["*"],
       "default_resolution": "L1",
       "invariants": [
-        "Domain never imports from Infrastructure or Application",
-        "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes",
-        "1:1:1 Source <-> Unit Test (Test<Module>) <-> Specification traceability with 100% branch coverage"
+        "Domain never imports from Infrastructure, Application, FastAPI, SQLAlchemy, or Pydantic",
+        "Application use cases depend exclusively on Domain typing.Protocol ports injected via constructor",
+        "FastAPI routers and dependency modules never enable from __future__ import annotations and delegate all business logic to Application use cases via Depends()"
       ],
       "rule_files": [
         "templates/tech-stack/fastapi-hexagonal/rules/coding.md",
         "templates/tech-stack/fastapi-hexagonal/rules/testing.md",
-        "templates/tech-stack/fastapi-hexagonal/rules/environment.md"
+        "templates/tech-stack/fastapi-hexagonal/rules/environment.md",
+        "templates/tech-stack/fastapi-hexagonal/rules/governance.md"
       ],
       "canonical_templates": [
         "templates/tech-stack/fastapi-hexagonal/rules/coding.md",
-        "templates/tech-stack/fastapi-hexagonal/rules/testing.md"
+        "templates/tech-stack/fastapi-hexagonal/rules/testing.md",
+        "templates/tech-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md"
       ]
     }
   ]

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Reference Business-Stack Template Pack (`templates/business-stack/corporate-ops-ledger/`)**:
+  - Seeded the first canonical `business-stack` starter pack (`kind: "business-stack"`, `extends: "business-base"`) with [`template.json`](templates/business-stack/corporate-ops-ledger/template.json), [`README.md`](templates/business-stack/corporate-ops-ledger/README.md), [`rules/ops-ledger-architecture.md`](templates/business-stack/corporate-ops-ledger/rules/ops-ledger-architecture.md) (Hexagonal Business Architecture: `corporate/ledgers/` Inner Hexagon $\rightarrow$ `corporate/{policies,sops}/` Business `AAA` Application Ring $\rightarrow$ `surfaces/{web,forms,print}/` Outer Adapters, `[DEPT]-[TYPE]-[YYYY]-[NNN]` citation contracts, and ready-to-copy Business `AAA` templates), and [`skills/ledger-surface-audit/SKILL.md`](templates/business-stack/corporate-ops-ledger/skills/ledger-surface-audit/SKILL.md).
+
+### Changed
+- **Pure FastAPI + Hexagonal DDD Alignment in `templates/tech-stack/fastapi-hexagonal/`**:
+  - Purified [`templates/tech-stack/fastapi-hexagonal/`](templates/tech-stack/fastapi-hexagonal/README.md) (`template.json`, `README.md`, `rules/{coding,testing,environment,governance}.md`, `skills/{start,fastapi-testing,database,frontend}/SKILL.md`, `governance/WORKVALI.md`) to focus strictly on idiomatic FastAPI + Hexagonal DDD (`domain/` zero-I/O `Protocol` ports, `application/` constructor-injected use cases, `infrastructure/` SQLAlchemy Async + Pydantic v2 + `Depends`, `httpx.AsyncClient` + `ASGITransport` + `app.dependency_overrides`), removing duplicate `human-core`/`technical-base` prose, replacing unpublished downstream framework helpers with standard FastAPI/Starlette primitives, and renaming `skills/testing/SKILL.md` to `skills/fastapi-testing/SKILL.md` so it coexists cleanly alongside `technical-base`'s `skills/testing/SKILL.md`.
+
+---
+
 ## [2.6.0] - 2026-11-02
 
 ### Added
@@ -404,52 +416,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.1] - 2026-10-27
 
 ### Added
-- **Accessibility Statement (`ACCESSIBILITY.md`)**:
-  - Added `ACCESSIBILITY.md` documenting terminal screen-reader compatibility, color-independent CLI status output, keyboard-only and non-interactive script execution, GNOME `a11y` dconf preservation, known limitations, and barrier reporting guidelines.
-  - Updated `scripts/verify-repo.sh` and `README.md` to track and verify `ACCESSIBILITY.md`.
+- **Accessibility Statement (`ACCESSIBILITY.md`)**: Documented terminal screen-reader compatibility, color-independent CLI status output, keyboard-only and non-interactive script execution, GNOME `a11y` dconf preservation, and barrier reporting guidelines; tracked in `scripts/verify-repo.sh` and `README.md`.
 
 ---
 
 ## [1.1.0] - 2026-10-27
 
 ### Added
-- **GitHub Community Standards Completeness**:
-  - `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1).
-  - `.github/ISSUE_TEMPLATE/bug_report.yml`, `.github/ISSUE_TEMPLATE/feature_request.yml`, and `.github/ISSUE_TEMPLATE/config.yml` (structured GitHub Issue Forms with `SECURITY.md` contact link).
-  - `.github/PULL_REQUEST_TEMPLATE.md` with pre-merge verification checklist (`./scripts/verify-repo.sh`, secret isolation, and token budget gate).
-- **Antigravity 2.0 Global Skills & Layer 2 Template Enrichment (`/enrich`)**:
-  - `antigravity/.gemini/config/skills/architecture-review/SKILL.md`: Added the **5-Dimension Pre-Development Gate** (*Normative Specs → Reference Docs → Diagrams → Root Guides/Rules → Future Roadmaps*) and **4 Deterministic Verification Gates** (Zero-Residue Grep, Bilingual Structural Parity, Language Purity, and Relative Link Integrity).
-  - `antigravity/.gemini/config/skills/governance/SKILL.md`: Updated `Part 2` with the **3-Stage Knowledge Extraction & Architectural Integration Pipeline** (*Reference Extraction & Gap Matrix → Normative Specs & Roadmaps → Raw Source Decommissioning*).
-  - `templates/fastapi-hexagonal/rules/testing.md` and `templates/fastapi-hexagonal/skills/testing/SKILL.md`: Added the `1:1 File Mapping & Decommissioning (orphan-test-file)` rule to prevent orphaned test files when removing modules or features.
-  - `scripts/verify-repo.sh`: Extended `[1/6] Open-Source Metadata & SemVer` to verify `CODE_OF_CONDUCT.md`, `.github/PULL_REQUEST_TEMPLATE.md`, and `.github/ISSUE_TEMPLATE/*.yml`.
+- **GitHub Community Standards Completeness**: Added `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1), `.github/ISSUE_TEMPLATE/{bug_report,feature_request,config}.yml`, and `.github/PULL_REQUEST_TEMPLATE.md` (verified in `scripts/verify-repo.sh`).
+- **Antigravity 2.0 Global Skills & Layer 2 Template Enrichment (`/enrich`)**: Added the 5-Dimension Pre-Development Gate & 4 Deterministic Verification Gates in `architecture-review/SKILL.md`, 3-Stage Knowledge Extraction Pipeline in `governance/SKILL.md`, and `1:1 File Mapping & Decommissioning (orphan-test-file)` in `templates/fastapi-hexagonal/`.
 
 ---
 
 ## [1.0.0] - 2026-10-26
 
 ### Added
-- **Declarative Ubuntu 26.04 LTS ("Resolute Raccoon") System Engine**:
-  - `bootstrap.sh` with modular modes (`--all`, `--antigravity`, `--stow`, `--packages`, `--external`, `--nvm`, `--gnome`, `--version`, `--help`) and automatic collision backup (`*.backup.YYYYMMDD`).
-  - `backup.sh` to snapshot manual APT packages (`system/packages-manual.txt`), application Snaps (`system/snaps.txt`), NPM globals (`system/npm-globals.txt`), NVM default version (`system/nvm-default.txt`), active external recipes (`system/external.txt`), GNOME extensions (`system/gnome-extensions.txt`), and declarative GNOME desktop settings (`system/gnome-settings.dconf`).
-  - `audit.sh` (`--clean`, `--version`, `--help`) to detect bidirectional package drift, stow symlink health, inactive external APT repositories, and residual files, with per-machine hardware exclusions via `.audit-ignore`.
-  - External package recipe catalog (`system/external/{apt-repo,deb-url,script}/`) for Docker Engine, Google Chrome, Google Cloud CLI, ProtonVPN, Proton Mail, Proton Pass, Discord, AutoFirma, Antigravity 2.0 (Agents), and Antigravity IDE.
-- **GNU Stow Dotfile Modules (`bash/`, `git/`, `antigravity/`)**:
-  - `bash/.bashrc` and `bash/.profile` with automatic sourcing of untracked `~/.bashrc.local`.
-  - `git/.gitconfig` with automatic inclusion of untracked `~/.gitconfig.local` so personal identity (`user.name`, `user.email`) is never committed.
-  - `antigravity/` tree-unfolded module linking `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/*}` and `~/.local/share/applications/antigravity-*.desktop` while preserving machine-local credentials and IDE state.
-- **Google Antigravity 2.0 Global Customization Suite (`antigravity/.gemini/config/`)**:
-  - `AGENTS.md` (~16.5 KB, engineered to stay strictly within Antigravity 2.0's 20,000-token `defaultRulesBudget` and 24 KB per-file cap) encoding 15 universal engineering mandates: reusability first, professional robustness, strict typing (`mypy --strict`), AAA testing with explicit 3-comment separation, documentation hierarchy, zero-backward clean cutovers, code decommissioning & mandatory obsolete-test pruning, pre-commit hygiene, exhaustive planning, `0-byte` `__init__.py` package marker purity, 4-Channel Subagent Digest (`Domain State`, `Affected Port/Contract`, `Invariants & Constraints`, `Actionable Delta`), language purity, and pre-debug diagnostic sweeps.
-  - **Python 3.14 Lifecycle Hooks (`hooks.json` + `scripts/`)**:
-    - `pre_tool_guard.py` (`PreToolUse`): Deterministically blocks non-empty writes to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and automatic execution of mutating `git` (`add`, `commit`, `push`, `reset --hard`, `clean -f`) or `alembic` commands.
-    - `post_edit_format.py` (`PostToolUse`): Runs `ruff format` automatically whenever the agent edits a `.py` file.
-    - `post_invocation_lint.py` (`PostInvocation`): Runs `ruff check` and AST architecture/test checks (`check_project`, `check_tests`) on modified and untracked Python files with `"terminationBehavior": "force_continue"`.
-    - `stop_verify_tests.py` (`Stop`): Verifies affected unit tests pass across modified and untracked Python workspaces before concluding a task.
-  - **11 Reusable Global Skills (`skills/`)**:
-    - 6 interactive workflow slash commands: `/sopen`, `/sclose`, `/continue`, `/priority`, `/review`, `/enrich`.
-    - 5 procedural engineering skills (`kebab-case` identifiers): `architecture-review`, `governance`, `refactoring`, `testing`, `validation`.
-- **Layer 2 Project Starter Template (`templates/fastapi-hexagonal/`)**:
-  - Reusable `.agents/rules/` (`coding.md`, `environment.md`, `governance.md` with `trigger: model_decision`, `testing.md`), `.agents/skills/` (`fastapi-database`, `fastapi-frontend`, `fastapi-testing`, `start`), and starter governance templates (`governance/{WORKTASK,WORKROAD,WORKVALI,BACKLOG,CHANGELOG,SESSION}.md`).
-- **Utility Scripts & CI Verification (`scripts/`, `.github/workflows/ci.yml`)**:
-  - `scripts/antigravity-install.sh` to install or upgrade Antigravity 2.0 (Agents) and Antigravity IDE directly from `~/Downloads/` archives.
-  - `scripts/audit-global-config.sh` to verify `~/.gemini/config/` tree unfolding, symlinks, and zero orphaned files.
-  - `scripts/verify-repo.sh` and GitHub Actions workflow (`.github/workflows/ci.yml`) validating Bash syntax, Python hook linting, `hooks.json` schema, `AGENTS.md` token budget, and `SKILL.md` frontmatter.
+- **Declarative Ubuntu 26.04 LTS ("Resolute Raccoon") System Engine**: `bootstrap.sh`, `backup.sh`, `audit.sh`, and `system/external/{apt-repo,deb-url,script}/` catalog for Docker, Chrome, gcloud, Proton suite, Discord, AutoFirma, and Antigravity 2.0/IDE.
+- **GNU Stow Dotfile Modules (`bash/`, `git/`, `antigravity/`)**: `bash/.bashrc` & `.profile` (`~/.bashrc.local`), `git/.gitconfig` (`~/.gitconfig.local`), and tree-unfolded `antigravity/.gemini/config/`.
+- **Google Antigravity 2.0 Global Customization Suite (`antigravity/.gemini/config/`)**: `AGENTS.md`, Python 3.14 Lifecycle Hooks (`pre_tool_guard.py`, `post_edit_format.py`, `post_invocation_lint.py`, `stop_verify_tests.py`), and 11 reusable global skills (`/sopen`, `/sclose`, `/continue`, `/priority`, `/review`, `/enrich`, `architecture-review`, `governance`, `refactoring`, `testing`, `validation`).
+- **Layer 2 Project Starter Template (`templates/fastapi-hexagonal/`) & CI Verification (`scripts/`, `.github/workflows/ci.yml`)**: Initial FastAPI + Hexagonal DDD starter rules/skills/governance templates, `scripts/antigravity-install.sh`, `scripts/audit-global-config.sh`, and `scripts/verify-repo.sh`.

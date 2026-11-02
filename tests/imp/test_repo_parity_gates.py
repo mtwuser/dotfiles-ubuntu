@@ -96,7 +96,7 @@ class TestRepoParityGates:
 
         # Assert
         assert len(pkg_modules) == 18
-        assert len(template_rules) == 8
+        assert len(template_rules) == 9
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
         assert missing_unit_tests == []

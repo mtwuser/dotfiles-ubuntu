@@ -1,154 +1,64 @@
 ---
-name: fastapi-frontend
-description: Frontend patterns for HTMX, Jinja2 templates, and Preact/Vue Islands in {PROJECT_NAME}
+name: frontend-patterns
+description: Standard FastAPI/Starlette Jinja2Templates, progressive HTMX partial rendering, and zero-build Web Component patterns
 ---
-# Skill: HTMX & Islands Conventions — {PROJECT_NAME}
+# Skill: Server-Rendered Views & HTMX in FastAPI (`frontend-patterns`)
 
-## Zone Architecture Quick Reference
+> Applies to FastAPI + Hexagonal projects that serve HTML views (`Jinja2Templates` + optional HTMX / Web Components) alongside or instead of JSON APIs. Uses **100% standard FastAPI/Starlette primitives**.
 
-| Zone | Tech | Client JS | When |
-|:----:|------|:---------:|------|
-| Z1 | Server HTML (Jinja2) | 0 KB | Landing, docs, static |
-| Z2 | HTMX + Alpine.js | ~30 KB | CRUD, forms, tables, filters |
-| Z3 | Preact/Vue Island + SSE | ~35 KB/island | Chat, dashboards, streaming |
-| Z4 | Dedicated library | ~200+ KB | 3D viewers, code editors |
+---
 
-## Z1: Pure Server HTML
+## 1. Progressive Presentation Tiers (Standard FastAPI + Jinja2 + HTMX)
 
-```html
-{# templates/{context}/list.html #}
-{% extends "base.html" %}
-{% block content %}
-  <h1>{{ title }}</h1>
-  <ul>
-    {% for item in items %}
-      <li>{{ item.name }}</li>
-    {% endfor %}
-  </ul>
-{% endblock %}
-```
+Choose the simplest presentation tier that satisfies the interaction:
 
-- No JavaScript. No HTMX attributes.
-- Every page starts as Z1. Promote only when justified.
+| Tier | Technology | When to Use |
+|------|------------|-------------|
+| **1. Full-Page SSR** | FastAPI `Jinja2Templates` + semantic HTML/CSS | Standard page navigation, SEO pages, read-heavy views |
+| **2. Partial HTML Swaps (HTMX)** | `hx-get` / `hx-post` + `HX-Request` header check | Inline table filtering, form submission, modal fragments, live polling |
+| **3. Isolated Client Widgets** | Native Web Components (`customElements.define`) | Rich client-side interactivity (charts, drag-and-drop, canvas) receiving initial state via HTML attributes or JSON `<script type="application/json">` |
 
-## Z2: HTMX Patterns
+---
 
-### Partial Swap (Core Pattern)
-```html
-{# templates/{context}/list.html #}
-<div id="item-list">
-  {% include "{context}/partials/item_table.html" %}
-</div>
+## 2. Standard FastAPI `Jinja2Templates` & HTMX Partial Rendering
 
-<button hx-get="/api/{context}/items?page=2"
-        hx-target="#item-list"
-        hx-swap="innerHTML">
-  Load More
-</button>
-```
-
-### Form Submission (List CRUD)
-```html
-{# ✅ CORRECT — return full list partial, swap innerHTML #}
-<form hx-post="/api/{context}/items"
-      hx-target="#item-list"
-      hx-swap="innerHTML">
-  <input name="name" required />
-  <button type="submit">Add</button>
-</form>
-```
-
-> **Anti-pattern**: Never use `hx-swap="afterbegin"` or `"beforeend"` on targets
-> that wrap conditional containers (e.g. grid vs empty state). The inserted element
-> lands outside the wrapper. Always return the full list partial and use `innerHTML`.
-
-### Search with Debounce
-```html
-<input type="search"
-       name="q"
-       hx-get="/api/{context}/items/search"
-       hx-trigger="input changed delay:300ms"
-       hx-target="#results" />
-```
-
-### Template Organization
-```
-templates/{context}/
-├── list.html              # Full page (extends base.html)
-├── detail.html            # Full page (extends base.html)
-└── partials/              # HTMX swap fragments
-    ├── item_table.html    # Table body fragment
-    ├── item_row.html      # Single row fragment
-    └── item_form.html     # Form fragment
-```
-
-### FastAPI Endpoint Pattern (Canonical)
-
-Always use the centralized `respond_template(request, template, context, partial=...)` helper (and `respond_poll(..., done=...)` for polled endpoints returning HTTP 286 on completion) instead of manual `HX-Request` header checks or raw `TemplateResponse()`:
+Keep view rendering in the `infrastructure/` outer ring (`src/<context>/infrastructure/api/` or `infrastructure/web/`). Never enable `from __future__ import annotations` in router files where `Request` is injected:
 
 ```python
-@router.get("/{context}/items", response_class=HTMLResponse)
-async def list_items(
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from src.orders.application.use_cases import ListOrdersUseCase
+from src.orders.infrastructure.api.dependencies import get_list_orders_use_case
+
+router = APIRouter(prefix="/orders", tags=["orders-web"])
+templates = Jinja2Templates(directory="templates")
+
+
+@router.get("", response_class=HTMLResponse)
+async def list_orders_view(
     request: Request,
-    q: str | None = None,
-) -> Response:
-    items = await service.list_items(search=q)
-    return respond_template(
-        request,
-        "{context}/list.html",
-        {"items": items, "query": q or ""},
-        partial="{context}/partials/_item_table.html",
-    )
+    use_case: ListOrdersUseCase = Depends(get_list_orders_use_case),
+) -> HTMLResponse:
+    """Render either the full orders page or the HTMX table partial."""
+    orders = await use_case.execute()
+    context = {"request": request, "orders": orders}
+    if request.headers.get("HX-Request") == "true":
+        return templates.TemplateResponse(request, "orders/partials/order_table.html", context)
+    return templates.TemplateResponse(request, "orders/list.html", context)
 ```
 
-> **Best practice**: Centralize HTMX partial detection in `respond_template(request, template=..., partial=...)` so endpoints never return a full HTML document (or raw JSON) into an HTMX swap target.
+### HTMX Polling Stop Convention (`HTTP 286`)
+When an HTMX polling element (`hx-trigger="every 2s"`) finishes its background work, return HTTP status `286` from the FastAPI endpoint so HTMX automatically stops polling:
 
-## Z3: Islands Architecture
-
-### Island Mount Point
-```html
-{# In Jinja2 template #}
-<div data-island="chat-widget"
-     data-props='{{ island_props | tojson }}'
-     data-sse-url="/api/chat/stream">
-  <p>Loading...</p>  {# SSR fallback #}
-</div>
+```python
+STATUS_HTMX_STOP_POLLING = 286
 ```
 
-### Island Loader (vanilla JS)
-```javascript
-// static/js/island-loader.js (~2 KB)
-document.querySelectorAll('[data-island]').forEach(async (el) => {
-  const name = el.dataset.island;
-  const props = JSON.parse(el.dataset.props || '{}');
-  const { mount } = await import(`/static/islands/${name}.js`);
-  mount(el, props);
-});
-```
+---
 
-### IslandBus (Inter-Island Communication)
-```javascript
-// static/js/island-bus.js
-const IslandBus = {
-  listeners: new Map(),
-  emit(event, data) {
-    (this.listeners.get(event) || []).forEach(cb => cb(data));
-  },
-  on(event, callback) {
-    if (!this.listeners.has(event)) this.listeners.set(event, []);
-    this.listeners.get(event).push(callback);
-  }
-};
-export default IslandBus;
-```
+## 3. Styling & Accessibility Hygiene
 
-## Rules
-
-1. **Z1 by default**: Every page starts as server HTML. Promote only when justified.
-2. **HTMX fragments are partials**: Always in `partials/` subdirectory.
-3. **Always use `respond_template` with `partial`**: Never use `TemplateResponse()` directly for Z2.
-4. **List CRUD uses `innerHTML`**: Return full list partial, never `afterbegin`/`beforeend`.
-5. **Islands are isolated**: Z3/Z4 mount into `data-island` containers. They do NOT control page layout.
-6. **Zero-build**: No webpack, no Vite. Vendor libraries as single ES module files. CSS is vanilla.
-7. **SSE for streaming**: Z3 islands connect via SSE for real-time data.
-8. **Progressive enhancement**: Page works without JS (Z1 fallback). JS enhances, never replaces.
+- **Design Tokens First**: Use CSS custom properties (`var(--color-surface)`, `var(--space-md)`) in `static/css/` — never scatter hardcoded hex colors or inline `style="..."` attributes across templates.
+- **Semantic HTML**: Use `<main>`, `<nav>`, `<section>`, `<dialog>`, `<button type="button">`, and explicit `<label for="...">` bindings on every form control.

@@ -82,7 +82,7 @@
         "Maintain 100% statement and branch coverage with < 1s per unit test"
       ],
       "rule_files": ["templates/tech-stack/fastapi-hexagonal/rules/testing.md"],
-      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/skills/testing/SKILL.md"],
+      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md"],
       "ephemeral_fork_policy": {
         "bot_role": "dept-qa-test-auditor",
         "trigger": "on_surface_match",

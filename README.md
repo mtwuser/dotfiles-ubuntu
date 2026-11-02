@@ -225,7 +225,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
 │       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
-├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/*, squad-stack/agile-task-branch, tech-stack/fastapi-hexagonal)
+├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/corporate-ops-ledger, squad-stack/agile-task-branch, tech-stack/fastapi-hexagonal)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans

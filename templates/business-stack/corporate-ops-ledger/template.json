@@ -1,0 +1,45 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "corporate-ops-ledger",
+  "kind": "business-stack",
+  "stack_group": "business-stack",
+  "extends": "business-base",
+  "target_role": "department",
+  "description": "Hexagonal Business Architecture pack: immutable Single Source of Truth ledgers (corporate/ledgers/), Business AAA policies/SOPs (corporate/policies/), and multi-surface compliance cascade (surfaces/{web,forms,print}/)",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "corporate-ops-ledger-and-surface-cascade",
+      "description": "Hexagonal business boundary (Inner Ledgers -> Normative Policies/SOPs -> Outer Surfaces), [DEPT]-[TYPE]-[YYYY]-[NNN] citation traceability, and Business AAA verification gates",
+      "mode": "transversal",
+      "target_globs": [
+        "corporate/**",
+        "surfaces/**",
+        "docs/**",
+        "*.md",
+        "*.json"
+      ],
+      "architectural_planes": [
+        "*"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L2",
+      "invariants": [
+        "Outer surfaces (surfaces/web/**, surfaces/forms/**, surfaces/print/**) never invent financial figures, legal clauses, or batch metrics; every claim cites an immutable Inner Ledger ID ([DEPT]-[TYPE]-[YYYY]-[NNN]) in corporate/ledgers/",
+        "Every policy, contract, or operational SOP in corporate/policies/ and corporate/sops/ follows the Three-Part Business AAA structure (# Scope & Surface Target, # Normative Invariants, # Verification & Sign-Off Gates)",
+        "Enforce the World Novelty & Trade Secret Firewall before publishing to surfaces/: reference restricted assets by opaque ID (<PAT-ID>, <TS-ID>, Batch #NNN) without exposing confidential formulas or unfiled IP"
+      ],
+      "rule_files": [
+        "templates/business-stack/corporate-ops-ledger/rules/ops-ledger-architecture.md"
+      ],
+      "canonical_templates": [
+        "templates/business-stack/corporate-ops-ledger/rules/ops-ledger-architecture.md",
+        "templates/business-stack/corporate-ops-ledger/skills/ledger-surface-audit/SKILL.md"
+      ]
+    }
+  ]
+}

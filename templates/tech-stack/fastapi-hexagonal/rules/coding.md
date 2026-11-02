@@ -1,214 +1,95 @@
 ---
-description: Hexagonal DDD architecture patterns and coding standards for {PROJECT_NAME}
 trigger: always_on
+description: "{PROJECT_NAME} FastAPI + Hexagonal DDD architecture, bounded contexts, Protocol ports, and dependency rules."
 ---
-# Coding Rules — {PROJECT_NAME}
 
-## Hexagonal Architecture (Layer 1: Domain)
+# {PROJECT_NAME} — FastAPI & Hexagonal Architecture Rules (`fastapi-hexagonal`)
 
-{PROJECT_NAME} uses **Hexagonal DDD** with Bounded Contexts as the unit of architecture.
+> Inherits universal engineering, typing, and `< 465`-line modularity from `technical-base.md`. This file defines the **FastAPI + Hexagonal DDD (Ports & Adapters)** architecture invariants.
 
-### Structure per Bounded Context
+---
 
-```
-src/{context}/
-├── domain/                          # INNER HEXAGON — Zero I/O, zero framework
-│   ├── __init__.py
-│   ├── models.py                    # Pydantic domain entities
-│   ├── enums.py                     # StrEnum definitions
-│   ├── types.py                     # Python 3.14 PEP 695 type aliases & [T] generics
-│   ├── constants.py                 # Pure constants
-│   ├── exceptions.py                # Domain-specific exceptions
-│   ├── ports.py                     # Abstract interfaces (Protocol/ABC)
-│   └── services/                    # Pure business logic (NO I/O)
-│       └── {name}.py                # Max ~400 lines, single class
-│
-├── application/                     # USE CASES — Orchestrates domain + infra
-│   ├── use_cases.py                 # Or split per action if > 400 lines
-│   └── dto.py                       # Data Transfer Objects (optional)
-│
-├── infrastructure/                  # OUTER HEXAGON — All I/O, all framework
-│   ├── persistence/                 # ORM models + repositories
-│   │   ├── orm_models.py            # SQLAlchemy ORM
-│   │   └── repositories.py         # Port implementations
-│   ├── api/                         # JSON API (inbound adapter)
-│   │   ├── router.py                # FastAPI router
-│   │   ├── schemas.py               # Request/response schemas (Pydantic)
-│   │   └── dependencies.py         # DI wiring
-│   ├── web/                         # HTML presentation (inbound adapter)
-│   │   ├── views.py                 # Routes returning respond_template / HTMLResponse
-│   │   └── templates/{context}/     # Jinja2 templates
-│   │       ├── list.html
-│   │       ├── detail.html
-│   │       └── partials/            # HTMX swap fragments
-│   ├── adapters/                    # External service adapters (outbound)
-│   │   └── {service}_adapter.py     # Implements domain ports
-│   └── tasks/                       # Background task definitions
-│       └── {task_group}.py          # Thin wrappers → use cases
-│
-└── tests/
-    ├── unit/                        # 0 DB access, all deps mocked
-    └── imp/                         # Real DB & boundary implementation verification only
+## 1. Hexagonal Bounded Context Structure & Dependency Rule
+
+Every Bounded Context lives under `src/<context>/` and is divided into three concentric rings:
+
+```text
+src/<context>/
+├── domain/                  # INNER HEXAGON — Pure business logic (Zero I/O)
+│   ├── entities.py          # Domain entities & aggregate roots
+│   ├── value_objects.py     # Immutable value objects (@dataclass(frozen=True))
+│   ├── services.py          # Pure domain services & business rules
+│   ├── exceptions.py        # Domain-specific exceptions (no HTTP status codes)
+│   └── ports.py             # Outbound & inbound contracts (typing.Protocol)
+├── application/             # APPLICATION RING — Use case orchestration
+│   ├── use_cases.py         # Command/Query handlers (inject Protocol ports in __init__)
+│   └── dto.py               # Application Data Transfer Objects / command inputs
+├── infrastructure/          # OUTER HEXAGON — Frameworks, I/O & Adapters
+│   ├── persistence/         # SQLAlchemy Async models, mappers, concrete Repositories
+│   ├── api/                 # FastAPI APIRouter, Pydantic v2 schemas, dependencies.py
+│   └── adapters/            # External HTTP clients (httpx), task queues, mailers
+└── tests/                   # Context-scoped test suite
+    ├── unit/                # Isolated unit tests (domain/, application/, api/)
+    └── imp/                 # Implementation tests (persistence/, external adapters)
 ```
 
-### Layer Call Direction
-
+### Strict Dependency Direction (`Outer -> Inner`)
+```text
+infrastructure  ──►  application  ──►  domain
 ```
-INFRASTRUCTURE (API/Web/Tasks)  → Trigger layer (when)
-APPLICATION (Use Cases)         → Orchestration layer (what)
-DOMAIN (Services/Ports)         → Business logic layer (how)
-INFRASTRUCTURE (Persistence)    → Adapter layer (I/O)
-```
+- **`domain/`**:
+  - **ZERO I/O** (no network, database, filesystem, or environment reads).
+  - **ZERO framework imports**: `domain/` MUST NEVER import from `fastapi`, `starlette`, `sqlalchemy`, `pydantic`, `httpx`, `application/`, or `infrastructure/`.
+  - Define outbound contracts (repositories, event publishers, gateways) as `typing.Protocol` interfaces inside `domain/ports.py`.
+- **`application/`**:
+  - Orchestrates `domain/` objects and outbound `domain/ports.py` protocols.
+  - Receives all outbound ports via explicit constructor injection (`def __init__(self, repo: OrderRepositoryPort) -> None:`).
+  - NEVER imports concrete adapters from `infrastructure/` or HTTP primitives from `fastapi`.
+- **`infrastructure/`**:
+  - Implements `domain/ports.py` protocols (e.g., `SQLAlchemyOrderRepository`, `HttpxPaymentGateway`).
+  - Wires concrete adapters into application use cases inside `infrastructure/api/dependencies.py` using `fastapi.Depends`.
+- **Cross-Context Isolation**:
+  - Bounded contexts (`src/orders/`, `src/billing/`) MUST NOT import each other's `infrastructure/` or internal `persistence/` models. Cross-context communication flows through explicit application ports or domain events.
 
-- **Dependency Rule**: Domain NEVER imports from Infrastructure or Application.
-- **Port Purity**: Ports are abstract interfaces (Protocol/ABC) in `domain/ports.py`. Infrastructure implements them.
-- **Service Purity**: Domain services have ZERO I/O. They receive data through method parameters, not by fetching it.
-- **`__init__.py` Purity**: All `__init__.py` files in consumer `src/` and `tests/` MUST remain **100% empty (`0 bytes`)**. Never place variables, configuration, imports, docstrings, or logic inside `__init__.py`. Bounded context configuration and `exclude_contexts` live exclusively in `app-manifest.yaml` (`domain.bounded_contexts`).
+---
 
-## Zone Architecture (Layer 3: Presentation)
+## 2. Domain Modeling & Pydantic v2 Boundary Discipline
 
-| Zone | Interactivity | Client JS | Technology | Use Case |
-|:----:|:-------------:|:---------:|-----------|----------|
-| **Z1** | None | 0 KB | Server HTML (Jinja2) | Landing, docs, legal, static pages |
-| **Z2** | Low-Medium | ~30 KB | HTMX + Alpine.js | CRUD, forms, tables, search, filters |
-| **Z3** | High | ~35 KB/island | Preact/Vue Island + SSE | Chat, dashboards, streaming, timelines |
-| **Z4** | Extreme | ~200+ KB | Dedicated library | 3D viewers, code editors, collaborative tools |
+- **Domain Value Objects (`domain/value_objects.py`)**:
+  - Represent domain concepts (`OrderId`, `Money`, `EmailAddress`, `Percentage`) as immutable `@dataclass(frozen=True, slots=True)` or `typing.NewType` with domain validation in `__post_init__`.
+  - Raise domain exceptions (`InvalidDiscountError`, `InsufficientFundsError`) in `domain/exceptions.py`, never `fastapi.HTTPException`.
+- **API Wire Schemas (`infrastructure/api/schemas.py`)**:
+  - Use **Pydantic v2** (`BaseModel`, `Field`, `ConfigDict(from_attributes=True, extra="forbid")`) strictly at the HTTP/serialization boundary (`infrastructure/api/` or `application/dto.py`).
+  - Map between Domain Entities/Value Objects and Pydantic/SQLAlchemy models explicitly in the adapter layer; never leak SQLAlchemy ORM instances into `domain/` or return raw ORM models directly from routers without a response schema.
 
-### Zone Rules
+---
 
-- **Z1 by default**: Every page starts as Z1 (server HTML). Promote only when justified.
-- **HTMX fragments**: Z2 uses HTMX partial swaps via `partials/` templates. Never full page reloads for CRUD.
-- **Islands are isolated**: Z3/Z4 components mount into `<div data-island="...">` containers. They do NOT control the page layout.
-- **Zero-build**: No webpack, no Vite. Vendor libraries as single ES module files. CSS is vanilla.
+## 3. FastAPI Router, Dependency Injection & Runtime Annotation Rules
 
-### HTMX Response Safety Rules
+- **NO `from __future__ import annotations` in FastAPI Runtime Modules**:
+  - NEVER add `from __future__ import annotations` to `router.py`, `dependencies.py`, or any module where FastAPI inspects `Request`, `WebSocket`, `BackgroundTasks`, `Depends()`, `Query()`, `Path()`, or `Body()` at runtime. Deferred string annotations break FastAPI/Pydantic parameter resolution when combined with local/private symbols.
+- **Thin Routers (`infrastructure/api/router.py`)**:
+  - Routers only parse/validate HTTP input, invoke one Application Use Case injected via `Depends(get_<use_case>)`, and map Domain results/exceptions to HTTP responses (`status.HTTP_201_CREATED`, `HTTPException`).
+  - Zero SQL queries, zero `AsyncSession` manipulation, and zero business branching inside `router.py`.
+- **Explicit Dependency Wiring (`infrastructure/api/dependencies.py`)**:
+  - Build the dependency graph with dedicated factory functions (`get_db_session -> get_order_repository -> get_create_order_use_case`) so unit tests can override any seam cleanly via `app.dependency_overrides[get_create_order_use_case]`.
 
-| Rule | Enforcement |
-|------|------------|
-| `respond_template(partial=)` for Z2 | NEVER use raw `TemplateResponse()` — bypasses HTMX detection and channel headers |
-| `respond_poll(done=)` for polling | Returns HTTP 286 to stop HTMX. NEVER return raw 200 for polled endpoints |
-| List CRUD: full list partial + `innerHTML` | NEVER use `afterbegin`/`beforeend` on conditional containers |
-| No manual `HX-Request` checks | Use `is_htmx_request()` or `respond_template(partial=)` |
+---
 
-## Async Continuum (Layer 2: Processing)
+## 4. Async I/O & Background Execution
 
-| Tier | Technology | Duration | Use Case |
-|:----:|-----------|----------|----------|
-| 1 | `await` (native asyncio) | < 200ms | DB queries, cache lookups |
-| 2 | `FastAPI.BackgroundTasks` | < 30s | Email, notifications, light ML |
-| 3 | SSE / WebSocket | Streaming | LLM streaming, live dashboards |
-| 4 | Celery / Taskiq | > 30s | Simulations, batch processing |
-| 5 | Celery Canvas / Prefect | Multi-step | ML training, CDC pipelines |
+- **Non-Blocking Event Loop**:
+  - Every `async def` endpoint, use case, or adapter MUST use non-blocking async I/O (`AsyncSession`, `httpx.AsyncClient`, `aiofiles`).
+  - Never call blocking `time.sleep()`, `requests.*`, or synchronous subprocess/DB calls inside `async def`.
+- **Background Tasks & Worker Queues**:
+  - Use FastAPI `BackgroundTasks` only for lightweight, best-effort post-response notifications (`< 500ms`).
+  - Route durable, retryable, or CPU/IO-heavy jobs through a Domain Port (`TaskQueuePort` in `domain/ports.py`) backed by an async worker adapter (e.g., Celery, ARQ, or Dramatiq) in `infrastructure/adapters/`.
 
-## Semantic Typing (Layer 0: Data Substrate)
+---
 
-Data types are NOT just wire types — they are **semantic types** from the Universal Type Ontology (UTO).
+## 5. Optional Server-Rendered Views (Jinja2 + HTMX)
 
-```python
-# ❌ WRONG — Generic wire types
-class User(BaseModel):
-    name: str
-    email: str
-
-# ✅ CORRECT — Semantic types
-from core.types import Identifier, NaturalText, EmailAddress
-
-class User(BaseModel):
-    name: NaturalText          # Implies: searchable, NLP-processable
-    email: EmailAddress        # Implies: validatable, deliverable
-    user_id: Identifier        # Implies: unique, hashable, URI-safe
-```
-
-## Manifest System (YAML-driven)
-
-Application behavior is configured via `app-manifest.yaml`, NOT hardcoded conditionals:
-
-```yaml
-# app-manifest.yaml
-project:
-  name: {project_slug}
-  scale: medium
-domain:
-  bounded_contexts:
-    - orders
-    - payments
-presentation:
-  default_zone: Z1
-processing:
-  default_tier: T1
-```
-
-## Bounded Context Dependency Pipeline
-
-**Dependency direction** (imports flow left → right, NEVER reverse):
-
-```
-core ← {domain contexts} ← shared_kernel
-```
-
-> [!IMPORTANT]
-> The exact pipeline will be defined when the bounded contexts are created.
-> The invariant is: **a context may only depend on contexts to its LEFT**.
-> Cross-cutting concerns live in `core`. Shared domain types live in `shared_kernel`.
-
-### Forbidden Import Patterns
-
-```python
-# ❌ FORBIDDEN — Domain importing from Infrastructure
-from src.orders.infrastructure.persistence.orm_models import OrderORM
-
-# ❌ FORBIDDEN — Context importing from a context to its RIGHT
-from src.analytics.domain.models import AnalyticsEvent  # if analytics depends on orders
-
-# ✅ CORRECT — Infrastructure importing from Domain
-from src.orders.domain.models import Order
-from src.orders.domain.ports import OrderRepository
-```
-
-## Code Quality Standards
-
-### Clean Code Principles
-- **Intention-revealing names**: Names must answer: _why does it exist?_, _what does it do?_, _how is it used?_
-- **Small functions**: Functions do ONE thing at ONE level of abstraction. Target 5-15 lines.
-- **Command-Query Separation (CQS)**: A method performs an action OR returns data, never both.
-- **Boy Scout Rule**: Leave code better than you found it.
-- **No dead code**: Remove unused functions, imports, and commented-out code immediately.
-
-### SOLID in {PROJECT_NAME}
-| Principle | {PROJECT_NAME} Application |
-|-----------|----------------|
-| **SRP** | Each service class has ONE reason to change. Split at ~400 lines. |
-| **OCP** | Extend via new port implementations, not by modifying domain services. |
-| **LSP** | All port implementations must be substitutable for their Protocol. |
-| **ISP** | Ports define minimal interfaces. Split large protocols into focused ones. |
-| **DIP** | Domain depends on Protocols. Infrastructure implements them. Never reverse. |
-
-### Technical Standards
-- **Strong typing**: Use `mypy --strict`. Prefer `Protocol` over ABC. No `Any`.
-- **Pydantic models**: Domain entities are Pydantic `BaseModel`. Infrastructure ORM is SQLAlchemy.
-- **Max file size**: Strictly `< 465` lines per source, test, and `docs/**/*.md` file (target `<= 400` lines). Split when exceeded.
-- **Naming**: Descriptive names. No single-letter variables in business logic. Classes as nouns, methods as verbs.
-- **Constants**: Centralized in `constants.py` per context. Search before creating.
-- **StrEnum**: All enumerations use `StrEnum` for serialization safety.
-- **Tests & Specs (`1:1:1`)**: `1:1:1` mapping (`Source <-> Unit Test <-> Specification: docs/architecture/<spec>.md`). 100% branch coverage gate. AAA pattern. Unit tests have zero DB access.
-
-### CRITICAL: FastAPI + `from __future__ import annotations` Pitfall
-
-> **Runtime 422 errors, invisible in unit tests, only manifests with uvicorn.**
-
-With `from __future__ import annotations`, ALL type annotations become **lazy strings**.
-FastAPI can't identify `Request` as a special injectable → treats it as query param → 422.
-
-```python
-# ❌ FORBIDDEN
-if TYPE_CHECKING:
-    from fastapi import Request  # invisible at runtime → 422
-
-# ✅ CORRECT
-from fastapi import Request  # always available at runtime
-```
-
-**Rules**:
-1. `Request`, `Response`, `WebSocket` MUST be **runtime imports** (never under `TYPE_CHECKING`)
-2. Other types (e.g. `AsyncSession`) CAN stay under `TYPE_CHECKING`
-3. Applies to ALL files in the dependency chain — not just route handlers
+When a project serves HTML alongside or instead of JSON APIs:
+- Render templates via Starlette/FastAPI `Jinja2Templates` in `infrastructure/api/` or `infrastructure/web/`.
+- For progressive enhancement with HTMX, inspect `request.headers.get("HX-Request") == "true"` to return either the partial HTML fragment or the full page layout.
+- Keep all business state in the backend use case; templates only format view context dictionaries.

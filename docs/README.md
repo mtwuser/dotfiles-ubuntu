@@ -61,7 +61,7 @@ flowchart TD
 
     subgraph AI["Subsystem 2: Distributed Human-AI Governance & Hooks (Guide 02, Architecture 02 & Reference 01)"]
         L1["Layer A: Corporate / Global Baseline\n(antigravity/.gemini/config/AGENTS.md + hooks.json + 13 skills)"]
-        L2["Layer B: Polymorphic Template Packs\n(templates/{human-core,technical-base,business-base,fastapi-hexagonal}/*)"]
+        L2["Layer B: Polymorphic Template Packs\n(templates/{human-core,technical-base,business-base,corporate-ops-ledger,agile-task-branch,fastapi-hexagonal}/*)"]
         L3["Layer C: Project & Layer Context\n(<workspace>/.agents/rules & skills + WORKTASK.md)"]
         L4["Layer D: 3-Tier Navigable Repository Docs\n(README.md -> docs/guides/ -> docs/architecture/ & reference/)"]
         L1 -->|"Downward Inheritance"| L2
