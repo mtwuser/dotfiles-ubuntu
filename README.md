@@ -283,7 +283,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ./scripts/layer-config.sh set-global-profile human-core --stow
 ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
-./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
+./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root --strategy reconcile
 ./scripts/layer-config.sh status <your-project>
 
 # Layer owner vs. consumer authority gates, roster, 1-hop horizon, delegation, feature/<TICKET-ID>-slug & completion:

@@ -301,6 +301,15 @@ class TestGitGovernanceEngine:
         )
         (dest_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
         (src_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
+        src_grouped = tmp_path / "upstream/templates/tech-stack/fastapi-hexagonal"
+        (src_grouped / "rules").mkdir(parents=True)
+        (src_grouped / "rules/coding.md").write_text("# Coding\n\n## Core\nUp.\n", encoding="utf-8")
+        flat_leg = ws / "templates/fastapi-hexagonal"
+        (flat_leg / "rules").mkdir(parents=True)
+        (flat_leg / "rules/coding.md").write_text(
+            "# Coding\n\n## Core\nOld.\n\n## Custom Hex\nLocal.\n", encoding="utf-8"
+        )
+        dest_grouped = ws / "templates/tech-stack/fastapi-hexagonal"
 
         # Act
         st_outdated = inspect_git_governance_state(ws)
@@ -355,6 +364,15 @@ class TestGitGovernanceEngine:
             is_local_newer=True,
         )
         acc_txt = (dest_tpl / "rules/business-base.md").read_text(encoding="utf-8")
+        grp_copied, _ = reconcile_template_pack_sync(
+            ws,
+            "fastapi-hexagonal",
+            src_grouped,
+            dest_grouped,
+            strategy="merge",
+            is_local_newer=True,
+        )
+        grp_txt = (dest_grouped / "rules/coding.md").read_text(encoding="utf-8")
 
         # Assert
         assert st_outdated["makefile_outdated"] is True
@@ -365,3 +383,4 @@ class TestGitGovernanceEngine:
         assert merge_copied is True and merge_conflicts == []
         assert "Upstream v2." in merged_txt and "## Local Annex" in merged_txt
         assert acc_copied is True and "## Local Annex" not in acc_txt
+        assert grp_copied is True and not flat_leg.exists() and "## Custom Hex" in grp_txt

@@ -193,8 +193,9 @@ def _sync_templates_from_roots(
             continue
         src_tpl = next((d for r in roots if (d := _resolve_template_dir(r, tpl_name))), None)
         dest_tpl = _resolve_template_dest_dir(target_dir, tpl_name, src_tpl=src_tpl)
+        local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
         if src_tpl is not None and src_tpl.resolve() != dest_tpl.resolve():
-            is_newer = check_newer and _is_dest_template_newer(src_tpl, dest_tpl)
+            is_newer = check_newer and _is_dest_template_newer(src_tpl, local_tpl)
             did_copy, c_list = reconcile_template_pack_sync(
                 target_dir, tpl_name, src_tpl, dest_tpl,
                 strategy=strategy, is_local_newer=is_newer, dry_run=dry_run,

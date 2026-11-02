@@ -32,6 +32,7 @@ from dotfiles_mcp.constants import (
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
 )
+from dotfiles_mcp.manifest_helpers import _resolve_template_dir
 
 
 def _load_manifest(target_dir: Path) -> dict[str, Any]:
@@ -119,7 +120,8 @@ def reconcile_template_pack_sync(
 ) -> tuple[bool, list[dict[str, Any]]]:  # fmt: skip
     """Reconcile an upstream template pack into dest_tpl using the requested sync strategy."""
     prop_dir = target_dir / ".agents" / "proposals" / "from-upstream"
-    if strategy == "keep-local" and dest_tpl.is_dir():
+    local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
+    if strategy == "keep-local" and local_tpl.is_dir():
         if not dry_run:
             for pf in prop_dir.glob(f"{tpl_name}-*.md"):
                 pf.unlink(missing_ok=True)
@@ -139,8 +141,8 @@ def reconcile_template_pack_sync(
                     "make sync STRATEGY=merge", "make sync STRATEGY=keep-local"]})  # fmt: skip
         return False, conflicts
     preserved: dict[str, list[str]] = {}
-    if strategy == "merge" and (dest_tpl / "rules").is_dir():
-        for dest_rf in sorted((dest_tpl / "rules").glob("*.md")):
+    if strategy == "merge" and (local_tpl / "rules").is_dir():
+        for dest_rf in sorted((local_tpl / "rules").glob("*.md")):
             src_rf = src_tpl / "rules" / dest_rf.name
             src_txt = src_rf.read_text(encoding="utf-8") if src_rf.is_file() else ""
             blocks = [
@@ -151,7 +153,7 @@ def reconcile_template_pack_sync(
             if blocks:
                 preserved[dest_rf.name] = blocks
     if not dry_run:
-        shutil.rmtree(target_dir / "templates" / tpl_name, ignore_errors=True)
+        shutil.rmtree(local_tpl, ignore_errors=True)
         shutil.rmtree(dest_tpl, ignore_errors=True)
         dest_tpl.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(src_tpl, dest_tpl)

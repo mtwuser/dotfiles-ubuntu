@@ -89,7 +89,7 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --id squad-patent-ops --role squad --parent-dir /path/to/dept-legal
    ./scripts/layer-config.sh start-task /path/to/squad-patents --task "LEGAL-2026-004"
    ./scripts/layer-config.sh complete-task /path/to/squad-patents --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
-   ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root
+   ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root --strategy reconcile
    ```
 7. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 

@@ -311,10 +311,14 @@ class TestManifestHelpers:
         src_tech_tpl = tmp_path / "src_repo/templates/tech-stack/fastapi-hexagonal"
         src_tech_tpl.mkdir(parents=True)
         (tmp_path / "src_repo/templates/tech-stack/.gitkeep").write_text("", encoding="utf-8")
+        (up_repo / "templates/fastapi-hexagonal").mkdir(parents=True)
         iter_tpls = manifest_helpers._iter_layer_template_dirs(tmp_path / "src_repo")
         empty_resolved = manifest_helpers._resolve_template_dir(up_repo, "tech-stack")
         dest_from_src = manifest_helpers._resolve_template_dest_dir(
             up_repo, "fastapi-hexagonal", src_tpl=src_tech_tpl
+        )
+        dest_existing_flat = manifest_helpers._resolve_template_dest_dir(
+            up_repo, "fastapi-hexagonal"
         )
         dest_from_kind = manifest_helpers._resolve_template_dest_dir(
             up_repo, "crm-ops", kind="business-stack"
@@ -334,6 +338,7 @@ class TestManifestHelpers:
         assert iter_tpls == [("fastapi-hexagonal", src_tech_tpl)]
         assert empty_resolved is None
         assert dest_from_src == up_repo / "templates/tech-stack/fastapi-hexagonal"
+        assert dest_existing_flat == up_repo / "templates/fastapi-hexagonal"
         assert dest_from_kind == up_repo / "templates/business-stack/crm-ops"
 
     def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(self) -> None:

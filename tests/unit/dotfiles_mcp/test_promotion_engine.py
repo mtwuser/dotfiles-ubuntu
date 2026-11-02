@@ -435,21 +435,30 @@ class TestPromotionEngine:
         )
         hz_oss = inspect_layer_horizon(oss_dir, proj_dir)
         hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
+        new_sk = oss_dir / "templates/business-base/skills/new-sk/SKILL.md"
+        new_sk.parent.mkdir(parents=True)
+        new_sk.write_text('---\nname: new-sk\ndescription: "ok"\n---\n', encoding="utf-8")
+        hz_miss_sk = inspect_layer_horizon(oss_dir, proj_dir)
         up_b = oss_dir / "templates/business-base/rules/business-base.md"
         up_b.write_text("# v3 upstream\n", encoding="utf-8")
         os.utime(up_b, ns=(ts + 1_000_000, ts + 1_000_000))
         hz_after_up = inspect_layer_horizon(oss_dir, proj_dir)
 
         # Assert
-        assert oss_tpl_res["target_template"] == "business-base"
-        assert oss_asset_res["destination"] == "templates/business-base/assets/a.md"
+        assert (
+            oss_tpl_res["target_template"] == "business-base"
+            and oss_asset_res["destination"] == "templates/business-base/assets/a.md"
+        )
         assert (
             hz_oss["is_oss_community_horizon"],
             hz_oss["downward_sync_needed"],
             len(hz_oss["upward_promotion_suggestions"]),
         ) == (True, False, 1)
-        assert hz_oss["oss_contrib_dir"] is not None
-        assert hz_int["is_oss_community_horizon"] is False
-        assert hz_int["oss_contrib_dir"] is None
-        assert len(hz_int["upward_promotion_suggestions"]) >= 1
-        assert hz_after_up["downward_sync_needed"] is True
+        assert hz_oss["oss_contrib_dir"] is not None and hz_int["is_oss_community_horizon"] is False
+        assert (
+            hz_int["oss_contrib_dir"] is None and len(hz_int["upward_promotion_suggestions"]) >= 1
+        )
+        assert (
+            hz_miss_sk["downward_sync_needed"] is True
+            and hz_after_up["downward_sync_needed"] is True
+        )
