@@ -19,7 +19,6 @@ from dotfiles_mcp.constants import (
     LAYER_MAKEFILE_RECIPES,
     LAYER_ROLE_MAKEFILE_TARGETS,
     MCP_OPERATING_MODES,
-    NEW_LAYER_INITIAL_SEMVER,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
     VALID_LAYER_ROLES,
@@ -291,19 +290,18 @@ def bootstrap_layer_workspace(
         "## Verification & Sign-Off Gates\n"
         "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
     )
-    chg_hdr = f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
-    init_ver = NEW_LAYER_INITIAL_SEMVER
     baseline_files = {
-        "VERSION": f"{init_ver}\n",
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
         "layers/.gitkeep": "",
         "Makefile": _render_layer_makefile(layer_id, layer_role, effective_parent, repo_dir),
         "README.md": _render_layer_onboarding_readme(
             layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
         ),
-        "CHANGELOG.md": f"{chg_hdr}## [{init_ver}]\n- Initial layer bootstrap.\n",
+        "CHANGELOG.md": (
+            f"# Changelog — {layer_id}\n\n## [Unreleased]\n- Initial layer bootstrap.\n"
+        ),
         "WORKTASK.md": (
-            f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap (`v{init_ver}`).\n"
+            f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap.\n"
             "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
         ),
         "antigravity/.gemini/config/AGENTS.md": ag_rule,

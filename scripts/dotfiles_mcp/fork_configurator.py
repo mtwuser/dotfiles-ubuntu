@@ -104,7 +104,7 @@ def configure_fork_manifest(
     prune_default_templates: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Parameterize system/mcp-layer.json (v1.2) for a fork."""
+    """Parameterize system/mcp-layer.json (mcp-layer-v1) for a fork."""
     if not KEBAB_ID_RE.match(layer_id):
         raise ValueError(f"Invalid layer_id {layer_id!r}: must be kebab-case")
     if layer_role not in VALID_LAYER_ROLES:

@@ -133,13 +133,13 @@ The server exposes nine read-only, deterministic tools for live node auditing, m
 
 ## 4. Declarative Layer & MCP Federation Schema (`system/mcp-layer.json`)
 
-To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "1.2"`).
+To enable multi-layer and multi-service orchestration without hardcoding machine-specific topologies or organizational department names into scripts, `dotfiles-ubuntu` supports an optional, declarative manifest at **`system/mcp-layer.json`** (`schema_version: "mcp-layer-v1"`).
 
 When a squad, department, or engineer forks `dotfiles-ubuntu` for a specific corporate layer, domain-policy module, squad archetype, or service container, they customize `system/mcp-layer.json` to describe **what this node is**, **its numeric deontic `precedence` (`0..100`)**, **its stack-agnostic `surface_bindings`**, **its environment safety profiles (`dev/tst/pre/pro`)**, and **which MCP servers belong to its context**:
 
 ```json
 {
-  "schema_version": "1.2",
+  "schema_version": "mcp-layer-v1",
   "layer_id": "dotfiles-ubuntu-default",
   "layer_role": "workstation",
   "precedence": 10,
@@ -331,5 +331,5 @@ To guarantee that `scripts/dotfiles_mcp_server.py` and `scripts/layer-subtree.sh
    - Running `./scripts/dotfiles_mcp_server.py --self-test` executes an in-process JSON-RPC 2.0 round-trip test verifying `initialize`, `resources/list`, `resources/read`, `tools/list`, `tools/call` (`get_layer_overview`, `discover_federated_mcps`, `query_governance_rules`, `unfold_context_capsule`, `resolve_surface_governance`, `orchestrate_ephemeral_fork`), `prompts/list`, and JSONL event/alert log generation without requiring an external MCP client.
    - Running `./scripts/layer-subtree.sh list` inspects `layers/*/` and reports all mounted context subtrees.
 2. **CI & Container Gate Integration (`scripts/verify-repo.sh` & `Dockerfile`)**:
-   - `scripts/verify-repo.sh` compiles `scripts/dotfiles_mcp_server.py` (`py_compile`), lints it with `ruff check` and `mypy --strict`, validates `system/mcp-layer.json` schema (`v1.2`) and `Dockerfile` contract (`FROM ubuntu:26.04`, non-root `USER ubuntu`, `/opt/dotfiles-ubuntu`), runs `./scripts/layer-subtree.sh list` and `./scripts/dotfiles_mcp_server.py --self-test`, and enforces **100.00% statement and branch coverage** via `pytest`.
+   - `scripts/verify-repo.sh` compiles `scripts/dotfiles_mcp_server.py` (`py_compile`), lints it with `ruff check` and `mypy --strict`, validates `system/mcp-layer.json` schema (`mcp-layer-v1`) and `Dockerfile` contract (`FROM ubuntu:26.04`, non-root `USER ubuntu`, `/opt/dotfiles-ubuntu`), runs `./scripts/layer-subtree.sh list` and `./scripts/dotfiles_mcp_server.py --self-test`, and enforces **100.00% statement and branch coverage** via `pytest`.
    - `Dockerfile` executes `python3 /opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py --self-test --no-log` and `/opt/dotfiles-ubuntu/scripts/layer-subtree.sh list` during `docker build` (`make docker-build` / `make docker-self-test`), guaranteeing that every built image is self-verified and ready for both standalone `docker run -i --rm` execution and multi-stage `COPY --from` sidecar injection.

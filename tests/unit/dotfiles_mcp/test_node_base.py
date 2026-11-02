@@ -125,7 +125,7 @@ class TestMCPNodeBase:
         (tmp_path / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "acme-team",
                     "default_stack_templates": ["existing-pack", "missing-pack"],
                 }

@@ -41,7 +41,7 @@ class TestForkConfigurator:
         (root_tpl / "template.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.0",
+                    "schema_version": "template-pack-v1",
                     "template_id": "web-stack",
                     "kind": "stack-starter",
                     "target_role": "squad",
@@ -99,7 +99,7 @@ class TestForkConfigurator:
         (sys_dir / "mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "old-id",
                     "layer_role": "workstation",
                     "default_stack_templates": [
@@ -211,7 +211,7 @@ class TestForkConfigurator:
         (tmp_path / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "acme-legal",
                     "default_stack_templates": [],
                     "surface_bindings": [],
@@ -291,7 +291,7 @@ class TestForkConfigurator:
         (fork_dir / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "acme-squad-web",
                     "layer_role": "squad",
                     "precedence": 40,
@@ -331,7 +331,7 @@ class TestForkConfigurator:
         (legal_sub / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "acme-legal",
                     "layer_role": "domain-policy",
                     "precedence": 5,

@@ -304,7 +304,7 @@ When you fork `dotfiles-ubuntu` for a squad or attach it to a microservice conta
 
 ```json
 {
-  "schema_version": "1.2",
+  "schema_version": "mcp-layer-v1",
   "layer_id": "acme-checkout-service-node",
   "layer_role": "service-node",
   "precedence": 20,

@@ -51,7 +51,7 @@ def _create_node_fixture(
         "---\nname: sopen\ndescription: open session\n---\n", encoding="utf-8"
     )
     manifest = {
-        "schema_version": "1.2",
+        "schema_version": "mcp-layer-v1",
         "layer_id": layer_id,
         "layer_role": layer_role,
         "description": f"E2E node {layer_id}",

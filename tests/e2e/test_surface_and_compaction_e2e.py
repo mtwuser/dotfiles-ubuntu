@@ -54,7 +54,7 @@ def _create_node_fixture(
         "branch": "master",
     }
     manifest = {
-        "schema_version": "1.2",
+        "schema_version": "mcp-layer-v1",
         "layer_id": layer_id,
         "layer_role": layer_role,
         "description": f"E2E node {layer_id}",

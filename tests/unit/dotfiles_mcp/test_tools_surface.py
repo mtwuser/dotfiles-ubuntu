@@ -244,7 +244,7 @@ class TestSurfaceToolsMixin:
         (root_dir / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "corp-root",
                     "layer_role": "corporate",
                     "precedence": 20,
@@ -280,7 +280,7 @@ class TestSurfaceToolsMixin:
         (fin_dir / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "org-financial-ledger",
                     "layer_role": "domain-policy",
                     "precedence": 20,
@@ -306,14 +306,14 @@ class TestSurfaceToolsMixin:
         bad_layer_prec_dir = tmp_path / "bad_layer_prec"
         (bad_layer_prec_dir / "system").mkdir(parents=True)
         (bad_layer_prec_dir / "system/mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "precedence": 150}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "precedence": 150}), encoding="utf-8"
         )
         bad_bind_prec_dir = tmp_path / "bad_bind_prec"
         (bad_bind_prec_dir / "system").mkdir(parents=True)
         (bad_bind_prec_dir / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "surface_bindings": [{"binding_id": "b1", "precedence": -1}],
                 }
             ),
@@ -324,7 +324,7 @@ class TestSurfaceToolsMixin:
         (bad_mode_dir / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "surface_bindings": [{"binding_id": "b1", "mode": "invalid-mode"}],
                 }
             ),

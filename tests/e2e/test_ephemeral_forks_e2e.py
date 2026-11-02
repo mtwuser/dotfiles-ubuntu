@@ -83,7 +83,7 @@ def _create_ro_container_fixture(ro_repo: Path) -> None:
     (ro_repo / "system/mcp-layer.json").write_text(
         json.dumps(
             {
-                "schema_version": "1.2",
+                "schema_version": "mcp-layer-v1",
                 "layer_id": "acme-ro-container-node",
                 "layer_role": "service-node",
                 "default_stack_templates": ["fastapi-hexagonal"],
@@ -99,7 +99,7 @@ def _create_ro_container_fixture(ro_repo: Path) -> None:
     (ro_repo / "layers/dept-security/system/mcp-layer.json").write_text(
         json.dumps(
             {
-                "schema_version": "1.2",
+                "schema_version": "mcp-layer-v1",
                 "layer_id": "acme-dept-security",
                 "layer_role": "department",
                 "precedence": 15,

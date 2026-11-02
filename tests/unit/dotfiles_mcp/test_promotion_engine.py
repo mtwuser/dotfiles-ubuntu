@@ -86,7 +86,7 @@ class TestPromotionEngine:
         for rel, txt in (
             (
                 "system/mcp-layer.json",
-                '{"schema_version":"1.2","layer_id":"acme-corp","layer_role":"corporate",'
+                '{"schema_version":"mcp-layer-v1","layer_id":"acme-corp","layer_role":"corporate",'
                 '"default_stack_templates":["web-starter"]}',
             ),
             ("templates/web-starter/rules/coding.md", "# Code\n"),
@@ -97,13 +97,13 @@ class TestPromotionEngine:
             ("templates/file.txt", "x"),
             (
                 "layers/dept-legal/system/mcp-layer.json",
-                '{"schema_version":"1.2","layer_id":"acme-legal","layer_role":"domain-policy",'
+                '{"schema_version":"mcp-layer-v1","layer_id":"acme-legal","layer_role":"domain-policy",'
                 '"surface_bindings":[{"binding_id":"gdpr-b","scopes":["*","checkout"],'
                 '"traits":["*","pii"]}]}',
             ),
             (
                 "layers/dept-design/system/mcp-layer.json",
-                '{"schema_version":"1.2","layer_id":"ab-sec","layer_role":"department",'
+                '{"schema_version":"mcp-layer-v1","layer_id":"ab-sec","layer_role":"department",'
                 '"default_stack_templates":["brand-ui"]}',
             ),
         ):

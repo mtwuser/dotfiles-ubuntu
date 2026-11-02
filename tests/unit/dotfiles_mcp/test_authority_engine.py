@@ -67,7 +67,8 @@ class TestAuthorityEngine:
         layer_dir = tmp_path / "dept-tech"
         (layer_dir / "system").mkdir(parents=True)
         (layer_dir / "system/mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "dept-tech"}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "layer_id": "dept-tech"}),
+            encoding="utf-8",
         )
 
         # Act
@@ -125,7 +126,7 @@ class TestAuthorityEngine:
             "# Squad\n", encoding="utf-8"
         )
         (squad_dir / "system/mcp-layer.json").write_text(
-            '{"schema_version":"1.2","layer_id":"squad-web","layer_role":"squad",'
+            '{"schema_version":"mcp-layer-v1","layer_id":"squad-web","layer_role":"squad",'
             '"upstream_layer":{"layer_id":"dept-tech"},'
             '"default_stack_templates":["dept-tech","squad-web"],'
             '"layer_authority":{"owner_role":"Squad Lead",'

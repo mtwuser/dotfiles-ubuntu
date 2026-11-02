@@ -25,7 +25,7 @@ class TestManifestHelpers:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Return '0.0.0' when VERSION file does not exist in target repository."""
+        """Return 'unversioned' when VERSION file does not exist in target repository."""
         # Arrange
         monkeypatch.setattr(manifest_helpers, "REPO_DIR", tmp_path)
 
@@ -33,7 +33,7 @@ class TestManifestHelpers:
         version = manifest_helpers._read_version()
 
         # Assert
-        assert version == "0.0.0"
+        assert version == "unversioned"
 
     def test_read_os_pretty_name_parses_os_release_or_falls_back(self, tmp_path: Path) -> None:
         """Extract PRETTY_NAME from os-release or fall back to platform system/release."""

@@ -12,10 +12,9 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = SCRIPT_DIR.parent
 MCP_JSONRPC_PROTOCOL_REV = "2024-11-05"
-LAYER_MANIFEST_CONTRACT_REV = "1.2"
-TEMPLATE_MANIFEST_CONTRACT_REV = "1.0"
-NEW_LAYER_INITIAL_SEMVER = "0.1.0"
-MISSING_VERSION_SENTINEL = "0.0.0"
+LAYER_MANIFEST_CONTRACT_REV = "mcp-layer-v1"
+TEMPLATE_MANIFEST_CONTRACT_REV = "template-pack-v1"
+MISSING_VERSION_SENTINEL = "unversioned"
 VALID_LAYER_ROLES = (
     "corporate", "department", "domain-policy", "ephemeral-bot",
     "squad", "service-node", "environment-cluster", "workstation",

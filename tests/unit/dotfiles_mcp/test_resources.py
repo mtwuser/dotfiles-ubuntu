@@ -90,7 +90,7 @@ class TestResourcesMixin:
         ]
         assert docs_idx["mimeType"] == "text/markdown"
         assert "Documentation Index" in docs_idx["text"]
-        assert topology["schema_version"] == "1.2"
+        assert topology["schema_version"] == "mcp-layer-v1"
         assert "discovered_mounted_layers" in topology
         assert "resonance_compaction_summary" in diag
 

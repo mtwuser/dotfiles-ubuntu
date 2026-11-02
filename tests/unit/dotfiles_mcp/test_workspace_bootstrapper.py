@@ -107,7 +107,7 @@ class TestWorkspaceBootstrapper:
         (sys_dir / "mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "corp-root",
                     "mounted_layers": [
                         {
@@ -168,7 +168,7 @@ class TestWorkspaceBootstrapper:
         bdir = repo_dir / "templates" / "business-base" / "rules"
         bdir.mkdir(parents=True)
         (repo_dir / "templates" / "business-base" / "template.json").write_text(
-            '{"schema_version": "1.0", "template_id": "business-base", '
+            '{"schema_version": "template-pack-v1", "template_id": "business-base", '
             '"kind": "domain-policy-pack"}',
             encoding="utf-8",
         )
@@ -176,13 +176,14 @@ class TestWorkspaceBootstrapper:
         hdir = repo_dir / "templates" / "human-core" / "rules"
         hdir.mkdir(parents=True)
         (repo_dir / "templates" / "human-core" / "template.json").write_text(
-            '{"schema_version": "1.0", "template_id": "human-core", "kind": "domain-policy-pack"}',
+            '{"schema_version": "template-pack-v1", "template_id": "human-core", '
+            '"kind": "domain-policy-pack"}',
             encoding="utf-8",
         )
         (hdir / "human-core.md").write_text("# Human Core\n", encoding="utf-8")
         target_dir = tmp_path / "dept-legal-ip"
         (target_dir / "templates" / "business-base").mkdir(parents=True)
-        (target_dir / "VERSION").write_text("0.1.0\n", encoding="utf-8")
+        (target_dir / ".gitignore").write_text("logs/\n", encoding="utf-8")
 
         # Act
         dry_res = bootstrap_layer_workspace(
@@ -196,7 +197,7 @@ class TestWorkspaceBootstrapper:
         )
         (repo_dir / "system").mkdir(parents=True)
         (repo_dir / "system" / "mcp-layer.json").write_text(
-            '{"schema_version": "1.2", "layer_id": "workstation-root", '
+            '{"schema_version": "mcp-layer-v1", "layer_id": "workstation-root", '
             '"layer_role": "workstation"}',
             encoding="utf-8",
         )
@@ -257,7 +258,7 @@ class TestWorkspaceBootstrapper:
         bare_layer = tmp_path / "bare-layer"
         (bare_layer / "system").mkdir(parents=True)
         (bare_layer / "system/mcp-layer.json").write_text(
-            '{"schema_version": "1.2", "layer_id": "bare-layer", '
+            '{"schema_version": "mcp-layer-v1", "layer_id": "bare-layer", '
             '"layer_role": "corporate", "default_stack_templates": []}',
             encoding="utf-8",
         )
@@ -305,6 +306,7 @@ class TestWorkspaceBootstrapper:
         assert live_res["copied_templates"] == ["business-base", "human-core"]
         assert live_res["scaffolded_template"] == "dept-legal-ip"
         assert "VERSION" not in live_res["baseline_files_created"]
+        assert ".gitignore" not in live_res["baseline_files_created"]
         assert "Makefile" in live_res["baseline_files_created"]
         assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert "make status" in (target_dir / "Makefile").read_text(encoding="utf-8")

@@ -20,7 +20,7 @@ Commands:
   init-fork --id <layer-id> [--role <role>] [--precedence <0..100>] [--upstream-url <url>]
             [--upstream-id <id>] [--upstream-branch <branch>] [--description <text>]
             [--prune-default-templates]
-      Configure system/mcp-layer.json (schema v1.2) for this fork's organizational purpose.
+      Configure system/mcp-layer.json (schema mcp-layer-v1) for this fork's organizational purpose.
   scaffold-template <template-name> [--kind <kind>] [--description <text>]
                     [--rule-file <filename.md>] [--register-binding]
       Scaffold templates/<template-name>/ and optionally register its surface_binding.

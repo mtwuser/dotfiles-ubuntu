@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "template-pack-v1",
   "template_id": "human-core",
   "kind": "core-base",
   "stack_group": "core",

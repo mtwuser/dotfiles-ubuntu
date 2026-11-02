@@ -18,7 +18,7 @@ description: Universal software engineering, 1:1:1 traceability, refactoring, an
 3. **`1:1:1` Symbiosis & Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)**: Read `docs/{guides,architecture}/` first, `tests/{e2e,imp,unit}/` (`Test<Module>`) second, and code last. Modules declare `Specification: docs/architecture/<spec>.md` and specs (`< 465` lines) keep a `1:1:1` table.
 4. **Generated Output & Package-Marker Purity**: Verify `import` packages exist, generated files pass linters, zero placeholders (`my_app`), and `src/**/__init__.py` / `tests/**/__init__.py` stay `0 bytes`.
 5. **Pre-Debug Diagnostic Sweep**: Run `make doctor` / `make verify` before blind-debugging; crystallize repeated checks into `Makefile` targets.
-6. **Constants, Cut-Points & Data Symmetry**: Zero magic numbers, raw modes (`0o644`), inline schema versions (`"1.2"`), raw slices (`[:24]`), or `.update()` dict packing. Use stdlib symbols, constants (`*_CONTRACT_REV`, `MAX_*`, `MIN_*`, `DEFAULT_*`, `VALID_*`), `{...}` literals, boundary `.get()`, and internal `d["k"]`.
+6. **Constants, Cut-Points & Data Symmetry**: Zero magic numbers, raw modes (`0o644`), numeric schema IDs (`"1.2"`), raw slices (`[:24]`), or `.update()` packing. Use stdlib symbols, nominal constants (`*_CONTRACT_REV`, `MAX_*`, `MIN_*`, `DEFAULT_*`, `VALID_*`), `{...}` literals, boundary `.get()`, and internal `d["k"]`.
 
 ---
 

@@ -34,7 +34,7 @@ class TestEphemeralToolsMixin:
         (repo / "system" / "mcp-layer.json").write_text(
             json.dumps(
                 {
-                    "schema_version": "1.2",
+                    "schema_version": "mcp-layer-v1",
                     "layer_id": "acme-root",
                     "layer_role": "corporate",
                     "precedence": 10,
@@ -132,7 +132,8 @@ class TestEphemeralToolsMixin:
         repo = tmp_path / "repo"
         (repo / "system").mkdir(parents=True)
         (repo / "system" / "mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "empty-root"}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "layer_id": "empty-root"}),
+            encoding="utf-8",
         )
         server = DotfilesMCPServer(repo_dir=repo, log_dir=repo / "logs")
 
@@ -158,7 +159,7 @@ class TestEphemeralToolsMixin:
         repo = tmp_path / "repo"
         (repo / "system").mkdir(parents=True)
         (repo / "system" / "mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "err-root"}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "layer_id": "err-root"}), encoding="utf-8"
         )
         eph_root = repo / "logs" / "ephemeral_forks"
         exp_dir = eph_root / "eph-expired-1" / "system"
@@ -226,11 +227,11 @@ class TestEphemeralToolsMixin:
         )
         (repo / "layers" / "dept-sec" / "system").mkdir(parents=True)
         (repo / "layers" / "dept-sec" / "system" / "mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "dept-sec"}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "layer_id": "dept-sec"}), encoding="utf-8"
         )
         (repo / "system").mkdir(parents=True)
         (repo / "system" / "mcp-layer.json").write_text(
-            json.dumps({"schema_version": "1.2", "layer_id": "ro-root"}), encoding="utf-8"
+            json.dumps({"schema_version": "mcp-layer-v1", "layer_id": "ro-root"}), encoding="utf-8"
         )
 
         def _spawn_ro(*args: object, **kwargs: object) -> dict[str, object]:
