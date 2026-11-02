@@ -53,13 +53,9 @@ def _read_git_commit(repo_dir: Path | None = None) -> str:
         return env_fallback or "unknown"
     try:
         proc = subprocess.run(  # noqa: S603
-            [git_bin, "rev-parse", "--short", "HEAD"],
-            cwd=base_dir,
-            capture_output=True,
-            text=True,
-            timeout=5,
-            check=False,
-        )
+            [git_bin, "rev-parse", "--short", "HEAD"], cwd=base_dir,
+            capture_output=True, text=True, timeout=5, check=False,
+        )  # fmt: skip
         if proc.returncode == 0:
             return proc.stdout.strip()
     except OSError:
@@ -70,25 +66,18 @@ def _read_git_commit(repo_dir: Path | None = None) -> str:
 def _parse_skill_frontmatter(skill_md: Path, repo_dir: Path | None = None) -> dict[str, Any]:
     base_dir = repo_dir or REPO_DIR
     lines = skill_md.read_text(encoding="utf-8").splitlines()
-    name = skill_md.parent.name
-    description = ""
+    name, description = skill_md.parent.name, ""
     if lines and lines[0].strip() == "---":
         for idx in range(1, min(len(lines), 30)):
             if lines[idx].strip() == "---":
                 fm = "\n".join(lines[1:idx])
-                name_m = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE)
-                desc_m = re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-                if name_m:
+                if name_m := re.search(r"^name:\s*(.+)$", fm, re.MULTILINE):
                     name = name_m.group(1).strip().strip("'\"")
-                if desc_m:
+                if desc_m := re.search(r"^description:\s*(.+)$", fm, re.MULTILINE):
                     description = desc_m.group(1).strip().strip("'\"")
                 break
-    return {
-        "name": name,
-        "description": description,
-        "path": str(skill_md.relative_to(base_dir)),
-        "line_count": len(lines),
-    }
+    return {"name": name, "description": description,
+        "path": str(skill_md.relative_to(base_dir)), "line_count": len(lines)}  # fmt: skip
 
 
 def _read_non_empty_lines(path: Path) -> list[str]:
@@ -225,6 +214,22 @@ def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
     return False
 
 
+def _resolve_default_parent_dir(workspace_dir: Path, parent_dir: Path | None) -> Path | None:
+    """Resolve an explicit or Makefile/mounted-parent default parent_dir for a layer workspace."""
+    if parent_dir is not None:
+        return parent_dir
+    ws, mk = workspace_dir.resolve(), workspace_dir.resolve() / "Makefile"
+    if mk.is_file() and (
+        m := re.search(r"^PARENT_DIR\s*\?=\s*(.+)$", mk.read_text(encoding="utf-8"), re.MULTILINE)
+    ):
+        cand = Path(m.group(1).strip())
+        if cand.is_dir() and cand.resolve() != ws and (cand / "system/mcp-layer.json").is_file():
+            return cand.resolve()
+    if ws.parent.name == "layers" and (ws.parent.parent / "system/mcp-layer.json").is_file():
+        return ws.parent.parent.resolve()
+    return None
+
+
 def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | None:
     """Resolve the live sibling checkout for a mounted child layer by folder name or layer_id."""
     ws = workspace_dir.resolve()
@@ -292,14 +297,8 @@ def _inspect_mounted_children_drifts(
                 if not dst_f.is_file() or _sha256_file(src_f) != _sha256_file(dst_f):
                     changed_files.append(rel_d)
         if changed_files:
-            drifts.append(
-                {
-                    "layer_id": child_name,
-                    "child_workspace_dir": str(child_ws),
-                    "mounted_path": f"layers/{child_name}",
-                    "drift_files": changed_files,
-                }
-            )
+            drifts.append({"layer_id": child_name, "child_workspace_dir": str(child_ws),
+                "mounted_path": f"layers/{child_name}", "drift_files": changed_files})  # fmt: skip
     return drifts
 
 

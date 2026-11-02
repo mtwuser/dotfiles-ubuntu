@@ -189,6 +189,18 @@ class TestCompactionToolsMixin:
                 {"query": "cap16word", "scope": "docs", "resolution": "L0"},
             )["content"][0]["text"]
         )
+        res_multi_kw = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "Cap15 and cap15word", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
+        res_multi_miss = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "Cap15 and absentkeyword", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
 
         # Assert
         assert len(res_1500["matches"][0]["excerpt"]) == 1500
@@ -202,3 +214,5 @@ class TestCompactionToolsMixin:
         assert res_16_matches["total_matches_found"] == 16
         assert res_16_matches["truncated"] is True
         assert res_16_matches["warnings"][0]["code"] == "RESPONSE_TRUNCATED"
+        assert res_multi_kw["total_matches_found"] == 15
+        assert res_multi_miss["total_matches_found"] == 0

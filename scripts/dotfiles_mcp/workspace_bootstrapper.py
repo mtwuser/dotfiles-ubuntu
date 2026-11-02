@@ -28,6 +28,7 @@ from dotfiles_mcp.constants import (
     STATUS_EXCERPT_MAX_LINES,
     TECHNICAL_MODE_RULE_FILES,
     TECHNICAL_MODE_TEMPLATES,
+    TEMPLATE_MANIFEST_CONTRACT_REV,
     VALID_LAYER_ROLES,
     VALID_SYNC_STRATEGIES,
 )
@@ -45,6 +46,7 @@ from dotfiles_mcp.manifest_helpers import (
     _iter_layer_template_dirs,
     _merge_unique_strings,
     _render_layer_onboarding_readme,
+    _resolve_default_parent_dir,
     _resolve_template_dest_dir,
     _resolve_template_dir,
     _sync_mounted_children_into_parent,
@@ -142,12 +144,11 @@ def register_mounted_subtree(
     raw_layers = root_manifest.get("mounted_layers", [])
     existing = [x for x in raw_layers if isinstance(x, dict) and x.get("name") != layer_name]
     existing.append(entry)
-    existing.sort(
-        key=lambda item: (int(item.get("precedence", svc_prec)), str(item.get("name", "")))
-    )
+    existing.sort(key=lambda it: (int(it.get("precedence", svc_prec)), str(it.get("name", ""))))
     root_manifest["mounted_layers"] = existing
     if not dry_run:
-        root_manifest_path.write_text(json.dumps(root_manifest, indent=2) + "\n", encoding="utf-8")
+        r_json = json.dumps(root_manifest, indent=2, ensure_ascii=False) + "\n"
+        root_manifest_path.write_text(r_json, encoding="utf-8")
     return {"registered_layer": entry, "total_mounted_layers": len(existing), "dry_run": dry_run}
 
 
@@ -257,7 +258,7 @@ def bootstrap_layer_workspace(
         m_path = target_dir / "system/mcp-layer.json"
         m_data = json.loads(m_path.read_text(encoding="utf-8"))
         m_data["default_stack_templates"] = list(all_tpls)
-        m_path.write_text(json.dumps(m_data, indent=2) + "\n", encoding="utf-8")
+        m_path.write_text(json.dumps(m_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     is_pol = layer_role in ("domain-policy", "corporate")
     own_kind = (
@@ -349,17 +350,25 @@ def sync_layer_workspace(
         manifest["schema_version"] = LAYER_MANIFEST_CONTRACT_REV
         manifest["layer_role"] = own_role
         manifest["default_stack_templates"] = list(stack_templates)
-        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
 
     existing_tpls = [name for name, _p in _iter_layer_template_dirs(target_dir)]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
-    eff_parent = parent_dir if parent_dir is not None else repo_dir
+    eff_parent = _resolve_default_parent_dir(target_dir, parent_dir) or repo_dir
     sync_kw: dict[str, Any] = {
         "skip_id": own_id, "check_newer": True, "strategy": strategy, "dry_run": dry_run,
     }  # fmt: skip
     synced_templates, conflicts = _sync_templates_from_roots(
         target_dir, eff_parent, repo_dir, candidate_tpls, **sync_kw
     )
+    for _tname, tdir in _iter_layer_template_dirs(target_dir) if not dry_run else ():
+        if (tj := tdir / "template.json").is_file() and (
+            td := json.loads(tj.read_text(encoding="utf-8"))
+        ).get("schema_version") != TEMPLATE_MANIFEST_CONTRACT_REV:
+            td["schema_version"] = TEMPLATE_MANIFEST_CONTRACT_REV
+            tj.write_text(json.dumps(td, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     synced_children = _sync_mounted_children_into_parent(
         target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
     )
@@ -425,12 +434,14 @@ def inspect_workspace_status(
         if not is_git:
             return []
         proc = subprocess.run(  # noqa: S603
-            [git_bin, *args], cwd=ws, check=False, capture_output=True, text=True
-        )
+            [git_bin, *args], cwd=ws, check=False, capture_output=True, text=True,
+        )  # fmt: skip
         return proc.stdout.splitlines()
 
-    g_stat = _git_lines("status", "--short", "--branch")
-    g_log = _git_lines("log", "--oneline", "-5")
+    g_stat, g_log = (
+        _git_lines("status", "--short", "--branch"),
+        _git_lines("log", "--oneline", "-5"),
+    )
     lim, last_cid = STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
     mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
@@ -439,18 +450,15 @@ def inspect_workspace_status(
     op_state = "oss-readonly-appliance" if is_ro_app else op_map.get(role, role)
     mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
     cmd_tiers = {k: [t for t in v if t in mk_t] for k, v in COMMAND_CONSCIOUSNESS_TIERS.items()}
-    return {
-        "workspace_dir": str(ws), "layer_id": lid, "layer_role": role,
+    s_st = {"exists": s_file.is_file(), "last_conversation_id": last_cid, "excerpt": s_ex}
+    a_root = ws if is_layer else (parent_dir or repo_dir)
+    return {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role,
         "operating_state": op_state, "mcp_operating_mode": mcp_mode, "precedence": prec,
         "workspace_mode": mode, "is_oss_dev_workspace": op_state == "oss-dev",
         "command_tiers": cmd_tiers, "active_templates": tpls, "active_rules": rules,
         "available_makefile_targets": mk_t, "git_governance": inspect_git_governance_state(ws),
         "has_project_start_skill": (ws / ".agents/skills/start/SKILL.md").is_file(),
-        "session_state": {
-            "exists": s_file.is_file(), "last_conversation_id": last_cid, "excerpt": s_ex,
-        },
-        "priority_state": {"active_tracker": active_trk, "excerpt": p_ex},
+        "session_state": s_st, "priority_state": {"active_tracker": active_trk, "excerpt": p_ex},
         "git_state": {"is_git_repo": is_git, "status_short": g_stat, "recent_commits": g_log},
         "horizon": inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None,
-        "agent_diff": diff_project_against_layers(ws if is_layer else (parent_dir or repo_dir), ws),
-    }  # fmt: skip
+        "agent_diff": diff_project_against_layers(a_root, ws)}  # fmt: skip

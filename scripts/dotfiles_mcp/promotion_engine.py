@@ -40,6 +40,7 @@ from dotfiles_mcp.manifest_helpers import (
     _inspect_mounted_children_drifts,
     _iter_layer_template_dirs,
     _parse_skill_frontmatter,
+    _resolve_default_parent_dir,
     _resolve_oss_contrib_repo_dir,
     _resolve_template_dest_dir,
     _resolve_template_dir,
@@ -385,7 +386,8 @@ def inspect_layer_horizon(
     actor_email: str | None = None,
 ) -> dict[str, Any]:  # fmt: skip
     """Inspect 1-hop downward propagation & quiet upward promotion candidates for a workspace."""
-    ws, up, oss = workspace_dir.resolve(), (parent_dir or repo_dir).resolve(), repo_dir.resolve()
+    ws, eff_p = workspace_dir.resolve(), _resolve_default_parent_dir(workspace_dir, parent_dir)
+    up, oss = (eff_p or repo_dir).resolve(), repo_dir.resolve()
     ws_m, up_m = _load_manifest_dict(ws), _load_manifest_dict(up)
     oss_vf, up_vf, ws_vf = oss / "VERSION", up / "VERSION", ws / "VERSION"
     oss_ver = oss_vf.read_text(encoding="utf-8").strip() if oss_vf.is_file() else None
@@ -423,7 +425,7 @@ def inspect_layer_horizon(
                     "promote_command": cmd, "drift_direction": d_dir})  # fmt: skip
     local_diff = diff_project_against_layers(ws, ws)
     child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))
-    sync_sfx = f" --parent-dir {up}" if parent_dir is not None else ""
+    sync_sfx = f" --parent-dir {up}" if eff_p is not None else ""
     up_drifts = [d for d in drifts if d["drift_direction"] == "workspace_newer"]
     miss_sk = any(
         not (w_d / sf.relative_to(u_d)).is_file()

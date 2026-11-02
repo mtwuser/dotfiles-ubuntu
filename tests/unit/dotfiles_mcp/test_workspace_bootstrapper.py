@@ -297,6 +297,7 @@ class TestWorkspaceBootstrapper:
         assert dept_status["mcp_operating_mode"] == "departmental-policy-hub"
         assert dept_status["is_oss_dev_workspace"] is False
         assert "setup-dev" in dept_status["available_makefile_targets"]
+        assert "complete" in dept_status["available_makefile_targets"]
         assert "workstation-sync" not in dept_status["available_makefile_targets"]
         assert proj_status["operating_state"] == "project"
         assert proj_status["mcp_operating_mode"] == "project-consumer-only"
@@ -349,9 +350,13 @@ class TestWorkspaceBootstrapper:
         )
         (bare_layer / "system/mcp-layer.json").write_text(
             '{"schema_version": "1.0", "layer_id": "bare-layer", '
+            '"description": "Layer — N ± 1", '
             '"layer_role": "team", "default_stack_templates": ["business-base"]}',
             encoding="utf-8",
         )
+        own_tj = bare_layer / "templates/bare-layer/template.json"
+        own_tj.parent.mkdir(parents=True, exist_ok=True)
+        own_tj.write_text('{"schema_version": "1.0", "description": "Own — ±"}', encoding="utf-8")
         local_bb = bare_layer / "templates/business-base/rules/business-base.md"
         local_bb.write_text("# Local Override\n\n## Custom Section\nKeep.\n", encoding="utf-8")
         sync_conflict = sync_layer_workspace(
@@ -360,6 +365,9 @@ class TestWorkspaceBootstrapper:
         sync_merged = sync_layer_workspace(repo_dir, bare_layer, strategy="merge", dry_run=False)
         assert sync_conflict["makefile_upgraded"] is True
         assert len(sync_conflict["reconciliation_conflicts"]) == 1
+        assert "— N ± 1" in (bare_layer / "system/mcp-layer.json").read_text(encoding="utf-8")
+        assert '"template-pack-v1"' in own_tj.read_text(encoding="utf-8")
+        assert "Own — ±" in own_tj.read_text(encoding="utf-8")
         assert "custom-target:" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert "--strategy $(STRATEGY)" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert "## Custom Section" in local_bb.read_text(encoding="utf-8")

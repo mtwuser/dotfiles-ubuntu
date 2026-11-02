@@ -167,7 +167,9 @@ def configure_fork_manifest(
 
     if not dry_run:
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
     return manifest
 
 
@@ -225,7 +227,7 @@ def scaffold_template_pack(
         "recommended_surface_bindings": [binding_entry],
     }
     files_to_write: dict[str, str] = {
-        f"{rel_tpl}/template.json": json.dumps(tpl_manifest, indent=2) + "\n",
+        f"{rel_tpl}/template.json": json.dumps(tpl_manifest, indent=2, ensure_ascii=False) + "\n",
         f"{rel_tpl}/rules/{effective_rule}": (
             f"---\ntrigger: always_on\n"
             f'description: "Governance rules and invariants for {template_name} ({kind})."\n'
@@ -277,15 +279,13 @@ def scaffold_template_pack(
                     bindings = list(manifest.get("surface_bindings", []))
                     bindings.append(binding_entry)
                     manifest["surface_bindings"] = bindings
-                manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+                manifest_path.write_text(
+                    json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+                )
 
-    return dict(
-        template_id=template_name,
-        kind=kind,
-        files_created=sorted(files_to_write.keys()),
-        binding_registered=register_binding,
-        dry_run=dry_run,
-    )
+    return {"template_id": template_name, "kind": kind, "dry_run": dry_run,
+        "files_created": sorted(files_to_write.keys()),
+        "binding_registered": register_binding}  # fmt: skip
 
 
 def apply_fork_to_project(

@@ -39,14 +39,15 @@ Execute this workflow **ONLY** when the user explicitly requests cutting or publ
 
 ## 3. Deterministic Verification Gate
 
-1. Run the repository's full verification suite (`make verify` or `./scripts/verify-repo.sh`).
+1. **Discover Active Verification Target & Branch First**:
+   - Check `git branch --show-current` (never hardcode `main` vs `master`) and inspect the `Makefile` / `operating_state`: run `make verify` (or `./scripts/verify-repo.sh`) in technical/software repositories, or `make diff && make horizon && make mcp-test` in `corporate-root` / `department` / `squad` governance repositories.
 2. If any linter, type-check, unit/E2E test, coverage gate, or parity check fails, **STOP** and fix all issues before delivering the release commit block.
 
 ---
 
 ## 4. Deliver Explicit Release Commit, Tag & Push Block
 
-Never execute mutating git commands automatically. Present the ready-to-run release block to the user:
+Never execute mutating git commands automatically. Substitute `<branch>` with the exact output of `git branch --show-current` (`master` or `main`), and append `./scripts/workstation-sync.sh --sync` when releasing from `DOTFILES_DEV_REPO_DIR`:
 
 ```bash
 ### Release vX.Y.Z (<Repo Name>)

@@ -343,9 +343,9 @@ def spawn_ephemeral_fork(
                 (b_layer / b_sub).mkdir(parents=True, exist_ok=True)
             b_agents = b_layer / "antigravity/.gemini/config/AGENTS.md"
             b_agents.write_text(bridge_md, encoding="utf-8")
-            b_json = json.dumps(bridge_manifest, indent=2) + "\n"
+            b_json = json.dumps(bridge_manifest, indent=2, ensure_ascii=False) + "\n"
             (b_layer / "system/mcp-layer.json").write_text(b_json, encoding="utf-8")
-        e_json = json.dumps(ephemeral_manifest, indent=2) + "\n"
+        e_json = json.dumps(ephemeral_manifest, indent=2, ensure_ascii=False) + "\n"
         (fork_dir / "system/mcp-layer.json").write_text(e_json, encoding="utf-8")
     out_rt = {"dry_run": dry_run, "fork_dir": str(fork_dir), "bridged_project_files": bridged_files}
     return {**eph_meta, **out_rt, "reaped_expired": reaped, "manifest": ephemeral_manifest}
@@ -368,21 +368,13 @@ def inspect_ephemeral_forks(
         data = json.loads(m_path.read_text(encoding="utf-8"))
         meta = data.get("ephemeral_metadata", {})
         rem = max(0.0, round(float(meta.get("expires_at_epoch", 0.0)) - now, 1))
-        f_id = {
-            "fork_id": child.name,
-            "fork_dir": str(child),
-            "bot_role": str(meta.get("bot_role", "")),
-        }
-        f_mode = {
-            "model_tier": str(meta.get("model_tier", "flash")),
-            "access_mode": str(meta.get("access_mode", "strictly-read-only")),
-        }
-        f_scope = {
-            "ephemeral_scope": str(meta.get("ephemeral_scope", "intra-layer")),
-            "actor_role": str(meta.get("actor_role", "member")),
-            "remaining_ttl_seconds": rem,
-            "default_stack_templates": list(data.get("default_stack_templates", [])),
-        }
+        f_id = {"fork_id": child.name, "fork_dir": str(child),
+            "bot_role": str(meta.get("bot_role", ""))}  # fmt: skip
+        f_mode = {"model_tier": str(meta.get("model_tier", "flash")),
+            "access_mode": str(meta.get("access_mode", "strictly-read-only"))}  # fmt: skip
+        f_scope = {"ephemeral_scope": str(meta.get("ephemeral_scope", "intra-layer")),
+            "actor_role": str(meta.get("actor_role", "member")), "remaining_ttl_seconds": rem,
+            "default_stack_templates": list(data.get("default_stack_templates", []))}  # fmt: skip
         forks.append({**f_id, **f_mode, **f_scope})
     if fork_id and not forks:
         if fork_id in reaped:
@@ -405,16 +397,21 @@ def reap_ephemeral_fork(
                 if not dry_run:
                     _ensure_dirs_writable(child)
                     shutil.rmtree(child, ignore_errors=True)
-        return {"dry_run": dry_run, "reaped_forks": reaped}
-    if not KEBAB_ID_RE.match(fork_id):
-        raise ValueError(f"Invalid fork_id {fork_id!r}: must be kebab-case or 'all'")
-    target = (root / fork_id).resolve()
-    if not target.is_relative_to(root) or not target.is_dir():
-        raise FileNotFoundError(f"Ephemeral fork {fork_id!r} not found under {root}")
+    else:
+        if not KEBAB_ID_RE.match(fork_id):
+            raise ValueError(f"Invalid fork_id {fork_id!r}: must be kebab-case or 'all'")
+        target = (root / fork_id).resolve()
+        if not target.is_relative_to(root) or not target.is_dir():
+            raise FileNotFoundError(f"Ephemeral fork {fork_id!r} not found under {root}")
+        reaped.append(fork_id)
+        if not dry_run:
+            _ensure_dirs_writable(target)
+            shutil.rmtree(target, ignore_errors=True)
     if not dry_run:
-        _ensure_dirs_writable(target)
-        shutil.rmtree(target, ignore_errors=True)
-    return {"dry_run": dry_run, "reaped_forks": [fork_id]}
+        with contextlib.suppress(OSError):
+            root.rmdir()
+            root.parent.rmdir()
+    return {"dry_run": dry_run, "reaped_forks": reaped}
 
 
 def build_subagent_invocation_brief(

@@ -39,6 +39,10 @@ venv/bin/pytest <test_file> --cov=<module_import_path> --cov-branch --cov-report
 # 3. Zero-residue & anti-duplication scan on touched files:
 grep -rn "DEPRECATED\|@deprecated\|BACKWARD COMPAT\|# shim\|# transitional" <target_paths>
 grep -rn "class.*Expanded\|class.*100Coverage\|class.*Extended\|class.*Additional\|class.*Coverage" <target_test_paths>
+
+# 4. Unpushed commit triangulation & cross-layer version/escape sweep (when HEAD is ahead of origin/<branch>):
+git diff origin/$(git branch --show-current) --stat
+grep -rn "\\\\u[0-9a-fA-F]\\{4\\}" system/ templates/ layers/ 2>/dev/null || true
 ```
 
 ---
@@ -51,7 +55,7 @@ Evaluate only the dimensions relevant to the selected target radius and `workspa
 
 ### Dimension 1 — `docs`: 3-Tier Documentation & 5-Link Change-Ripple
 - [ ] **3-Tier Progressive Disclosure & `< 465`-Line Gate**: Touched `README.md` ($\le 400$ target), `docs/guides/*.md`, `docs/architecture/*.md`, and `docs/reference/*.md` stay strictly `< 465` lines and match actual disk trees (`find` / `ls`).
-- [ ] **5-Link Change-Ripple Parity**: Any modified capability is synchronized across all 5 links: `1. Engine/Service Function <-> 2. CLI/Router Parser <-> 3. Makefile Recipe / Hook <-> 4. Spec Table (docs/architecture/) <-> 5. Root/Guide Docs & Parity Tests`.
+- [ ] **5-Link Change-Ripple & Flag-Signature Parity**: Any modified capability is synchronized across all 5 links (`1. Engine/Service Function <-> 2. CLI/Router Parser <-> 3. Makefile Recipe / Hook <-> 4. Spec Table (docs/architecture/) <-> 5. Root/Guide Docs & Parity Tests`), verifying that Link 3 (`Makefile` recipes) forwards all optional CLI flags exposed by Link 2.
 - [ ] **Links, Mermaid & Language Purity**: 100% of relative Markdown links resolve on disk, Mermaid node labels containing `()` or `[]` are double-quoted, and repository artifacts remain in 100% pure technical English.
 
 ### Dimension 2 — `arch`: Pragmatic Code Architecture (`technical`) OR SSoT Ledgers (`business`)
@@ -68,7 +72,7 @@ Evaluate only the dimensions relevant to the selected target radius and `workspa
 ### Dimension 3 — `1:1:1`: Executable Test Symbiosis (`technical`) OR Normative Sign-Off (`business`)
 - **In `technical` / `hybrid` mode**:
   - [ ] **Bidirectional `1:1:1` Mapping, 3-Tier Flow (`Unit -> Imp -> E2E`) & Scope**: Every executable module declares `Specification: docs/architecture/<spec>.md` and maps `1:1` to `tests/unit/**/test_<module>.*` (`1` canonical `class Test<Module>`, `0` loose top-level `test_*` functions, `0` banned `*Expanded`/`*Coverage` class suffixes, `0` duplicate method names, and `0` artificial unit test files for purely declarative DTOs/models/catalogs). Verify no real DB/subprocess/network I/O in `tests/unit/` (move to `tests/imp/`) and no mocked boundaries in `tests/imp/`.
-  - [ ] **Constructor Injection, Patch-at-Consumption & Anti-Deception Gates**: Inject spec-constrained mocks in constructors; patch at the consumer lookup seam (`@patch('consumer.Dep')`, never `@patch('external.Dep')`); enforce 1-line invariant docstrings on every `test_<subject>_<scenario>_<expected>`, separated `# Arrange` / `# Act` / `# Assert` comments, `match=` on `pytest.raises`, zero blind `subprocess.run` lambdas, and `100%` isolated unit branch coverage across all 4 quadrants (*Nominal*, *`N` vs `N ± 1` Boundaries*, *Negative-First Bipolar Guards*, *Outbound Failures*).
+  - [ ] **Constructor Injection, Patch-at-Consumption & Anti-Deception Gates**: Inject spec-constrained mocks in constructors; patch at the consumer lookup seam (`@patch('consumer.Dep')`, never `@patch('external.Dep')`); enforce 1-line invariant docstrings on every `test_<subject>_<scenario>_<expected>`, separated `# Arrange` / `# Act` / `# Assert` comments, `match=` on `pytest.raises`, zero blind `subprocess.run` lambdas, and `100%` isolated unit branch coverage across all 4 quadrants (*Nominal*, *`N` vs `N ± 1` Numeric, Input-Cardinality (`1-token` vs `multi-token`) & Lifecycle (`greenfield t=0` vs `brownfield N-1 -> N`) Boundaries*, *Negative-First Bipolar Guards*, *Outbound Failures*).
 - **In `business` / `hybrid` mode**:
   - [ ] **Traceable IDs & Three-Part Verification**: Every normative artifact carries `[DEPT]-[TYPE]-[YYYY]-[NNN]` and contains `# Scope & Surface Target`, `# Normative Invariants`, and `# Verification & Sign-Off Gates` (`- [ ]`).
 

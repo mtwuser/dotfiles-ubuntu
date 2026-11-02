@@ -87,7 +87,9 @@ def configure_layer_authority(
         "owner_restricted_ops": list(OWNER_RESTRICTED_OPS)}  # fmt: skip
     manifest["layer_authority"] = auth_blk
     if not dry_run:
-        mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        mpath.write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
     return {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run,
         "layer_authority": auth_blk}  # fmt: skip
 

@@ -248,6 +248,12 @@ class TestManifestHelpers:
         # Act
         missing_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-missing")
         direct_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-direct")
+        explicit_parent = manifest_helpers._resolve_default_parent_dir(mounted_child, parent_ws)
+        mounted_parent = manifest_helpers._resolve_default_parent_dir(mounted_child, None)
+        (org_child / "Makefile").write_text(f"PARENT_DIR ?= {parent_ws}\n", encoding="utf-8")
+        mk_parent = manifest_helpers._resolve_default_parent_dir(org_child, None)
+        (direct_sib / "Makefile").write_text(f"PARENT_DIR ?= {direct_sib}\n", encoding="utf-8")
+        self_parent = manifest_helpers._resolve_default_parent_dir(direct_sib, None)
         drifts_before = manifest_helpers._inspect_mounted_children_drifts(
             parent_ws, mounted_entries
         )
@@ -266,6 +272,10 @@ class TestManifestHelpers:
         assert newer_equal is False
         assert missing_resolved is None
         assert direct_resolved == direct_sib.resolve()
+        assert explicit_parent == parent_ws
+        assert mounted_parent == parent_ws.resolve()
+        assert mk_parent == parent_ws.resolve()
+        assert self_parent is None
         assert len(drifts_before) == 1
         assert "README.md" in drifts_before[0]["drift_files"]
         assert "docs/guide.md" in drifts_before[0]["drift_files"]

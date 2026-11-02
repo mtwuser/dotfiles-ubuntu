@@ -379,7 +379,11 @@ class TestGitGovernanceEngine:
         assert st_outdated["manifest_contracts_outdated"] is True
         assert rec_copied is False and len(rec_conflicts) == 2
         assert keep_dry is False and keep_live is False
-        assert not list((ws / ".agents/proposals/from-upstream").glob("*.md"))
+        assert not (ws / ".agents/proposals/from-upstream").exists()
+        assert "Staged Governance Proposal" not in (ws / "WORKTASK.md").read_text(encoding="utf-8")
+        assert "UPSTREAM_TEMPLATE_CONFLICT" not in (ws / ".agents/SESSION.md").read_text(
+            encoding="utf-8"
+        )
         assert merge_copied is True and merge_conflicts == []
         assert "Upstream v2." in merged_txt and "## Local Annex" in merged_txt
         assert acc_copied is True and "## Local Annex" not in acc_txt

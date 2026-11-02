@@ -151,6 +151,7 @@ class TestEphemeralForkEngine:
         assert spawned["bridged_project_files"] == [".agents/rules/domain.md"]
         fork_dir = repo / "logs" / "ephemeral_forks" / spawned["fork_id"]
         assert not fork_dir.exists()
+        assert not (repo / "logs").exists()
         assert inspected["active_count"] == 1
         assert inspected["forks"][0]["remaining_ttl_seconds"] == 70.0
         assert reaped_dry["reaped_forks"] == [spawned["fork_id"]]

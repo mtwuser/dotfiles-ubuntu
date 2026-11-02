@@ -270,7 +270,7 @@ _FULL_LAYER_TARGETS: tuple[str, ...] = (
 LAYER_ROLE_MAKEFILE_TARGETS: dict[str, tuple[str, ...]] = {
     "workstation": _WORKSTATION_DEV_TARGETS,
     "corporate": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
-    "domain-policy": tuple(t for t in _FULL_LAYER_TARGETS if t != "complete"),
+    "domain-policy": _FULL_LAYER_TARGETS,
     "department": _FULL_LAYER_TARGETS,
     "squad": _FULL_LAYER_TARGETS,
     "project": tuple(
@@ -314,8 +314,15 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
         f'{_CLI_RUN} record-decision $(CURDIR) --item "$(ITEM)" '
         '--decision $(DEC) --reason "$(REASON)"'
     ),
-    "promote": f"{_CLI_RUN} promote-from-project $(CURDIR) --source $(SOURCE) $(PR_FLAGS)",
-    "delegate": f'{_CLI_RUN} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)"',
+    "promote": (
+        f"{_CLI_RUN} promote-from-project $(CURDIR) --source $(SOURCE) "
+        "$(if $(TEMPLATE),--to-template $(TEMPLATE),) $(PR_FLAGS)"
+    ),
+    "delegate": (
+        f'{_CLI_RUN} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)" '
+        "$(if $(TICKET),--ticket $(TICKET),) $(if $(PRIORITY),--priority $(PRIORITY),) "
+        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(SOURCE),--source $(SOURCE),)"
+    ),
     "mcp-test": f"{_CLI_RUN} list-templates $(CURDIR)",
 }
 GENERIC_LAYER_TOKENS: frozenset[str] = frozenset({

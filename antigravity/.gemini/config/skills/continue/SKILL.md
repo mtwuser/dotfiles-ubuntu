@@ -110,7 +110,7 @@ After alignment, scan for **all completed work** — task blocks, backlogs, AND 
 2. **Agent memory = source of truth** — deliver commits for edited repos directly. No `git status` verification.
 3. **If uncertain** (context loss) — run `git status --short` per-repo individually.
 4. **ONE commit per repo** — never split.
-5. **Format** — resolve `<PROJECT_ROOT>` from workspace metadata. Dynamically detect sub-repos. Only include repos with changes. **NEVER** append `(vX.Y.Z)` to working commit messages, **NEVER** bump `VERSION` mid-iteration, and **NEVER** include `git push` by default unless the user explicitly asks to push or runs `/release` (`skills/release/SKILL.md`):
+5. **Format & Pre-Commit Target Discovery** — resolve `<PROJECT_ROOT>` from workspace metadata, dynamically detect sub-repos, and verify the exact branch name (`git branch --show-current`, never assuming `main` vs `master`) and role-specialized `Makefile` targets (`make verify` in software/technical repos vs. `make diff && make horizon && make mcp-test` in `corporate-root`/`department`/`squad` workspaces) before chaining verification or push commands. **NEVER** append `(vX.Y.Z)` to working commit messages, **NEVER** bump `VERSION` mid-iteration, and **NEVER** include `git push` by default unless the user explicitly asks to push or runs `/release` (`skills/release/SKILL.md`):
 
 ```bash
 ### <Root Repo>

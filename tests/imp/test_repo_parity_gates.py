@@ -214,6 +214,10 @@ class TestRepoParityGates:
             assert sub in readme_md and sub in ext_guide and sub in arch_mcp
         assert "All 26 Subcommands" in readme_md
         assert "all 26 subcommands" in (REPO_DIR / "scripts/layer-config.sh").read_text("utf-8")
+        for flag in ("--ticket", "--priority", "--surface", "--source"):
+            assert flag in mcp_constants.LAYER_MAKEFILE_RECIPES["delegate"]
+        assert "--to-template" in mcp_constants.LAYER_MAKEFILE_RECIPES["promote"]
+        assert "--strategy" in mcp_constants.LAYER_MAKEFILE_RECIPES["sync"]
 
     def test_single_language_english_purity_across_repository_files(self) -> None:
         """Verify 100% pure technical English across all repository docs, rules, and code."""

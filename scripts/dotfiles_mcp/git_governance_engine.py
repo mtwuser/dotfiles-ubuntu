@@ -114,6 +114,22 @@ def stage_non_destructive_proposal(
     return staged_file
 
 
+def _clear_upstream_proposal_residue(target_dir: Path, prop_dir: Path, tpl_name: str) -> None:
+    """Remove resolved upstream proposal files and their pending tracker/session alerts."""
+    for pf in prop_dir.glob(f"{tpl_name}-*.md"):
+        pf.unlink(missing_ok=True)
+    with contextlib.suppress(OSError):
+        prop_dir.rmdir()
+        prop_dir.parent.rmdir()
+    token = f".agents/proposals/from-upstream/{tpl_name}-"
+    for rel_f in ("WORKTASK.md", ".agents/SESSION.md"):
+        fp = target_dir / rel_f
+        if fp.is_file() and token in (raw := fp.read_text(encoding="utf-8")):
+            kept = [ln for ln in raw.splitlines() if token not in ln]
+            cleaned = "\n".join(kept).removesuffix("\n\n## Governance Alerts & Pending Decisions")
+            fp.write_text(f"{cleaned.rstrip()}\n", encoding="utf-8")
+
+
 def reconcile_template_pack_sync(
     target_dir: Path, tpl_name: str, src_tpl: Path, dest_tpl: Path, *,
     strategy: str = "reconcile", is_local_newer: bool = False, dry_run: bool = False,
@@ -123,8 +139,7 @@ def reconcile_template_pack_sync(
     local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
     if strategy == "keep-local" and local_tpl.is_dir():
         if not dry_run:
-            for pf in prop_dir.glob(f"{tpl_name}-*.md"):
-                pf.unlink(missing_ok=True)
+            _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name)
         return False, []
     if strategy == "reconcile" and is_local_newer:
         conflicts: list[dict[str, Any]] = []
@@ -163,34 +178,26 @@ def reconcile_template_pack_sync(
                 f"{rf.read_text(encoding='utf-8').rstrip()}\n\n" + "\n\n".join(blocks) + "\n",
                 encoding="utf-8",
             )
-        for pf in prop_dir.glob(f"{tpl_name}-*.md"):
-            pf.unlink(missing_ok=True)
+        _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name)
     return True, []
 
 
 def configure_git_governance_policy(
-    target_dir: Path,
-    *,
-    protected_branches: list[str] | None = None,
-    require_pr_on_protected: bool = True,
-    sync_codeowners: bool = True,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    target_dir: Path, *, protected_branches: list[str] | None = None,
+    require_pr_on_protected: bool = True, sync_codeowners: bool = True, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Configure persistent Git branch/environment rules and optional .github/CODEOWNERS."""
-    ws = target_dir.resolve()
-    mpath = ws / "system" / "mcp-layer.json"
+    ws, mpath = target_dir.resolve(), target_dir.resolve() / "system" / "mcp-layer.json"
     if not mpath.is_file():
         raise ValueError(f"Missing layer manifest: {mpath}")
     manifest = _load_manifest(ws)
     layer_id = str(manifest.get("layer_id", ws.name))
     prot = [b.strip() for b in (protected_branches or DEFAULT_PROTECTED_BRANCHES) if b.strip()]
-    git_gov: dict[str, Any] = {
-        "protected_branches": prot,
+    git_gov: dict[str, Any] = {"protected_branches": prot,
         "require_pr_on_protected": require_pr_on_protected,
         "process_branch_prefixes": dict(DEFAULT_PROCESS_BRANCH_PREFIXES),
         "environment_branches": dict(DEFAULT_ENV_BRANCH_MAP),
-        "environment_promotion_order": list(VALID_ENVIRONMENTS),
-    }
+        "environment_promotion_order": list(VALID_ENVIRONMENTS)}  # fmt: skip
     manifest["git_governance"] = git_gov
     raw_auth = manifest.get("layer_authority")
     auth = raw_auth if isinstance(raw_auth, dict) else {}
@@ -216,7 +223,9 @@ def configure_git_governance_policy(
         f"/WORKROAD.md {maint_str}\n/ROADMAP.md {maint_str}\n/WORKVALI.md {val_str}\n"
     )
     if not dry_run:
-        mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        mpath.write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         if sync_codeowners:
             co_file = ws / codeowners_rel
             co_file.parent.mkdir(parents=True, exist_ok=True)
@@ -227,13 +236,10 @@ def configure_git_governance_policy(
 
 
 def inspect_git_governance_state(
-    workspace_dir: Path,
-    *,
-    current_branch: str | None = None,
+    workspace_dir: Path, *, current_branch: str | None = None
 ) -> dict[str, Any]:
     """Inspect active Git branch, inferred process stage, environment, and governance alerts."""
-    ws = workspace_dir.resolve()
-    manifest = _load_manifest(ws)
+    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
     raw_gg = manifest.get("git_governance")
     gg = raw_gg if isinstance(raw_gg, dict) else {}
     prot = [str(b) for b in gg.get("protected_branches", DEFAULT_PROTECTED_BRANCHES)]
@@ -244,11 +250,8 @@ def inspect_git_governance_state(
         git_bin = shutil.which("git") or "/usr/bin/git"
         proc = subprocess.run(  # noqa: S603
             [git_bin, "rev-parse", "--abbrev-ref", "HEAD"],
-            cwd=ws,
-            check=False,
-            capture_output=True,
-            text=True,
-        )
+            cwd=ws, check=False, capture_output=True, text=True,
+        )  # fmt: skip
         branch = proc.stdout.strip()
     eff_branch = branch or "main"
     is_protected = eff_branch in prot
@@ -445,7 +448,9 @@ def manage_layer_roster(
     auth["validator_emails"] = list(dict.fromkeys(val_ems))
     manifest["layer_authority"] = auth
     if not dry_run:
-        mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        mpath.write_text(
+            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
         if (ws / ".github/CODEOWNERS").is_file() or add_email or remove_email:
             configure_git_governance_policy(ws, sync_codeowners=True, dry_run=False)
     return {"target_dir": str(ws), "layer_id": layer_id, "roster": roster, "dry_run": dry_run,

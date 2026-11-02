@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from dotfiles_mcp.capsule_engine import (
 )
 from dotfiles_mcp.constants import (
     CHARS_PER_TOKEN_ESTIMATE,
+    CODON_STOPWORDS,
     L1_FALLBACK_EST_TOKENS,
     L2_EXCERPT_MAX_CHARS,
     L2_SECTION_MAX_CHARS,
@@ -182,6 +184,9 @@ class CompactionToolsMixin(MCPNodeBase):
         matches: list[dict[str, Any]] = []
         excerpt_truncated = False
         q_lower = query.lower()
+        q_tokens = [
+            tok for tok in re.findall(r"[a-z0-9_-]{3,}", q_lower) if tok not in CODON_STOPWORDS
+        ]
         for lname, ldir, file_path in candidate_files:
             if not file_path.is_file() or not file_path.resolve().is_relative_to(ldir.resolve()):
                 continue
@@ -190,7 +195,10 @@ class CompactionToolsMixin(MCPNodeBase):
                 lines, file_path.name
             ):
                 joined = "\n".join(body)
-                if q_lower in joined.lower() or q_lower in heading.lower():
+                haystack = f"{heading}\n{joined}".lower()
+                if q_lower in haystack or (
+                    len(q_tokens) >= 2 and all(t in haystack for t in q_tokens)
+                ):
                     if resolution == "L2" and len(joined) > L2_EXCERPT_MAX_CHARS:
                         excerpt_truncated = True
                     l2_excerpt = joined[:L2_EXCERPT_MAX_CHARS]
