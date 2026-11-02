@@ -270,7 +270,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 - **`post_invocation_lint.py` (`PostInvocation`)** — Enforces `< 465` lines on modified `.py`, root `README.md`, and `docs/**/*.md` files, AAA test markers, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18,000`-byte `AGENTS.md` cap & `80,000`-byte workspace cap) with `force_continue`.
 - **`stop_verify_tests.py` (`Stop`)** — Runs affected unit tests before concluding a task.
 
-### 2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 25 Subcommands)
+### 2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 26 Subcommands)
 
 ```bash
 # Template discovery, fork parameterization & static project projection:

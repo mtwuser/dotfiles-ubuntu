@@ -27,7 +27,7 @@ Beyond individual workstation setup, `dotfiles-ubuntu` is architected so any com
 ```mermaid
 flowchart TD
     subgraph OSS["Tier 0 — Public Open-Source Upstream (layer_role: workstation)"]
-        PUB["mtwuser/dotfiles-ubuntu\n• Base Ubuntu 26.04 Engine + Antigravity 2.0 Hooks & 13 Skills\n• 3-Tier Profiles (human-core, technical-base, business-base)\n• Zero-Dependency Contextual MCP Server & Layer/Subtree CLI"]
+        PUB["mtwuser/dotfiles-ubuntu\n• Base Ubuntu 26.04 Engine + Antigravity 2.0 Hooks & 14 Skills\n• 3-Tier Profiles (human-core, technical-base, business-base)\n• Zero-Dependency Contextual MCP Server & Layer/Subtree CLI"]
     end
 
     subgraph Org["Tier 1 — Corporate Reference Root 0 (layer_role: corporate, precedence: 10)"]
@@ -394,7 +394,7 @@ Consider a technology company (**Acme Corp**) with 150 engineers across Backend,
 
 1. **Onboarding a New Engineer (15 Minutes)**:
    - The engineer clones the corporate workstation fork (`git clone git@github.com:acme-corp/dotfiles-ubuntu.git ~/dotfiles-ubuntu`) and runs `./bootstrap.sh --all` (or `./bootstrap.sh --workstation`).
-   - Their Ubuntu 26.04 environment, CLI tools, Git identity isolation (`~/.gitconfig.local`), and global AI governance rules (`~/.gemini/config/AGENTS.md`, lifecycle hooks, and 13 skills) are immediately active.
+   - Their Ubuntu 26.04 environment, CLI tools, Git identity isolation (`~/.gitconfig.local`), and global AI governance rules (`~/.gemini/config/AGENTS.md`, lifecycle hooks, and 10 global + 4 `technical-base` skills) are immediately active.
 2. **Starting a Feature on a Microservice (`/sopen`)**:
    - The engineer opens `checkout-service` and types `/sopen`.
    - The AI agent automatically pulls the latest corporate rules from `~/dotfiles-ubuntu`, reads `.agents/SESSION.md` and `WORKTASK.md`, loads the project's Hexagonal DDD rules (`.agents/rules/`), and consults `docs/README.md` to understand the payment bounded contexts.

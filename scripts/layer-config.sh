@@ -102,7 +102,7 @@ done
 
 SUBCOMMAND="${1:-}"
 if [ -z "$SUBCOMMAND" ]; then
-  echo "❌ Missing subcommand (see './scripts/layer-config.sh --help' for all 25 subcommands)." >&2
+  echo "❌ Missing subcommand (see './scripts/layer-config.sh --help' for all 26 subcommands)." >&2
   usage >&2
   exit 1
 fi

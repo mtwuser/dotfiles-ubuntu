@@ -372,7 +372,7 @@ class TestAuthorityEngine:
         (sib_child / "WORKTASK.md").write_text("# Tasks", encoding="utf-8")
 
         # Act
-        def dlg(**kw: object) -> dict[str, object]:
+        def _dlg(**kw: object) -> dict[str, object]:
             return delegate_directive_to_child(
                 corp_dir,
                 child_layer="dept-legal",
@@ -380,20 +380,20 @@ class TestAuthorityEngine:
                 **kw,  # type: ignore[arg-type]
             )
 
-        dry_res = dlg(directive="Audit Q3 compliance ledgers", priority="P0", dry_run=True)
+        dry_res = _dlg(directive="Audit Q3 compliance ledgers", priority="P0", dry_run=True)
         dry_existed = (mnt_child / "WORKTASK.md").exists()
-        live_res = dlg(
+        live_res = _dlg(
             directive="Audit Q3 compliance ledgers", source_rel_path="WORKROAD.md", priority="P0"
         )
-        dup_res = dlg(directive="Audit Q3 compliance ledgers", priority="P0")
-        road_dry = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
-        road_live = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
-        road_staged = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
-        road_forced = dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", force_overwrite=True)
-        rule_dry = dlg(directive="Enforce GDPR", tracker="rules", dry_run=True)
-        rule_live = dlg(directive="Enforce GDPR", tracker="rules")
-        rule_staged = dlg(directive="Enforce GDPR v2", tracker="rules")
-        rule_forced = dlg(directive="Enforce GDPR v2", tracker="rules", force_overwrite=True)
+        dup_res = _dlg(directive="Audit Q3 compliance ledgers", priority="P0")
+        road_dry = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
+        road_live = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
+        road_staged = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
+        road_forced = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", force_overwrite=True)
+        rule_dry = _dlg(directive="Enforce GDPR", tracker="rules", dry_run=True)
+        rule_live = _dlg(directive="Enforce GDPR", tracker="rules")
+        rule_staged = _dlg(directive="Enforce GDPR v2", tracker="rules")
+        rule_forced = _dlg(directive="Enforce GDPR v2", tracker="rules", force_overwrite=True)
 
         # Assert
         assert dry_res["dry_run"] is True and dry_existed is False

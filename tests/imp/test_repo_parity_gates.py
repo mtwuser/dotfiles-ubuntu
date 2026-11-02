@@ -212,6 +212,8 @@ class TestRepoParityGates:
             "manage-roster", "configure-git-policy", "check-env-promotion", "record-decision",
         ):  # fmt: skip
             assert sub in readme_md and sub in ext_guide and sub in arch_mcp
+        assert "All 26 Subcommands" in readme_md
+        assert "all 26 subcommands" in (REPO_DIR / "scripts/layer-config.sh").read_text("utf-8")
 
     def test_single_language_english_purity_across_repository_files(self) -> None:
         """Verify 100% pure technical English across all repository docs, rules, and code."""
@@ -414,15 +416,13 @@ class TestRepoParityGates:
                 structure_violations.append(
                     f"{rel_tp}: classes={[c.name for c in test_classes]}, top_tests={top_tests}"
                 )
-            for cls_node in test_classes:
-                for item in cls_node.body:
-                    if (
-                        isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
-                        and item.name.startswith("test_")
-                        and not ast.get_docstring(item)
-                    ):
-                        structure_violations.append(f"{rel_tp}:{item.lineno}:{item.name}")
             for node in ast.walk(tree):
+                if (
+                    isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and not node.name.startswith("_")
+                    and not ast.get_docstring(node)
+                ):
+                    structure_violations.append(f"{rel_tp}:{node.lineno}:{node.name}")
                 if (
                     isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Attribute)

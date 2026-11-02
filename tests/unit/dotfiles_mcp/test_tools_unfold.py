@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from dotfiles_mcp import capsule_engine
+from dotfiles_mcp.constants import CAPSULE_HMAC_HEX_LEN
 from dotfiles_mcp.server import DotfilesMCPServer
 
 if TYPE_CHECKING:
@@ -214,7 +215,7 @@ class TestUnfoldToolsMixin:
         )
         sig_bad_zlib = hmac.new(
             ck, f"rcap1.{hdr_ph1}.{bad_zlib_cipher}".encode("ascii"), hashlib.sha256
-        ).hexdigest()[:24]
+        ).hexdigest()[:CAPSULE_HMAC_HEX_LEN]
         corrupt_zlib_token = f"rcap1.{hdr_ph1}.{bad_zlib_cipher}.{sig_bad_zlib}"
 
         bad_ph_token = capsule_engine._seal_single_capsule(

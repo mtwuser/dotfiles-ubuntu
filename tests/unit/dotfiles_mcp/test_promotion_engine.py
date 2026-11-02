@@ -292,7 +292,7 @@ class TestPromotionEngine:
             (proj_dir / rel).write_text(txt, encoding="utf-8")
 
         # Act
-        def prom(src: str, **kw: object) -> dict[str, object]:
+        def _prom(src: str, **kw: object) -> dict[str, object]:
             return promote_project_asset_to_layer(
                 repo_dir,
                 proj_dir,
@@ -300,35 +300,35 @@ class TestPromotionEngine:
                 **kw,  # type: ignore[arg-type]
             )
 
-        dry_res = prom(".agents/rules/legal.md", target_layer="dept-legal", dry_run=True)
-        sub_rule_res = prom(".agents/rules/legal.md", target_layer="dept-legal")
-        auto_tpl_res = prom(".agents/rules/legal.md", target_layer="dept-own")
-        tpl_rule_res = prom(".agents/rules/legal.md", target_template="fastapi-hexagonal")
-        root_skill_res = prom(".agents/skills/good-skill/SKILL.md")
-        tpl_skill_res = prom(
+        dry_res = _prom(".agents/rules/legal.md", target_layer="dept-legal", dry_run=True)
+        sub_rule_res = _prom(".agents/rules/legal.md", target_layer="dept-legal")
+        auto_tpl_res = _prom(".agents/rules/legal.md", target_layer="dept-own")
+        tpl_rule_res = _prom(".agents/rules/legal.md", target_template="fastapi-hexagonal")
+        root_skill_res = _prom(".agents/skills/good-skill/SKILL.md")
+        tpl_skill_res = _prom(
             ".agents/skills/good-skill/SKILL.md",
             target_layer="dept-legal",
             target_template="gdpr-pack",
         )
-        asset_res = prom(".agents/assets/gdpr-pack/snippet.md", target_layer="dept-legal")
-        mat_update_res = prom(".agents/rules/layer-05-dept-legal.md", target_layer="dept-legal")
-        gov_dir_res = prom("roadmaps/q4.md", target_layer="dept-own")
-        trk_res_1 = prom("BACKLOG.md", target_layer="dept-own")
-        trk_res_2 = prom("BACKLOG.md", target_layer="dept-own")
-        exact_18k_res = prom(
+        asset_res = _prom(".agents/assets/gdpr-pack/snippet.md", target_layer="dept-legal")
+        mat_update_res = _prom(".agents/rules/layer-05-dept-legal.md", target_layer="dept-legal")
+        gov_dir_res = _prom("roadmaps/q4.md", target_layer="dept-own")
+        trk_res_1 = _prom("BACKLOG.md", target_layer="dept-own")
+        trk_res_2 = _prom("BACKLOG.md", target_layer="dept-own")
+        exact_18k_res = _prom(
             ".agents/rules/AGENTS.md",
             target_layer="root",
             prepare_pr=True,
             actor_email="member@squad.acme.com",
             dry_run=True,
         )
-        staged_pr_res = prom(
+        staged_pr_res = _prom(
             ".agents/rules/legal.md",
             target_template="fastapi-hexagonal",
             prepare_pr=True,
             actor_email="member@squad.acme.com",
         )
-        upstream_res = prom(
+        upstream_res = _prom(
             ".agents/rules/legal.md",
             target_layer="dept-legal",
             target_template="gdpr-pack",
@@ -382,12 +382,9 @@ class TestPromotionEngine:
             (".agents/rules/legal.md", {"target_template": "BAD_TEMPLATE"}, "Invalid target"),
         ):
             with pytest.raises(ValueError, match=err_pat):
-                prom(src, **bad_kw)
+                _prom(src, **bad_kw)
 
-    def test_inspect_layer_horizon_detects_upward_and_downward_drift(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    def test_inspect_layer_horizon_detects_upward_and_downward_drift(self, tmp_path: Path) -> None:
         """Inspect 1-hop horizon across OSS and internal parent layers with mtime cut-points."""
         # Arrange
         repo_dir, proj_dir, oss_dir = tmp_path / "fork", tmp_path / "proj", tmp_path / "oss"

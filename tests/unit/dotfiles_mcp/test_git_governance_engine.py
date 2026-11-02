@@ -134,11 +134,11 @@ class TestGitGovernanceEngine:
         st_fallback = inspect_git_governance_state(ws)
         (ws / ".git").mkdir()
 
-        def fake_run(cmd: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
+        def _fake_run(cmd: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
             assert "rev-parse" in cmd
             return subprocess.CompletedProcess(cmd, 0, stdout="feature/SHM-01-sensor\n", stderr="")
 
-        monkeypatch.setattr(subprocess, "run", fake_run)
+        monkeypatch.setattr(subprocess, "run", _fake_run)
         st_git = inspect_git_governance_state(ws)
         st_tst = inspect_git_governance_state(ws, current_branch="env/tst")
         st_pre = inspect_git_governance_state(ws, current_branch="pre/rc1")
