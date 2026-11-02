@@ -297,6 +297,7 @@ from pathlib import Path
 import re, sys
 
 kebab_re = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+yaml_unsafe_re = re.compile(r'^(?:[{[\*&!|>%@`]|[^"\']*:\s)')
 skill_files = sorted(list(Path("antigravity/.gemini/config/skills").glob("*/SKILL.md")) + list(Path("templates").rglob("skills/*/SKILL.md")))
 if not skill_files:
     sys.exit("No SKILL.md files found")
@@ -307,8 +308,8 @@ for sf in skill_files:
         sys.exit(f"Invalid SKILL.md header or size: {sf}")
     fm = "\n".join(lines[1:end_idx])
     nm, dm = re.search(r"^name:\s*(.+)$", fm, re.MULTILINE), re.search(r"^description:\s*(.+)$", fm, re.MULTILINE)
-    if not nm or not dm or not kebab_re.match(nm.group(1).strip().strip("'\"")):
-        sys.exit(f"Invalid name/description in frontmatter: {sf}")
+    if not nm or not dm or not kebab_re.match(nm.group(1).strip().strip("'\"")) or yaml_unsafe_re.search(dm.group(1).strip()):
+        sys.exit(f"Invalid or YAML-unsafe name/description in frontmatter: {sf}")
 print(f"  Verified {len(skill_files)} SKILL.md files (all kebab-case, < 500 lines)")
 PYEOF
 then

@@ -1,6 +1,6 @@
 ---
 name: ledger-surface-audit
-description: Audit 1:1:1 traceability between Inner Ledgers (corporate/ledgers/), Business AAA Policies (corporate/policies/), and Outer Surfaces (surfaces/{web,forms,print}/)
+description: "Audit 1:1:1 traceability between Inner Ledgers (corporate/ledgers/), Business AAA Policies (corporate/policies/), and Outer Surfaces (surfaces/{web,forms,print}/)"
 ---
 # Skill: Ledger-to-Surface `1:1:1` Compliance Audit (`ledger-surface-audit`)
 

@@ -201,11 +201,11 @@ def _resolve_template_dest_dir(
     src_tpl: Path | None = None,
 ) -> Path:
     """Resolve the destination directory for creating, syncing, or promoting a template pack."""
+    if src_tpl is not None and src_tpl.parent.name in TEMPLATE_STACK_GROUP_DIRS:
+        return layer_dir / "templates" / src_tpl.parent.name / tpl_name
     existing = _resolve_template_dir(layer_dir, tpl_name)
     if existing is not None:
         return existing
-    if src_tpl is not None and src_tpl.parent.name in TEMPLATE_STACK_GROUP_DIRS:
-        return layer_dir / "templates" / src_tpl.parent.name / tpl_name
     if kind in TEMPLATE_STACK_GROUP_DIRS:
         return layer_dir / "templates" / str(kind) / tpl_name
     return layer_dir / "templates" / tpl_name

@@ -425,7 +425,16 @@ def inspect_layer_horizon(
     child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))
     sync_sfx = f" --parent-dir {up}" if parent_dir is not None else ""
     up_drifts = [d for d in drifts if d["drift_direction"] == "workspace_newer"]
-    need_sync = any(d["drift_direction"] == "upstream_newer" for d in drifts) or bool(child_drifts)
+    miss_sk = any(
+        not (w_d / sf.relative_to(u_d)).is_file()
+        for _t, u_d, w_d in tpl_pairs
+        for sf in (u_d / "skills").rglob("SKILL.md")
+    )
+    need_sync = (
+        any(d["drift_direction"] == "upstream_newer" for d in drifts)
+        or miss_sk
+        or bool(child_drifts)
+    )
     novel_cmds = [
         f"./scripts/layer-config.sh promote-from-project {ws} "
         f"--source .agents/{rel} --upstream-dir {contrib_dir} --create-pr"

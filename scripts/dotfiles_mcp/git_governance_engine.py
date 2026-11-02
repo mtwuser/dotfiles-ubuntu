@@ -151,6 +151,7 @@ def reconcile_template_pack_sync(
             if blocks:
                 preserved[dest_rf.name] = blocks
     if not dry_run:
+        shutil.rmtree(target_dir / "templates" / tpl_name, ignore_errors=True)
         shutil.rmtree(dest_tpl, ignore_errors=True)
         dest_tpl.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(src_tpl, dest_tpl)

@@ -1,6 +1,6 @@
 ---
 name: database-migrations
-description: Guide for SQLAlchemy 2.0 Async persistence adapters, Domain <-> ORM mapping, and human-gated Alembic migrations in FastAPI Hexagonal projects
+description: "Guide for SQLAlchemy 2.0 Async persistence adapters, Domain <-> ORM mapping, and human-gated Alembic migrations in FastAPI Hexagonal projects"
 ---
 # Skill: SQLAlchemy Async Persistence & Alembic Migrations (`database-migrations`)
 

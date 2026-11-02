@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-description: Universal software engineering, 1:1:1 traceability, refactoring, and 100% AAA testing rules for technical workspaces
+description: "Universal software engineering, 1:1:1 traceability, refactoring, and 100% AAA testing rules for technical workspaces"
 ---
 # Technical Engineering, Refactoring & Testing Baseline (`technical-base`)
 

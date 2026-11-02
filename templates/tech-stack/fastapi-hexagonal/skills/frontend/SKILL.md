@@ -1,6 +1,6 @@
 ---
 name: frontend-patterns
-description: Standard FastAPI/Starlette Jinja2Templates, progressive HTMX partial rendering, and zero-build Web Component patterns
+description: "Standard FastAPI/Starlette Jinja2Templates, progressive HTMX partial rendering, and zero-build Web Component patterns"
 ---
 # Skill: Server-Rendered Views & HTMX in FastAPI (`frontend-patterns`)
 

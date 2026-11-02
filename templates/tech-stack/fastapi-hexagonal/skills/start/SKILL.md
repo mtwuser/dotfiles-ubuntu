@@ -1,6 +1,6 @@
 ---
 name: start
-description: {PROJECT_NAME} FastAPI + Hexagonal DDD architecture orientation and verification command reference
+description: "FastAPI + Hexagonal DDD architecture orientation, bounded context structure, and verification command reference"
 ---
 # Skill: FastAPI Hexagonal Orientation (`start`)
 

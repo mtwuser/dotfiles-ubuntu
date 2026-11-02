@@ -1,6 +1,6 @@
 ---
 name: fastapi-testing
-description: FastAPI + Hexagonal DDD test recipes across Domain, Application (Protocol mocks), API Router (AsyncClient + ASGITransport + dependency_overrides), and Persistence (async SQLAlchemy imp tests)
+description: "FastAPI + Hexagonal DDD test recipes across Domain, Application (Protocol mocks), API Router (AsyncClient + ASGITransport + dependency_overrides), and Persistence (async SQLAlchemy imp tests)"
 ---
 # Skill: FastAPI & Hexagonal Testing Recipes (`fastapi-testing`)
 
