@@ -31,9 +31,11 @@ class ResourcesMixin(MCPNodeBase):
     """Implements list_resources, read_resource, and dotfiles://mcp/diagnostics."""
 
     def list_resources(self) -> list[dict[str, Any]]:
+        """Return the catalog of read-only MCP resources exposed by this layer node."""
         return [dict(item) for item in MCP_RESOURCES_CATALOG]
 
     def read_resource(self, uri: str) -> dict[str, Any]:
+        """Read and serialize the requested MCP resource URI into a JSON-RPC content payload."""
         if uri == "dotfiles://layer/identity":
             manifest = self._load_layer_manifest()
             payload = {

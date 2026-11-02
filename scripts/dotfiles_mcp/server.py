@@ -37,9 +37,11 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
     """Read-only MCP server exposing dotfiles-ubuntu system & governance context."""
 
     def list_tools(self) -> list[dict[str, Any]]:
+        """Return the catalog of MCP tools exposed by this layer node."""
         return [dict(item) for item in MCP_TOOLS_CATALOG]
 
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Dispatch an MCP tool invocation by name and return its structured JSON payload."""
         args = arguments or {}
         if name == "get_layer_overview":
             return self._tool_get_layer_overview(args)
@@ -62,6 +64,7 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
         raise ValueError(f"Unknown tool name: {name!r}")
 
     def handle_request(self, message: dict[str, Any]) -> dict[str, Any] | None:
+        """Process a single JSON-RPC 2.0 request message and return the response envelope."""
         method = message.get("method", "")
         msg_id = message.get("id")
         params = message.get("params") or {}

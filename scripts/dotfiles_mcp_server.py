@@ -208,6 +208,7 @@ def run_self_test(server: DotfilesMCPServer) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """CLI entrypoint for the stdio JSON-RPC MCP server and deterministic self-test runner."""
     parser = argparse.ArgumentParser(
         prog="dotfiles_mcp_server.py",
         description=(

@@ -330,6 +330,7 @@ class TestCLIScripts:
             in df_text
         )
         assert "composed global profile:" in (REPO_DIR / "audit.sh").read_text(encoding="utf-8")
+        assert "STOW_BASE_DIR=" in (REPO_DIR / "audit.sh").read_text(encoding="utf-8")
         for ign in (".git/", "venv/", "tests/"):
             assert ign in di_text
         for target in (

@@ -122,3 +122,13 @@ Before invoking `stow -t "$HOME" "$module"`, `bootstrap.sh` enforces three safet
 1. **Git Identity Preservation**: If `~/.gitconfig` is a real file containing `user.name` or `user.email` and `~/.gitconfig.local` does not exist yet, `bootstrap.sh` extracts those values into `~/.gitconfig.local` before backing up `~/.gitconfig`.
 2. **Tree-Unfolding Directory Preparation (`prepare_antigravity_dirs`)**: Creates `~/.gemini/config/skills` and `~/.local/share/applications` as real directories, and backs up any real (non-symlink) `scripts/` or colliding `skills/<name>/` directories to `*.backup.YYYYMMDD`.
 3. **File Collision Backup**: Any real file at `$HOME/$relpath` is moved to `$HOME/${relpath}.backup.YYYYMMDD` before `stow` runs, ensuring `stow` never fails with a conflict error and zero user data is lost.
+4. **Contributor `dev-*` Workspace Stow Resolution (`audit.sh` & `workstation-sync.sh`)**: When `audit.sh` (`make audit`) or `scripts/workstation-sync.sh` runs inside a dedicated contributor clone (`$DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>`), `STOW_BASE_DIR` / `RUNTIME_DIR` automatically resolves to the machine-global runtime appliance (`${DOTFILES_RUNTIME_DIR:-$HOME/dotfiles-ubuntu}`) so `$HOME` symlinks pointing to the runtime appliance validate cleanly without false-positive target drift.
+
+---
+
+## 5. `1:1:1` Source $\leftrightarrow$ Implementation Test $\leftrightarrow$ Specification Traceability Matrix
+
+| Source Script / Engine | Implementation Test Suite (`Specification: docs/architecture/01_system_and_stow_engine.md`) | Functional Responsibility & Key Verified Invariants |
+|---|---|---|
+| [`bootstrap.sh`](../../bootstrap.sh), [`backup.sh`](../../backup.sh), [`audit.sh`](../../audit.sh), [`scripts/workstation-sync.sh`](../../scripts/workstation-sync.sh), [`scripts/audit-global-config.sh`](../../scripts/audit-global-config.sh), [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh) | [`tests/imp/test_cli_scripts.py`](../../tests/imp/test_cli_scripts.py) (`TestCLIScripts`) | Verifies `--help`/`--version` flags, unknown-option rejection, `bash -n` syntax across all 19 shell scripts, `workstation-sync.sh` (`--setup`, `--auto`, `--status`, `dev-*` pushurl guard healing), `STOW_BASE_DIR` runtime resolution in `audit.sh`, and `Dockerfile` / `Makefile` contracts. |
+| [`scripts/verify-repo.sh`](../../scripts/verify-repo.sh), `system/*` manifests | [`tests/imp/test_repo_parity_gates.py`](../../tests/imp/test_repo_parity_gates.py) (`TestRepoParityGates`) | Enforces 8-stage repository verification, `0-byte` `__init__.py` markers, `< 465`-line modularity cap, `1:1:1` spec pointers, English language purity, and AST anti-deception gates. |

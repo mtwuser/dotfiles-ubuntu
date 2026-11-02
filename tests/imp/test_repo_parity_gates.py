@@ -103,6 +103,10 @@ class TestRepoParityGates:
         assert oversized_files == []
         assert untraced_sources == []
         assert missing_rule_frontmatter == []
+        assert all(
+            "1:1:1" in p.read_text(encoding="utf-8")
+            for p in (REPO_DIR / "docs/architecture").glob("0*.md")
+        )
         assert (
             not (REPO_DIR / "antigravity/.gemini/config/AGENTS.md").read_text().startswith("---\n")
         )
@@ -389,6 +393,11 @@ class TestRepoParityGates:
                     isinstance(b, ast.Constant) and isinstance(b.value, int) and abs(b.value) > 2
                     for b in (n.lower, n.upper)
                 )
+            )
+            or (
+                isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and (not n.name.startswith("_") or n.name == "__init__")
+                and not ast.get_docstring(n)
             )
         ]
         unmatched_raises, blind_subprocess_mocks, structure_violations = [], [], []

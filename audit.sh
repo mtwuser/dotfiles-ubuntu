@@ -57,6 +57,16 @@ echo -e "${BOLD}🔍 dotfiles-ubuntu audit — $(date +%Y-%m-%d)${NC}"
 section "Stow Symlinks"
 STOW_OK=0
 STOW_ISSUES=0
+if [ -n "${DOTFILES_RUNTIME_DIR:-}" ] && [ -d "$DOTFILES_RUNTIME_DIR" ]; then
+  STOW_BASE_DIR="$(cd "$DOTFILES_RUNTIME_DIR" && pwd)"
+else
+  REPO_BASE="$(basename "$SCRIPT_DIR")"
+  if [[ "$REPO_BASE" == dev-* ]] && [ -d "$HOME/${REPO_BASE#dev-}" ]; then
+    STOW_BASE_DIR="$(cd "$HOME/${REPO_BASE#dev-}" && pwd)"
+  else
+    STOW_BASE_DIR="$SCRIPT_DIR"
+  fi
+fi
 
 cd "$SCRIPT_DIR"
 for module_dir in */; do
@@ -70,10 +80,12 @@ for module_dir in */; do
     [ -z "$relpath" ] && continue
     target="$HOME/$relpath"
     source="$SCRIPT_DIR/$module_name/$relpath"
+    runtime_source="$STOW_BASE_DIR/$module_name/$relpath"
     if [ -e "$target" ] || [ -L "$target" ]; then
       resolved_target="$(readlink -f "$target" 2>/dev/null || echo "BROKEN")"
       resolved_source="$(readlink -f "$source")"
-      if [ "$resolved_target" = "$resolved_source" ]; then
+      resolved_rt_source="$(readlink -f "$runtime_source" 2>/dev/null || echo "$resolved_source")"
+      if [ "$resolved_target" = "$resolved_source" ] || [ "$resolved_target" = "$resolved_rt_source" ]; then
         STOW_OK=$((STOW_OK + 1))
       else
         warn "[$module_name] ~/$relpath → wrong target"

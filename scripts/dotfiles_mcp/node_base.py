@@ -36,6 +36,7 @@ class MCPNodeBase:
         layer_role_override: str | None = None,
         log_dir: Path | None = None,
     ) -> None:
+        """Initialize the MCP node base with repository path, overrides, and ephemeral store."""
         self.repo_dir = repo_dir.resolve()
         self.layer_id_override = layer_id_override
         self.layer_role_override = layer_role_override
@@ -242,9 +243,11 @@ class MCPNodeBase:
         return candidate
 
     def list_prompts(self) -> list[dict[str, Any]]:
+        """Return the catalog of MCP prompts exposed by this layer node."""
         return [dict(item) for item in MCP_PROMPTS_CATALOG]
 
     def get_prompt(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Render a structured MCP prompt message sequence for the requested prompt name."""
         args = arguments or {}
         if name == "orient-on-layer":
             task = args.get("task_description", "general architectural exploration")
