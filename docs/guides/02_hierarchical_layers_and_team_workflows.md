@@ -31,7 +31,7 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
 
 ### 1.2 Global Slash Commands (`~/.gemini/config/skills/`) vs. Technical-Pack Skills (`templates/technical-base/skills/`)
 
-The 10 universal lifecycle, governance, and audit skills live in `$HOME/.gemini/config/skills/` and adapt automatically to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`), while the 3 software-engineering-specific skills (`testing`, `refactoring`, `validation`) live in `templates/technical-base/skills/` and are projected into `.agents/skills/` only on technical workspaces:
+The 10 universal lifecycle, governance, and audit skills live in `$HOME/.gemini/config/skills/` and adapt automatically to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`), while the 4 software-engineering-specific skills (`testing`, `refactoring`, `validation`, `oss-contribute`) live in `templates/technical-base/skills/` and are projected into `.agents/skills/` only on technical workspaces:
 
 | Skill / Command | Scope | When to Use & Key Actions |
 |-----------------|------|---------------------------|
@@ -48,6 +48,7 @@ The 10 universal lifecycle, governance, and audit skills live in `$HOME/.gemini/
 | `refactoring` | `technical-base` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target) with `1:1:1` parity. |
 | `testing` | `technical-base` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% branch coverage audits. |
 | `validation` | `technical-base` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
+| `oss-contribute` | `technical-base` | Conscious `C3` workflow for empirical hot-path profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and isolated `~/Projects/oss-contrib-<repo>` upstream PRs. |
 
 > **`/learn` (built-in Antigravity command) vs. `/enrich` (`dotfiles-ubuntu`)**:
 > `/learn` captures a lesson from the current chat into the active workspace's `.agents/`. `/enrich` evaluates matured rules across workspaces and promotes them upward (`Squad/App -> Department -> Corporate Root 0 -> Open Source`) via `layer-config.sh promote-from-project`.
@@ -229,7 +230,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
      - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
      - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
    - **Tier `C2: guided_tactical` (Per-Task / Intra-Layer Transitions — local workspace state)**:
-     - `make setup-dev` — Overlays `technical-base` (`rules/technical-base.md` + `skills/{testing,refactoring,validation}`) onto the layer's active domain/business rules in `.agents/` (`workspace_mode: "hybrid"`), enabling full software-engineering rigor inside any `Root 0`, `Department`, or `Squad` checkout without mutating `system/mcp-layer.json` (`make sync` restores `business` mode).
+     - `make setup-dev` — Overlays `technical-base` (`rules/technical-base.md` + `skills/{testing,refactoring,validation,oss-contribute}`) onto the layer's active domain/business rules in `.agents/` (`workspace_mode: "hybrid"`), enabling full software-engineering rigor inside any `Root 0`, `Department`, or `Squad` checkout without mutating `system/mcp-layer.json` (`make sync` restores `business` mode).
      - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task` with `Ticket ID` and `Origin Layer`), and outputs `git checkout -b feature/<TICKET-ID>-<slug>`.
      - `make sync [STRATEGY=reconcile|accept-upstream|keep-local|merge]` — Self-heals generated `# Role-Specialized Layer Makefile` targets (preserving any `# --- Custom Targets ---` tail) and manifest contracts (`mcp-layer-v1` / `squad`), reconciles inherited template packs from the configured parent (`PARENT_DIR`) using `STRATEGY` (`reconcile` default stages diverged upstream rules in `.agents/proposals/from-upstream/`; `accept-upstream` adopts upstream; `merge` preserves local-only `# / ## / ###` headings; `keep-local` keeps local rule files), and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - **Tier `C3: conscious_human_gated` (Low-Frequency / High-Consciousness Inter-Layer & Authority Gates)**:

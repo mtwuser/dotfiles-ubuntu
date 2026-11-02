@@ -288,6 +288,7 @@ class TestRepoParityGates:
             REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/priority/SKILL.md",
             REPO_DIR / "templates/technical-base/skills/validation/SKILL.md",
+            REPO_DIR / "templates/technical-base/skills/oss-contribute/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/architecture-review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/governance/SKILL.md",
         ]

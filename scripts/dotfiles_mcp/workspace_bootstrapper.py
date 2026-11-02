@@ -373,7 +373,7 @@ def sync_layer_workspace(
     if not dry_run:
         if "technical-base" not in stack_templates:
             (target_dir / ".agents/rules/technical-base.md").unlink(missing_ok=True)
-            for sk in ("testing", "refactoring", "validation"):
+            for sk in ("testing", "refactoring", "validation", "oss-contribute"):
                 shutil.rmtree(target_dir / ".agents/skills" / sk, ignore_errors=True)
         if mk_upgraded:
             makefile_path.write_text(new_mk, encoding="utf-8")

@@ -98,7 +98,7 @@ While semantic conciseness (clean comprehensions, native stdlib primitives) is d
 ## Adaptive Co-Evolution & Bifurcated Age Evaluation (`Human <-> AI Model <-> Technology Substrate`)
 
 Code representation is a living equilibrium across three evolving surfaces:
-1. **Technology Substrate**: As language floor versions and C-backed standard libraries evolve, replace verbose manual loops/state with native runtime primitives.
+1. **Technology Substrate**: As language floor versions and C-backed standard libraries evolve, replace verbose manual loops/state with native runtime primitives (for deep empirical hot-path profiling, optional `PEP 7` C-accelerators, or external `OSS-to-OSS` upstream PRs, use the dedicated `oss-contribute` skill).
 2. **AI Reasoning & Specificity**: As model reasoning and context capabilities advance, favor higher specificity (strict `Protocol` contracts, declarative strategy tables, exact cut-point constants) over repetitive procedural boilerplate.
 3. **Human Comprehension Anchor (`1:1:1`)**: Production code can increase in semantic specificity and execution efficiency as long as **Tier 1–3 Documentation (`README -> Guides -> Architecture Specs`)** and **Self-Documenting `1:1:1` Tests (`test_<subject>_<scenario>_<expected>` + 1-line invariant docstring + AAA)** remain 100% transparent to the human operator, flowing refinements bidirectionally via `/enrich` (upward) and `make sync` (downward).
 4. **Bifurcated Evaluation of Prolonged Unedited Use (`> 90d` Code/Specs, `> 180d` Policies/Workflows)**:

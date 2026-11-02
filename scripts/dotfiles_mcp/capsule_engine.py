@@ -176,17 +176,14 @@ def _derive_chain_key(
 
 
 def _xor_keystream(data: bytes, key: bytes) -> bytes:
-    out = bytearray(len(data))
-    offset = 0
-    counter = 0
-    while offset < len(data):
-        block = hashlib.sha256(key + counter.to_bytes(4, "big")).digest()
-        chunk_len = min(SHA256_BLOCK_BYTES, len(data) - offset)
-        for idx in range(chunk_len):
-            out[offset + idx] = data[offset + idx] ^ block[idx]
-        offset += chunk_len
-        counter += 1
-    return bytes(out)
+    n_bytes = len(data)
+    blocks = (n_bytes + SHA256_BLOCK_BYTES - 1) // SHA256_BLOCK_BYTES
+    stream = b"".join(
+        hashlib.sha256(key + ctr.to_bytes(4, "big")).digest() for ctr in range(blocks)
+    )
+    return (int.from_bytes(data, "big") ^ int.from_bytes(stream[:n_bytes], "big")).to_bytes(
+        n_bytes, "big"
+    )
 
 
 def _seal_single_capsule(

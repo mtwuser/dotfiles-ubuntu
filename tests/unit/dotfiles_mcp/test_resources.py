@@ -85,6 +85,7 @@ class TestResourcesMixin:
         ]
         tech_tpl = next(t for t in templates["templates"] if t["template_name"] == "technical-base")
         assert sorted(s["name"] for s in tech_tpl["skills"]) == [
+            "oss-contribute",
             "refactoring",
             "testing",
             "validation",

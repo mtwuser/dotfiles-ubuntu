@@ -19,7 +19,11 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
    - **Scope 3 (Stack-Specific Template Pack)**: Language- and framework-specific conventions (e.g., Python 3.14 PEP 695, FastAPI/HTMX, TypeScript/React, Rust, Go).
    - **Scope 4 (Repository-Local Specifications & Gates)**: Architecture specs (`docs/architecture/`), domain invariants, and verification gates specific to the active repository.
 3. **Modern Stack Currency & Zero-Backward Law**: Always target the latest stable language/framework idioms declared by the project; flag and eliminate legacy shims, aliases, and deprecated fallbacks.
-4. **Execution Block Until Approval**: Present structured findings and the Pre-Edit Scope Blueprint first; never mutate repository files before explicit user confirmation.
+4. **3-Pillar Separation of Responsibilities (`Audit` vs. `Optimize` vs. `Contribute`)**:
+   - **`/full-audit` (This Skill — Convergent Gap Detection)**: Audits the active repository for compliance gaps against its specs, rules, `1:1:1` test symbiosis, and 5-link parity (`Regime 0: 0 findings`). Never mix open-ended architectural redesign or external R&D into `/full-audit`.
+   - **`/architecture-review` + `refactoring` (Internal Architectural & Code Optimization)**: Evaluates orthogonal dimension matrices, SSoT consolidation, and the 5-Stage Evolution Ladder (`Inline -> Function -> Class -> Protocol -> 1:1:1 Module`).
+   - **`oss-contribute` (Conscious `C3` C-Substrate & External `OSS-to-OSS` Contribution)**: Executed separately after `Regime 0` for empirical hot-path profiling, `PEP 7` C-accelerators, and upstream pull requests to external open-source packages (`Tier -1`).
+5. **Execution Block Until Approval**: Present structured findings and the Pre-Edit Scope Blueprint first; never mutate repository files before explicit user confirmation.
 
 ---
 
@@ -88,8 +92,8 @@ Once conceptual and normative requirements from Pass 1 are aligned, audit their 
 - **In `business` mode (`Root 0` / `Department` / `business-base`)**: Audit (1) **Single Source of Truth (SSoT) Ledger Consolidation** (`corporate/` tables vs. prose duplication), (2) **Cross-Departmental Precedence (`5..35`) & Surface Binding Coverage**, (3) **Cross-Surface Cascade (`surfaces/{web,forms,print}/`) & `< 465`-Line Modularity**, and (4) **IP Firewall & Crisis Escalation SLAs (`P0/P1/P2`)**.
 - **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**, audit the **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
 
-1. **Floor-Version Security & Intrinsic Runtime Substrate Exploitation**:
-   - Verify the code uses modern, secure-by-default idioms of the declared language floor version (`requires-python`) and C-backed standard library primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`) over legacy patterns. When `is_oss_dev_workspace: true` (`DOTFILES_DEV_REPO_DIR`), also identify pure-Python hot paths eligible for C-backed stdlib replacement, optional C-accelerators (`PEP 7`), or upstream OSS-to-OSS runtime contributions.
+1. **Floor-Version Security & Stdlib Compliance Gate**:
+   - Verify the code uses modern, secure-by-default idioms of the declared language floor version (`requires-python`) and standard library primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`) over deprecated or legacy patterns. (Keep deep hot-path profiling, optional `PEP 7` C-accelerators, and external `OSS-to-OSS` upstream PRs strictly separated in the conscious `oss-contribute` workflow.)
 2. **Functional vs. Object-Oriented & Polymorphic Evolution Ladder (`Inline -> Function -> Class -> Protocol/Polymorphism -> Module`)**:
    - Prefer pure functions for stateless transformations, but escalate deterministically when code exhibits defensive syntactic compression (cryptic short identifiers, chained `.update()` packing) or structural data asymmetry (mixing `.get()` and `d["k"]` on the same internal dict, inline schema versions like `"1.2"`, or raw numeric slices like `[:24]`): extract a **Function** when an inline block repeats $\ge 2$ times; extract a **Class / `@dataclass`** when $\ge 3$ functions share $\ge 4$ context parameters (*Data Clump*); use a **Declarative Catalog (`dict`) or `Protocol` Polymorphism** when `if/elif` chains branch across $\ge 3$–$4$ variants; and extract a **`1:1:1` Sub-Module** when a file crosses `400` lines.
 3. **Modularity, Reuse, File Size (`< 465` Lines) & Bifurcated Age Radar (`14d / 90d / 180d`)**:

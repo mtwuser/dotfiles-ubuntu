@@ -193,11 +193,10 @@ While `dotfiles-ubuntu` enforces **Zero Third-Party Runtime Dependencies (`depen
 | **Tier 1** | **Language Standard Library (`Stdlib`)** | First-party modules shipped inside Python (`pathlib`, `stat`, `hashlib`, `json`, `subprocess`, `shutil`, `ast`, `re`, `tomllib`, `sqlite3`, `urllib`). |
 | **Tier 2** | **Declared Primary Stack (`tech-stack/*`)** | Framework dependencies declared explicitly by Level 4 consumer application repositories (e.g., `FastAPI`, `Pydantic`/`pydantic-core`). |
 
-### Strict Separation Between `/enrich` and `DOTFILES_DEV_REPO_DIR` OSS-to-OSS Substrate Evolution
+### Strict 3-Way Separation Between `/enrich`, `/full-audit`, and Conscious `oss-contribute`
 
-1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates**:
+1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates (`Layer C -> B -> A`)**:
    - `/enrich` operates along the `Project -> Squad -> Department -> Root 0 -> dotfiles-ubuntu` governance hierarchy and never exposes internal runtime or C-substrate workflows to `Root 0`, `Department`, `Squad`, or `~/dotfiles-ubuntu` (`readonly` appliance) workspaces.
-2. **OSS-to-OSS Substrate Evolution is Scoped Exclusively to `DOTFILES_DEV_REPO_DIR` (`layer_role: "workstation"`, `is_oss_dev_workspace: true`)**:
-   - When `make status` reports `"is_oss_dev_workspace": true` inside `DOTFILES_DEV_REPO_DIR`, `/full-audit` evaluates:
-     1. **Floor-Version Security & C-Backed Stdlib Primitives First**: Replacing pure-Python loops or legacy patterns with C-backed `Python 3.14` stdlib primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`, `os.scandir`).
-     2. **Optional C-Accelerators (`PEP 7`) or Upstream OSS Contributions**: When a core architectural hot path (`pre_tool_guard.py`, `rcap1` capsule hashing, or multi-layer tree diffing) reaches the limits of pure Python, isolating an optional C accelerator (with a 1:1 pure-Python fallback) or proposing upstream OSS-to-OSS improvements to `CPython` / primary stack repositories.
+2. **Closed-World Gap Detection (`/full-audit`) vs. Conscious `oss-contribute` (`C3` Substrate & Upstream PRs)**:
+   - `/full-audit` is strictly a **convergent compliance gate (`Regime 0`)** verifying zero discrepancies against specs, rules, `1:1:1` test symbiosis, and floor-version stdlib compliance.
+   - Deep empirical hot-path profiling, C-backed stdlib vectorization (`hashlib.file_digest`, `int.from_bytes` XOR), optional `PEP 7` C-accelerators (with `1:1` pure-Python fallbacks), and external `OSS-to-OSS` upstream pull requests (`~/Projects/oss-contrib-<repo>`) live in the dedicated **`oss-contribute`** skill (`templates/technical-base/skills/oss-contribute/SKILL.md`), invoked consciously as a `C3` engineering task after `Regime 0` is reached.
