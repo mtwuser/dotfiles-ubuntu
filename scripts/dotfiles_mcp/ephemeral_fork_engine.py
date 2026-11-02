@@ -22,10 +22,10 @@ from dotfiles_mcp.constants import (
     EPOCH_DECIMAL_PLACES,
     FORK_ID_HASH_HEX_LEN,
     KEBAB_ID_RE,
+    LAYER_MANIFEST_CONTRACT_REV,
     MAX_ACTIVE_EPHEMERAL_FORKS,
     MAX_BRIEF_INVARIANTS,
     MAX_EPHEMERAL_TTL_SECONDS,
-    MCP_LAYER_SCHEMA_VERSION,
     MIN_EPHEMERAL_TTL_SECONDS,
     OWNER_DIR_RWX_BITS,
     ROLE_DEFAULT_PRECEDENCE,
@@ -162,7 +162,7 @@ def _prepare_project_bridge(project_dir: Path) -> tuple[list[str], str, dict[str
     b_inv = {"invariants": [f"Enforce bridged workspace contracts from {proj.name}"]}
     b_files = {"rule_files": ["antigravity/.gemini/config/AGENTS.md"], "canonical_templates": []}
     binding: dict[str, Any] = {**b_head, **b_desc, **b_match, **b_inv, **b_files}
-    m_head = {"schema_version": MCP_LAYER_SCHEMA_VERSION, "layer_id": lid, "layer_role": "squad"}
+    m_head = {"schema_version": LAYER_MANIFEST_CONTRACT_REV, "layer_id": lid, "layer_role": "squad"}
     m_prec = {"precedence": ROLE_DEFAULT_PRECEDENCE["bridge"], "default_stack_templates": []}
     m_desc = {"description": f"Ephemeral cross-project rule bridge from {proj.name}"}
     m_guard = {"baseline_guardrails": [f"Cross-project bridge active from {proj.name}"]}
@@ -309,7 +309,7 @@ def spawn_ephemeral_fork(
         "repository": "local-ephemeral-overlay",
         "branch": "ephemeral",
     }
-    schema_ver = str(base_manifest.get("schema_version", MCP_LAYER_SCHEMA_VERSION))
+    schema_ver = str(base_manifest.get("schema_version", LAYER_MANIFEST_CONTRACT_REV))
     em_head = {"schema_version": schema_ver, "layer_id": fork_id, "layer_role": "ephemeral-bot"}
     em_prec = {"precedence": ROLE_DEFAULT_PRECEDENCE["ephemeral-bot"], "upstream_layer": up_meta}
     em_desc = {"description": f"Ephemeral Department Bot ({role_clean}) scoped to {globs}"}

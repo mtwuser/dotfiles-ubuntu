@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **In-Layer Technical Dev Overlay (`make setup-dev`), Cross-Layer `--parent-dir` Hybrid Projection & Engine Template Fallback (`scripts/dotfiles_mcp/fork_configurator.py`, `scripts/dotfiles_mcp/constants.py`, `scripts/layer-config.sh`, `docs/`)**:
+  - Added `"setup-dev"` to `_FULL_LAYER_TARGETS` and `LAYER_MAKEFILE_RECIPES` (`apply-project $(CURDIR) $(PARENT_FLAG) --template technical-base --include-defaults`) so any `corporate`, `domain-policy`, `department`, `squad`, or `project` layer can locally overlay `technical-base` (`rules/technical-base.md` + `skills/{testing,refactoring,validation}`) onto its active business/domain rules in `.agents/` (`workspace_mode: "hybrid"`) without mutating `system/mcp-layer.json` (`make sync` restores pure `business` mode).
+  - Upgraded [`apply_fork_to_project`](scripts/dotfiles_mcp/fork_configurator.py) and `./scripts/layer-config.sh apply-project` (`--parent-dir <dir>`, `--include-defaults`) to merge the governing layer's `default_stack_templates` with requested technical templates and automatically fall back to `REPO_DIR` (`~/dotfiles-ubuntu/templates/`) when resolving foundational technical templates (`technical-base`, `fastapi-hexagonal`, `agile-task-branch`) on business layers that pruned them.
+
+### Changed
+- **Purpose-Driven Contract, Protocol & Seed Constant Nomenclature (`scripts/dotfiles_mcp/constants.py`, `scripts/dotfiles_mcp/*.py`, `scripts/verify-repo.sh`, `templates/technical-base/rules/technical-base.md`, `antigravity/.gemini/config/skills/review/SKILL.md`)**:
+  - Renamed `PROTOCOL_VERSION` $\rightarrow$ `MCP_JSONRPC_PROTOCOL_REV`, `MCP_LAYER_SCHEMA_VERSION` $\rightarrow$ `LAYER_MANIFEST_CONTRACT_REV`, `TEMPLATE_SCHEMA_VERSION` $\rightarrow$ `TEMPLATE_MANIFEST_CONTRACT_REV`, `DEFAULT_INITIAL_LAYER_VERSION` $\rightarrow$ `NEW_LAYER_INITIAL_SEMVER`, and `FALLBACK_UNKNOWN_VERSION` $\rightarrow$ `MISSING_VERSION_SENTINEL` to distinguish JSON manifest contract revisions, wire protocol revisions, bootstrap seed SemVers, and missing-file sentinels from repository release SemVer (`VERSION`), while keeping all JSON wire values (`"1.2"`, `"1.0"`, `"0.1.0"`, `"0.0.0"`, `"2024-11-05"`) unchanged.
+
+---
+
 ## [2.5.0] - 2026-11-01
 
 ### Added

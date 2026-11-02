@@ -12,10 +12,11 @@ from typing import Any
 
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
-    MCP_LAYER_SCHEMA_VERSION,
+    LAYER_MANIFEST_CONTRACT_REV,
     OWNER_WRITABLE_MODE_BIT,
+    REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
-    TEMPLATE_SCHEMA_VERSION,
+    TEMPLATE_MANIFEST_CONTRACT_REV,
     TEMPLATE_STACK_GROUP_DIRS,
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
@@ -57,19 +58,19 @@ def _inspect_single_template_dir(
         else []
     )
     parent_grp = tpl_dir.parent.name if tpl_dir.parent.name in TEMPLATE_STACK_GROUP_DIRS else "core"
-    return dict(
-        template_name=tpl_dir.name,
-        source_layer=source_layer,
-        kind=str(meta.get("kind", "stack-starter")),
-        stack_group=str(meta.get("stack_group", parent_grp)),
-        target_role=str(meta.get("target_role", "squad")),
-        description=str(meta.get("description", f"Template pack {tpl_dir.name}")),
-        rules=rules,
-        skills=skills,
-        governance_files=gov,
-        assets=assets,
-        recommended_surface_bindings=list(meta.get("recommended_surface_bindings", [])),
-    )
+    return {
+        "template_name": tpl_dir.name,
+        "source_layer": source_layer,
+        "kind": str(meta.get("kind", "stack-starter")),
+        "stack_group": str(meta.get("stack_group", parent_grp)),
+        "target_role": str(meta.get("target_role", "squad")),
+        "description": str(meta.get("description", f"Template pack {tpl_dir.name}")),
+        "rules": rules,
+        "skills": skills,
+        "governance_files": gov,
+        "assets": assets,
+        "recommended_surface_bindings": list(meta.get("recommended_surface_bindings", [])),
+    }
 
 
 def discover_templates_catalog(
@@ -113,40 +114,33 @@ def configure_fork_manifest(
         raise ValueError(f"Invalid precedence {eff_precedence}: must be between 0 and 100")
 
     manifest_path = repo_dir / "system" / "mcp-layer.json"
-    manifest: dict[str, Any] = dict(
-        schema_version=MCP_LAYER_SCHEMA_VERSION,
-        layer_id=layer_id,
-        layer_role=layer_role,
-        precedence=eff_precedence,
-        description=description or f"Configured {layer_role} layer ({layer_id})",
-        upstream_layer=dict(
-            layer_id="mtwuser/dotfiles-ubuntu",
-            repository="https://github.com/mtwuser/dotfiles-ubuntu.git",
-            branch="master",
-        ),
-        mounted_layers_dir="layers",
-        mounted_layers=[],
-        default_stack_templates=discover_layer_template_names(repo_dir),
-        baseline_guardrails=[],
-        surface_bindings=[],
-        environments={},
-        federated_mcps=[],
+    loaded_m = (
+        json.loads(manifest_path.read_text(encoding="utf-8")) if manifest_path.is_file() else {}
     )
-    if manifest_path.is_file():
-        loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
-        if isinstance(loaded, dict):
-            manifest.update(loaded)
-
-    manifest.update(
-        schema_version=MCP_LAYER_SCHEMA_VERSION,
-        layer_id=layer_id,
-        layer_role=layer_role,
-        precedence=eff_precedence,
-    )
-    if description is not None:
-        manifest["description"] = description
-
-    upstream = dict(manifest.get("upstream_layer", {}))
+    base_m = loaded_m if isinstance(loaded_m, dict) else {}
+    up_default = {
+        "layer_id": "mtwuser/dotfiles-ubuntu",
+        "repository": "https://github.com/mtwuser/dotfiles-ubuntu.git",
+        "branch": "master",
+    }
+    manifest: dict[str, Any] = {
+        "mounted_layers_dir": "layers",
+        "mounted_layers": [],
+        "default_stack_templates": discover_layer_template_names(repo_dir),
+        "baseline_guardrails": [],
+        "surface_bindings": [],
+        "environments": {},
+        "federated_mcps": [],
+        **base_m,
+        "schema_version": LAYER_MANIFEST_CONTRACT_REV,
+        "layer_id": layer_id,
+        "layer_role": layer_role,
+        "precedence": eff_precedence,
+        "description": description
+        or base_m.get("description")
+        or f"Configured {layer_role} layer ({layer_id})",
+    }
+    upstream = {**up_default, **dict(manifest.get("upstream_layer", {}))}
     if upstream_url is not None:
         upstream["repository"] = upstream_url
     if upstream_id is not None:
@@ -221,7 +215,7 @@ def scaffold_template_pack(
         "canonical_templates": ([f"{rel_tpl}/assets/canonical_snippet.md"] if not is_tech else []),
     }
     tpl_manifest = {
-        "schema_version": TEMPLATE_SCHEMA_VERSION,
+        "schema_version": TEMPLATE_MANIFEST_CONTRACT_REV,
         "template_id": template_name,
         "kind": kind,
         "target_role": "domain-policy" if kind == "domain-policy-pack" else "squad",
@@ -298,12 +292,15 @@ def apply_fork_to_project(
     *,
     template_ref: str | None = None,
     layers_filter: list[str] | None = None,
+    include_layer_defaults: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Materialize template pack and 0..N layer rules/bindings into a target project."""
     root_manifest_path = repo_dir / "system" / "mcp-layer.json"
-    corp_prec = ROLE_DEFAULT_PRECEDENCE["corporate"]
-    svc_prec = ROLE_DEFAULT_PRECEDENCE["service-node"]
+    corp_prec, svc_prec = (
+        ROLE_DEFAULT_PRECEDENCE["corporate"],
+        ROLE_DEFAULT_PRECEDENCE["service-node"],
+    )
     root_manifest: dict[str, Any] = (
         json.loads(root_manifest_path.read_text(encoding="utf-8"))
         if root_manifest_path.is_file()
@@ -333,31 +330,34 @@ def apply_fork_to_project(
     candidate_layers.sort(key=lambda item: (int(item[2].get("precedence", svc_prec)), item[0]))
 
     resolved_templates: list[tuple[str, Path]] = []
+    def_tpls = [
+        str(t) for t in root_manifest.get("default_stack_templates", []) if str(t) != "human-core"
+    ]
     if template_ref:
-        for raw_ref in [r.strip() for r in template_ref.split(",") if r.strip()]:
+        raw_list = [r.strip() for r in template_ref.split(",") if r.strip()]
+        req_refs = _merge_unique_strings(def_tpls, raw_list) if include_layer_defaults else raw_list
+        for raw_ref in req_refs:
             found_dir: Path | None = None
             found_name = ""
             if ":" in raw_ref:
                 layer_part, tpl_part = raw_ref.split(":", 1)
                 for name, ldir, _m in candidate_layers:
-                    cand_d = _resolve_template_dir(ldir, tpl_part) if name == layer_part else None
-                    if cand_d is not None:
+                    if name == layer_part and (cand_d := _resolve_template_dir(ldir, tpl_part)):
                         found_dir, found_name = cand_d, cand_d.name
                         break
             else:
                 for _name, ldir, _m in sorted(candidate_layers, key=lambda item: item[0] != "root"):
-                    cand_d = _resolve_template_dir(ldir, raw_ref)
-                    if cand_d is not None:
+                    if cand_d := _resolve_template_dir(ldir, raw_ref):
                         found_dir, found_name = cand_d, cand_d.name
                         break
+                if found_dir is None and (eng_d := _resolve_template_dir(REPO_DIR, raw_ref)):
+                    found_dir, found_name = eng_d, eng_d.name
             if found_dir is None:
                 raise ValueError(f"Template {raw_ref!r} not found in selected layers")
             resolved_templates.append((found_name, found_dir))
     else:
-        for tpl_item in root_manifest.get("default_stack_templates", []):
-            tpl_str = str(tpl_item)
-            cand_d = _resolve_template_dir(repo_dir, tpl_str) if tpl_str != "human-core" else None
-            if cand_d is not None:
+        for tpl_str in def_tpls:
+            if cand_d := _resolve_template_dir(repo_dir, tpl_str):
                 resolved_templates.append((cand_d.name, cand_d))
 
     resolved_tpl_name = ",".join(t[0] for t in resolved_templates)
@@ -367,13 +367,27 @@ def apply_fork_to_project(
         if (
             base_id not in seen_names
             and any(d.parent.name == grp for _n, d in resolved_templates)
-            and (base_dir := _resolve_template_dir(repo_dir, base_id)) is not None
+            and (
+                base_dir := _resolve_template_dir(repo_dir, base_id)
+                or _resolve_template_dir(REPO_DIR, base_id)
+            )
         ):
             mat_templates.insert(0, (base_id, base_dir))
             seen_names.add(base_id)
 
     copied_files: list[str] = []
     agents_dir = target_project_dir / ".agents"
+
+    def _copy_file(src: Path, dest: Path, *, overwrite: bool = True, fm: bool = False) -> None:
+        if not dry_run:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if overwrite:
+                dest.unlink(missing_ok=True)
+            shutil.copy2(src, dest)
+            if fm:
+                _ensure_rule_file_frontmatter(dest)
+            dest.chmod(dest.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
+
     for tpl_name, tpl_dir in mat_templates:
         for sub_name, dest_sub in (
             ("rules", agents_dir / "rules"),
@@ -382,18 +396,12 @@ def apply_fork_to_project(
             src_sub = tpl_dir / sub_name
             if src_sub.is_dir():
                 for src_file in sorted(src_sub.rglob("*")):
-                    if not src_file.is_file():
-                        continue
-                    rel = src_file.relative_to(src_sub)
-                    dest = dest_sub / rel
-                    copied_files.append(str(dest.relative_to(target_project_dir)))
-                    if not dry_run:
-                        dest.parent.mkdir(parents=True, exist_ok=True)
-                        dest.unlink(missing_ok=True)
-                        shutil.copy2(src_file, dest)
-                        if sub_name == "rules" and dest.suffix == ".md":
-                            _ensure_rule_file_frontmatter(dest)
-                        dest.chmod(dest.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
+                    if src_file.is_file():
+                        dest = dest_sub / src_file.relative_to(src_sub)
+                        copied_files.append(str(dest.relative_to(target_project_dir)))
+                        _copy_file(
+                            src_file, dest, fm=(sub_name == "rules" and dest.suffix == ".md")
+                        )
         gov_src = tpl_dir / "governance"
         if gov_src.is_dir():
             for gfile in [*sorted(gov_src.glob("*.md")), *sorted(gov_src.glob("Makefile"))]:
@@ -404,22 +412,14 @@ def apply_fork_to_project(
                 )
                 if not dest_g.exists():
                     copied_files.append(str(dest_g.relative_to(target_project_dir)))
-                    if not dry_run:
-                        dest_g.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(gfile, dest_g)
-                        dest_g.chmod(dest_g.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
+                    _copy_file(gfile, dest_g, overwrite=False)
         assets_src = tpl_dir / "assets"
         if assets_src.is_dir():
             for afile in sorted(assets_src.rglob("*")):
-                if not afile.is_file():
-                    continue
-                dest_a = agents_dir / "assets" / tpl_name / afile.relative_to(assets_src)
-                copied_files.append(str(dest_a.relative_to(target_project_dir)))
-                if not dry_run:
-                    dest_a.parent.mkdir(parents=True, exist_ok=True)
-                    dest_a.unlink(missing_ok=True)
-                    shutil.copy2(afile, dest_a)
-                    dest_a.chmod(dest_a.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
+                if afile.is_file():
+                    dest_a = agents_dir / "assets" / tpl_name / afile.relative_to(assets_src)
+                    copied_files.append(str(dest_a.relative_to(target_project_dir)))
+                    _copy_file(afile, dest_a)
 
     lineage_rows: list[str] = []
     for name, ldir, m in candidate_layers:
@@ -434,12 +434,7 @@ def apply_fork_to_project(
                 dest_rule.unlink(missing_ok=True)
         elif layer_agents.is_file():
             copied_files.append(str(dest_rule.relative_to(target_project_dir)))
-            if not dry_run:
-                dest_rule.parent.mkdir(parents=True, exist_ok=True)
-                dest_rule.unlink(missing_ok=True)
-                shutil.copy2(layer_agents, dest_rule)
-                _ensure_rule_file_frontmatter(dest_rule)
-                dest_rule.chmod(dest_rule.stat().st_mode | OWNER_WRITABLE_MODE_BIT)
+            _copy_file(layer_agents, dest_rule, fm=True)
 
     lineage_dest, session_dest = agents_dir / "LAYER_LINEAGE.md", agents_dir / "SESSION.md"
     copied_files.extend([str(lineage_dest.relative_to(target_project_dir)), ".agents/SESSION.md"])
@@ -455,10 +450,10 @@ def apply_fork_to_project(
                 encoding="utf-8",
             )
 
-    return dict(
-        target_project_dir=str(target_project_dir),
-        applied_template=resolved_tpl_name or None,
-        participating_layers=[name for name, _d, _m in candidate_layers],
-        files_materialized=_merge_unique_strings(copied_files),
-        dry_run=dry_run,
-    )
+    return {
+        "target_project_dir": str(target_project_dir),
+        "applied_template": resolved_tpl_name or None,
+        "participating_layers": [name for name, _d, _m in candidate_layers],
+        "files_materialized": _merge_unique_strings(copied_files),
+        "dry_run": dry_run,
+    }

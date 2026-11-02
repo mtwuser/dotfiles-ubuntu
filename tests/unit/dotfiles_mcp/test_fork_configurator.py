@@ -384,7 +384,15 @@ class TestForkConfigurator:
         minimal_res = apply_fork_to_project(
             bare_fork,
             tmp_path / "minimal_proj",
-            template_ref="minimal-tpl",
+            template_ref="minimal-tpl,agile-task-branch",
+            include_layer_defaults=False,
+            dry_run=False,
+        )
+        inc_def_res = apply_fork_to_project(
+            fork_dir,
+            tmp_path / "inc_def_proj",
+            template_ref="dept-legal:gdpr-pack",
+            include_layer_defaults=True,
             dry_run=False,
         )
         no_sys_fork = tmp_path / "no_sys_fork"
@@ -415,7 +423,8 @@ class TestForkConfigurator:
         assert second_res["applied_template"] == "gdpr-pack"
         assert by_name_res["applied_template"] == "web-starter"
         assert bare_res["applied_template"] is None
-        assert minimal_res["applied_template"] == "minimal-tpl"
+        assert minimal_res["applied_template"] == "minimal-tpl,agile-task-branch"
+        assert inc_def_res["applied_template"] == "web-starter,gdpr-pack"
 
         with pytest.raises(ValueError, match="not found in selected layers"):
             apply_fork_to_project(fork_dir, project_dir, template_ref="nonexistent")

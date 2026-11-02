@@ -17,8 +17,8 @@ from dotfiles_mcp.constants import (
     AGENTS_MD_WARN_BYTES,
     ALLOWED_READ_PREFIXES,
     ALLOWED_ROOT_FILES,
+    LAYER_MANIFEST_CONTRACT_REV,
     MAX_LOG_FILE_BYTES,
-    MCP_LAYER_SCHEMA_VERSION,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
 )
@@ -140,7 +140,7 @@ class MCPNodeBase:
             else ROLE_DEFAULT_PRECEDENCE["service-node"]
         )
         data: dict[str, Any] = {
-            "schema_version": MCP_LAYER_SCHEMA_VERSION,
+            "schema_version": LAYER_MANIFEST_CONTRACT_REV,
             "layer_id": base_dir.name if base_dir != self.repo_dir else "dotfiles-ubuntu-default",
             "layer_role": "workstation",
             "precedence": default_prec,
@@ -162,10 +162,10 @@ class MCPNodeBase:
             loaded = json.loads(manifest_path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 data.update(loaded)
-        if str(data.get("schema_version")) != MCP_LAYER_SCHEMA_VERSION:
+        if str(data.get("schema_version")) != LAYER_MANIFEST_CONTRACT_REV:
             raise ValueError(
                 f"Unsupported mcp-layer.json schema_version {data.get('schema_version')!r}: "
-                f"expected {MCP_LAYER_SCHEMA_VERSION!r}"
+                f"expected {LAYER_MANIFEST_CONTRACT_REV!r}"
             )
         if base_dir == self.repo_dir:
             if self.layer_id_override:

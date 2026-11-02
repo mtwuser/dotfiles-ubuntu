@@ -150,12 +150,16 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/squad-patent-ops/rules/squad-patent-ops.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh apply-project commands for our target application repositories.
    ```
 
-### 3.4 Level 4 — `Project` (`apply-project`, Application / Service Workspace)
+### 3.4 Level 4 — `Project` (`apply-project`, Application / Service Workspace & In-Layer `make setup-dev`)
 
-1. **CLI Setup (Run from the `Squad` Workspace)**:
+1. **CLI Setup (Project Under a `Department` or `Squad`, or In-Layer Technical Mode via `make setup-dev`)**:
    ```bash
+   # Option A: Project workspace under a parent Department or Squad (inherits parent domain rules + tech stack)
    ./scripts/layer-config.sh apply-project /path/to/patent-api \
-     --template technical-base,fastapi-hexagonal,squad-patent-ops
+     --parent-dir /path/to/squad-patent-ops --template fastapi-hexagonal,agile-task-branch
+
+   # Option B: In-layer technical dev mode inside Root 0, a Department, or a Squad (local .agents/ hybrid overlay)
+   cd /path/to/dept-legal && make setup-dev   # Overlays technical-base onto business rules (make sync restores business mode)
    ```
 2. **Fill-in-the-Blanks Blueprint (`.agents/LAYER_LINEAGE.md` in `Project`)**:
    ```markdown
@@ -220,6 +224,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
      - `make authority` — Checks whether `git config user.email` is authorized to cut a release (`layer_authority`).
      - `make mcp-test` — Runs the MCP layer discovery self-test across the workspace and its mounted subtrees.
    - **Tier `C2: guided_tactical` (Per-Task / Intra-Layer Transitions — local workspace state)**:
+     - `make setup-dev` — Overlays `technical-base` (`rules/technical-base.md` + `skills/{testing,refactoring,validation}`) onto the layer's active domain/business rules in `.agents/` (`workspace_mode: "hybrid"`), enabling full software-engineering rigor inside any `Root 0`, `Department`, or `Squad` checkout without mutating `system/mcp-layer.json` (`make sync` restores `business` mode).
      - `make task TASK=<id>` — Claims a task item in `WORKTASK.md` (marking it `[/]`), updates `.agents/SESSION.md` (`## Active Task` with `Ticket ID` and `Origin Layer`), and outputs `git checkout -b feature/<TICKET-ID>-<slug>`.
      - `make sync` — Propagates inherited template packs from the configured parent (`PARENT_DIR`) and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - **Tier `C3: conscious_human_gated` (Low-Frequency / High-Consciousness Inter-Layer & Authority Gates)**:

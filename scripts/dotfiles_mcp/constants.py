@@ -11,11 +11,11 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 REPO_DIR = SCRIPT_DIR.parent
-PROTOCOL_VERSION = "2024-11-05"
-MCP_LAYER_SCHEMA_VERSION = "1.2"
-TEMPLATE_SCHEMA_VERSION = "1.0"
-DEFAULT_INITIAL_LAYER_VERSION = "0.1.0"
-FALLBACK_UNKNOWN_VERSION = "0.0.0"
+MCP_JSONRPC_PROTOCOL_REV = "2024-11-05"
+LAYER_MANIFEST_CONTRACT_REV = "1.2"
+TEMPLATE_MANIFEST_CONTRACT_REV = "1.0"
+NEW_LAYER_INITIAL_SEMVER = "0.1.0"
+MISSING_VERSION_SENTINEL = "0.0.0"
 VALID_LAYER_ROLES = (
     "corporate", "department", "domain-policy", "ephemeral-bot",
     "squad", "service-node", "environment-cluster", "workstation",
@@ -261,7 +261,7 @@ _WORKSTATION_DEV_TARGETS: tuple[str, ...] = (
     "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
 )  # fmt: skip
 _FULL_LAYER_TARGETS: tuple[str, ...] = (
-    "status", "task", "complete", "consult", "horizon", "sync", "upstream-diff",
+    "status", "setup-dev", "task", "complete", "consult", "horizon", "sync", "upstream-diff",
     "diff", "authority", "roster", "env-gate", "decision", "promote", "delegate", "mcp-test",
 )  # fmt: skip
 LAYER_ROLE_MAKEFILE_TARGETS: dict[str, tuple[str, ...]] = {
@@ -291,6 +291,7 @@ _CLI_RUN = "\t@$(DOTFILES_DIR)/scripts/layer-config.sh"
 _PF = "$(CURDIR) $(PARENT_FLAG)"
 LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "status": f"{_CLI_RUN} status {_PF}",
+    "setup-dev": f"{_CLI_RUN} apply-project $(CURDIR) --template technical-base --include-defaults",
     "task": (
         f'{_CLI_RUN} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)'
     ),

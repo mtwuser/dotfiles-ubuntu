@@ -19,9 +19,9 @@ from dotfiles_mcp.constants import (
     JSONRPC_INVALID_PARAMS,
     JSONRPC_METHOD_NOT_FOUND,
     JSONRPC_PARSE_ERROR,
+    MCP_JSONRPC_PROTOCOL_REV,
     MCP_PAYLOAD_WARN_BYTES,
     MS_PER_SECOND,
-    PROTOCOL_VERSION,
 )
 from dotfiles_mcp.manifest_helpers import (
     _count_result_warnings,
@@ -78,7 +78,7 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
         try:
             if method == "initialize":
                 result: dict[str, Any] = {
-                    "protocolVersion": PROTOCOL_VERSION,
+                    "protocolVersion": MCP_JSONRPC_PROTOCOL_REV,
                     "capabilities": {
                         "resources": {"subscribe": False, "listChanged": False},
                         "tools": {"listChanged": False},

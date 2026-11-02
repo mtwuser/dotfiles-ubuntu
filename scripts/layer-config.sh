@@ -24,7 +24,7 @@ Commands:
   scaffold-template <template-name> [--kind <kind>] [--description <text>]
                     [--rule-file <filename.md>] [--register-binding]
       Scaffold templates/<template-name>/ and optionally register its surface_binding.
-  apply-project <target-project-dir> [--template <[layer:]name>] [--layers <all|csv>]
+  apply-project <target-project-dir> [--parent-dir <dir>] [--template <[layer:]name>] [--layers <all|csv>]
       Materialize template pack + 0..N participating layers into <target-project-dir>/.agents/.
   diff-project <target-project-dir>
       Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates.
@@ -212,8 +212,12 @@ if subcmd == "scaffold-template":
 if subcmd == "apply-project":
     if not rest or rest[0].startswith("-"):
         _die("Usage: ./scripts/layer-config.sh apply-project <target-project-dir> [options]")
-    opts = _parse_opts(rest[1:], {"--template": "tpl", "--layers": "layers"})
-    print(json.dumps(apply_fork_to_project(repo_dir, Path(rest[0]).resolve(), template_ref=_opt_str(opts, "tpl"), layers_filter=_csv(opts.get("layers")), dry_run=dry_run), indent=2))
+    opts = _parse_opts(rest[1:], {"--template": "tpl", "--layers": "layers", "--parent-dir": "p_dir"}, {"--include-defaults": "inc_def"})
+    target_dir, p_dir = Path(rest[0]).resolve(), _opt_path(opts, "p_dir")
+    is_non_ws_layer = (target_dir / "system/mcp-layer.json").is_file() and json.loads((target_dir / "system/mcp-layer.json").read_text(encoding="utf-8")).get("layer_role") != "workstation"
+    base_dir = p_dir if p_dir is not None else (target_dir if is_non_ws_layer else repo_dir)
+    inc_def = bool(opts.get("inc_def", False)) or p_dir is not None or is_non_ws_layer
+    print(json.dumps(apply_fork_to_project(base_dir, target_dir, template_ref=_opt_str(opts, "tpl"), layers_filter=_csv(opts.get("layers")), include_layer_defaults=inc_def, dry_run=dry_run), indent=2))
     sys.exit(0)
 
 if subcmd == "diff-project":

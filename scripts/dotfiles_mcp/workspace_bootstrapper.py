@@ -15,11 +15,11 @@ from typing import Any
 from dotfiles_mcp.constants import (
     AGENTS_MD_MAX_BYTES,
     COMMAND_CONSCIOUSNESS_TIERS,
-    DEFAULT_INITIAL_LAYER_VERSION,
     KEBAB_ID_RE,
     LAYER_MAKEFILE_RECIPES,
     LAYER_ROLE_MAKEFILE_TARGETS,
     MCP_OPERATING_MODES,
+    NEW_LAYER_INITIAL_SEMVER,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
     VALID_LAYER_ROLES,
@@ -292,7 +292,7 @@ def bootstrap_layer_workspace(
         "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
     )
     chg_hdr = f"# Changelog — {layer_id}\n\n## [Unreleased]\n\n---\n\n"
-    init_ver = DEFAULT_INITIAL_LAYER_VERSION
+    init_ver = NEW_LAYER_INITIAL_SEMVER
     baseline_files = {
         "VERSION": f"{init_ver}\n",
         ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
@@ -369,19 +369,26 @@ def sync_layer_workspace(
         target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
     )
     makefile_path = target_dir / "Makefile"
-    if not dry_run and not makefile_path.exists():
-        mk_txt = _render_layer_makefile(own_id, own_role, eff_parent, repo_dir)
-        makefile_path.write_text(mk_txt, encoding="utf-8")
+    if not dry_run:
+        if "technical-base" not in stack_templates:
+            (target_dir / ".agents/rules/technical-base.md").unlink(missing_ok=True)
+            for sk in ("testing", "refactoring", "validation"):
+                shutil.rmtree(target_dir / ".agents/skills" / sk, ignore_errors=True)
+        if not makefile_path.exists():
+            makefile_path.write_text(
+                _render_layer_makefile(own_id, own_role, eff_parent, repo_dir), encoding="utf-8"
+            )
     tpl_ref = ",".join(stack_templates) if stack_templates else None
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
     )
-    res: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": own_id, "dry_run": dry_run}
-    res.update(synced_templates=synced_templates, synced_mounted_layers=synced_children)
-    res.update(applied_template=apply_res.get("applied_template"))
-    res["files_materialized"] = apply_res.get("files_materialized", [])
-    res["participating_layers"] = apply_res.get("participating_layers", [])
-    return res
+    return {
+        "target_dir": str(target_dir), "layer_id": own_id, "dry_run": dry_run,
+        "synced_templates": synced_templates, "synced_mounted_layers": synced_children,
+        "applied_template": apply_res.get("applied_template"),
+        "files_materialized": apply_res.get("files_materialized", []),
+        "participating_layers": apply_res.get("participating_layers", []),
+    }  # fmt: skip
 
 
 def inspect_workspace_status(
@@ -425,33 +432,22 @@ def inspect_workspace_status(
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
     mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
     is_ro_app = role == "workstation" and (ws / ".workstation-state.json").is_file()
-    op_state = (
-        "oss-readonly-appliance"
-        if is_ro_app
-        else (
-            "oss-dev"
-            if role == "workstation"
-            else ("corporate-root" if role == "corporate" else role)
-        )
-    )
+    op_map = {"workstation": "oss-dev", "corporate": "corporate-root"}
+    op_state = "oss-readonly-appliance" if is_ro_app else op_map.get(role, role)
     mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
     cmd_tiers = {k: [t for t in v if t in mk_t] for k, v in COMMAND_CONSCIOUSNESS_TIERS.items()}
-    out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role}
-    out.update(operating_state=op_state, mcp_operating_mode=mcp_mode, precedence=prec)
-    out.update(workspace_mode=mode, is_oss_dev_workspace=op_state == "oss-dev")
-    out.update(command_tiers=cmd_tiers, active_templates=tpls, active_rules=rules)
-    out["available_makefile_targets"] = mk_t
-    out.update(git_governance=inspect_git_governance_state(ws))
-    out["has_project_start_skill"] = (ws / ".agents/skills/start/SKILL.md").is_file()
-    out["session_state"] = {
-        "exists": s_file.is_file(),
-        "last_conversation_id": last_cid,
-        "excerpt": s_ex,
-    }
-    out["priority_state"] = {"active_tracker": active_trk, "excerpt": p_ex}
-    out["git_state"] = {"is_git_repo": is_git, "status_short": g_stat, "recent_commits": g_log}
-    out["horizon"] = (
-        inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None
-    )
-    out["agent_diff"] = diff_project_against_layers(ws if is_layer else repo_dir, ws)
-    return out
+    return {
+        "workspace_dir": str(ws), "layer_id": lid, "layer_role": role,
+        "operating_state": op_state, "mcp_operating_mode": mcp_mode, "precedence": prec,
+        "workspace_mode": mode, "is_oss_dev_workspace": op_state == "oss-dev",
+        "command_tiers": cmd_tiers, "active_templates": tpls, "active_rules": rules,
+        "available_makefile_targets": mk_t, "git_governance": inspect_git_governance_state(ws),
+        "has_project_start_skill": (ws / ".agents/skills/start/SKILL.md").is_file(),
+        "session_state": {
+            "exists": s_file.is_file(), "last_conversation_id": last_cid, "excerpt": s_ex,
+        },
+        "priority_state": {"active_tracker": active_trk, "excerpt": p_ex},
+        "git_state": {"is_git_repo": is_git, "status_short": g_stat, "recent_commits": g_log},
+        "horizon": inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None,
+        "agent_diff": diff_project_against_layers(ws if is_layer else repo_dir, ws),
+    }  # fmt: skip

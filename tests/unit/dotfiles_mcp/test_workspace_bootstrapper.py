@@ -263,7 +263,7 @@ class TestWorkspaceBootstrapper:
         )
         sync_bare = sync_layer_workspace(repo_dir, bare_layer, templates=[""], dry_run=False)
         sync_bare_add = sync_layer_workspace(
-            repo_dir, bare_layer, templates=["business-base"], dry_run=False
+            repo_dir, bare_layer, templates=["business-base", "technical-base"], dry_run=False
         )
         (target_dir / ".agents/SESSION.md").write_text(
             "## Session Log\n- Conv: 3fcd5708-4b9b-4d2b-b187-f224a76165de\n",
@@ -293,7 +293,8 @@ class TestWorkspaceBootstrapper:
         assert dept_status["operating_state"] == "domain-policy"
         assert dept_status["mcp_operating_mode"] == "departmental-policy-hub"
         assert dept_status["is_oss_dev_workspace"] is False
-        assert "setup-dev" not in dept_status["available_makefile_targets"]
+        assert "setup-dev" in dept_status["available_makefile_targets"]
+        assert "workstation-sync" not in dept_status["available_makefile_targets"]
         assert proj_status["operating_state"] == "project"
         assert proj_status["mcp_operating_mode"] == "project-consumer-only"
         assert dry_res["dry_run"] is True

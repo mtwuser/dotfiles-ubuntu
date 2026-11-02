@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.constants import (
-    FALLBACK_UNKNOWN_VERSION,
+    MISSING_VERSION_SENTINEL,
     REPO_DIR,
     TEMPLATE_STACK_GROUP_DIRS,
 )
@@ -28,7 +28,7 @@ def _read_version(repo_dir: Path | None = None) -> str:
     version_file = base_dir / "VERSION"
     if version_file.is_file():
         return version_file.read_text(encoding="utf-8").strip()
-    return FALLBACK_UNKNOWN_VERSION
+    return MISSING_VERSION_SENTINEL
 
 
 def _read_os_pretty_name(os_release: Path | None = None) -> str:
