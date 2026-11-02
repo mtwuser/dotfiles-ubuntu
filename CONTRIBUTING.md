@@ -52,7 +52,7 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
 All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/*.py` (`20` modules) must:
 - Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`) and prefer C-backed floor-version stdlib primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`).
 - Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), follow the self-indexing file-prefix taxonomy (`tools_*`, `*_engine`, `NN_*`, `test_*`), stay strictly **`< 465` lines** (`<= 400` target via the 5-Stage Evolution Ladder), and pass `mypy --strict` and `ruff check` with 0 errors.
-- Centralize schema versions (`MCP_LAYER_SCHEMA_VERSION`, `TEMPLATE_SCHEMA_VERSION`), slice bounds, and domain cut-points in [`scripts/dotfiles_mcp/constants.py`](scripts/dotfiles_mcp/constants.py) with explicit absolute imports (zero magic numbers/raw slices, zero `import ... as c` aliases, `.get()` at external boundaries vs. `d["k"]` on guaranteed internal dicts, and `{...}` literals instead of `.update()` packing).
+- Centralize contract identifiers (`LAYER_MANIFEST_CONTRACT_REV`, `TEMPLATE_MANIFEST_CONTRACT_REV`), slice bounds, and domain cut-points in [`scripts/dotfiles_mcp/constants.py`](scripts/dotfiles_mcp/constants.py) with explicit absolute imports (zero magic numbers/raw slices, zero `import ... as c` aliases, `.get()` at external boundaries vs. `d["k"]` on guaranteed internal dicts, and `{...}` literals instead of `.update()` packing).
 - Keep `scripts/dotfiles_mcp/__init__.py` and all `tests/**/__init__.py` files at **`0 bytes`** (package marker purity).
 - Maintain **100% isolated unit test coverage** (`tests/unit/dotfiles_mcp/`) and **100% total statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` (`1` `Test<Module>` class per file, 1-line invariant docstring on every `test_*` method, explicit `# Arrange`, `# Act`, `# Assert` comments, exact boundary cut-points `N` vs `N ± 1`, bipolar guard assertions, and zero `# pragma: no cover` or blind `subprocess.run` lambdas).
 
@@ -67,7 +67,7 @@ All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfil
 Contributors modifying Python scripts, hooks, MCP/Docker tooling, or tests should initialize `./venv` (and local `.agents/` overlay) via [`Makefile`](Makefile):
 
 ```bash
-cd ~/dotfiles-ubuntu   # or cd ~/Projects/dev-dotfiles-ubuntu
+cd ~/dotfiles-ubuntu   # or cd "$DOTFILES_DEV_REPO_DIR"
 
 # 1. Create ./venv, install requirements-dev.txt, and materialize .agents/ (technical-base + Priority-1 skills)
 make setup-dev         # (or 'make install' for ./venv only)

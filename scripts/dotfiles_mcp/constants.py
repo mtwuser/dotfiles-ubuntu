@@ -299,7 +299,7 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "horizon": f"{_CLI_RUN} inspect-horizon {_PF}",
     "sync": f"{_CLI_RUN} sync-layer {_PF}",
     "upstream-diff": f"{_CLI_RUN} compare-upstream {_PF}",
-    "diff": f"{_CLI_RUN} diff-project $(CURDIR)",
+    "diff": f"{_CLI_RUN} diff-project {_PF}",
     "authority": f"{_CLI_RUN} check-authority $(CURDIR) --op release",
     "roster": (
         f"{_CLI_RUN} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "

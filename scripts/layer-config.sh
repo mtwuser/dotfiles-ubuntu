@@ -224,7 +224,7 @@ if subcmd == "diff-project":
     if not rest or rest[0].startswith("-"):
         _die("Usage: ./scripts/layer-config.sh diff-project <target-project-dir> [--parent-dir <dir>]")
     target_dir, opts = Path(rest[0]).resolve(), _parse_opts(rest[1:], {"--parent-dir": "p_dir"})
-    base_dir = _opt_path(opts, "p_dir") or (target_dir if (target_dir / "system/mcp-layer.json").is_file() else repo_dir)
+    base_dir = target_dir if (target_dir / "system/mcp-layer.json").is_file() else (_opt_path(opts, "p_dir") or repo_dir)
     print(json.dumps(diff_project_against_layers(base_dir, target_dir), indent=2))
     sys.exit(0)
 

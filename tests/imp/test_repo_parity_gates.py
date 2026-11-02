@@ -269,6 +269,11 @@ class TestRepoParityGates:
                 "\x70romoter_header",
                 "\x5fopen_single_capsule",
                 "\x5flocate_section_with_drift_tolerance",
+                "\x4dCP_LAYER_SCHEMA_VERSION",
+                "\x54EMPLATE_SCHEMA_VERSION",
+                "\x44EFAULT_INITIAL_LAYER_VERSION",
+                "\x46ALLBACK_UNKNOWN_VERSION",
+                "\x4eEW_LAYER_INITIAL_SEMVER",
             )
         ]
         retired_token_re = re.compile(
@@ -302,6 +307,7 @@ class TestRepoParityGates:
         targets = sorted(
             [
                 REPO_DIR / "README.md",
+                REPO_DIR / "CONTRIBUTING.md",
                 REPO_DIR / "CHANGELOG.md",
                 *list((REPO_DIR / "antigravity").rglob("*.md")),
                 *list((REPO_DIR / "antigravity").rglob("*.py")),
@@ -338,6 +344,7 @@ class TestRepoParityGates:
             "promoter_codon",
             "_parse_capsule_envelope",
             "_resolve_ephemeral_issuer_meta",
+            "diff-project <dir> [--parent-dir <dir>]",
         ):
             assert canonical in arch_04
         for eph_canonical in (

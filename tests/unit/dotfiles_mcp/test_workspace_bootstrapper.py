@@ -313,6 +313,9 @@ class TestWorkspaceBootstrapper:
         assert "make horizon" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert "make status" in (target_dir / "Makefile").read_text(encoding="utf-8")
         assert "make env-gate" in (target_dir / "Makefile").read_text(encoding="utf-8")
+        assert "diff-project $(CURDIR) $(PARENT_FLAG)" in (target_dir / "Makefile").read_text(
+            encoding="utf-8"
+        )
         assert str(target_dir.resolve()) in (squad_dir / "Makefile").read_text(encoding="utf-8")
         assert "CONTRIB_REPO ?=" in (bare_layer / "Makefile").read_text(encoding="utf-8")
         assert ".agents/rules/business-base.md" in live_res["files_materialized"]
