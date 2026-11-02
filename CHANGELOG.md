@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.7.0] - 2026-11-02
 
 ### Added
 - **Reference Business-Stack Template Pack (`templates/business-stack/corporate-ops-ledger/`, `scripts/dotfiles_mcp/constants.py`, `scripts/dotfiles_mcp/fork_configurator.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/dotfiles_mcp/git_governance_engine.py`, `docs/`)**:
