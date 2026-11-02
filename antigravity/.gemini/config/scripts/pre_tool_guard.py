@@ -257,7 +257,7 @@ def _detect_protected_write_in_segment(
     elif prog == "dd":
         for arg in args:
             if arg.startswith("of="):
-                hit = _classify_protected_path(arg[3:])
+                hit = _classify_protected_path(arg.removeprefix("of="))
                 if hit is not None:
                     return hit
     elif prog.startswith("python") and "-c" in args:

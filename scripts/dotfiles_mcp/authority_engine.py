@@ -81,15 +81,14 @@ def configure_layer_authority(
     contact = (escalation_contact or "").strip() or (
         f"{cleaned_role} ({layer_id})" + (f" <{cleaned_emails[0]}>" if cleaned_emails else "")
     )
-    auth_blk: dict[str, Any] = {"owner_role": cleaned_role, "authorized_emails": cleaned_emails}
-    auth_blk.update(escalation_contact=contact, consumer_allowed_ops=list(CONSUMER_ALLOWED_OPS))
-    auth_blk["owner_restricted_ops"] = list(OWNER_RESTRICTED_OPS)
+    auth_blk: dict[str, Any] = {"owner_role": cleaned_role, "authorized_emails": cleaned_emails,
+        "escalation_contact": contact, "consumer_allowed_ops": list(CONSUMER_ALLOWED_OPS),
+        "owner_restricted_ops": list(OWNER_RESTRICTED_OPS)}  # fmt: skip
     manifest["layer_authority"] = auth_blk
     if not dry_run:
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
-    out: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run}
-    out["layer_authority"] = auth_blk
-    return out
+    return {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run,
+        "layer_authority": auth_blk}  # fmt: skip
 
 
 def _detect_inherited_upstream_asset(
@@ -154,19 +153,18 @@ def verify_layer_operation_authority(
                 f"--source {target_rel_path} --to-layer {upstream_id} --create-pr'; "
                 f"(3) Coordinate with {escalation_contact} for review."
             )
-            res: dict[str, Any] = {"allowed": False, "operation": operation, "layer_id": layer_id}
-            res.update(reason_code="INHERITED_UPSTREAM_ASSET_IMMUTABLE", actor_email=eff_email)
-            res.update(target_rel_path=target_rel_path, origin_source=origin_ref, remediation=rem)
-            ev_kw: dict[str, Any] = {"operation": operation, "status": "blocked", "message": rem}
-            ev_kw.update(actor_email=eff_email, source_rel_path=target_rel_path, remediation=rem)
-            ev_kw["reason_code"] = "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
+            rc = "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
+            ev_kw: dict[str, Any] = {"operation": operation, "status": "blocked", "message": rem,
+                "actor_email": eff_email, "source_rel_path": target_rel_path, "remediation": rem,
+                "reason_code": rc}  # fmt: skip
             record_governance_event(target_dir, **ev_kw)
-            return res
+            return {"allowed": False, "operation": operation, "layer_id": layer_id,
+                "reason_code": rc, "actor_email": eff_email, "target_rel_path": target_rel_path,
+                "origin_source": origin_ref, "remediation": rem}  # fmt: skip
     if operation in CONSUMER_ALLOWED_OPS:
-        res = {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "remediation": None}
-        res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
-        res["owner_role"] = owner_role
-        return res
+        return {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "remediation": None,
+            "operation": operation, "layer_id": layer_id, "actor_email": eff_email,
+            "owner_role": owner_role}  # fmt: skip
     if allowed_pool and not (
         eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in allowed_pool)
     ):
@@ -179,17 +177,17 @@ def verify_layer_operation_authority(
             f"--source .agents/rules/<file>.md --to-layer {layer_id} --create-pr'; "
             f"(3) Contact {escalation_contact} to review and sync via 'sync-layer'."
         )
-        res = {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL"}
-        res.update(operation=operation, layer_id=layer_id, actor_email=eff_email)
-        res.update(owner_role=owner_role, authorized_emails=allowed_pool)
-        res.update(escalation_contact=escalation_contact, remediation=rem)
-        ev_kw = {"operation": operation, "status": "blocked", "actor_email": eff_email}
-        ev_kw.update(reason_code="UNAUTHORIZED_ACTOR_EMAIL", message=rem, remediation=rem)
+        ev_kw = {"operation": operation, "status": "blocked", "actor_email": eff_email,
+            "reason_code": "UNAUTHORIZED_ACTOR_EMAIL", "message": rem,
+            "remediation": rem}  # fmt: skip
         record_governance_event(target_dir, **ev_kw)
-        return res
-    res = {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation}
-    res.update(layer_id=layer_id, actor_email=eff_email, owner_role=owner_role, remediation=None)
-    return res
+        return {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL", "operation": operation,
+            "layer_id": layer_id, "actor_email": eff_email, "owner_role": owner_role,
+            "authorized_emails": allowed_pool, "escalation_contact": escalation_contact,
+            "remediation": rem}  # fmt: skip
+    return {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation,
+        "layer_id": layer_id, "actor_email": eff_email, "owner_role": owner_role,
+        "remediation": None}  # fmt: skip
 
 
 def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
@@ -341,13 +339,13 @@ def build_upward_promotion_pr_plan(
         f"cd {target_repo_dir} && git push -u origin {branch_name}",
         gh_cmd,
     ]
-    out: dict[str, Any] = {"origin_layer_id": source_layer_id, "proposer_email": proposer_email}
-    out.update(origin_layer_role=source_layer_role, contributing_org=eff_org)
-    out.update(contributors=eff_contrib, validation_context=eff_ctx, reviewer_contact=esc)
-    out.update(target_layer_id=target_layer_id, target_owner_role=owner_role)
-    out.update(oss_anonymized=oss_anonymized, branch_name=branch_name, commit_message=commit_msg)
-    out.update(pr_title=pr_title, pr_body=pr_body, git_pr_commands=cmds)
-    return out
+    return {"origin_layer_id": source_layer_id, "proposer_email": proposer_email,
+        "origin_layer_role": source_layer_role, "contributing_org": eff_org,
+        "contributors": eff_contrib, "validation_context": eff_ctx, "reviewer_contact": esc,
+        "target_layer_id": target_layer_id, "target_owner_role": owner_role,
+        "oss_anonymized": oss_anonymized, "branch_name": branch_name,
+        "commit_message": commit_msg, "pr_title": pr_title, "pr_body": pr_body,
+        "git_pr_commands": cmds}  # fmt: skip
 
 
 def delegate_directive_to_child(
@@ -403,8 +401,8 @@ def delegate_directive_to_child(
         f"`precedence: {pprec}`)]**: {eff_text}"
     )
     fname, updated, staged = src_file.name if src_file is not None else "delegated-item.md", [], []
-    stg_kw: dict[str, Any] = {"scope_tag": f"from-{pid}", "file_name": fname, "dry_run": dry_run}
-    stg_kw.update(operation="delegate-to-child", actor_email=actor_email or "")
+    stg_kw: dict[str, Any] = {"scope_tag": f"from-{pid}", "file_name": fname, "dry_run": dry_run,
+        "operation": "delegate-to-child", "actor_email": actor_email or ""}  # fmt: skip
     for tdir in targets:
         if tracker == "rules":
             ctpl = str(_load_manifest_dict(tdir).get("layer_id") or clean_child)
@@ -455,8 +453,7 @@ def delegate_directive_to_child(
         note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
         if not dry_run and note not in src_body:
             src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
-    out: dict[str, Any] = {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run}
-    out.update(child_layer=clean_child, ticket_id=eff_ticket, priority=priority, tracker=tracker)
-    out.update(delegated_entry=entry, parent_ledger_entry=p_entry, updated_paths=updated)
-    out["staged_proposals"] = staged
-    return out
+    return {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run,
+        "child_layer": clean_child, "ticket_id": eff_ticket, "priority": priority,
+        "tracker": tracker, "delegated_entry": entry, "parent_ledger_entry": p_entry,
+        "updated_paths": updated, "staged_proposals": staged}  # fmt: skip

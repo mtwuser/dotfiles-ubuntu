@@ -65,18 +65,11 @@ def record_governance_event(
     manifest = _load_manifest(ws)
     layer_id = str(manifest.get("layer_id", ws.name))
     event: dict[str, Any] = {
-        "ts": datetime.now(UTC).isoformat(),
-        "workspace_dir": str(ws),
-        "layer_id": layer_id,
-        "operation": operation,
-        "status": status,
-        "actor_email": actor_email or "unspecified",
-        "target_layer": target_layer or layer_id,
-        "source_rel_path": source_rel_path,
-        "reason_code": reason_code,
-        "message": message,
-        "remediation": remediation,
-    }
+        "ts": datetime.now(UTC).isoformat(), "workspace_dir": str(ws), "layer_id": layer_id,
+        "operation": operation, "status": status, "actor_email": actor_email or "unspecified",
+        "target_layer": target_layer or layer_id, "source_rel_path": source_rel_path,
+        "reason_code": reason_code, "message": message, "remediation": remediation,
+    }  # fmt: skip
     if not dry_run:
         with contextlib.suppress(OSError):
             log_file = ws / "logs" / "governance_audit.jsonl"
@@ -195,10 +188,9 @@ def configure_git_governance_policy(
             co_file = ws / codeowners_rel
             co_file.parent.mkdir(parents=True, exist_ok=True)
             co_file.write_text(codeowners_content, encoding="utf-8")
-    out: dict[str, Any] = {"target_dir": str(ws), "layer_id": layer_id, "dry_run": dry_run}
-    out.update(git_governance=git_gov, codeowners_owners=owners_str)
-    out["codeowners_file"] = codeowners_rel if sync_codeowners else None
-    return out
+    return {"target_dir": str(ws), "layer_id": layer_id, "dry_run": dry_run,
+        "git_governance": git_gov, "codeowners_owners": owners_str,
+        "codeowners_file": codeowners_rel if sync_codeowners else None}  # fmt: skip
 
 
 def inspect_git_governance_state(
@@ -256,23 +248,15 @@ def inspect_git_governance_state(
         for p in p_paths
         if (now_ts - p.stat().st_mtime) / SECONDS_PER_DAY > STALE_PROPOSAL_MAX_DAYS
     ]
-    thresholds = {
-        "proposals": STALE_PROPOSAL_MAX_DAYS,
+    thresholds = {"proposals": STALE_PROPOSAL_MAX_DAYS,
         "modules_and_specs": STALE_MODULE_REVIEW_DAYS,
-        "policies": STALE_POLICY_REVIEW_DAYS,
-    }
-    return {
-        "current_branch": eff_branch,
-        "is_protected_branch": is_protected,
-        "active_process_stage": stage,
-        "active_environment": active_env,
-        "protected_branches": prot,
-        "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
-        "staged_proposals": staged_files,
-        "stale_proposals": stale_props,
+        "policies": STALE_POLICY_REVIEW_DAYS}  # fmt: skip
+    return {"current_branch": eff_branch, "is_protected_branch": is_protected,
+        "active_process_stage": stage, "active_environment": active_env,
+        "protected_branches": prot, "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
+        "staged_proposals": staged_files, "stale_proposals": stale_props,
         "staleness_thresholds_days": thresholds,
-        "recent_governance_alerts": alerts[-MAX_RECENT_GOVERNANCE_ALERTS:],
-    }
+        "recent_governance_alerts": alerts[-MAX_RECENT_GOVERNANCE_ALERTS:]}  # fmt: skip
 
 
 def evaluate_environment_promotion(
@@ -336,16 +320,10 @@ def evaluate_environment_promotion(
             dry_run=dry_run,
         )
     promo_cmd = f"git checkout -B {req_branch}" if req_branch not in ("task/*", "feature/*") else ""
-    return {
-        "workspace_dir": str(ws),
-        "current_environment": git_state["active_environment"],
-        "target_environment": clean_env,
-        "phase_semantics": sem_map[clean_env],
-        "required_branch": req_branch,
-        "allowed": allowed,
-        "failed_gates": failed_gates,
-        "git_promotion_command": promo_cmd,
-    }
+    return {"workspace_dir": str(ws), "current_environment": git_state["active_environment"],
+        "target_environment": clean_env, "phase_semantics": sem_map[clean_env],
+        "required_branch": req_branch, "allowed": allowed, "failed_gates": failed_gates,
+        "git_promotion_command": promo_cmd}  # fmt: skip
 
 
 def record_governance_decision(
@@ -369,12 +347,8 @@ def record_governance_decision(
         raise ValueError("Both item_ref and reason must be non-empty strings")
     ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
     lid = str(manifest.get("layer_id", ws.name))
-    status_map = {
-        "approve": "approved",
-        "reject": "rejected",
-        "defer": "deferred",
-        "blocked": "blocked",
-    }
+    status_map = {"approve": "approved", "reject": "rejected",
+        "defer": "deferred", "blocked": "blocked"}  # fmt: skip
     mapped_status, chk = status_map[clean_dec], "x" if clean_dec == "approve" else " "
     line = (
         f"- [{chk}] **[GOVERNANCE DECISION: {mapped_status.upper()} by "
@@ -382,17 +356,14 @@ def record_governance_decision(
     )
     if not dry_run:
         _append_tracker_line(ws, tracker, line, lid)
-    ev_kw: dict[str, Any] = {"operation": "record-decision", "status": mapped_status}
-    ev_kw.update(actor_email=actor_email, source_rel_path=clean_ref, dry_run=dry_run)
-    ev_kw.update(
-        reason_code=f"HUMAN_DECISION_{mapped_status.upper()}",
-        message=f"{clean_ref}: {clean_reason}",
-    )
+    ev_kw: dict[str, Any] = {"operation": "record-decision", "status": mapped_status,
+        "actor_email": actor_email, "source_rel_path": clean_ref, "dry_run": dry_run,
+        "reason_code": f"HUMAN_DECISION_{mapped_status.upper()}",
+        "message": f"{clean_ref}: {clean_reason}"}  # fmt: skip
     ev = record_governance_event(ws, **ev_kw)
-    out: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": lid, "item_ref": clean_ref}
-    out.update(decision=clean_dec, status=mapped_status, tracker=tracker, dry_run=dry_run)
-    out.update(recorded_entry=line, audit_event=ev)
-    return out
+    return {"workspace_dir": str(ws), "layer_id": lid, "item_ref": clean_ref,
+        "decision": clean_dec, "status": mapped_status, "tracker": tracker, "dry_run": dry_run,
+        "recorded_entry": line, "audit_event": ev}  # fmt: skip
 
 
 def manage_layer_roster(

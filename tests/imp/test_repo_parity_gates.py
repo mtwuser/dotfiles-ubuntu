@@ -191,52 +191,22 @@ class TestRepoParityGates:
         ):
             assert budget_token in arch_02 and budget_token in arch_mcp
         for mcp_token in (
-            "unfold_context_capsule",
-            "resolve_surface_governance",
-            "orchestrate_ephemeral_fork",
-            "ephemeral_fork_policy",
-            "surface_bindings",
-            "collect_layer_effective_bindings",
-            "promotion_routing",
-            "SURFACE_PRECEDENCE_COLLISION",
-            "SURFACE_ASSET_MISSING",
-            "TEMPLATE_PACK_MISSING",
-            "EPHEMERAL_FORK_LIMIT_REACHED",
-            "EPHEMERAL_FORK_EXPIRED",
-            "rcap1",
-            "CAPSULE_CAPABILITY_INSUFFICIENT",
-            "CAPSULE_RESONANCE_DENIED",
+            "unfold_context_capsule", "resolve_surface_governance", "orchestrate_ephemeral_fork",
+            "ephemeral_fork_policy", "surface_bindings", "collect_layer_effective_bindings",
+            "promotion_routing", "SURFACE_PRECEDENCE_COLLISION", "SURFACE_ASSET_MISSING",
+            "TEMPLATE_PACK_MISSING", "EPHEMERAL_FORK_LIMIT_REACHED", "EPHEMERAL_FORK_EXPIRED",
+            "rcap1", "CAPSULE_CAPABILITY_INSUFFICIENT", "CAPSULE_RESONANCE_DENIED",
             "CAPSULE_CHAIN_BROKEN",
-        ):
+        ):  # fmt: skip
             assert mcp_token in arch_mcp
         for sub in (
-            "init-fork",
-            "list-templates",
-            "scaffold-template",
-            "apply-project",
-            "diff-project",
-            "promote-from-project",
-            "spawn-ephemeral",
-            "inspect-ephemeral",
-            "reap-ephemeral",
-            "set-global-profile",
-            "register-subtree",
-            "bootstrap-workspace",
-            "sync-layer",
-            "set-authority",
-            "check-authority",
-            "inspect-horizon",
-            "status",
-            "start-task",
-            "complete-task",
-            "compare-upstream",
-            "consult-layer",
-            "delegate-to-child",
-            "manage-roster",
-            "configure-git-policy",
-            "check-env-promotion",
-            "record-decision",
-        ):
+            "init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project",
+            "promote-from-project", "spawn-ephemeral", "inspect-ephemeral", "reap-ephemeral",
+            "set-global-profile", "register-subtree", "bootstrap-workspace", "sync-layer",
+            "set-authority", "check-authority", "inspect-horizon", "status", "start-task",
+            "complete-task", "compare-upstream", "consult-layer", "delegate-to-child",
+            "manage-roster", "configure-git-policy", "check-env-promotion", "record-decision",
+        ):  # fmt: skip
             assert sub in readme_md and sub in ext_guide and sub in arch_mcp
 
     def test_single_language_english_purity_across_repository_files(self) -> None:
@@ -396,9 +366,25 @@ class TestRepoParityGates:
             for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
             if "pragma:" in line and "no cover" in line
         ]
-        unmatched_raises: list[str] = []
-        blind_subprocess_mocks: list[str] = []
-        structure_violations: list[str] = []
+        prod_style_violations = [
+            f"{p.relative_to(REPO_DIR)}:{getattr(n, 'lineno', 0)}"
+            for p in prod_py
+            for n in ast.walk(ast.parse(p.read_text(encoding="utf-8"), filename=str(p)))
+            if (
+                isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "update"
+                and bool(n.keywords)
+            )
+            or (
+                isinstance(n, ast.Slice)
+                and any(
+                    isinstance(b, ast.Constant) and isinstance(b.value, int) and abs(b.value) > 2
+                    for b in (n.lower, n.upper)
+                )
+            )
+        ]
+        unmatched_raises, blind_subprocess_mocks, structure_violations = [], [], []
         for tp in test_py:
             rel_tp = str(tp.relative_to(REPO_DIR))
             tree = ast.parse(tp.read_text(encoding="utf-8"), filename=str(tp))
@@ -448,9 +434,7 @@ class TestRepoParityGates:
                     blind_subprocess_mocks.append(f"{rel_tp}:{node.lineno}")
 
         # Assert
-        assert len(prod_py) == 26
-        assert len(test_py) == 31
-        assert pragma_violations == []
-        assert unmatched_raises == []
-        assert blind_subprocess_mocks == []
+        assert (len(prod_py), len(test_py)) == (26, 31)
+        assert pragma_violations == [] and prod_style_violations == []
+        assert unmatched_raises == [] and blind_subprocess_mocks == []
         assert structure_violations == []

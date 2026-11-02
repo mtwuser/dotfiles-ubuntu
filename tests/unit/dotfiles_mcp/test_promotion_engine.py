@@ -10,6 +10,7 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
+from dotfiles_mcp.constants import REPO_DIR
 from dotfiles_mcp.promotion_engine import (
     collect_layer_effective_bindings,
     diff_project_against_layers,
@@ -206,6 +207,11 @@ class TestPromotionEngine:
             (".agents/rules/layer-10-dept-sync.md", "# Sync v1\n"),
             (".agents/rules/layer-99-unmounted.md", "# Unmounted\n"),
             (".agents/rules/brand-new.md", "# Brand new\n"),
+            (
+                ".agents/rules/technical-base.md",
+                (REPO_DIR / "templates/technical-base/rules/technical-base.md").read_text("utf-8"),
+            ),
+            (".agents/rules/business-base.md", "# Locally modified engine rule\n"),
             (".agents/assets/base/sub/snippet.md", "asset-v2-mod\n"),
             (".agents/skills/sopen/SKILL.md", "---\nname: sopen\ndescription: s\n---\n"),
             (".agents/skills/release/SKILL.md", "---\nname: release\ndescription: r\n---\n"),
@@ -225,11 +231,13 @@ class TestPromotionEngine:
         in_sync_files = [x["file"] for x in diff["in_sync"]]
         mod_files = [x["file"] for x in diff["modified_in_project"]]
         assert "rules/coding.md" in in_sync_files
+        assert "rules/technical-base.md" in in_sync_files
         assert "rules/layer-10-root.md" in in_sync_files
         assert "rules/layer-10-dept-sync.md" in in_sync_files
         assert "skills/sopen/SKILL.md" in in_sync_files
         assert "skills/release/SKILL.md" in in_sync_files
         assert "rules/testing.md" in mod_files
+        assert "rules/business-base.md" in mod_files
         assert "rules/layer-05-dept-legal.md" in mod_files
         assert "assets/base/sub/snippet.md" in mod_files
         assert "rules/brand-new.md" in diff["novel_in_project"]

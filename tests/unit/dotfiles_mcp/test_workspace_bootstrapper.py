@@ -250,6 +250,8 @@ class TestWorkspaceBootstrapper:
         )
         (bdir / "business-base.md").write_text("# Business Base v2\n", encoding="utf-8")
         (squad_dir / "templates/local-only").mkdir(parents=True)
+        (target_dir / ".agents/rules/technical-base.md").write_text("# Temp\n", encoding="utf-8")
+        (target_dir / ".agents/skills/testing").mkdir(parents=True, exist_ok=True)
         sync_dry = sync_layer_workspace(
             repo_dir, target_dir, templates=["human-core"], dry_run=True
         )
@@ -329,6 +331,8 @@ class TestWorkspaceBootstrapper:
         assert ".agents/rules/layer-50-root.md" not in squad_res["files_materialized"]
         assert sync_dry["dry_run"] is True
         assert "business-base" in sync_dept["synced_templates"]
+        assert not (target_dir / ".agents/rules/technical-base.md").exists()
+        assert not (target_dir / ".agents/skills/testing").exists()
         assert "business-base" in sync_squad["synced_templates"]
         assert (squad_dir / ".agents/rules/business-base.md").read_text(encoding="utf-8") == (
             '---\ntrigger: always_on\ndescription: "Business Base v2"\n---\n# Business Base v2\n'

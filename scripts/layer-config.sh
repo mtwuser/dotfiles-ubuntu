@@ -26,7 +26,7 @@ Commands:
       Scaffold templates/<template-name>/ and optionally register its surface_binding.
   apply-project <target-project-dir> [--parent-dir <dir>] [--template <[layer:]name>] [--layers <all|csv>]
       Materialize template pack + 0..N participating layers into <target-project-dir>/.agents/.
-  diff-project <target-project-dir>
+  diff-project <target-project-dir> [--parent-dir <dir>]
       Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates.
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
                        [--to-template <template-name>] [--upstream-dir|--target-repo <dir>]
@@ -222,9 +222,9 @@ if subcmd == "apply-project":
 
 if subcmd == "diff-project":
     if not rest or rest[0].startswith("-"):
-        _die("Usage: ./scripts/layer-config.sh diff-project <target-project-dir>")
-    target_dir = Path(rest[0]).resolve()
-    base_dir = target_dir if (target_dir / "system" / "mcp-layer.json").is_file() else repo_dir
+        _die("Usage: ./scripts/layer-config.sh diff-project <target-project-dir> [--parent-dir <dir>]")
+    target_dir, opts = Path(rest[0]).resolve(), _parse_opts(rest[1:], {"--parent-dir": "p_dir"})
+    base_dir = _opt_path(opts, "p_dir") or (target_dir if (target_dir / "system/mcp-layer.json").is_file() else repo_dir)
     print(json.dumps(diff_project_against_layers(base_dir, target_dir), indent=2))
     sys.exit(0)
 

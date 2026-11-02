@@ -27,6 +27,7 @@ from dotfiles_mcp.constants import (
     MATERIALIZED_RULE_RE,
     MIN_ROUTING_KEYWORD_LEN,
     OWNER_WRITABLE_MODE_BIT,
+    REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
     SKILL_MD_MAX_LINES,
     TEMPLATE_STACK_GROUP_DIRS,
@@ -50,8 +51,7 @@ def collect_layer_effective_bindings(
     layer_dir: Path, manifest: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Merge manifest surface_bindings with active template.json recommended_surface_bindings."""
-    effective: list[dict[str, Any]] = []
-    seen_ids: set[str] = set()
+    effective, seen_ids = [], set[str]()
     candidates = list(manifest.get("surface_bindings") or [])
     for tpl_name in manifest.get("default_stack_templates", []):
         tpl_dir = _resolve_template_dir(layer_dir, str(tpl_name))
@@ -79,18 +79,19 @@ def _route_novel_item(
     for rec in layer_records:
         lname = str(rec["name"])
         if lname != "root" and (lname in stem or bool(tokens & set(rec["keywords"]))):
-            tpls = list(rec["templates"])
-            suffix = "AGENTS.md" if item_kind == "rules" else f"skills/{stem}/SKILL.md"
+            tpls, sfx = (
+                list(rec["templates"]),
+                "AGENTS.md" if item_kind == "rules" else f"skills/{stem}/SKILL.md",
+            )
             dest = (
                 f"layers/{lname}/templates/{tpls[0]}/{item_kind}/{item_name}"
                 if tpls
-                else f"layers/{lname}/antigravity/.gemini/config/{suffix}"
+                else f"layers/{lname}/antigravity/.gemini/config/{sfx}"
             )
             push_cmd = f"./scripts/layer-subtree.sh push {lname} feat/promote-{stem}"
-            res: dict[str, Any] = {"item": item_name, "kind": item_kind, "target_layer": lname}
-            res.update(target_role=rec["layer_role"], target_destination=dest)
-            res["subtree_push_command"] = push_cmd
-            return res
+            return {"item": item_name, "kind": item_kind, "target_layer": lname,
+                "target_role": rec["layer_role"], "target_destination": dest,
+                "subtree_push_command": push_cmd}  # fmt: skip
     root_rec, root_tpls = layer_records[0], list(layer_records[0]["templates"])
     if item_kind == "rules" and root_tpls:
         dest = f"templates/{root_tpls[0]}/rules/{item_name}"
@@ -99,20 +100,16 @@ def _route_novel_item(
         dest, scope = f"antigravity/.gemini/config/skills/{stem}/SKILL.md", "global-skills-root"
     else:
         dest, scope = "antigravity/.gemini/config/AGENTS.md", "global-agents-root"
-    res = {"item": item_name, "kind": item_kind, "target_layer": "root", "target_scope": scope}
-    res.update(target_role=root_rec["layer_role"], target_destination=dest)
-    res["root_agents_md_headroom_bytes"] = root_headroom_bytes
-    return res
+    return {"item": item_name, "kind": item_kind, "target_layer": "root", "target_scope": scope,
+        "target_role": root_rec["layer_role"], "target_destination": dest,
+        "root_agents_md_headroom_bytes": root_headroom_bytes}  # fmt: skip
 
 
 def compare_project_patterns_multilayer(
-    repo_dir: Path,
-    mounted_layers: list[dict[str, Any]],
-    *,
-    project_rules: list[str],
-    project_skills: list[str],
+    repo_dir: Path, mounted_layers: list[dict[str, Any]], *,
+    project_rules: list[str], project_skills: list[str],
     target_dirs: list[tuple[str, Path, dict[str, Any]]],
-) -> dict[str, Any]:
+) -> dict[str, Any]:  # fmt: skip
     """Compare consumer project rules/skills across 1..N layers and route promotions."""
     layer_a_skills, layer_b_rules, layer_b_skills = set[str](), set[str](), set[str]()
     layer_records: list[dict[str, Any]] = []
@@ -130,11 +127,9 @@ def compare_project_patterns_multilayer(
         for b in collect_layer_effective_bindings(ldir, manifest):
             for k in ("scopes", "traits"):
                 kw.update(str(v).lower() for v in b.get(k, []) if v != "*")
-        rec: dict[str, Any] = {"name": lname, "layer_id": manifest.get("layer_id", lname)}
-        rec.update(
-            layer_role=manifest.get("layer_role", "workstation"), templates=tpl_names, keywords=kw
-        )
-        layer_records.append(rec)
+        layer_records.append({"name": lname, "layer_id": manifest.get("layer_id", lname),
+            "layer_role": manifest.get("layer_role", "workstation"),
+            "templates": tpl_names, "keywords": kw})  # fmt: skip
     materialized_rules = [r for r in project_rules if MATERIALIZED_RULE_RE.match(r)]
     filtered_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
     novel_rules = sorted(r for r in filtered_rules if r not in layer_b_rules)
@@ -152,17 +147,16 @@ def compare_project_patterns_multilayer(
     in_b_skills = sorted(s for s in project_skills if s in layer_b_skills)
     miss_rules = sorted(r for r in layer_b_rules if r not in filtered_rules)
     miss_skills = sorted(s for s in layer_b_skills if s not in project_skills)
-    out: dict[str, Any] = {"compared_against_layer": primary_id, "promotion_routing": routing}
-    out.update(
-        layers_scanned=[r["name"] for r in layer_records],
-        mounted_layers_count=len(mounted_layers),
-        materialized_layer_rules=sorted(materialized_rules),
-        already_in_layer_a_skills=sorted(s for s in project_skills if s in layer_a_skills),
-        already_in_layer_b_templates={"rules": in_b_rules, "skills": in_b_skills},
-        candidates_for_upward_promotion={"novel_rules": novel_rules, "novel_skills": novel_skills},
-        available_in_layer_b_but_missing_in_project={"rules": miss_rules, "skills": miss_skills},
-    )
-    return out
+    cand_up = {"novel_rules": novel_rules, "novel_skills": novel_skills}
+    miss_b = {"rules": miss_rules, "skills": miss_skills}
+    return {"compared_against_layer": primary_id, "promotion_routing": routing,
+        "layers_scanned": [r["name"] for r in layer_records],
+        "mounted_layers_count": len(mounted_layers),
+        "materialized_layer_rules": sorted(materialized_rules),
+        "already_in_layer_a_skills": sorted(s for s in project_skills if s in layer_a_skills),
+        "already_in_layer_b_templates": {"rules": in_b_rules, "skills": in_b_skills},
+        "candidates_for_upward_promotion": cand_up,
+        "available_in_layer_b_but_missing_in_project": miss_b}  # fmt: skip
 
 
 def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, Any]:
@@ -174,7 +168,8 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
         for s in sorted((repo_dir / "layers").glob("*"))
         if s.is_dir() and not s.name.startswith(".")
     ]
-    for lname, ldir in [("root", repo_dir), *sub_layers]:
+    eng_dirs = [("engine", REPO_DIR)] if repo_dir.resolve() != REPO_DIR.resolve() else []
+    for lname, ldir in [("root", repo_dir), *sub_layers, *eng_dirs]:
         for tname, tdir in _iter_layer_template_dirs(ldir):
             tag = f"{lname}:{tname}"
             for rf in sorted((tdir / "rules").glob("*.md")):
@@ -185,13 +180,14 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 if af.is_file():
                     rel_a = str(af.relative_to(tdir / "assets")).replace("\\", "/")
                     layer_sources.setdefault(f"assets/{tname}/{rel_a}", []).append((tag, af))
-        for sf in sorted((ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md")):
+        for sf in (
+            sorted((ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md"))
+            if lname != "engine"
+            else ()
+        ):
             k, v = f"skills/{sf.parent.name}/SKILL.md", (f"layer:{lname}", sf)
-            layer_sources[k] = (
-                [v, *layer_sources.get(k, [])]
-                if proj_resolved == repo_dir.resolve()
-                else [*layer_sources.get(k, []), v]
-            )
+            cur = layer_sources.get(k, [])
+            layer_sources[k] = [v, *cur] if proj_resolved == repo_dir.resolve() else [*cur, v]
 
     in_sync, modified_in_project, novel_in_project = [], [], []
     r_files = [(f"rules/{rf.name}", rf) for rf in sorted((agents_dir / "rules").glob("*.md"))]
@@ -224,35 +220,28 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 in_sync.append({"file": rel_key, "source": sync_origin})
             else:
                 origin, src_path = candidates[0]
-                rel_t = str(src_path.relative_to(repo_dir))
-                mod_item = {"file": rel_key, "source": origin, "target_path": rel_t}
-                modified_in_project.append(mod_item)
+                base_r = REPO_DIR if origin.startswith("engine:") else repo_dir
+                rel_t = str(src_path.relative_to(base_r))
+                modified_in_project.append(
+                    {"file": rel_key, "source": origin, "target_path": rel_t}
+                )
         else:
             novel_in_project.append(rel_key)
-    out_d: dict[str, Any] = {"project_dir": str(project_dir), "in_sync": in_sync}
-    out_d.update(modified_in_project=modified_in_project, novel_in_project=novel_in_project)
-    return out_d
+    return {"project_dir": str(project_dir), "in_sync": in_sync,
+        "modified_in_project": modified_in_project,
+        "novel_in_project": novel_in_project}  # fmt: skip
 
 
 PROMOTABLE_TRACKERS = VALID_TRACKER_FILES
 
 
 def promote_project_asset_to_layer(
-    repo_dir: Path,
-    project_dir: Path,
-    *,
-    source_rel_path: str,
-    target_layer: str = "root",
-    target_template: str | None = None,
-    upstream_dir: Path | None = None,
-    prepare_pr: bool = False,
-    actor_email: str | None = None,
-    contributing_org: str | None = None,
-    contributors: str | None = None,
-    validation_context: str | None = None,
-    force_overwrite: bool = False,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, project_dir: Path, *, source_rel_path: str, target_layer: str = "root",
+    target_template: str | None = None, upstream_dir: Path | None = None,
+    prepare_pr: bool = False, actor_email: str | None = None,
+    contributing_org: str | None = None, contributors: str | None = None,
+    validation_context: str | None = None, force_overwrite: bool = False, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Promote a rule, skill, doc, or tracker from <project_dir> into a parent layer or template."""
     src_file = (project_dir / source_rel_path.strip().lstrip("/")).resolve()
     if not src_file.is_relative_to(project_dir.resolve()) or not src_file.is_file():
@@ -267,8 +256,7 @@ def promote_project_asset_to_layer(
     )
     if not layer_base.is_relative_to(repo_resolved) or not layer_base.is_dir():
         raise ValueError(f"Target layer directory not found: {target_layer!r}")
-    content = src_file.read_text(encoding="utf-8")
-    target_m = _load_manifest_dict(layer_base)
+    content, target_m = src_file.read_text(encoding="utf-8"), _load_manifest_dict(layer_base)
     if _is_oss_root_manifest(target_m):
         verify_oss_promotion_agnosticism(project_dir.resolve(), content, source_rel_path)
 
@@ -279,8 +267,9 @@ def promote_project_asset_to_layer(
         and rel_parts[0] == "templates"
         and rel_parts[tpl_idx + 1] in ("rules", "skills", "assets")
     )
+    ag_pfx_len = len(AGENTS_ASSETS_PREFIX)
     is_ag_asset = (
-        len(rel_parts) >= 4 and rel_parts[: len(AGENTS_ASSETS_PREFIX)] == AGENTS_ASSETS_PREFIX
+        len(rel_parts) >= ag_pfx_len + 2 and rel_parts[:ag_pfx_len] == AGENTS_ASSETS_PREFIX
     )
     is_tracker = len(rel_parts) == 1 and rel_parts[0] in PROMOTABLE_TRACKERS
     is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in VALID_DELEGATION_DIRS
@@ -301,7 +290,7 @@ def promote_project_asset_to_layer(
     if is_tracker or is_gov_dir:
         dest_file = layer_base / Path(*rel_parts)
     elif is_ag_asset or (is_tpl_src and rel_parts[tpl_idx + 1] == "assets"):
-        tail = rel_parts[3:] if is_ag_asset else rel_parts[tpl_idx + 2 :]
+        tail = rel_parts[ag_pfx_len + 1 :] if is_ag_asset else rel_parts[tpl_idx + 2 :]
         base_d = tpl_dest or (layer_base / "templates" / str(eff_template))
         dest_file = base_d / "assets" / Path(*tail)
     elif src_file.name == "SKILL.md":
@@ -344,17 +333,20 @@ def promote_project_asset_to_layer(
         and not force_overwrite
         and (not auth_ok or (prepare_pr and dest_file.is_file()))
     ):
-        stg_kw: dict[str, Any] = {"scope_tag": f"to-{eff_layer}", "file_name": dest_file.name}
-        stg_kw.update(content=content, operation="promote-from-project", dry_run=dry_run)
-        stg_kw.update(actor_email=actor_email or "", reason_code="TARGET_PROTECTED_OR_PR_MODE")
+        stg_kw: dict[str, Any] = {"scope_tag": f"to-{eff_layer}", "file_name": dest_file.name,
+            "content": content, "operation": "promote-from-project",
+            "actor_email": actor_email or "", "reason_code": "TARGET_PROTECTED_OR_PR_MODE",
+            "dry_run": dry_run}  # fmt: skip
         staged_path = str(stage_non_destructive_proposal(project_dir.resolve(), **stg_kw))
         prepare_pr = True
     elif not dry_run:
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         if is_tracker:
             om = _load_manifest_dict(project_dir)
-            oid = str(om.get("layer_id", project_dir.name))
-            orole = str(om.get("layer_role", "project"))
+            oid, orole = (
+                str(om.get("layer_id", project_dir.name)),
+                str(om.get("layer_role", "project")),
+            )
             oprec = int(om.get("precedence", ROLE_DEFAULT_PRECEDENCE["service-node"]))
             hdr = f"## Proposed from `{oid}` (`{orole}`, `precedence: {oprec}`)"
             def_hdr = f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
@@ -372,15 +364,16 @@ def promote_project_asset_to_layer(
         if eff_layer != "root"
         else None
     )
-    result: dict[str, Any] = {"source": src_rel_str, "target_layer": eff_layer, "dry_run": dry_run}
-    result.update(target_template=eff_template, destination=dest_rel_str, sha256=sha256_str)
-    result.update(subtree_push_command=push_cmd, staged_proposal=staged_path)
+    result: dict[str, Any] = {"source": src_rel_str, "target_layer": eff_layer,
+        "target_template": eff_template, "destination": dest_rel_str, "sha256": sha256_str,
+        "subtree_push_command": push_cmd, "staged_proposal": staged_path,
+        "dry_run": dry_run}  # fmt: skip
     if prepare_pr or upstream_dir is not None:
         dest_rel_lb = str(dest_file.relative_to(layer_base))
-        pr_kw: dict[str, Any] = {"source_rel": src_rel_str, "dest_rel": dest_rel_lb}
-        pr_kw.update(target_layer=eff_layer, target_template=eff_template, sha256=sha256_str)
-        pr_kw.update(actor_email=actor_email, contributing_org=contributing_org)
-        pr_kw.update(contributors=contributors, validation_context=validation_context)
+        pr_kw: dict[str, Any] = {"source_rel": src_rel_str, "dest_rel": dest_rel_lb,
+            "target_layer": eff_layer, "target_template": eff_template, "sha256": sha256_str,
+            "actor_email": actor_email, "contributing_org": contributing_org,
+            "contributors": contributors, "validation_context": validation_context}  # fmt: skip
         result["promotion_pr_plan"] = build_upward_promotion_pr_plan(
             project_dir, layer_base, **pr_kw
         )
@@ -388,12 +381,9 @@ def promote_project_asset_to_layer(
 
 
 def inspect_layer_horizon(
-    repo_dir: Path,
-    workspace_dir: Path,
-    *,
-    parent_dir: Path | None = None,
+    repo_dir: Path, workspace_dir: Path, *, parent_dir: Path | None = None,
     actor_email: str | None = None,
-) -> dict[str, Any]:
+) -> dict[str, Any]:  # fmt: skip
     """Inspect 1-hop downward propagation & quiet upward promotion candidates for a workspace."""
     ws, up, oss = workspace_dir.resolve(), (parent_dir or repo_dir).resolve(), repo_dir.resolve()
     ws_m, up_m = _load_manifest_dict(ws), _load_manifest_dict(up)
@@ -428,10 +418,9 @@ def inspect_layer_horizon(
                     f"./scripts/layer-config.sh promote-from-project {ws} --source {rel_src} "
                     f"--to-template {tpl} --upstream-dir {contrib_dir} --create-pr"
                 )
-                d_rec: dict[str, Any] = {"template": tpl, "rule_file": rel_src}
-                d_rec.update(oss_agnostic=oss_ok, promote_command=cmd)
-                d_rec["drift_direction"] = "upstream_newer" if up_newer else "workspace_newer"
-                drifts.append(d_rec)
+                d_dir = "upstream_newer" if up_newer else "workspace_newer"
+                drifts.append({"template": tpl, "rule_file": rel_src, "oss_agnostic": oss_ok,
+                    "promote_command": cmd, "drift_direction": d_dir})  # fmt: skip
     local_diff = diff_project_against_layers(ws, ws)
     child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))
     sync_sfx = f" --parent-dir {up}" if parent_dir is not None else ""
@@ -443,19 +432,21 @@ def inspect_layer_horizon(
         for rel in local_diff["novel_in_project"]
     ]
     ws_lid, up_lid = str(ws_m.get("layer_id", ws.name)), str(up_m.get("layer_id", up.name))
-    out_h: dict[str, Any] = {"workspace_dir": str(ws), "layer_id": ws_lid}
-    out_h.update(layer_role=str(ws_m.get("layer_role", "project")), is_oss_community_horizon=is_oss)
-    out_h.update(actor_is_layer_owner=bool(auth_v["allowed"]), immediate_upstream_dir=str(up))
-    out_h.update(actor_is_upstream_owner=bool(up_auth_v["allowed"]), immediate_upstream_id=up_lid)
-    out_h.update(immediate_upstream_role=str(up_m.get("layer_role", "unknown")))
-    out_h.update(oss_contrib_dir=str(contrib_dir) if is_oss else None, oss_root_version=oss_ver)
-    out_h.update(upstream_version=up_ver, workspace_version=ws_ver, downward_sync_needed=need_sync)
-    out_h.update(child_sync_needed=bool(child_drifts), shared_template_drifts=drifts)
-    out_h.update(downward_sync_command=f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}")
-    out_h["downstream_layer_drifts"] = child_drifts
-    out_h["upward_promotion_suggestions"] = (
+    up_sugg = (
         [d for d in up_drifts if d["oss_agnostic"]]
         if is_oss
         else [*(d["promote_command"] for d in up_drifts), *novel_cmds]
     )
-    return out_h
+    return {"workspace_dir": str(ws), "layer_id": ws_lid,
+        "layer_role": str(ws_m.get("layer_role", "project")),
+        "is_oss_community_horizon": is_oss, "actor_is_layer_owner": bool(auth_v["allowed"]),
+        "immediate_upstream_dir": str(up), "actor_is_upstream_owner": bool(up_auth_v["allowed"]),
+        "immediate_upstream_id": up_lid,
+        "immediate_upstream_role": str(up_m.get("layer_role", "unknown")),
+        "oss_contrib_dir": str(contrib_dir) if is_oss else None, "oss_root_version": oss_ver,
+        "upstream_version": up_ver, "workspace_version": ws_ver,
+        "downward_sync_needed": need_sync, "child_sync_needed": bool(child_drifts),
+        "shared_template_drifts": drifts,
+        "downward_sync_command": f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}",
+        "downstream_layer_drifts": child_drifts,
+        "upward_promotion_suggestions": up_sugg}  # fmt: skip

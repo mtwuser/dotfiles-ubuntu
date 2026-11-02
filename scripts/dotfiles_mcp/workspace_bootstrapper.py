@@ -105,11 +105,10 @@ def set_global_agents_profile(
             subprocess.run(cmd, cwd=repo_dir, check=True, capture_output=True, text=True)  # noqa: S603
             stow_executed = True
 
-    res: dict[str, Any] = {"profile": profile, "source_files": source_files, "dry_run": dry_run}
-    res.update(target_file=str(target_agents.relative_to(repo_dir)), size_bytes=composed_bytes)
-    res.update(budget_max_bytes=cap, headroom_bytes=cap - composed_bytes)
-    res["stow_executed"] = stow_executed
-    return res
+    return {"profile": profile, "source_files": source_files, "dry_run": dry_run,
+        "target_file": str(target_agents.relative_to(repo_dir)), "size_bytes": composed_bytes,
+        "budget_max_bytes": cap, "headroom_bytes": cap - composed_bytes,
+        "stow_executed": stow_executed}  # fmt: skip
 
 
 def register_mounted_subtree(
@@ -130,10 +129,9 @@ def register_mounted_subtree(
         ROLE_DEFAULT_PRECEDENCE["department"],
         ROLE_DEFAULT_PRECEDENCE["service-node"],
     )
-    entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role}
-    entry.update(
-        precedence=int(sub_m.get("precedence", dept_prec)), repository=repo_url, branch=branch
-    )
+    entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role,
+        "precedence": int(sub_m.get("precedence", dept_prec)), "repository": repo_url,
+        "branch": branch}  # fmt: skip
     raw_layers = root_manifest.get("mounted_layers", [])
     existing = [x for x in raw_layers if isinstance(x, dict) and x.get("name") != layer_name]
     existing.append(entry)
@@ -253,11 +251,10 @@ def bootstrap_layer_workspace(
     copied_templates = _sync_templates_from_roots(
         target_dir, effective_parent, repo_dir, requested_templates, dry_run=dry_run
     )
-    cfg_kw: dict[str, Any] = {"layer_id": layer_id, "layer_role": layer_role, "dry_run": dry_run}
-    cfg_kw.update(precedence=effective_prec, description=description, prune_default_templates=True)
-    cfg_kw.update(
-        upstream_url=upstream_repo, upstream_branch=upstream_branch, upstream_id=upstream_layer_id
-    )
+    cfg_kw: dict[str, Any] = {"layer_id": layer_id, "layer_role": layer_role, "dry_run": dry_run,
+        "precedence": effective_prec, "description": description, "prune_default_templates": True,
+        "upstream_url": upstream_repo, "upstream_branch": upstream_branch,
+        "upstream_id": upstream_layer_id}  # fmt: skip
     manifest_res = configure_fork_manifest(target_dir, **cfg_kw)
     own_tpl_id, all_tpls = own_template_name or layer_id, list(requested_templates)
     if scaffold_own_template and own_tpl_id not in all_tpls:
@@ -274,9 +271,9 @@ def bootstrap_layer_workspace(
         if is_pol
         else ("department-pack" if layer_role == "department" else "project-overlay")
     )
-    scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run}
-    scaf_kw.update(description=description or f"{layer_id} ({layer_role}) governance pack")
-    scaf_kw.update(register_binding=True, rule_filename=f"{own_tpl_id}.md")
+    scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run,
+        "description": description or f"{layer_id} ({layer_role}) governance pack",
+        "register_binding": True, "rule_filename": f"{own_tpl_id}.md"}  # fmt: skip
     scaffold_res = scaffold_template_pack(target_dir, **scaf_kw) if scaffold_own_template else None
     ag_rule = (
         f"---\ntrigger: always_on\n"
@@ -325,12 +322,12 @@ def bootstrap_layer_workspace(
         else empty_apply
     )
     scaf_id = scaffold_res["template_id"] if scaffold_res else None
-    out: dict[str, Any] = {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run}
-    out.update(layer_role=layer_role, precedence=effective_prec, copied_templates=copied_templates)
-    out.update(scaffolded_template=scaf_id, baseline_files_created=sorted(created_baseline))
-    out.update(applied_template=apply_res.get("applied_template"), manifest=manifest_res)
-    out["files_materialized"] = apply_res.get("files_materialized", [])
-    return out
+    return {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run,
+        "layer_role": layer_role, "precedence": effective_prec,
+        "copied_templates": copied_templates, "scaffolded_template": scaf_id,
+        "baseline_files_created": sorted(created_baseline),
+        "applied_template": apply_res.get("applied_template"), "manifest": manifest_res,
+        "files_materialized": apply_res.get("files_materialized", [])}  # fmt: skip
 
 
 def sync_layer_workspace(
@@ -447,5 +444,5 @@ def inspect_workspace_status(
         "priority_state": {"active_tracker": active_trk, "excerpt": p_ex},
         "git_state": {"is_git_repo": is_git, "status_short": g_stat, "recent_commits": g_log},
         "horizon": inspect_layer_horizon(repo_dir, ws, parent_dir=parent_dir) if is_layer else None,
-        "agent_diff": diff_project_against_layers(ws if is_layer else repo_dir, ws),
+        "agent_diff": diff_project_against_layers(ws if is_layer else (parent_dir or repo_dir), ws),
     }  # fmt: skip
