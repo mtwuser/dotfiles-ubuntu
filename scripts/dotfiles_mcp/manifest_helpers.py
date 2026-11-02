@@ -247,18 +247,10 @@ def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | N
 
 
 _CHILD_TRACKED_REL_PATHS: tuple[str, ...] = (
-    "antigravity/.gemini/config/AGENTS.md",
-    "system/mcp-layer.json",
-    "README.md",
-    "CHANGELOG.md",
-    "WORKROAD.md",
-    "ROADMAP.md",
-    "WORKTASK.md",
-    "BACKLOG.md",
-    "WORKVALI.md",
-    "Makefile",
-    "VERSION",
-)
+    "antigravity/.gemini/config/AGENTS.md", "system/mcp-layer.json", "README.md",
+    "CHANGELOG.md", "WORKROAD.md", "ROADMAP.md", "WORKTASK.md", "BACKLOG.md",
+    "WORKVALI.md", "Makefile", "VERSION",
+)  # fmt: skip
 
 
 def _sha256_file(path: Path) -> str:
@@ -281,13 +273,15 @@ def _inspect_mounted_children_drifts(
         child_ws = _resolve_mounted_child_dir(ws, child_name) if child_name else None
         if not child_name or not mounted_dir.is_dir() or child_ws is None:
             continue
-        changed_files: list[str] = []
-        for rel in _CHILD_TRACKED_REL_PATHS:
-            src_f, dst_f = child_ws / rel, mounted_dir / rel
-            if src_f.is_file() and (
-                not dst_f.is_file() or _sha256_file(src_f) != _sha256_file(dst_f)
-            ):
-                changed_files.append(rel)
+        changed_files: list[str] = [
+            rel
+            for rel in _CHILD_TRACKED_REL_PATHS
+            if (child_ws / rel).is_file()
+            and (
+                not (mounted_dir / rel).is_file()
+                or _sha256_file(child_ws / rel) != _sha256_file(mounted_dir / rel)
+            )
+        ]
         for sub_name in ("docs", "templates", "roadmaps", "corporate"):
             sub_dir = child_ws / sub_name
             for src_f in sorted(sub_dir.rglob("*")) if sub_dir.is_dir() else []:
@@ -395,6 +389,12 @@ _ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
 }
 
 
+_HUMAN_STACK_BLUEPRINT_HINT = (
+    "[Optional: leave blank for default, or compose Human-Specs: "
+    "domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]"
+)
+
+
 def _render_layer_onboarding_readme(
     layer_id: str,
     layer_role: str,
@@ -409,14 +409,13 @@ def _render_layer_onboarding_readme(
     )
     tpl_csv = ", ".join(f"`{t}`" for t in active_templates) or "`none`"
     parent_label = f"`{parent_id}`" if parent_id else "`open-source-root`"
-    hs_hint = "[Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]"
     return (
         f"# {layer_id} (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
         f"## Layer Setup Blueprint ({tier_title})\n\n"
         f"- **Layer ID & Role**: `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`)\n"
         f"- **1-Hop Upstream Parent**: {parent_label}\n"
         f"- **Active Template Packs**: {tpl_csv}\n"
-        f"- **Human-Stack Profile**: {hs_hint}\n"
+        f"- **Human-Stack Profile (Optional)**: {_HUMAN_STACK_BLUEPRINT_HINT}\n"
         f"- **Mission, Scope & Core Invariants**: {scope_hint}\n"
         f"- **Downstream Topology (Next Tier)**: {children_hint}\n"
         f"- **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]\n\n"
@@ -434,7 +433,6 @@ def _render_layer_onboarding_readme(
 def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
     """Render .agents/LAYER_LINEAGE.md with participating layers and Level 4 Project Blueprint."""
     tpl_label = resolved_tpl_name or "none"
-    hs_hint = "[Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]"
     lines = [
         "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
         f"- **Applied Template Pack**: `{tpl_label}`\n",
@@ -445,7 +443,7 @@ def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
         "",
         "## Project Setup Blueprint (Level 4 — Application Workspace)",
         f"- **Applied Template Packs**: `{tpl_label}`",
-        f"- **Human-Stack Profile**: {hs_hint}",
+        f"- **Human-Stack Profile (Optional)**: {_HUMAN_STACK_BLUEPRINT_HINT}",
         "- **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]",
         "- **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]",
         "- **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]",

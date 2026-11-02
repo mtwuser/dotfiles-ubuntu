@@ -60,9 +60,9 @@ description: restore session state and initialize workspace — first command in
    - **Top Session Log entry** — most recent session: conversation ID, machine, completed items
    - **Last entry for this machine** — if different from top entry, read it too (reveals this machine's last known state)
    - If any entry has a **Resume from** note → this is the exact continuation point
-2. **Adopt the Operator's Active `Human-Stack Profile` (`precedence: 85..95`)**:
-   - Inspect `.agents/LAYER_LINEAGE.md` (`Human-Stack Profile`), `README.md` (`Layer Setup Blueprint`), or `.agents/SESSION.md` for the operator's declared **`Human-Stack`** (`Asymmetric Domain Maturity: L1..L4`, `Hard-Skill Bridges`, `Soft-Skill & Cognitive Specs`, and `Session Hat`).
-   - Adapt explanation depth, cross-discipline vocabulary bridges (`tech-for-business` / `business-for-tech`), and Socratic guidance to the active `Human-Stack` while keeping all organizational and technical gates (`precedence: 0..80`) strictly invariant.
+2. **Adopt the Operator's Optional `Human-Stack Profile` (`precedence: 85..95`)**:
+   - Inspect `.agents/SESSION.md` (*Case 2: personal evolving `Human-Stack`*), `.agents/LAYER_LINEAGE.md` or `README.md` (*Case 3: Squad/Department onboarding directive*), or any punctual in-chat request (*Case 1*) using the specificity chain `In-Chat Override -> Personal .agents/SESSION.md -> Team Blueprint -> Default (Case 0 when blank/omitted)`.
+   - When one or more atomic `Human-Specs` (`domain-<area>:L1..L4`, `bridge-*`, `soft-*`, `hat-*`) are declared, adapt explanation depth, cross-discipline vocabulary bridges (`bridge-tech-for-business` / `bridge-business-for-tech`), and Socratic guidance accordingly while keeping all organizational and technical gates (`precedence: 0..80`) strictly invariant.
 
 3. **Cross-reference against Tier 1 artifacts**:
    - If `walkthrough.md` documents verified work not in any Session Log entry → SESSION.md missed it

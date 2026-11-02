@@ -358,11 +358,11 @@ class TestManifestHelpers:
         # Assert
         assert "Level 1 — Root 0" in corp_md
         assert "`open-source-root`" in corp_md
-        assert "Human-Stack Profile" in corp_md
+        assert "Human-Stack Profile (Optional)" in corp_md
         assert "Level 2 — Department" in dept_md
         assert "`none`" in dept_md
         assert "Level 3 — Squad Execution" in squad_md
         assert "apply-project commands" in squad_md
         assert "Project Setup Blueprint (Level 4" in lineage_md
-        assert "Human-Stack Profile" in lineage_md
+        assert "Human-Stack Profile (Optional)" in lineage_md
         assert "Initial Chat Kickoff Prompt" in lineage_md
