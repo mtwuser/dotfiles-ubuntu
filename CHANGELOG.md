@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.6.0] - 2026-11-02
 
 ### Added
 - **Reversible In-Layer Technical Dev Overlay (`make setup-dev` $\leftrightarrow$ `make sync`), Cross-Layer `--parent-dir` Hybrid Projection & Engine Template Fallback (`scripts/dotfiles_mcp/fork_configurator.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/dotfiles_mcp/constants.py`, `scripts/layer-config.sh`, `docs/`)**:
