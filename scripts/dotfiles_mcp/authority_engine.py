@@ -29,6 +29,7 @@ from dotfiles_mcp.constants import (
     VALID_DELEGATION_DIRS,
     VALID_DELEGATION_SURFACES,
     VALID_TRACKER_FILES,
+    VALIDATOR_ALLOWED_OPS,
 )
 from dotfiles_mcp.git_governance_engine import (
     record_governance_event,
@@ -137,21 +138,27 @@ def verify_layer_operation_authority(
     owner_role = str(auth.get("owner_role", f"Layer Owner ({layer_id})"))
     auth_emails = [str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()]
     maint_emails = [str(e).strip() for e in auth.get("maintainer_emails", []) if str(e).strip()]
-    all_auth = list(dict.fromkeys([*auth_emails, *maint_emails]))
-    allowed_pool = all_auth if operation in MAINTAINER_ALLOWED_OPS else auth_emails
+    val_emails = [str(e).strip() for e in auth.get("validator_emails", []) if str(e).strip()]
+    ext_ops = (*MAINTAINER_ALLOWED_OPS, *VALIDATOR_ALLOWED_OPS)
+    pool_raw = [
+        *auth_emails,
+        *maint_emails,
+        *(val_emails if operation in VALIDATOR_ALLOWED_OPS else ()),
+    ]
+    allowed_pool = list(dict.fromkeys(pool_raw if operation in ext_ops else auth_emails))
     escalation_contact = str(auth.get("escalation_contact", f"{owner_role} ({layer_id})"))
     eff_email = resolve_git_user_email(target_dir) if actor_email is None else actor_email.strip()
     if target_rel_path:
         is_inh, origin_ref = _detect_inherited_upstream_asset(target_dir, manifest, target_rel_path)
         if is_inh:
             rem = (
-                f"Blocked: '{target_rel_path}' is an inherited upstream asset "
-                f"(origin: '{origin_ref}', upstream layer: '{upstream_id}'). "
-                f"Downstream workspaces must not mutate or publish upstream rules directly. "
-                f"Process: (1) Adapt in 'templates/{layer_id}/' or local '.agents/rules/'; "
-                f"(2) Run './scripts/layer-config.sh promote-from-project {target_dir} "
-                f"--source {target_rel_path} --to-layer {upstream_id} --create-pr'; "
-                f"(3) Coordinate with {escalation_contact} for review."
+                f"Blocked: '{target_rel_path}' is an inherited upstream asset (origin: "
+                f"'{origin_ref}', upstream layer: '{upstream_id}'). Downstream workspaces must "
+                f"not mutate or publish upstream rules directly. Process: (1) Adapt in "
+                f"'templates/{layer_id}/' or local '.agents/rules/'; (2) Run './scripts/"
+                f"layer-config.sh promote-from-project {target_dir} --source {target_rel_path} "
+                f"--to-layer {upstream_id} --create-pr'; (3) Coordinate with "
+                f"{escalation_contact} for review."
             )
             rc = "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
             ev_kw: dict[str, Any] = {"operation": operation, "status": "blocked", "message": rem,
@@ -245,30 +252,23 @@ def verify_single_hop_upstream(
             f"CROSS_TIER_PROMOTION_BYPASS: Layer '{src_id}' can only promote to "
             f"immediate upstream_layer '{expected_up_id}' (1-hop), not '{actual_up_id}'."
         )
-    if _is_oss_root_manifest(up_m):
-        v = verify_layer_operation_authority(
-            project_dir, operation="release", actor_email=actor_email
-        )
-        if not v["allowed"]:
-            raise ValueError(
-                f"UNAUTHORIZED_OSS_PROMOTION: Root 0 owner required ({v['remediation']})."
+    if (
+        _is_oss_root_manifest(up_m)
+        and not (
+            v := verify_layer_operation_authority(
+                project_dir, operation="release", actor_email=actor_email
             )
+        )["allowed"]
+    ):
+        raise ValueError(f"UNAUTHORIZED_OSS_PROMOTION: Root 0 owner required ({v['remediation']}).")
 
 
 def build_upward_promotion_pr_plan(
-    project_dir: Path,
-    target_repo_dir: Path,
-    *,
-    source_rel: str,
-    dest_rel: str,
-    target_layer: str,
-    target_template: str | None,
-    sha256: str,
-    actor_email: str | None = None,
-    contributing_org: str | None = None,
-    contributors: str | None = None,
-    validation_context: str | None = None,
-) -> dict[str, Any]:
+    project_dir: Path, target_repo_dir: Path, *, source_rel: str, dest_rel: str,
+    target_layer: str, target_template: str | None, sha256: str,
+    actor_email: str | None = None, contributing_org: str | None = None,
+    contributors: str | None = None, validation_context: str | None = None,
+) -> dict[str, Any]:  # fmt: skip
     """Build a Pull Request plan anchored in the originating child layer's context."""
     proj_m, target_m = _load_manifest_dict(project_dir), _load_manifest_dict(target_repo_dir)
     oss_anonymized = _is_oss_root_manifest(target_m)

@@ -269,17 +269,12 @@ class TestRepoParityGates:
         dynamic_tokens = [
             re.escape(tok)
             for tok in (
-                *local_project_tokens,
-                "\x70romoter_header",
-                "\x5fopen_single_capsule",
-                "\x5flocate_section_with_drift_tolerance",
-                "\x4dCP_LAYER_SCHEMA_VERSION",
-                "\x54EMPLATE_SCHEMA_VERSION",
-                "\x44EFAULT_INITIAL_LAYER_VERSION",
-                "\x46ALLBACK_UNKNOWN_VERSION",
-                "\x4eEW_LAYER_INITIAL_SEMVER",
+                *local_project_tokens, "\x70romoter_header", "\x5fopen_single_capsule",
+                "\x5flocate_section_with_drift_tolerance", "\x4dCP_LAYER_SCHEMA_VERSION",
+                "\x54EMPLATE_SCHEMA_VERSION", "\x44EFAULT_INITIAL_LAYER_VERSION",
+                "\x46ALLBACK_UNKNOWN_VERSION", "\x4eEW_LAYER_INITIAL_SEMVER",
             )
-        ]
+        ]  # fmt: skip
         retired_token_re = re.compile(
             r"\b(" + "|".join(dynamic_tokens) + r")\b|\[DOTFILES-" + r"\d+\]",
             re.IGNORECASE,
@@ -308,20 +303,16 @@ class TestRepoParityGates:
         arch_05 = (
             REPO_DIR / "docs/architecture/05_ephemeral_forks_and_department_bots.md"
         ).read_text(encoding="utf-8")
-        targets = sorted(
-            [
-                REPO_DIR / "README.md",
-                REPO_DIR / "CONTRIBUTING.md",
-                REPO_DIR / "CHANGELOG.md",
-                *list((REPO_DIR / "antigravity").rglob("*.md")),
-                *list((REPO_DIR / "antigravity").rglob("*.py")),
-                *list((REPO_DIR / "docs").rglob("*.md")),
-                *list((REPO_DIR / "templates").rglob("*.md")),
-                *list((REPO_DIR / "scripts").rglob("*.py")),
-                *list((REPO_DIR / "scripts").glob("*.sh")),
-                *list((REPO_DIR / "tests").rglob("*.py")),
-            ]
-        )
+        targets = sorted([
+            REPO_DIR / "README.md", REPO_DIR / "CONTRIBUTING.md", REPO_DIR / "CHANGELOG.md",
+            *list((REPO_DIR / "antigravity").rglob("*.md")),
+            *list((REPO_DIR / "antigravity").rglob("*.py")),
+            *list((REPO_DIR / "docs").rglob("*.md")),
+            *list((REPO_DIR / "templates").rglob("*.md")),
+            *list((REPO_DIR / "scripts").rglob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.sh")),
+            *list((REPO_DIR / "tests").rglob("*.py")),
+        ])  # fmt: skip
 
         # Act
         violations = [
@@ -454,3 +445,12 @@ class TestRepoParityGates:
         assert pragma_violations == [] and prod_style_violations == []
         assert unmatched_raises == [] and blind_subprocess_mocks == []
         assert structure_violations == []
+        const_text = (REPO_DIR / "scripts/dotfiles_mcp/constants.py").read_text(encoding="utf-8")
+        other_py = "\n".join(
+            p.read_text(encoding="utf-8") for p in [*prod_py, *test_py] if p.name != "constants.py"
+        )
+        assert [
+            m.group(1)
+            for m in re.finditer(r"^([A-Z][A-Z0-9_]+)\b", const_text, re.M)
+            if m.group(1) not in other_py
+        ] == []

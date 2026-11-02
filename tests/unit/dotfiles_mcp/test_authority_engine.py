@@ -132,6 +132,7 @@ class TestAuthorityEngine:
             '"layer_authority":{"owner_role":"Squad Lead",'
             '"authorized_emails":["lead@squad.acme.com","*@managers.acme.com"],'
             '"maintainer_emails":["maint@squad.acme.com"],'
+            '"validator_emails":["qa@squad.acme.com"],'
             '"escalation_contact":"Squad Lead <lead@squad.acme.com>"}}',
             encoding="utf-8",
         )
@@ -169,6 +170,12 @@ class TestAuthorityEngine:
         ok_maint = verify_layer_operation_authority(
             squad_dir, operation="delegate-to-child", actor_email="maint@squad.acme.com"
         )
+        ok_val = verify_layer_operation_authority(
+            squad_dir, operation="record-decision", actor_email="qa@squad.acme.com"
+        )
+        b_val_maint = verify_layer_operation_authority(
+            squad_dir, operation="scaffold-template", actor_email="qa@squad.acme.com"
+        )
         ok_glob = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="director@managers.acme.com"
         )
@@ -194,6 +201,11 @@ class TestAuthorityEngine:
         assert "Squad Lead <lead@squad.acme.com>" in b_rel["remediation"]
         assert ok_own_rel["reason_code"] == "OWNER_AUTHORIZED"
         assert ok_maint["reason_code"] == "OWNER_AUTHORIZED"
+        assert ok_val["allowed"] is True and ok_val["reason_code"] == "OWNER_AUTHORIZED"
+        assert (
+            b_val_maint["allowed"] is False
+            and b_val_maint["reason_code"] == "UNAUTHORIZED_ACTOR_EMAIL"
+        )
         assert all(x["allowed"] for x in (ok_own_rel, ok_maint, ok_glob, ok_open, ok_bad))
 
     def test_build_upward_promotion_pr_plan_captures_child_layer_context(

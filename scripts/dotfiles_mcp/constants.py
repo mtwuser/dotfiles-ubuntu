@@ -9,8 +9,7 @@ import re
 import stat
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parents[1]
-REPO_DIR = SCRIPT_DIR.parent
+REPO_DIR = Path(__file__).resolve().parents[2]
 MCP_JSONRPC_PROTOCOL_REV = "2024-11-05"
 LAYER_MANIFEST_CONTRACT_REV = "mcp-layer-v1"
 TEMPLATE_MANIFEST_CONTRACT_REV = "template-pack-v1"
@@ -18,10 +17,6 @@ MISSING_VERSION_SENTINEL = "unversioned"
 VALID_LAYER_ROLES = (
     "corporate", "department", "domain-policy", "ephemeral-bot",
     "squad", "service-node", "environment-cluster", "workstation",
-)  # fmt: skip
-VALID_OPERATING_STATES: tuple[str, ...] = (
-    "oss-readonly-appliance", "oss-dev", "corporate-root", "domain-policy",
-    "department", "squad", "service-node", "environment-cluster", "ephemeral-bot", "project",
 )  # fmt: skip
 MCP_OPERATING_MODES: dict[str, str] = {
     "oss-readonly-appliance": "workstation-baseline-provider",
@@ -85,13 +80,11 @@ SHA256_BLOCK_BYTES = 32
 ZLIB_MAX_COMPRESSION_LEVEL = 9
 EPOCH_DECIMAL_PLACES = 3
 CHARS_PER_TOKEN_ESTIMATE = 4
-MIN_CODON_WORD_LEN = 4
 CODON_SLUG_MAX_CHARS = 36
 CODON_MAX_SEMANTIC_TAGS = 5
 EXON_HEADING_MAX_CHARS = 160
 EXON_BULLET_MAX_CHARS = 120
 EXON_MAX_BULLETS = 4
-L0_FALLBACK_EST_TOKENS = 20
 L1_FALLBACK_EST_TOKENS = 60
 L2_EXCERPT_MAX_CHARS = 1500
 L2_SECTION_MAX_CHARS = 8000
@@ -245,7 +238,7 @@ CODON_STOPWORDS = frozenset({
 CONSUMER_ALLOWED_OPS: tuple[str, ...] = (
     "list-templates", "apply-project", "sync-layer", "diff-project", "promote-from-project",
     "check-authority", "inspect-horizon", "start-task", "complete-task",
-    "compare-upstream", "consult-layer", "check-env-promotion", "record-decision",
+    "compare-upstream", "consult-layer",
 )  # fmt: skip
 VALIDATOR_ALLOWED_OPS: tuple[str, ...] = ("check-env-promotion", "record-decision")
 MAINTAINER_ALLOWED_OPS: tuple[str, ...] = (
