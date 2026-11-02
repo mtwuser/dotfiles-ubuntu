@@ -409,12 +409,14 @@ def _render_layer_onboarding_readme(
     )
     tpl_csv = ", ".join(f"`{t}`" for t in active_templates) or "`none`"
     parent_label = f"`{parent_id}`" if parent_id else "`open-source-root`"
+    hs_hint = "[Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]"
     return (
         f"# {layer_id} (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
         f"## Layer Setup Blueprint ({tier_title})\n\n"
         f"- **Layer ID & Role**: `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`)\n"
         f"- **1-Hop Upstream Parent**: {parent_label}\n"
         f"- **Active Template Packs**: {tpl_csv}\n"
+        f"- **Human-Stack Profile**: {hs_hint}\n"
         f"- **Mission, Scope & Core Invariants**: {scope_hint}\n"
         f"- **Downstream Topology (Next Tier)**: {children_hint}\n"
         f"- **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]\n\n"
@@ -432,6 +434,7 @@ def _render_layer_onboarding_readme(
 def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
     """Render .agents/LAYER_LINEAGE.md with participating layers and Level 4 Project Blueprint."""
     tpl_label = resolved_tpl_name or "none"
+    hs_hint = "[Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]"
     lines = [
         "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
         f"- **Applied Template Pack**: `{tpl_label}`\n",
@@ -442,6 +445,7 @@ def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
         "",
         "## Project Setup Blueprint (Level 4 — Application Workspace)",
         f"- **Applied Template Packs**: `{tpl_label}`",
+        f"- **Human-Stack Profile**: {hs_hint}",
         "- **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]",
         "- **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]",
         "- **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]",

@@ -239,6 +239,56 @@ Suppose the organization operates a transversal **`VoIP` & Unified Communication
 
 ---
 
+### 2.4. The `Human-Spec` & `Human-Stack` Matrix: Fluid Multidisciplinary Profiles & Maturity Adaptation
+
+While **Axis 1 (Deontic Precedence `0..80`)** defines *which organizational laws govern the repository* and **Axis 2 (Stack Templates)** defines *which technical or operational architecture applies*, modern professionals are rarely single-track specialists. A single practitioner often operates as a **multidisciplinary `Human-Stack`** whose maturity varies asymmetrically by domain (for example, **`L3` Expert in Legal/IP + `L1` Explorer in Python/MCP**, or **`L3` Staff Backend Engineer + `L1` Explorer in Regulatory Finance**) and whose role evolves over time.
+
+To guide each human operator with zero overengineering, `dotfiles-ubuntu` models **`Human-Specs`** as a **living, composable catalog of cognitive and interaction facets at `precedence: 85..95`**:
+- **Invariance of Quality (`0..80` *Lex Superior*)**: A `Human-Stack` (`85..95`) **never lowers statutory, security, architectural, or `100%` test-coverage gates (`0..80`)**. Whether paired with an `L1` newcomer or an `L4` Principal, the deliverable must pass the exact same verification suite (`make verify`).
+- **Fluid Cognitive Adaptation (`85..95`)**: What changes is **how the AI pairs with the human** — adjusting explanation depth, cross-discipline vocabulary bridges, Socratic coaching, and review pacing to match the operator's active `Human-Stack` (configured either by corporate/squad directive during onboarding or self-selected fluidly in `.agents/LAYER_LINEAGE.md` and `.agents/SESSION.md`).
+
+```mermaid
+flowchart LR
+    subgraph Laws["System Invariants (Precedence 0..80 — Non-Negotiable)"]
+        O1["Organizational Laws: Legal (5) -> Root 0 (10) -> Tech (25) -> Brand (30)"]
+        O2["Execution Templates: human-core / technical-base / business-base / fastapi"]
+    end
+
+    subgraph Specs["Living Catalog of Composable Human-Specs (Precedence 85..95)"]
+        S1["1. Asymmetric Domain Maturity\nL1 Explorer · L2 Builder · L3 Architect · L4 Synthesizer"]
+        S2["2. Hard-Skill Bridges\ntech-for-business · business-for-tech · legal-eng · data-literacy"]
+        S3["3. Soft-Skill & Cognitive Style\nsocratic-coach · red-team-critic · exec-storyteller · deep-flow"]
+        S4["4. Active Session Hat\nonboarding-learner · feature-builder · forensic-auditor"]
+    end
+
+    subgraph Stack["Resulting Human-Stack (.agents/LAYER_LINEAGE.md & SESSION.md)"]
+        HS["Fluid Profile (Corporate Directive or Self-Selected)\nEvolves organically via /learn -> /enrich -> make promote"]
+    end
+
+    Laws --> HS
+    Specs --> HS
+```
+
+#### The 4 Composable Dimensions of the `Human-Spec` Living Catalog
+
+| `Human-Spec` Dimension | Living Catalog Facets (`precedence: 85..95`) | How the AI Agent Adapts Its Pairing Behavior |
+| :--- | :--- | :--- |
+| **1. Asymmetric Domain Maturity (`L1..L4` per specialty)** | • `L1-guided-explorer` *(Onboarding / New Domain)*<br/>• `L2-autonomous-builder` *(Practitioner)*<br/>• `L3-systems-architect` *(Senior / Staff)*<br/>• `L4-principal-synthesizer` *(Executive / Cross-Domain)* | In domains where the operator is **`L1`**, the agent explains the architectural *why* before edits, links to `docs/guides/`, and walks through the 5-link ripple chain step by step. Where the operator is **`L3/L4`**, it uses terse 4-channel digests, boundary trade-offs (`N vs N±1`), and strategic synthesis. |
+| **2. Cross-Discipline Bridges (`Hard-Skill Translators`)** | • `bridge-tech-for-business`<br/>• `bridge-business-for-tech`<br/>• `bridge-legal-engineering`<br/>• `bridge-growth-engineering` | Translates concepts across guilds: explains hexagonal ports, `AAA` tests, and Git gates to business specialists as *enforceable contract clauses and audit ledgers*, or translates EBITDA, CAPEX/OPEX, and IP novelty rules to engineers as *state-machine invariants*. |
+| **3. Cognitive & Soft-Skill Specs (`Interaction Style`)** | • `soft-socratic-coach` *(Active learning)*<br/>• `soft-red-team-critic` *(Assumption challenger)*<br/>• `soft-executive-storyteller` *(Board/ROI framing)*<br/>• `soft-deep-flow` *(Maximum velocity, minimal prose)* | Modulates collaboration dynamics: prompts the user to spot edge cases (`socratic-coach`), stress-tests architectural or commercial premises (`red-team-critic`), or packages technical diffs into executive impact summaries (`executive-storyteller`). |
+| **4. Task / Session Hat (`Temporal Role`)** | • `hat-onboarding-explorer`<br/>• `hat-feature-builder`<br/>• `hat-forensic-auditor`<br/>• `hat-cross-dept-integrator` | Allows the same person to shift modes fluidly within a single day (e.g., *Explorer* when entering an unfamiliar module in the morning, *Deep-Flow Builder* at midday, and *Executive Storyteller* when preparing a cross-departmental PR). |
+
+#### Representative Composed `Human-Stack` Profiles
+
+| Composed `Human-Stack` Archetype | `Human-Stack Profile` Declaration (`.agents/LAYER_LINEAGE.md` / `SESSION.md`) | Activation Mode & Evolutionary Path |
+| :--- | :--- | :--- |
+| **1. Squad Onboarding Engineer** | `Maturity: L1 Squad-Stack, L2 Python \| Bridge: business-for-tech \| Soft: soft-socratic-coach \| Hat: hat-onboarding-explorer` | **Pre-set by Squad Directive**: Guides new hires through `docs/guides/` and `1:1:1` specs; transitions fluidly to `L2/L3` + `soft-deep-flow` as mastery grows. |
+| **2. LegalTech Domain Builder** | `Maturity: L3 Legal-IP, L1 FastAPI-MCP \| Bridge: bridge-tech-for-business \| Soft: soft-socratic-coach \| Hat: hat-feature-builder` | **Hybrid Specialty**: Zero condescension on statutory IP law (`L3`), paired with step-by-step scaffolding on hexagonal Python, `pytest`, and Git hygiene (`L1`). |
+| **3. Multidisciplinary Product Engineer** | `Maturity: L3 Full-Stack, L2 Growth-Brand, L1 Finance \| Bridge: bridge-growth-engineering \| Soft: soft-red-team-critic` | **Self-Selected Fluid Stack**: Combines high-velocity code execution with automated brand/legal/unit-economics challenge gates. |
+| **4. Principal / Cross-Dept Architect** | `Maturity: L4 Architecture, L3 Governance \| Soft: soft-executive-storyteller, soft-red-team-critic \| Hat: hat-cross-dept-integrator` | **Executive & Governance Mode**: Focuses on 4-channel digests, cross-layer `rcap1` consultations, and promoting new `Human-Specs` via `/enrich` + `make promote`. |
+
+---
+
 ## 3. Bidirectional Organic Knowledge Evolution (`Downward` & `Upward`)
 
 Static corporate coding guidelines fail because they are written top-down and quickly become disconnected from daily engineering reality. In `dotfiles-ubuntu`, knowledge is **organic and bidirectional**:

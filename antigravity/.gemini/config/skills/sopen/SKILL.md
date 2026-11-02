@@ -53,15 +53,18 @@ description: restore session state and initialize workspace — first command in
 
 ---
 
-## 2. Read Session State (Tier 2 — portable cross-device)
+## 2. Read Session State & Active `Human-Stack` Profile (Tier 2 — portable cross-device)
 
 // delegate: flash
 1. **Use `session_state.excerpt` from Step 0** (or read `.agents/SESSION.md` in full only if the excerpt is truncated):
    - **Top Session Log entry** — most recent session: conversation ID, machine, completed items
    - **Last entry for this machine** — if different from top entry, read it too (reveals this machine's last known state)
    - If any entry has a **Resume from** note → this is the exact continuation point
+2. **Adopt the Operator's Active `Human-Stack Profile` (`precedence: 85..95`)**:
+   - Inspect `.agents/LAYER_LINEAGE.md` (`Human-Stack Profile`), `README.md` (`Layer Setup Blueprint`), or `.agents/SESSION.md` for the operator's declared **`Human-Stack`** (`Asymmetric Domain Maturity: L1..L4`, `Hard-Skill Bridges`, `Soft-Skill & Cognitive Specs`, and `Session Hat`).
+   - Adapt explanation depth, cross-discipline vocabulary bridges (`tech-for-business` / `business-for-tech`), and Socratic guidance to the active `Human-Stack` while keeping all organizational and technical gates (`precedence: 0..80`) strictly invariant.
 
-2. **Cross-reference against Tier 1 artifacts**:
+3. **Cross-reference against Tier 1 artifacts**:
    - If `walkthrough.md` documents verified work not in any Session Log entry → SESSION.md missed it
    - Trust Tier 1 artifacts over SESSION.md when they conflict
 

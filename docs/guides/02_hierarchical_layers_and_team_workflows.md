@@ -90,6 +90,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    - **Layer ID & Role**: `acme-corp-root` (`corporate`, `precedence: 10`)
    - **1-Hop Upstream Parent**: `open-source-root`
    - **Active Template Packs**: `business-base`, `acme-corp-root`
+   - **Human-Stack Profile**: [Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]
    - **Mission, Scope & Core Invariants**: [Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]
    - **Downstream Topology (Next Tier)**: [Fill: Planned child Departments (--role department / --role domain-policy)]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -116,6 +117,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    - **Layer ID & Role**: `dept-legal-ip` (`domain-policy`, `precedence: 5`)
    - **1-Hop Upstream Parent**: `acme-corp-root`
    - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`
+   - **Human-Stack Profile**: [Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]
    - **Mission, Scope & Core Invariants**: [Fill: Department mission, domain invariants, and target file surface globs]
    - **Downstream Topology (Next Tier)**: [Fill: Planned child Squads (--role squad, e.g. squad-patent-ops)]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -141,6 +143,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    - **Layer ID & Role**: `squad-patent-ops` (`squad`, `precedence: 50`)
    - **1-Hop Upstream Parent**: `dept-legal-ip`
    - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`, `technical-base`, `fastapi-hexagonal`, `squad-patent-ops`
+   - **Human-Stack Profile**: [Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]
    - **Mission, Scope & Core Invariants**: [Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]
    - **Downstream Topology (Next Tier)**: [Fill: Target application repositories for apply-project, e.g. /path/to/patent-api]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -165,10 +168,12 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    ```markdown
    ## Project Setup Blueprint (Level 4 — Application Workspace)
    - **Applied Template Packs**: `technical-base,fastapi-hexagonal,squad-patent-ops`
+   - **Human-Stack Profile**: [Fill: Domain Maturity (L1..L4 per area) | Skill Bridges | Cognitive/Soft Specs]
    - **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]
    - **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]
    - **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]
    ```
+   > **Fluid `Human-Stack` Adaptation (`precedence: 85..95`)**: The `Human-Stack Profile` line can be pre-populated by corporate/squad directive for onboarding or self-selected and updated at any time in `.agents/LAYER_LINEAGE.md` / `.agents/SESSION.md` as the practitioner's maturity, role, or session focus evolves (see [`docs/reference/enterprise_pair_programming_governance.md`](../reference/enterprise_pair_programming_governance.md#24-the-human-spec--human-stack-matrix-fluid-multidisciplinary-profiles--maturity-adaptation)).
 3. **Initial Chat Kickoff Prompt (`Project`)**:
    ```text
    /sopen — Read .agents/LAYER_LINEAGE.md, all inherited .agents/rules/*.md, and our Project Setup Blueprint.
