@@ -80,7 +80,7 @@ Commands:
                       [--upstream-branch <branch>] [--description <text>] [--templates <csv>]
                       [--template-name <name>] [--no-scaffold-own]
       One-shot workspace initializer: inherits templates/lineage and runs apply-project.
-  sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]
+  sync-layer [<target-dir>] [--parent-dir <dir>] [--templates <csv>] [--strategy <reconcile|accept-upstream|keep-local|merge>]
       Propagate upstream template pack improvements and re-materialize <target-dir>/.agents/.
 
 Options:
@@ -328,10 +328,8 @@ if subcmd == "bootstrap-workspace":
     sys.exit(0)
 
 if subcmd == "sync-layer":
-    if not rest or rest[0].startswith("--"):
-        _die("Usage: ./scripts/layer-config.sh sync-layer <target-dir> [--parent-dir <dir>] [--templates <csv>]")
-    opts = _parse_opts(rest[1:], {"--parent-dir": "parent", "--templates": "tpls"})
-    res = sync_layer_workspace(repo_dir, Path(rest[0]).resolve(), parent_dir=_opt_path(opts, "parent"), templates=_csv(opts.get("tpls")), dry_run=dry_run)
+    target_dir, opts = _pos_opts(rest, {"--parent-dir": "parent", "--templates": "tpls", "--strategy": "strat"})
+    res = sync_layer_workspace(repo_dir, target_dir, parent_dir=_opt_path(opts, "parent"), templates=_csv(opts.get("tpls")), strategy=str(opts.get("strat", "reconcile")), dry_run=dry_run)
     print(json.dumps(res, indent=2))
     sys.exit(0)
 

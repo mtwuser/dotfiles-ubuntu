@@ -17,6 +17,7 @@ from dotfiles_mcp.git_governance_engine import (
     evaluate_environment_promotion,
     inspect_git_governance_state,
     manage_layer_roster,
+    reconcile_template_pack_sync,
     record_governance_decision,
     record_governance_event,
     stage_non_destructive_proposal,
@@ -271,3 +272,96 @@ class TestGitGovernanceEngine:
             record_governance_decision(ws, item_ref="x", decision="maybe", reason="r")
         with pytest.raises(ValueError, match="Both item_ref and reason"):
             record_governance_decision(ws, item_ref="  ", decision="approve", reason="r")
+
+    def test_reconcile_template_pack_sync_supports_all_four_strategies(
+        self, tmp_path: Path
+    ) -> None:
+        """Reconcile upstream vs local template packs via reconcile, keep-local, merge, accept."""
+        # Arrange
+        ws = tmp_path / "corp-root"
+        (ws / "system").mkdir(parents=True)
+        (ws / "system/mcp-layer.json").write_text(
+            '{"schema_version": "1.0", "layer_id": "corp-root", "layer_role": "team"}',
+            encoding="utf-8",
+        )
+        (ws / "Makefile").write_text(
+            "# Role-Specialized Layer Makefile — corp-root\nhelp:\n\t@echo ok\n",
+            encoding="utf-8",
+        )
+        src_tpl = tmp_path / "upstream/templates/business-base"
+        dest_tpl = ws / "templates/business-base"
+        (src_tpl / "rules").mkdir(parents=True)
+        (dest_tpl / "rules").mkdir(parents=True)
+        (src_tpl / "rules/business-base.md").write_text(
+            "# Business Base\n\n## Core Rule\nUpstream v2.\n", encoding="utf-8"
+        )
+        (dest_tpl / "rules/business-base.md").write_text(
+            "Preamble line\n# Business Base\n\n## Core Rule\nLocal v1.\n\n## Local Annex\nKeep.\n",
+            encoding="utf-8",
+        )
+        (dest_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
+        (src_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
+
+        # Act
+        st_outdated = inspect_git_governance_state(ws)
+        rec_copied, rec_conflicts = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="reconcile",
+            is_local_newer=True,
+        )
+        keep_dry, _ = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="keep-local",
+            is_local_newer=True,
+            dry_run=True,
+        )
+        keep_live, _ = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="keep-local",
+            is_local_newer=True,
+        )
+        reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="reconcile",
+            is_local_newer=True,
+        )
+        merge_copied, merge_conflicts = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="merge",
+            is_local_newer=True,
+        )
+        merged_txt = (dest_tpl / "rules/business-base.md").read_text(encoding="utf-8")
+        acc_copied, _ = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="accept-upstream",
+            is_local_newer=True,
+        )
+        acc_txt = (dest_tpl / "rules/business-base.md").read_text(encoding="utf-8")
+
+        # Assert
+        assert st_outdated["makefile_outdated"] is True
+        assert st_outdated["manifest_contracts_outdated"] is True
+        assert rec_copied is False and len(rec_conflicts) == 2
+        assert keep_dry is False and keep_live is False
+        assert not list((ws / ".agents/proposals/from-upstream").glob("*.md"))
+        assert merge_copied is True and merge_conflicts == []
+        assert "Upstream v2." in merged_txt and "## Local Annex" in merged_txt
+        assert acc_copied is True and "## Local Annex" not in acc_txt

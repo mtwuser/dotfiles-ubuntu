@@ -19,6 +19,9 @@ from dotfiles_mcp.constants import (
     DEFAULT_ENV_BRANCH_MAP,
     DEFAULT_PROCESS_BRANCH_PREFIXES,
     DEFAULT_PROTECTED_BRANCHES,
+    LAYER_MANIFEST_CONTRACT_REV,
+    LAYER_ROLE_MAKEFILE_TARGETS,
+    MAKEFILE_ROLE_HEADER_PREFIX,
     MAX_RECENT_GOVERNANCE_ALERTS,
     SECONDS_PER_DAY,
     STALE_MODULE_REVIEW_DAYS,
@@ -40,7 +43,7 @@ def _load_manifest(target_dir: Path) -> dict[str, Any]:
 def _append_tracker_line(ws: Path, tracker: str, line: str, title_id: str) -> None:
     trk_file = ws / tracker
     cur = (
-        trk_file.read_text(encoding="utf-8")
+        trk_file.read_text("utf-8")
         if trk_file.is_file()
         else f"# Active Work Tasks — {title_id}\n\n"
     )
@@ -49,21 +52,12 @@ def _append_tracker_line(ws: Path, tracker: str, line: str, title_id: str) -> No
 
 
 def record_governance_event(
-    workspace_dir: Path,
-    *,
-    operation: str,
-    status: str,
-    actor_email: str = "",
-    target_layer: str = "",
-    source_rel_path: str = "",
-    reason_code: str = "",
-    message: str = "",
-    remediation: str = "",
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    workspace_dir: Path, *, operation: str, status: str, actor_email: str = "",
+    target_layer: str = "", source_rel_path: str = "", reason_code: str = "",
+    message: str = "", remediation: str = "", dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Persist a governance/permission event to logs/governance_audit.jsonl and SESSION.md."""
-    ws = workspace_dir.resolve()
-    manifest = _load_manifest(ws)
+    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
     layer_id = str(manifest.get("layer_id", ws.name))
     event: dict[str, Any] = {
         "ts": datetime.now(UTC).isoformat(), "workspace_dir": str(ws), "layer_id": layer_id,
@@ -80,11 +74,7 @@ def record_governance_event(
             if status in ("blocked", "rejected", "deferred", "staged_proposal"):
                 s_file = ws / ".agents" / "SESSION.md"
                 s_file.parent.mkdir(parents=True, exist_ok=True)
-                cur = (
-                    s_file.read_text(encoding="utf-8")
-                    if s_file.is_file()
-                    else "# Session State Log\n"
-                )
+                cur = s_file.read_text("utf-8") if s_file.is_file() else "# Session State Log\n"
                 hdr = "## Governance Alerts & Pending Decisions"
                 bullet = (
                     f"- **[{status.upper()} · `{operation}`]** "
@@ -97,19 +87,11 @@ def record_governance_event(
 
 
 def stage_non_destructive_proposal(
-    target_dir: Path,
-    *,
-    scope_tag: str,
-    file_name: str,
-    content: str,
-    operation: str,
-    actor_email: str = "",
-    reason_code: str = "EXISTING_FILE_PROTECTED",
-    dry_run: bool = False,
-) -> Path:
+    target_dir: Path, *, scope_tag: str, file_name: str, content: str, operation: str,
+    actor_email: str = "", reason_code: str = "EXISTING_FILE_PROTECTED", dry_run: bool = False,
+) -> Path:  # fmt: skip
     """Stage a candidate governance file in .agents/proposals/<scope_tag>/ without overwriting."""
-    ws = target_dir.resolve()
-    staged_rel = Path(".agents") / "proposals" / scope_tag / file_name
+    ws, staged_rel = target_dir.resolve(), Path(".agents") / "proposals" / scope_tag / file_name
     staged_file = ws / staged_rel
     msg = (
         f"Target file '{file_name}' is protected or already exists in '{ws.name}'; "
@@ -124,16 +106,63 @@ def stage_non_destructive_proposal(
         )
         _append_tracker_line(ws, "WORKTASK.md", entry, ws.name)
     record_governance_event(
-        ws,
-        operation=operation,
-        status="staged_proposal",
-        actor_email=actor_email,
-        source_rel_path=staged_rel.as_posix(),
-        reason_code=reason_code,
-        message=msg,
+        ws, operation=operation, status="staged_proposal", actor_email=actor_email,
+        source_rel_path=staged_rel.as_posix(), reason_code=reason_code, message=msg,
         dry_run=dry_run,
-    )
+    )  # fmt: skip
     return staged_file
+
+
+def reconcile_template_pack_sync(
+    target_dir: Path, tpl_name: str, src_tpl: Path, dest_tpl: Path, *,
+    strategy: str = "reconcile", is_local_newer: bool = False, dry_run: bool = False,
+) -> tuple[bool, list[dict[str, Any]]]:  # fmt: skip
+    """Reconcile an upstream template pack into dest_tpl using the requested sync strategy."""
+    prop_dir = target_dir / ".agents" / "proposals" / "from-upstream"
+    if strategy == "keep-local" and dest_tpl.is_dir():
+        if not dry_run:
+            for pf in prop_dir.glob(f"{tpl_name}-*.md"):
+                pf.unlink(missing_ok=True)
+        return False, []
+    if strategy == "reconcile" and is_local_newer:
+        conflicts: list[dict[str, Any]] = []
+        for src_rf in sorted((src_tpl / "rules").glob("*.md")):
+            staged = stage_non_destructive_proposal(
+                target_dir, scope_tag="from-upstream", file_name=f"{tpl_name}-{src_rf.name}",
+                content=src_rf.read_text(encoding="utf-8"), operation="sync-layer",
+                reason_code="UPSTREAM_TEMPLATE_CONFLICT", dry_run=dry_run,
+            )  # fmt: skip
+            rel_stg = str(staged.relative_to(target_dir.resolve())).replace("\\", "/")
+            conflicts.append({"template": tpl_name, "staged_proposal": rel_stg,
+                "rule_file": f"templates/{tpl_name}/rules/{src_rf.name}",
+                "resolution_commands": ["make sync STRATEGY=accept-upstream",
+                    "make sync STRATEGY=merge", "make sync STRATEGY=keep-local"]})  # fmt: skip
+        return False, conflicts
+    preserved: dict[str, list[str]] = {}
+    if strategy == "merge" and (dest_tpl / "rules").is_dir():
+        for dest_rf in sorted((dest_tpl / "rules").glob("*.md")):
+            src_rf = src_tpl / "rules" / dest_rf.name
+            src_txt = src_rf.read_text(encoding="utf-8") if src_rf.is_file() else ""
+            blocks = [
+                b.strip()
+                for b in re.split(r"(?m)^(?=#+\s)", dest_rf.read_text(encoding="utf-8"))
+                if b.strip().startswith("#") and b.strip().splitlines()[0].strip() not in src_txt
+            ]
+            if blocks:
+                preserved[dest_rf.name] = blocks
+    if not dry_run:
+        shutil.rmtree(dest_tpl, ignore_errors=True)
+        dest_tpl.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(src_tpl, dest_tpl)
+        for rname, blocks in preserved.items():
+            rf = dest_tpl / "rules" / rname
+            rf.write_text(
+                f"{rf.read_text(encoding='utf-8').rstrip()}\n\n" + "\n\n".join(blocks) + "\n",
+                encoding="utf-8",
+            )
+        for pf in prop_dir.glob(f"{tpl_name}-*.md"):
+            pf.unlink(missing_ok=True)
+    return True, []
 
 
 def configure_git_governance_policy(
@@ -252,38 +281,46 @@ def inspect_git_governance_state(
     thresholds = {"proposals": STALE_PROPOSAL_MAX_DAYS,
         "modules_and_specs": STALE_MODULE_REVIEW_DAYS,
         "policies": STALE_POLICY_REVIEW_DAYS}  # fmt: skip
+    role = str(manifest.get("layer_role", "project"))
+    req_t = LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"])
+    mk_txt = (ws / "Makefile").read_text("utf-8") if (ws / "Makefile").is_file() else ""
+    mk_outdated = mk_txt.startswith(MAKEFILE_ROLE_HEADER_PREFIX) and (
+        any(f"\n{t}:\n" not in mk_txt for t in req_t) or "--strategy $(STRATEGY)" not in mk_txt
+    )
+    mc_outdated = bool(
+        manifest
+        and (
+            manifest.get("schema_version") != LAYER_MANIFEST_CONTRACT_REV
+            or manifest.get("layer_role") == "team"
+        )
+    )
     return {"current_branch": eff_branch, "is_protected_branch": is_protected,
         "active_process_stage": stage, "active_environment": active_env,
         "protected_branches": prot, "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
+        "makefile_outdated": mk_outdated, "manifest_contracts_outdated": mc_outdated,
         "staged_proposals": staged_files, "stale_proposals": stale_props,
         "staleness_thresholds_days": thresholds,
         "recent_governance_alerts": alerts[-MAX_RECENT_GOVERNANCE_ALERTS:]}  # fmt: skip
 
 
 def evaluate_environment_promotion(
-    workspace_dir: Path,
-    *,
-    target_env: str,
-    actor_email: str | None = None,
-    current_branch: str | None = None,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    workspace_dir: Path, *, target_env: str, actor_email: str | None = None,
+    current_branch: str | None = None, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Verify intrinsic promotion gates for transitioning to dev, tst, pre, or pro."""
     clean_env = target_env.strip().lower()
     if clean_env not in VALID_ENVIRONMENTS:
         raise ValueError(f"Invalid target_env {target_env!r}: must be one of {VALID_ENVIRONMENTS}")
-    ws = workspace_dir.resolve()
-    manifest = _load_manifest(ws)
+    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
     raw_auth = manifest.get("layer_authority")
     auth = raw_auth if isinstance(raw_auth, dict) else {}
     auth_emails = [str(e).lower() for e in auth.get("authorized_emails", []) if str(e).strip()]
     val_emails = [str(e).lower() for e in auth.get("validator_emails", []) if str(e).strip()]
     eff_actor = (actor_email or "").strip().lower()
+    def_tpls = set(manifest.get("default_stack_templates", []))
     is_biz = str(manifest.get("layer_role", "")) in (
-        "corporate",
-        "department",
-        "domain-policy",
-    ) or bool(set(BUSINESS_MODE_TEMPLATES) & set(manifest.get("default_stack_templates", [])))
+        "corporate", "department", "domain-policy",
+    ) or bool(set(BUSINESS_MODE_TEMPLATES) & def_tpls)  # fmt: skip
     sem_map = BUSINESS_PHASE_SEMANTICS if is_biz else TECHNICAL_PHASE_SEMANTICS
     failed_gates: list[str] = []
     wt_file, wv_file = ws / "WORKTASK.md", ws / "WORKVALI.md"
@@ -312,14 +349,10 @@ def evaluate_environment_promotion(
     git_state = inspect_git_governance_state(ws, current_branch=current_branch)
     if not allowed:
         record_governance_event(
-            ws,
-            operation=f"check-env-promotion:{clean_env}",
-            status="blocked",
-            actor_email=actor_email or "",
-            reason_code="ENV_PROMOTION_GATE_FAILED",
-            message="; ".join(failed_gates),
-            dry_run=dry_run,
-        )
+            ws, operation=f"check-env-promotion:{clean_env}", status="blocked",
+            actor_email=actor_email or "", reason_code="ENV_PROMOTION_GATE_FAILED",
+            message="; ".join(failed_gates), dry_run=dry_run,
+        )  # fmt: skip
     promo_cmd = f"git checkout -B {req_branch}" if req_branch not in ("task/*", "feature/*") else ""
     return {"workspace_dir": str(ws), "current_environment": git_state["active_environment"],
         "target_environment": clean_env, "phase_semantics": sem_map[clean_env],
@@ -328,15 +361,9 @@ def evaluate_environment_promotion(
 
 
 def record_governance_decision(
-    workspace_dir: Path,
-    *,
-    item_ref: str,
-    decision: str,
-    reason: str,
-    actor_email: str = "",
-    tracker: str = "WORKTASK.md",
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    workspace_dir: Path, *, item_ref: str, decision: str, reason: str,
+    actor_email: str = "", tracker: str = "WORKTASK.md", dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Record a human governance review decision (approve, reject, defer, blocked) in tracker."""
     clean_dec = decision.strip().lower()
     if clean_dec not in VALID_GOVERNANCE_DECISIONS:
@@ -368,15 +395,9 @@ def record_governance_decision(
 
 
 def manage_layer_roster(
-    target_dir: Path,
-    *,
-    add_email: str | None = None,
-    member_role: str = "member",
-    title: str = "",
-    squad: str = "",
-    remove_email: str | None = None,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    target_dir: Path, *, add_email: str | None = None, member_role: str = "member",
+    title: str = "", squad: str = "", remove_email: str | None = None, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Maintain CO/Department/Squad roster (owners, validators, members) and sync CODEOWNERS."""
     ws = target_dir.resolve()
     mpath = ws / "system" / "mcp-layer.json"
@@ -424,12 +445,7 @@ def manage_layer_roster(
         mpath.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         if (ws / ".github/CODEOWNERS").is_file() or add_email or remove_email:
             configure_git_governance_policy(ws, sync_codeowners=True, dry_run=False)
-    return {
-        "target_dir": str(ws),
-        "layer_id": layer_id,
-        "roster": roster,
+    return {"target_dir": str(ws), "layer_id": layer_id, "roster": roster, "dry_run": dry_run,
         "authorized_emails": auth["authorized_emails"],
         "maintainer_emails": auth["maintainer_emails"],
-        "validator_emails": auth["validator_emails"],
-        "dry_run": dry_run,
-    }
+        "validator_emails": auth["validator_emails"]}  # fmt: skip

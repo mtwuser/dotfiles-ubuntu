@@ -342,6 +342,30 @@ class TestWorkspaceBootstrapper:
         )
         assert sync_bare["synced_templates"] == []
         assert sync_bare_add["synced_templates"] == ["business-base"]
+        (bare_layer / "Makefile").write_text(
+            "# Role-Specialized Layer Makefile — bare-layer\nhelp:\n\t@echo old\n\n"
+            "# --- Custom Targets ---\ncustom-target:\n\t@echo custom\n",
+            encoding="utf-8",
+        )
+        (bare_layer / "system/mcp-layer.json").write_text(
+            '{"schema_version": "1.0", "layer_id": "bare-layer", '
+            '"layer_role": "team", "default_stack_templates": ["business-base"]}',
+            encoding="utf-8",
+        )
+        local_bb = bare_layer / "templates/business-base/rules/business-base.md"
+        local_bb.write_text("# Local Override\n\n## Custom Section\nKeep.\n", encoding="utf-8")
+        sync_conflict = sync_layer_workspace(
+            repo_dir, bare_layer, strategy="reconcile", dry_run=False
+        )
+        sync_merged = sync_layer_workspace(repo_dir, bare_layer, strategy="merge", dry_run=False)
+        assert sync_conflict["makefile_upgraded"] is True
+        assert len(sync_conflict["reconciliation_conflicts"]) == 1
+        assert "custom-target:" in (bare_layer / "Makefile").read_text(encoding="utf-8")
+        assert "--strategy $(STRATEGY)" in (bare_layer / "Makefile").read_text(encoding="utf-8")
+        assert "## Custom Section" in local_bb.read_text(encoding="utf-8")
+        assert "business-base" in sync_merged["synced_templates"]
+        with pytest.raises(ValueError, match="Invalid sync strategy"):
+            sync_layer_workspace(repo_dir, bare_layer, strategy="bad-strategy")
         assert dept_status["workspace_mode"] == "business"
         assert dept_status["git_state"]["is_git_repo"] is True
         assert dept_status["session_state"]["last_conversation_id"] == (

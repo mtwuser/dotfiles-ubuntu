@@ -49,6 +49,9 @@ DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
     "pro": "main",
 }
 VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
+VALID_SYNC_STRATEGIES: tuple[str, ...] = ("reconcile", "accept-upstream", "keep-local", "merge")
+MAKEFILE_ROLE_HEADER_PREFIX: str = "# Role-Specialized Layer Makefile"
+MAKEFILE_CUSTOM_TARGETS_MARKER: str = "# --- Custom Targets ---"
 VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "maintainer", "validator", "member")
 VALID_TRACKER_FILES: tuple[str, ...] = (
     "WORKTASK.md", "BACKLOG.md", "WORKROAD.md", "ROADMAP.md", "WORKVALI.md",
@@ -298,7 +301,7 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "complete": f'{_CLI_RUN} complete-task {_PF} --task "$(TASK)"',
     "consult": f'{_CLI_RUN} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)"',
     "horizon": f"{_CLI_RUN} inspect-horizon {_PF}",
-    "sync": f"{_CLI_RUN} sync-layer {_PF}",
+    "sync": f"{_CLI_RUN} sync-layer {_PF} $(if $(STRATEGY),--strategy $(STRATEGY),)",
     "upstream-diff": f"{_CLI_RUN} compare-upstream {_PF}",
     "diff": f"{_CLI_RUN} diff-project {_PF}",
     "authority": f"{_CLI_RUN} check-authority $(CURDIR) --op release",

@@ -19,20 +19,27 @@ from dotfiles_mcp.constants import (
     COMMAND_CONSCIOUSNESS_TIERS,
     KEBAB_ID_RE,
     LAYER_MAKEFILE_RECIPES,
+    LAYER_MANIFEST_CONTRACT_REV,
     LAYER_ROLE_MAKEFILE_TARGETS,
+    MAKEFILE_CUSTOM_TARGETS_MARKER,
+    MAKEFILE_ROLE_HEADER_PREFIX,
     MCP_OPERATING_MODES,
     ROLE_DEFAULT_PRECEDENCE,
     STATUS_EXCERPT_MAX_LINES,
     TECHNICAL_MODE_RULE_FILES,
     TECHNICAL_MODE_TEMPLATES,
     VALID_LAYER_ROLES,
+    VALID_SYNC_STRATEGIES,
 )
 from dotfiles_mcp.fork_configurator import (
     apply_fork_to_project,
     configure_fork_manifest,
     scaffold_template_pack,
 )
-from dotfiles_mcp.git_governance_engine import inspect_git_governance_state
+from dotfiles_mcp.git_governance_engine import (
+    inspect_git_governance_state,
+    reconcile_template_pack_sync,
+)
 from dotfiles_mcp.manifest_helpers import (
     _is_dest_template_newer,
     _iter_layer_template_dirs,
@@ -74,13 +81,9 @@ def _strip_secondary_header(markdown_text: str) -> str:
 
 
 def set_global_agents_profile(
-    repo_dir: Path,
-    profile: str,
-    *,
-    run_stow: bool = False,
-    home_dir: Path | None = None,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, profile: str, *, run_stow: bool = False,
+    home_dir: Path | None = None, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Compose antigravity/.gemini/config/AGENTS.md from modular base templates."""
     if profile not in VALID_GLOBAL_PROFILES:
         raise ValueError(f"Invalid global profile {profile!r}; must be in {VALID_GLOBAL_PROFILES}")
@@ -88,12 +91,14 @@ def set_global_agents_profile(
     for idx, (tpl_id, rule_filename) in enumerate(PROFILE_TEMPLATE_CHAIN[profile]):
         rule_path = repo_dir / "templates" / tpl_id / "rules" / rule_filename
         if not rule_path.is_file():
-            rel_r = rule_path.relative_to(repo_dir)
-            raise ValueError(f"Missing profile template rule file: {rel_r}")
+            raise ValueError(
+                f"Missing profile template rule file: {rule_path.relative_to(repo_dir)}"
+            )
         source_files.append(str(rule_path.relative_to(repo_dir)))
         raw_text = rule_path.read_text(encoding="utf-8").strip()
-        sec = _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
-        sections.append(sec)
+        sections.append(
+            _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
+        )
 
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes, cap = len(composed.encode("utf-8")), AGENTS_MD_MAX_BYTES
@@ -129,10 +134,8 @@ def register_mounted_subtree(
     sub_m: dict[str, Any] = json.loads(sub_p.read_text(encoding="utf-8")) if sub_p.is_file() else {}
     sub_id = str(sub_m.get("layer_id") or layer_name)
     sub_role = str(sub_m.get("layer_role") or "department")
-    dept_prec, svc_prec = (
-        ROLE_DEFAULT_PRECEDENCE["department"],
-        ROLE_DEFAULT_PRECEDENCE["service-node"],
-    )
+    dept_prec = ROLE_DEFAULT_PRECEDENCE["department"]
+    svc_prec = ROLE_DEFAULT_PRECEDENCE["service-node"]
     entry: dict[str, Any] = {"name": layer_name, "layer_id": sub_id, "layer_role": sub_role,
         "precedence": int(sub_m.get("precedence", dept_prec)), "repository": repo_url,
         "branch": branch}  # fmt: skip
@@ -176,54 +179,40 @@ def _render_layer_makefile(
 
 
 def _sync_templates_from_roots(
-    target_dir: Path,
-    effective_parent: Path,
-    repo_dir: Path,
-    tpl_names: list[str],
-    *,
-    skip_id: str = "",
-    check_newer: bool = False,
+    target_dir: Path, effective_parent: Path, repo_dir: Path, tpl_names: list[str], *,
+    skip_id: str = "", check_newer: bool = False, strategy: str = "accept-upstream",
     dry_run: bool = False,
-) -> list[str]:
-    """Copy or refresh template packs from effective_parent and repo_dir into target_dir."""
+) -> tuple[list[str], list[dict[str, Any]]]:  # fmt: skip
+    """Copy or reconcile template packs from effective_parent and repo_dir into target_dir."""
     same_root = effective_parent.resolve() == repo_dir.resolve()
     roots = [repo_dir] if same_root else [effective_parent, repo_dir]
     copied: list[str] = []
+    conflicts: list[dict[str, Any]] = []
     for tpl_name in tpl_names:
         if tpl_name == skip_id:
             continue
         src_tpl = next((d for r in roots if (d := _resolve_template_dir(r, tpl_name))), None)
         dest_tpl = _resolve_template_dest_dir(target_dir, tpl_name, src_tpl=src_tpl)
-        if (
-            src_tpl is not None
-            and src_tpl.resolve() != dest_tpl.resolve()
-            and not (check_newer and _is_dest_template_newer(src_tpl, dest_tpl))
-        ):
-            copied.append(tpl_name)
-            if not dry_run:
-                shutil.rmtree(dest_tpl, ignore_errors=True)
-                dest_tpl.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copytree(src_tpl, dest_tpl)
-    return copied
+        if src_tpl is not None and src_tpl.resolve() != dest_tpl.resolve():
+            is_newer = check_newer and _is_dest_template_newer(src_tpl, dest_tpl)
+            did_copy, c_list = reconcile_template_pack_sync(
+                target_dir, tpl_name, src_tpl, dest_tpl,
+                strategy=strategy, is_local_newer=is_newer, dry_run=dry_run,
+            )  # fmt: skip
+            if did_copy:
+                copied.append(tpl_name)
+            conflicts.extend(c_list)
+    return copied, conflicts
 
 
 def bootstrap_layer_workspace(
-    repo_dir: Path,
-    target_dir: Path,
-    *,
-    layer_id: str,
-    layer_role: str = "department",
-    precedence: int | None = None,
-    description: str | None = None,
-    upstream_repo: str | None = None,
-    upstream_branch: str = "master",
-    upstream_layer_id: str | None = None,
-    parent_dir: Path | None = None,
-    templates: list[str] | None = None,
-    own_template_name: str | None = None,
-    scaffold_own_template: bool = True,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, target_dir: Path, *, layer_id: str, layer_role: str = "department",
+    precedence: int | None = None, description: str | None = None,
+    upstream_repo: str | None = None, upstream_branch: str = "master",
+    upstream_layer_id: str | None = None, parent_dir: Path | None = None,
+    templates: list[str] | None = None, own_template_name: str | None = None,
+    scaffold_own_template: bool = True, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """One-shot initializer for a corporate, domain-policy, department, or squad workspace."""
     if not KEBAB_ID_RE.match(layer_id):
         raise ValueError(f"Invalid layer_id {layer_id!r}")
@@ -252,7 +241,7 @@ def bootstrap_layer_workspace(
             def_tpls = [str(pt) for pt in parent_manifest.get("default_stack_templates", [])]
             inherited_templates = _merge_unique_strings(def_tpls)
     requested_templates = _merge_unique_strings(inherited_templates, templates or [])
-    copied_templates = _sync_templates_from_roots(
+    copied_templates, _ = _sync_templates_from_roots(
         target_dir, effective_parent, repo_dir, requested_templates, dry_run=dry_run
     )
     cfg_kw: dict[str, Any] = {"layer_id": layer_id, "layer_role": layer_role, "dry_run": dry_run,
@@ -335,55 +324,67 @@ def bootstrap_layer_workspace(
 
 
 def sync_layer_workspace(
-    repo_dir: Path,
-    target_dir: Path,
-    *,
-    parent_dir: Path | None = None,
-    templates: list[str] | None = None,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, target_dir: Path, *, parent_dir: Path | None = None,
+    templates: list[str] | None = None, strategy: str = "reconcile", dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Propagate upstream template updates into target_dir/templates/ and refresh .agents/."""
+    if strategy not in VALID_SYNC_STRATEGIES:
+        raise ValueError(f"Invalid sync strategy {strategy!r}; must be in {VALID_SYNC_STRATEGIES}")
     manifest_path = target_dir / "system" / "mcp-layer.json"
     if not manifest_path.is_file():
         raise ValueError(f"Missing target layer manifest: {manifest_path}")
     manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    own_id, own_role = (
-        str(manifest.get("layer_id") or ""),
-        str(manifest.get("layer_role") or "department"),
-    )
+    own_id = str(manifest.get("layer_id") or "")
+    raw_role = str(manifest.get("layer_role") or "department")
+    own_role = "squad" if raw_role == "team" else raw_role
     def_tpls = [str(t) for t in manifest.get("default_stack_templates", [])]
     stack_templates = _merge_unique_strings(def_tpls, templates or [])
-    if not dry_run and templates:
+    needs_m_save = (
+        manifest.get("schema_version") != LAYER_MANIFEST_CONTRACT_REV
+        or raw_role == "team"
+        or bool(templates)
+    )
+    if not dry_run and needs_m_save:
+        manifest["schema_version"] = LAYER_MANIFEST_CONTRACT_REV
+        manifest["layer_role"] = own_role
         manifest["default_stack_templates"] = list(stack_templates)
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
     existing_tpls = [name for name, _p in _iter_layer_template_dirs(target_dir)]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
     eff_parent = parent_dir if parent_dir is not None else repo_dir
-    sync_kw: dict[str, Any] = {"skip_id": own_id, "check_newer": True, "dry_run": dry_run}
-    synced_templates = _sync_templates_from_roots(
+    sync_kw: dict[str, Any] = {
+        "skip_id": own_id, "check_newer": True, "strategy": strategy, "dry_run": dry_run,
+    }  # fmt: skip
+    synced_templates, conflicts = _sync_templates_from_roots(
         target_dir, eff_parent, repo_dir, candidate_tpls, **sync_kw
     )
     synced_children = _sync_mounted_children_into_parent(
         target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
     )
     makefile_path = target_dir / "Makefile"
+    cur_mk = makefile_path.read_text(encoding="utf-8") if makefile_path.is_file() else ""
+    c_idx = cur_mk.find(MAKEFILE_CUSTOM_TARGETS_MARKER)
+    c_tail = f"\n{cur_mk[c_idx:].strip()}\n" if c_idx != -1 else ""
+    new_mk = _render_layer_makefile(own_id, own_role, eff_parent, repo_dir) + c_tail
+    mk_ok = not cur_mk or cur_mk.startswith(MAKEFILE_ROLE_HEADER_PREFIX)
+    mk_upgraded = mk_ok and cur_mk != new_mk
     if not dry_run:
         if "technical-base" not in stack_templates:
             (target_dir / ".agents/rules/technical-base.md").unlink(missing_ok=True)
             for sk in ("testing", "refactoring", "validation"):
                 shutil.rmtree(target_dir / ".agents/skills" / sk, ignore_errors=True)
-        if not makefile_path.exists():
-            makefile_path.write_text(
-                _render_layer_makefile(own_id, own_role, eff_parent, repo_dir), encoding="utf-8"
-            )
+        if mk_upgraded:
+            makefile_path.write_text(new_mk, encoding="utf-8")
     tpl_ref = ",".join(stack_templates) if stack_templates else None
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
     )
     return {
-        "target_dir": str(target_dir), "layer_id": own_id, "dry_run": dry_run,
-        "synced_templates": synced_templates, "synced_mounted_layers": synced_children,
+        "target_dir": str(target_dir), "layer_id": own_id, "strategy": strategy,
+        "dry_run": dry_run, "makefile_upgraded": mk_upgraded,
+        "synced_templates": synced_templates, "reconciliation_conflicts": conflicts,
+        "synced_mounted_layers": synced_children,
         "applied_template": apply_res.get("applied_template"),
         "files_materialized": apply_res.get("files_materialized", []),
         "participating_layers": apply_res.get("participating_layers", []),

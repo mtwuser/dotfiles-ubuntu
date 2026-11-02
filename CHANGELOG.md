@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Seamless 4-Mode Layer Upgrade Reconciliation (`make sync [STRATEGY=reconcile|accept-upstream|keep-local|merge]`), Self-Healing Generated Layer `Makefile` & Assisted `/sopen` Upgrade Radar (`scripts/dotfiles_mcp/constants.py`, `scripts/dotfiles_mcp/git_governance_engine.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/layer-config.sh`, `antigravity/.gemini/config/skills/sopen/SKILL.md`, `docs/`)**:
+  - Added `VALID_SYNC_STRATEGIES = ("reconcile", "accept-upstream", "keep-local", "merge")`, `MAKEFILE_ROLE_HEADER_PREFIX`, and `MAKEFILE_CUSTOM_TARGETS_MARKER` in [`constants.py`](scripts/dotfiles_mcp/constants.py), exposed `makefile_outdated` and `manifest_contracts_outdated` in [`inspect_git_governance_state`](scripts/dotfiles_mcp/git_governance_engine.py) (`make status`), and implemented [`reconcile_template_pack_sync`](scripts/dotfiles_mcp/git_governance_engine.py) + self-healing `Makefile` / `mcp-layer-v1` / `squad` upgrades in [`sync_layer_workspace`](scripts/dotfiles_mcp/workspace_bootstrapper.py) (`./scripts/layer-config.sh sync-layer [<dir>] [--strategy <reconcile|accept-upstream|keep-local|merge>]`) and `/sopen` Step 0.3 so existing forks and layers upgrade across versions non-destructively without manual `Makefile` deletion or loss of local customizations.
+
+---
+
 ## [2.7.0] - 2026-11-02
 
 ### Added

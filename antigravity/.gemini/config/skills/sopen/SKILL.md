@@ -26,8 +26,14 @@ description: restore session state and initialize workspace — first command in
    - `priority_state` (`active_tracker` and `excerpt` of `WORKTASK.md` / `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` / `README.md`)
    - `git_state` (`is_git_repo`, `status_short` including branch and ahead/behind status, `recent_commits`)
    - `horizon` (`oss_root_version`, `upstream_version`, `workspace_version`, `downward_sync_needed`, `child_sync_needed`, `shared_template_drifts`, `downstream_layer_drifts`, `upward_promotion_suggestions`)
+   - `git_governance` (`current_branch`, `active_environment`, `makefile_outdated`, `manifest_contracts_outdated`, `staged_proposals`, `stale_proposals`)
    - `agent_diff` (`in_sync`, `modified_in_project`, `novel_in_project`)
-3. **If `horizon.downward_sync_needed` or `horizon.child_sync_needed` is `true`**, run `make sync` (or `~/dotfiles-ubuntu/scripts/layer-config.sh sync-layer "<PROJECT_ROOT>"`) so `.agents/` absorbs upstream templates and mounted child layers (`layers/*`).
+3. **Assisted Upgrade Reconciliation (`make sync`)**:
+   - **If `horizon.downward_sync_needed`, `horizon.child_sync_needed`, `git_governance.makefile_outdated`, or `git_governance.manifest_contracts_outdated` is `true`**, run `make sync` (or `~/dotfiles-ubuntu/scripts/layer-config.sh sync-layer "<PROJECT_ROOT>"`) using the default non-destructive `--strategy reconcile`. This self-heals generated `# Role-Specialized Layer Makefile` targets in place (preserving any `# --- Custom Targets ---` block), normalizes `mcp-layer-v1` / `squad` manifest contracts, and updates unmodified upstream template packs and mounted child layers (`layers/*`).
+   - **If `reconciliation_conflicts` or `git_governance.staged_proposals` (`from-upstream/*`) are present**, run `make upstream-diff` (`~/dotfiles-ubuntu/scripts/layer-config.sh compare-upstream "<PROJECT_ROOT>"`) to inspect section-level differences (`upstream_only_sections`, `local_only_sections`, `diverged_sections`) and ask the user which reconciliation strategy to apply:
+     - `make sync STRATEGY=accept-upstream` — adopt the upstream template pack in full
+     - `make sync STRATEGY=merge` — adopt upstream updates while preserving local-only `# / ## / ###` rule sections
+     - `make sync STRATEGY=keep-local` — keep local rule customizations untouched and clear the staged proposal
 
 > [!NOTE]
 > This single-command pre-flight replaces separate calls to `make horizon`, `make diff`, `git status`, `git log`, `.agents/SESSION.md`, and tracker file probes.
