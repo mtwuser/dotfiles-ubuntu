@@ -56,8 +56,8 @@ Verify `~/.gemini/config/` symlink health at any time with:
 | `~/.local/share/applications/` | ✅ (Tree-unfolded) | Desktop launchers (`antigravity-agents.desktop` and `antigravity-ide.desktop`) linked by the `antigravity` stow module and refreshed by `update-desktop-database`. |
 | `~/.bashrc`, `~/.profile`, `~/.gitconfig` | ✅ | Symlinked from `bash/` and `git/` stow modules. Automatically include untracked machine-local overrides (`~/.bashrc.local` and `~/.gitconfig.local`). |
 | `~/Projects/<project>/` | ❌ (Never stowed) | Standard workspace location for user repositories. **GNU Stow never creates symlinks inside `~/Projects/`**: global rules/skills in `~/.gemini/config/` apply automatically to every workspace, while project-specific rules (`<project>/.agents/`) are projected from `templates/` and committed to each project's Git repo. Lifecycle hooks (`scripts/*.py`) receive the active project path dynamically via `workspacePaths`. |
-| `~/Downloads/` | ❌ | Staging directory used by [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh). The installer automatically detects and extracts `Antigravity.zip` / `Antigravity.tar.gz` (or `Antigravity-x64.*`) and `Antigravity IDE.zip` / `Antigravity IDE.tar.gz` from `~/Downloads/` before installing. |
-| `/opt/antigravity-agents/` & `/opt/antigravity-ide/` | ❌ | Target installation directories populated by `scripts/antigravity-install.sh`, verified by `bootstrap.sh`/`audit.sh` (`system/external/script/antigravity-*.sh`), and targeted by `.desktop` launchers. |
+| `~/Downloads/` | ❌ | Staging directory used by [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh). The installer automatically detects and extracts `Antigravity.zip` / `Antigravity.tar.gz` (or `Antigravity-x64.*`, recommended) and optional `Antigravity IDE.zip` / `Antigravity IDE.tar.gz` from `~/Downloads/` before installing. |
+| `/opt/antigravity-agents/`, `~/.local/bin/agy` & `/opt/antigravity-ide/` | ❌ | Target installation paths populated by `scripts/antigravity-install.sh` (`antigravity-agents` + `agy` CLI recommended for daily work; `antigravity-ide` optional), verified by `bootstrap.sh`/`audit.sh`, and targeted by `.desktop` launchers. |
 | `~/AppImage/` | ❌ | Monitored by `audit.sh` (`--clean` mode) to detect and optionally clean up orphaned AppImage directories. |
 
 ---
@@ -98,26 +98,29 @@ cd ~/dotfiles-ubuntu && stow -t ~ ssh
 git add -A && git commit -m "feat: add ssh config module"
 ```
 
-### 4.2 Installing or Upgrading Antigravity IDE & Agents
+### 4.2 Installing or Upgrading Antigravity Agents (Recommended), CLI (`agy`) & Optional IDE
 
-Download the latest release archives (`.zip` or `.tar.gz`) directly into `~/Downloads/`:
-- **Antigravity 2.0 (Agents)**: `~/Downloads/Antigravity.zip` or `~/Downloads/Antigravity.tar.gz` *(also supports `Antigravity-x64.zip` / `.tar.gz`, or pre-extracted `~/Downloads/Antigravity/Antigravity-x64/`)*
-- **Antigravity IDE**: `~/Downloads/Antigravity IDE.zip` or `~/Downloads/Antigravity IDE.tar.gz` *(or pre-extracted `~/Downloads/Antigravity IDE/`)*
+> **Recommended Setup**: Only **Antigravity 2.0 (`antigravity-agents`)** and **Antigravity CLI (`agy`)** are required for daily engineering and governance workflows. **Antigravity IDE (`antigravity-ide`)** remains supported as an optional legacy editor.
+
+1. **Antigravity 2.0 (`antigravity-agents` — Recommended)**: Place `~/Downloads/Antigravity.zip` or `~/Downloads/Antigravity.tar.gz` *(also supports `Antigravity-x64.zip` / `.tar.gz`, or pre-extracted `~/Downloads/Antigravity/Antigravity-x64/`)*.
+2. **Antigravity CLI (`agy` — Automatic via Official Bootstrapper)**: Installed to `~/.local/bin/agy` via `curl -fsSL https://antigravity.google/cli/install.sh | bash`. Because the official `install.sh` skips installation when `~/.local/bin/agy` already exists, `scripts/antigravity-install.sh` automatically backs up and removes `~/.local/bin/agy` before running the installer (and restores the backup if offline) whenever `--agents`, `--cli`, or `--all` is executed.
+3. **Antigravity IDE (`antigravity-ide` — Optional)**: Place `~/Downloads/Antigravity IDE.zip` or `~/Downloads/Antigravity IDE.tar.gz` in `~/Downloads/` only if you also use the standalone IDE.
 
 Then run:
 
 ```bash
 cd ~/dotfiles-ubuntu
-./scripts/antigravity-install.sh            # interactive
-./scripts/antigravity-install.sh --all      # install/update both
-./scripts/antigravity-install.sh --agents   # Agents only
-./scripts/antigravity-install.sh --ide      # IDE only
+./scripts/antigravity-install.sh --agents   # (Recommended) Install/update Agents + agy CLI
+./scripts/antigravity-install.sh --cli      # Install/update agy CLI only (~/.local/bin/agy)
+./scripts/antigravity-install.sh --ide      # (Optional) Install/update Antigravity IDE only
+./scripts/antigravity-install.sh --all      # Install/update Agents, agy CLI, and optional IDE
+./scripts/antigravity-install.sh            # Interactive prompt
 ```
 
-The installer extracts the archives from `~/Downloads/`, backs up the previous installation (`/opt/antigravity-*.backup`), installs the new release into `/opt/antigravity-agents` and `/opt/antigravity-ide`, and sets Electron sandbox permissions (`chrome-sandbox 4755`).
+The installer extracts the archives from `~/Downloads/`, backs up the previous installation (`/opt/antigravity-*.backup`), installs the new release into `/opt/antigravity-agents` (and optionally `/opt/antigravity-ide`), sets Electron sandbox permissions (`chrome-sandbox 4755`), and refreshes `~/.local/bin/agy`.
 
-> **Note (`bootstrap.sh --all` vs `scripts/antigravity-install.sh --all`)**:
-> `./bootstrap.sh --all` (or `--external`) checks whether `/opt/antigravity-agents/antigravity` and `/opt/antigravity-ide/antigravity-ide` already exist and **skips** them if installed (idempotent initial provisioning). To **upgrade** an existing installation after downloading a new release, always run `./scripts/antigravity-install.sh --all`.
+> **Note (`bootstrap.sh --all` vs `scripts/antigravity-install.sh --agents`)**:
+> `./bootstrap.sh --all` (or `--external`) checks whether `/opt/antigravity-agents/antigravity` already exists and **skips** it if installed (idempotent initial provisioning). To **upgrade** an existing installation and refresh `agy` CLI after downloading a new release, run `./scripts/antigravity-install.sh --agents`.
 
 ### 4.3 Bootstrap Modes (`./bootstrap.sh`) & Audit Modes (`./audit.sh`)
 
@@ -155,10 +158,10 @@ cd ~/dotfiles-ubuntu
 chmod +x bootstrap.sh backup.sh audit.sh scripts/*.sh
 ./bootstrap.sh              # interactive — or ./bootstrap.sh --all
 
-# 2. Install Antigravity IDE & Agents (after downloading archives to ~/Downloads/)
-./scripts/antigravity-install.sh --all
+# 2. Install Antigravity Agents + agy CLI (after downloading Antigravity archive to ~/Downloads/)
+./scripts/antigravity-install.sh --agents
 
-# 3. Clone project repositories, sign in to Antigravity IDE, and run /sopen
+# 3. Clone project repositories, sign in to Antigravity Agents, and run /sopen
 git clone https://github.com/<your-user>/<your-project>.git ~/Projects/<your-project>
 ```
 
@@ -209,7 +212,7 @@ diff ~/.gemini/config/AGENTS.md.backup.* ~/dotfiles-ubuntu/antigravity/.gemini/c
 | GNOME settings & extensions | ✅ | `dotfiles-ubuntu/system/gnome-*` | `./bootstrap.sh --gnome` |
 | Polymorphic templates (`templates/`) | ✅ | `dotfiles-ubuntu/templates/` | `git clone` |
 | Project rules & session state (`.agents/`, `SESSION.md`, `WORKTASK.md`) | ✅ | Project Git repository | `git clone` + `/sopen` (Tier 2 & Tier 3 recovery) |
-| Antigravity binaries (`IDE`, `Agents`) | 🔧 | [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh) | Download archives + run installer |
+| Antigravity binaries (`Agents`, `agy` CLI, optional `IDE`) | 🔧 | [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh) | `./scripts/antigravity-install.sh --agents` (or `--cli`) |
 | Conversation scratchpads (`brain/`) | ❌ | Local `~/.gemini/antigravity/brain/` | Auto-healed by `/sopen` from `SESSION.md` + `git log` |
 | Auth credentials & CLI history | ❌ | Local `~/.gemini/*.json`, `~/.gemini/history/` | Re-authenticate in IDE |
 

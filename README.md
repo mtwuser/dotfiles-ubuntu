@@ -49,8 +49,8 @@ cd ~/dotfiles-ubuntu
 ./bootstrap.sh --workstation   # Sets up read-only runtime, boot auto-sync & dotfiles-sync command
                                # (or ./bootstrap.sh --antigravity for standalone Antigravity links only)
 
-# Optional: install/upgrade Antigravity IDE & Agents binaries from ~/Downloads/
-./scripts/antigravity-install.sh --all      # or --agents / --ide
+# Install/upgrade Antigravity Agents + agy CLI (Recommended; --ide is optional):
+./scripts/antigravity-install.sh --agents   # or --cli (CLI only) / --ide (optional IDE) / --all
 
 # Any time in terminal: pull latest release, re-apply global profile & re-stow
 dotfiles-sync                               # or ./scripts/workstation-sync.sh --status
@@ -250,7 +250,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │
 ├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/corporate-ops-ledger, science-stack/scientific-knowledge-branch, tech-stack/fastapi-hexagonal)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
-│   ├── antigravity-install.sh         ←   Install/update Antigravity binaries from ~/Downloads/
+│   ├── antigravity-install.sh         ←   Install/update Antigravity Agents, agy CLI & optional IDE
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
 │   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
 │   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (4 domain subpackages, 24 modules)

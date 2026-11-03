@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
-# Install or update Antigravity IDE and/or Agents
-# Usage:
-#   ./antigravity-install.sh              # interactive — asks what to install/update
-#   ./antigravity-install.sh --all        # install/update both
-#   ./antigravity-install.sh --agents     # install/update Agents only
-#   ./antigravity-install.sh --ide        # install/update IDE only
-#
-# Prerequisites:
-#   Place either the downloaded archive (.zip / .tar.gz) OR extracted folder in ~/Downloads/:
-#     Agents (Antigravity 2.0):
-#       - ~/Downloads/Antigravity.zip  or  ~/Downloads/Antigravity.tar.gz
-#       - ~/Downloads/Antigravity-x64.zip  or  ~/Downloads/Antigravity-x64.tar.gz
-#       - (or already extracted: ~/Downloads/Antigravity/Antigravity-x64/ or ~/Downloads/Antigravity-x64/)
-#     IDE (Antigravity IDE):
-#       - ~/Downloads/Antigravity IDE.zip  or  ~/Downloads/Antigravity IDE.tar.gz
-#       - (or already extracted: ~/Downloads/Antigravity IDE/)
+# Install or update Antigravity Agents (recommended), Antigravity CLI (agy), and/or optional Antigravity IDE
+# Usage: ./scripts/antigravity-install.sh [--agents | --cli | --ide | --all | --version | --help]
+#   Agents (Recommended): ~/Downloads/Antigravity{.zip,.tar.gz,-x64.zip,-x64.tar.gz}
+#   CLI (agy):            https://antigravity.google/cli/install.sh -> ~/.local/bin/agy
+#   IDE (Optional):       ~/Downloads/Antigravity IDE{.zip,.tar.gz}
 
 set -euo pipefail
 
@@ -24,27 +13,27 @@ VERSION_STR="$(tr -d '[:space:]' < "$REPO_DIR/VERSION" 2>/dev/null || echo "unkn
 DOWNLOADS_DIR="$HOME/Downloads"
 AGENTS_DEST="/opt/antigravity-agents"
 IDE_DEST="/opt/antigravity-ide"
+CLI_BIN="$HOME/.local/bin/agy"
+CLI_INSTALL_URL="https://antigravity.google/cli/install.sh"
 
 MODE="${1:-interactive}"
 
 case "$MODE" in
-  interactive|--all|--agents|--ide) ;;
-  -v|--version)
-    echo "dotfiles-ubuntu v$VERSION_STR"
-    exit 0
-    ;;
+  interactive|--all|--agents|--cli|--ide) ;;
+  -v|--version) echo "dotfiles-ubuntu v$VERSION_STR"; exit 0 ;;
   -h|--help)
-    echo "Usage: ./scripts/antigravity-install.sh [--all | --agents | --ide | --version | --help]"
+    echo "Usage: ./scripts/antigravity-install.sh [--agents | --cli | --ide | --all | --version | --help]"
     echo "  (no flag)      Interactive — asks what to install/update"
-    echo "  --all          Install/update both Antigravity Agents and IDE"
-    echo "  --agents       Install/update Antigravity Agents only"
-    echo "  --ide          Install/update Antigravity IDE only"
+    echo "  --agents       (Recommended) Install/update Antigravity Agents + Antigravity CLI (agy)"
+    echo "  --cli          Install/update Antigravity CLI (agy) only (~/.local/bin/agy)"
+    echo "  --ide          (Optional) Install/update Antigravity IDE only"
+    echo "  --all          Install/update Antigravity Agents, CLI (agy), and optional IDE"
     echo "  -v, --version  Show version information"
     exit 0
     ;;
   *)
     echo "❌ Unknown option: $MODE" >&2
-    echo "Usage: ./scripts/antigravity-install.sh [--all | --agents | --ide]" >&2
+    echo "Usage: ./scripts/antigravity-install.sh [--agents | --cli | --ide | --all]" >&2
     exit 1
     ;;
 esac
@@ -191,22 +180,47 @@ cleanup_backup() {
   fi
 }
 
-# --- Agents ---
+install_or_update_cli() {
+  echo "=== Antigravity CLI (agy) ==="
+  mkdir -p "$(dirname "$CLI_BIN")"
+  if [ -f "$CLI_BIN" ]; then
+    echo "  → Removing existing $CLI_BIN (backed up to ${CLI_BIN}.backup) before fresh CLI install..."
+    mv -f "$CLI_BIN" "${CLI_BIN}.backup"
+  fi
+  if curl -fsSL "$CLI_INSTALL_URL" | bash; then
+    rm -f "${CLI_BIN}.backup"
+    echo "  ✅ Antigravity CLI (agy) installed/updated at $CLI_BIN"
+  else
+    [ -f "${CLI_BIN}.backup" ] && mv -f "${CLI_BIN}.backup" "$CLI_BIN"
+    echo "⚠️  Failed to download Antigravity CLI from $CLI_INSTALL_URL (previous binary restored if present)."
+    return 1
+  fi
+}
+
+# --- Agents + CLI ---
 if [ "$MODE" = "--all" ] || [ "$MODE" = "--agents" ] || [ "$MODE" = "interactive" ]; then
-  if [ "$MODE" = "interactive" ] && ! confirm "Install/update Antigravity Agents?"; then
+  if [ "$MODE" = "interactive" ] && ! confirm "Install/update Antigravity Agents (recommended)?"; then
     echo "Skipping Agents."
   else
     AGENTS_SRC="$(prepare_agents_src)"
     install_or_update "Antigravity Agents" "$AGENTS_SRC" "$AGENTS_DEST"
     cleanup_backup "$AGENTS_DEST"
+    echo ""
+    install_or_update_cli
+  fi
+fi
+
+if [ "$MODE" = "--cli" ] || { [ "$MODE" = "interactive" ] && ! [ -f "$CLI_BIN" ]; }; then
+  if [ "$MODE" = "--cli" ] || confirm "Install/update Antigravity CLI (agy)?"; then
+    install_or_update_cli
   fi
 fi
 
 echo ""
 
-# --- IDE ---
+# --- Optional IDE ---
 if [ "$MODE" = "--all" ] || [ "$MODE" = "--ide" ] || [ "$MODE" = "interactive" ]; then
-  if [ "$MODE" = "interactive" ] && ! confirm "Install/update Antigravity IDE?"; then
+  if [ "$MODE" = "interactive" ] && ! confirm "Install/update Antigravity IDE (optional)?"; then
     echo "Skipping IDE."
   else
     IDE_SRC="$(prepare_ide_src)"
