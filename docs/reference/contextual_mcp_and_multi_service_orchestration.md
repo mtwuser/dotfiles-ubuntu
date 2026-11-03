@@ -180,7 +180,7 @@ Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent 
 When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` to inspect the **actual runtime environment inside a microservice container** (`checkout-api`, `payment-worker`), you don't need to run `git clone` (or pass private Git SSH keys/tokens) inside the microservice's `Dockerfile`. Instead, copy `/opt/dotfiles-ubuntu` from your `dotfiles-ubuntu-mcp` image in a single line:
 
 ```dockerfile
-FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:3.0.0 AS governance-layer
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:3.0.1 AS governance-layer
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
 COPY --from=governance-layer /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu

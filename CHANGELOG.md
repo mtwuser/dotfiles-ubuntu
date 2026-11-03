@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [3.0.1] - 2026-11-03
 
 ### Fixed & Changed
 - **Intra-Workspace `make complete` Containment (`PARENT_SYNC=1` Opt-In & Parent `make sync` Completion Reconciliation), 1-Hop Parent/Peer Resolution in `make consult`, Automatic `git config user.email` Resolution in `make env-gate` / `make decision` & Deontic `(precedence, name)` Mounted Subtree Ordering (`scripts/dotfiles_mcp/core/{constants,layer_topology_helpers}.py`, `scripts/dotfiles_mcp/mcp_node/node_base.py`, `scripts/dotfiles_mcp/governance/{workflow_engine,cli_dispatcher}.py`, `docs/architecture/06_layer_governance_and_promotion_engines.md`, `tests/unit/dotfiles_mcp/`)**:
