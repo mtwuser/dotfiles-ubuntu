@@ -19,6 +19,7 @@ from typing import Any
 from dotfiles_mcp.core.constants import (
     MISSING_VERSION_SENTINEL,
     REPO_DIR,
+    ROLE_DEFAULT_PRECEDENCE,
     TEMPLATE_MANIFEST_CONTRACT_REV,
     TEMPLATE_STACK_GROUP_DIRS,
     VALID_TEMPLATE_KINDS,
@@ -180,31 +181,34 @@ def _sha256_file(path: Path) -> str:
 
 
 def _has_stale_schema(json_file: Path, expected_rev: str) -> bool:
-    """Return True if json_file exists and its schema_version or template kind is stale."""
+    """Return True if json_file exists and its schema_version, kind, or target_role is stale."""
     if not json_file.is_file():
         return False
     d = json.loads(json_file.read_text(encoding="utf-8"))
     bad_k = (
         expected_rev == TEMPLATE_MANIFEST_CONTRACT_REV
         and isinstance(d, dict)
-        and d.get("kind") not in VALID_TEMPLATE_KINDS
+        and (
+            d.get("kind") not in VALID_TEMPLATE_KINDS
+            or ("target_role" in d and d.get("target_role") not in ROLE_DEFAULT_PRECEDENCE)
+        )
     )
     return not isinstance(d, dict) or d.get("schema_version") != expected_rev or bad_k
 
 
 def _stamp_schema_rev(json_file: Path, expected_rev: str) -> None:
-    """Update schema_version and normalize non-canonical template kind in json_file when stale."""
+    """Update schema_version and normalize non-canonical template metadata in json_file."""
     if _has_stale_schema(json_file, expected_rev):
         raw = json.loads(json_file.read_text("utf-8"))
         base = raw if isinstance(raw, dict) else {}
         d: dict[str, Any] = {**base, "schema_version": expected_rev}
-        if (
-            expected_rev == TEMPLATE_MANIFEST_CONTRACT_REV
-            and d.get("kind") not in VALID_TEMPLATE_KINDS
-        ):
-            k_str = f"{d.get('kind', '')} {d.get('description', '')} {d.get('target_role', '')}"
-            is_biz = any(t in k_str for t in ("policy", "department", "corporate"))
-            d["kind"] = "business-stack" if is_biz else "tech-stack"
+        if expected_rev == TEMPLATE_MANIFEST_CONTRACT_REV:
+            if "target_role" in d and d.get("target_role") not in ROLE_DEFAULT_PRECEDENCE:
+                d["target_role"] = "department"
+            if d.get("kind") not in VALID_TEMPLATE_KINDS:
+                k_str = f"{d.get('kind', '')} {d.get('description', '')} {d.get('target_role', '')}"
+                is_biz = any(t in k_str for t in ("policy", "department", "corporate"))
+                d["kind"] = "business-stack" if is_biz else "tech-stack"
         json_file.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n", "utf-8")
 
 

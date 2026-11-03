@@ -206,14 +206,20 @@ class TestManifestHelpers:
         (env_contrib / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
         stale_tpl_biz = tmp_path / "biz-template.json"
         stale_tpl_biz.write_text(
-            '{"schema_version": "template-pack-v1", "kind": "legacy-policy", '
-            '"target_role": "domain-policy"}',
+            '{"schema_version": "template-pack-v1", "kind": "business-stack", '
+            '"target_role": "legacy-role"}',
             encoding="utf-8",
         )
         stale_tpl_tech = tmp_path / "tech-template.json"
         stale_tpl_tech.write_text(
             '{"schema_version": "template-pack-v1", "kind": "legacy-starter", '
             '"target_role": "squad"}',
+            encoding="utf-8",
+        )
+        stale_tpl_pol = tmp_path / "pol-template.json"
+        stale_tpl_pol.write_text(
+            '{"schema_version": "template-pack-v1", "kind": "legacy-policy", '
+            '"target_role": "domain-policy"}',
             encoding="utf-8",
         )
 
@@ -223,6 +229,7 @@ class TestManifestHelpers:
         res_existing = manifest_helpers._ensure_rule_file_frontmatter(existing, sync_in_place=True)
         manifest_helpers._stamp_schema_rev(stale_tpl_biz, "template-pack-v1")
         manifest_helpers._stamp_schema_rev(stale_tpl_tech, "template-pack-v1")
+        manifest_helpers._stamp_schema_rev(stale_tpl_pol, "template-pack-v1")
         monkeypatch.delenv("DOTFILES_DEV_REPO_DIR", raising=False)
         fallback_contrib = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
         (dev_sibling / "system").mkdir(parents=True)
@@ -254,8 +261,9 @@ class TestManifestHelpers:
         assert 'description: "Governance rules for fallback"' in res_no_h1
         assert plain_no_h1.read_text(encoding="utf-8") == "Body without heading.\n"
         assert res_existing.startswith("---\ntrigger: model_decision\n---\n")
-        assert '"kind": "business-stack"' in stale_tpl_biz.read_text(encoding="utf-8")
+        assert '"target_role": "department"' in stale_tpl_biz.read_text(encoding="utf-8")
         assert '"kind": "tech-stack"' in stale_tpl_tech.read_text(encoding="utf-8")
+        assert '"kind": "business-stack"' in stale_tpl_pol.read_text(encoding="utf-8")
         assert fallback_contrib == up_repo
         assert sibling_contrib == dev_sibling.resolve()
         assert env_resolved == env_contrib.resolve()
