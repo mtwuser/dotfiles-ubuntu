@@ -22,11 +22,13 @@ from dotfiles_mcp.core.constants import (
     LAYER_MANIFEST_CONTRACT_REV,
     LAYER_ROLE_MAKEFILE_TARGETS,
     MAKEFILE_ROLE_HEADER_PREFIX,
+    PUBLIC_GOV_PREFIXES,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
     ROLE_ENVIRONMENT_PERMISSIONS,
     ROLE_ONBOARDING_SPECS,
     TEMPLATE_MANIFEST_CONTRACT_REV,
+    VALID_ENTITY_KINDS,
 )
 from dotfiles_mcp.core.manifest_helpers import (
     _has_stale_schema,
@@ -37,6 +39,88 @@ from dotfiles_mcp.core.manifest_helpers import (
     _sha256_file,
     _stamp_schema_rev,
 )
+
+
+def _resolve_layer_entity_identity(
+    target_dir: Path,
+    manifest: dict[str, Any] | None = None,
+    parent_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Resolve entity_kind, collective_scope, and governing_root_id (Root 0) for a layer."""
+    ws = target_dir.resolve()
+    m = manifest if manifest is not None else _load_manifest_dict(ws)
+    lid = str(m.get("layer_id", ws.name))
+    lrole = str(m.get("layer_role", "project"))
+    prec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(lrole, 80)))
+    raw_ek = str(m.get("entity_kind", "")).strip().lower()
+    if raw_ek in VALID_ENTITY_KINDS:
+        ek = raw_ek
+    elif (lrole == "workstation" and lid != "dotfiles-workstation-root") or prec >= 85:
+        ek = "individual"
+    elif _is_oss_root_manifest(m):
+        ek = "open-source"
+    elif 1 <= prec <= 4 or lid.lower().startswith(PUBLIC_GOV_PREFIXES):
+        ek = "public-government"
+    else:
+        ek = "enterprise"
+    cscope = "individual" if ek == "individual" else "collective"
+    exp_root = str(m.get("governing_root_id", "")).strip()
+    up_raw = m.get("upstream_layer")
+    raw_up_lid = str(up_raw.get("layer_id", "")).strip() if isinstance(up_raw, dict) else ""
+    up_lid = "" if raw_up_lid == "dotfiles-workstation-root" else raw_up_lid
+    eff_p = _resolve_default_parent_dir(ws, parent_dir)
+    p_root, p_ek = "", ""
+    if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
+        pm = _load_manifest_dict(eff_p)
+        if not _is_oss_root_manifest(pm):
+            p_id = _resolve_layer_entity_identity(eff_p, pm)
+            p_root = str(p_id["governing_root_id"] or pm.get("layer_id", eff_p.name))
+            p_ek = str(p_id["entity_kind"])
+    org_pfx = lid.split("-dept-")[0] if "-dept-" in lid else ""
+    conflict_pfx = bool(org_pfx and p_root and not p_root.startswith(org_pfx))
+    if ek == "individual":
+        gov_root: str | None = exp_root or None
+    elif exp_root:
+        gov_root = exp_root
+    elif lrole == "corporate" or ek == "open-source" or (ek == "public-government" and prec <= 2):
+        gov_root = lid
+    elif up_lid:
+        gov_root = up_lid
+    elif p_root and p_ek == ek and not conflict_pfx:
+        gov_root = p_root
+    elif org_pfx:
+        gov_root = f"{org_pfx}-root"
+    else:
+        gov_root = lid
+    return {"layer_id": lid, "layer_role": lrole, "precedence": prec,
+        "entity_kind": ek, "collective_scope": cscope, "governing_root_id": gov_root}  # fmt: skip
+
+
+def _classify_inter_layer_relationship(
+    source_identity: dict[str, Any], target_identity: dict[str, Any]
+) -> dict[str, Any]:
+    """Classify mutual relationship between layers (internal vs external collective/individual)."""
+    src_ek, tgt_ek = str(source_identity["entity_kind"]), str(target_identity["entity_kind"])
+    src_root = source_identity.get("governing_root_id")
+    tgt_root = target_identity.get("governing_root_id")
+    same_root = bool(
+        src_root
+        and tgt_root
+        and src_root == tgt_root
+        and src_ek == tgt_ek
+        and source_identity["collective_scope"] == "collective"
+        and target_identity["collective_scope"] == "collective"
+    )
+    rel_scope = "internal" if same_root else "external"
+    return {
+        "relationship_scope": rel_scope,
+        "external_category": "internal" if same_root else f"external:{tgt_ek}",
+        "same_governing_root": same_root,
+        "source_governing_root_id": src_root,
+        "target_governing_root_id": tgt_root,
+        "target_entity_kind": tgt_ek,
+        "target_collective_scope": target_identity["collective_scope"],
+    }
 
 
 def _match_manifest_actor_role(manifest: dict[str, Any], actor_email: str) -> tuple[str, bool]:
@@ -80,32 +164,44 @@ def _resolve_hierarchical_actor_profile(
     """Compute effective actor role, read-only upstream inheritance, and parent overarching auth."""
     ws = target_dir.resolve()
     ws_m = _load_manifest_dict(ws)
-    lid = str(ws_m.get("layer_id", ws.name))
-    lrole = str(ws_m.get("layer_role", "project"))
-    lprec = int(ws_m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(lrole, 80)))
-    local_role, has_roster = _match_manifest_actor_role(ws_m, actor_email)
     eff_p = _resolve_default_parent_dir(ws, parent_dir)
+    local_id_meta = _resolve_layer_entity_identity(ws, ws_m, eff_p)
+    lid, lrole, lprec = (
+        str(local_id_meta["layer_id"]),
+        str(local_id_meta["layer_role"]),
+        int(local_id_meta["precedence"]),
+    )
+    local_role, has_roster = _match_manifest_actor_role(ws_m, actor_email)
     up_role, up_id, up_prec, hier_ok = "consumer", None, None, False
+    up_rel = "none"
     if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
         up_m = _load_manifest_dict(eff_p)
-        up_id = str(up_m.get("layer_id", eff_p.name))
-        up_r = str(up_m.get("layer_role", "corporate"))
-        up_prec = int(up_m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(up_r, 10)))
+        up_id_meta = _resolve_layer_entity_identity(eff_p, up_m)
+        up_id = str(up_id_meta["layer_id"])
+        up_prec = int(up_id_meta["precedence"])
+        rel = _classify_inter_layer_relationship(local_id_meta, up_id_meta)
+        up_rel = str(rel["external_category"])
         if not _is_oss_root_manifest(up_m):
             up_role, _ = _match_manifest_actor_role(up_m, actor_email)
-            hier_ok = up_role in ("owner", "maintainer") and up_prec < lprec
+            hier_ok = (
+                up_role in ("owner", "maintainer")
+                and up_prec < lprec
+                and rel["relationship_scope"] == "internal"
+            )
     rank = {"owner": 4, "maintainer": 3, "validator": 2, "member": 1, "consumer": 0}
     eff_role = up_role if (hier_ok and rank[up_role] > rank[local_role]) else local_role
     return {
         "layer_id": lid,
         "layer_role": lrole,
         "precedence": lprec,
+        "entity_identity": local_id_meta,
         "actor_email": actor_email,
         "local_role": local_role,
         "has_configured_roster": has_roster,
         "upstream_layer_id": up_id,
         "upstream_precedence": up_prec,
         "upstream_role": up_role,
+        "upstream_relationship": up_rel,
         "upstream_read_only": up_role not in ("owner", "maintainer"),
         "hierarchical_authority_granted": hier_ok,
         "effective_role": eff_role,

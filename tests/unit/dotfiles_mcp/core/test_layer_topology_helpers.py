@@ -285,3 +285,78 @@ class TestLayerTopologyHelpers:
         assert (
             p_consumer["effective_role"] == "consumer" and p_consumer["allowed_environments"] == []
         )
+
+    def test_resolve_layer_entity_identity_and_classify_inter_layer_relationship(
+        self, tmp_path: Path
+    ) -> None:
+        """Identify public-government, enterprise, individual, and external root boundaries."""
+        # Arrange
+        gov_dir = tmp_path / "gov-es-aepd"
+        ind_dir = tmp_path / "workstation-user"
+        exp_dir = tmp_path / "custom-layer"
+        up_dir = tmp_path / "dept-up"
+        ext_dept = tmp_path / "partner-dept-sec"
+        acme_root = tmp_path / "acme-root"
+        for d in (gov_dir, ind_dir, exp_dir, up_dir, ext_dept, acme_root):
+            (d / "system").mkdir(parents=True)
+        (acme_root / "system/mcp-layer.json").write_text(
+            '{"layer_id": "acme-root", "layer_role": "corporate", "precedence": 10, '
+            '"layer_authority": {"authorized_emails": ["ceo@acme.com"]}}',
+            encoding="utf-8",
+        )
+        (gov_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "gov-es-aepd", "layer_role": "domain-policy", "precedence": 2}',
+            encoding="utf-8",
+        )
+        (ind_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dev-home", "layer_role": "workstation", "precedence": 90}',
+            encoding="utf-8",
+        )
+        (exp_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "custom-layer", "entity_kind": "enterprise", '
+            '"governing_root_id": "acme-root", "precedence": 30}',
+            encoding="utf-8",
+        )
+        (up_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-up", "layer_role": "department", "precedence": 30, '
+            '"upstream_layer": {"layer_id": "acme-root"}}',
+            encoding="utf-8",
+        )
+        (ext_dept / "system/mcp-layer.json").write_text(
+            '{"layer_id": "partner-dept-sec", "layer_role": "department", "precedence": 30}',
+            encoding="utf-8",
+        )
+
+        # Act
+        gov_id = layer_topology_helpers._resolve_layer_entity_identity(gov_dir)
+        ind_id = layer_topology_helpers._resolve_layer_entity_identity(ind_dir)
+        exp_id = layer_topology_helpers._resolve_layer_entity_identity(exp_dir)
+        up_id = layer_topology_helpers._resolve_layer_entity_identity(up_dir)
+        ext_id = layer_topology_helpers._resolve_layer_entity_identity(
+            ext_dept, parent_dir=acme_root
+        )
+        rel_int = layer_topology_helpers._classify_inter_layer_relationship(exp_id, up_id)
+        rel_gov = layer_topology_helpers._classify_inter_layer_relationship(exp_id, gov_id)
+        ext_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            ext_dept, actor_email="ceo@acme.com", parent_dir=acme_root
+        )
+
+        # Assert
+        assert (gov_id["entity_kind"], gov_id["governing_root_id"]) == (
+            "public-government",
+            "gov-es-aepd",
+        )
+        assert (ind_id["entity_kind"], ind_id["collective_scope"], ind_id["governing_root_id"]) == (
+            "individual",
+            "individual",
+            None,
+        )
+        assert (exp_id["entity_kind"], exp_id["governing_root_id"]) == ("enterprise", "acme-root")
+        assert up_id["governing_root_id"] == "acme-root"
+        assert ext_id["governing_root_id"] == "partner-root"
+        assert rel_int["relationship_scope"] == "internal"
+        assert (rel_gov["relationship_scope"], rel_gov["external_category"]) == (
+            "external",
+            "external:public-government",
+        )
+        assert ext_prof["hierarchical_authority_granted"] is False

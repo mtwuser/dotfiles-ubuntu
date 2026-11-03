@@ -53,6 +53,10 @@ VALID_SYNC_STRATEGIES: tuple[str, ...] = ("reconcile", "accept-upstream", "keep-
 MAKEFILE_ROLE_HEADER_PREFIX: str = "# Role-Specialized Layer Makefile"
 MAKEFILE_CUSTOM_TARGETS_MARKER: str = "# --- Custom Targets ---"
 VALID_ROSTER_ROLES: tuple[str, ...] = ("owner", "maintainer", "validator", "member")
+VALID_ENTITY_KINDS: tuple[str, ...] = (
+    "public-government", "enterprise", "individual", "open-source",
+)  # fmt: skip
+PUBLIC_GOV_PREFIXES: tuple[str, ...] = ("gov-", "admin-", "public-", "state-", "geo-")
 VALID_TRACKER_FILES: tuple[str, ...] = (
     "WORKTASK.md", "BACKLOG.md", "WORKROAD.md", "ROADMAP.md", "WORKVALI.md",
 )  # fmt: skip

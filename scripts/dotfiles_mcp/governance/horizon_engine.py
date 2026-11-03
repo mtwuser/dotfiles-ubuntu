@@ -309,12 +309,14 @@ def _build_bilateral_layer_report(
     up_r = [d["rule_file"] for d in drifts if d["drift_direction"] == "workspace_newer"]
     mod_proj = [str(m["file"]) for m in local_diff["modified_in_project"]]
     mod_assets = list(dict.fromkeys([*up_r, *mod_proj, *local_diff["novel_in_project"]]))
+    pend_cons = [ln for ln in main_lines if ln.startswith("- [ ]") and "GOVERNANCE DECISION:" in ln]
     loc_chg = {
         "tasks_in_progress": loc_prog,
         "tasks_pending": loc_pend,
+        "pending_consensus_items": pend_cons,
         "outbound_delegations": out_lines,
         "modified_or_novel_assets": mod_assets,
-        "has_local_changes": bool(loc_prog or out_lines or mod_assets),
+        "has_local_changes": bool(loc_prog or out_lines or mod_assets or pend_cons),
     }
     return {
         "inbound_from_upstream": in_up,
@@ -402,7 +404,7 @@ def inspect_layer_horizon(
     ]
     ws_lid, up_lid = str(ws_m.get("layer_id", ws.name)), str(up_m.get("layer_id", up.name))
     ws_role = str(ws_m.get("layer_role", "project"))
-    up_sugg = (
+    up_sugg: list[Any] = (
         [d for d in up_drifts if d["oss_agnostic"]]
         if is_oss
         else [*(d["promote_command"] for d in up_drifts), *novel_cmds]

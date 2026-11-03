@@ -12,7 +12,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.capsules.surface_weaver import match_authoritative_surface_bindings
+from dotfiles_mcp.capsules.surface_weaver import (
+    evaluate_multilayer_surface_consensus,
+    match_authoritative_surface_bindings,
+)
 from dotfiles_mcp.core.constants import (
     AUDIT_LOG_TAIL_LINES,
     BUSINESS_MODE_TEMPLATES,
@@ -33,7 +36,6 @@ from dotfiles_mcp.core.constants import (
 )
 from dotfiles_mcp.core.layer_topology_helpers import (
     _is_makefile_outdated,
-    _match_manifest_actor_role,
     _resolve_default_parent_dir,
     _resolve_hierarchical_actor_profile,
 )
@@ -297,28 +299,11 @@ def evaluate_environment_promotion(
         )
     ]
     surf_hits = match_authoritative_surface_bindings(layer_nodes, changed_files or [])
-    for hit in surf_hits:
-        own_id, own_dir = str(hit["owning_layer_id"]), Path(str(hit["owning_layer_dir"]))
-        t_path, own_prec = str(hit["target_path"]), int(hit["precedence"])
-        own_role, _ = _match_manifest_actor_role(_load_manifest_dict(own_dir), eff_actor)
-        approved_in_ledger = "APPROVED" in wt_txt and (t_path in wt_txt or own_id in wt_txt)
-        root_overarching = eff_role == "owner" and int(role_prof["precedence"]) <= own_prec
-        req_roles = ("owner",) if clean_env == "pro" else ("owner", "maintainer", "validator")
-        hit["status"] = (
-            "simulated_in_dev_tst"
-            if clean_env in ("dev", "tst")
-            else (
-                "authorized"
-                if (own_role in req_roles or root_overarching or approved_in_ledger)
-                else "blocked_surface_authority"
-            )
-        )
-        if hit["status"] == "blocked_surface_authority":
-            failed_gates.append(
-                f"SURFACE_AUTHORITY_REQUIRED: '{t_path}' is governed authoritatively by "
-                f"'{own_id}' (precedence {own_prec}); requires '{own_id}' {', '.join(req_roles)} "
-                f"or approved governance decision before '{clean_env}'."
-            )
+    consensus_summary, surf_gates = evaluate_multilayer_surface_consensus(
+        ws, surf_hits, clean_env=clean_env, eff_actor=eff_actor, role_prof=role_prof,
+        wt_txt=wt_txt, parent_dir=eff_p,
+    )  # fmt: skip
+    failed_gates.extend(surf_gates)
     allowed, req_branch = len(failed_gates) == 0, DEFAULT_ENV_BRANCH_MAP[clean_env]
     git_state = inspect_git_governance_state(ws, current_branch=current_branch)
     if not allowed:
@@ -332,6 +317,7 @@ def evaluate_environment_promotion(
         "target_environment": clean_env, "phase_semantics": sem_map[clean_env],
         "required_branch": req_branch, "allowed": allowed, "failed_gates": failed_gates,
         "actor_role_profile": role_prof, "surface_ownership": surf_hits,
+        "inter_departmental_consensus": consensus_summary,
         "git_promotion_command": promo_cmd}  # fmt: skip
 
 

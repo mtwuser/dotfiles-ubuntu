@@ -333,11 +333,15 @@ class TestGitGovernanceEngine:
         assert (
             pre_surf_fail["allowed"] is False
             and "SURFACE_AUTHORITY_REQUIRED" in pre_surf_fail["failed_gates"][0]
+            and pre_surf_fail["inter_departmental_consensus"]["consensus_status"]
+            == "ITERATION_REQUIRED"
         )
         assert pre_surf_clo_ok["allowed"] is True
         assert (
             pro_surf_approved["allowed"] is True
             and pro_surf_approved["surface_ownership"][0]["status"] == "authorized"
+            and pro_surf_approved["inter_departmental_consensus"]["consensus_status"]
+            == "RECONCILED_FLOW"
         )
         assert dec_dry["dry_run"] is True and dec_app["status"] == "approved"
         assert dec_dup["recorded_entry"] == dec_app["recorded_entry"]
