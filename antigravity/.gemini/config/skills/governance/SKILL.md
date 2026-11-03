@@ -93,7 +93,7 @@ Match execution autonomy to the operation's cadence, consolidation level, and bl
    - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable directive (`- [ ] **[P1 · [<TICKET-ID>] · Delegated from '<parent-id>']**: ...`) into `layers/<child>/<tracker>` (or stages a proposal if cross-owner) and logs `- [/] **[<TICKET-ID> -> <child-id> (<surface>, stage: delegated)]**` under `## Outbound Delegations` in the parent's `WORKTASK.md`.
    - **Roadmaps, Corporate Ledgers & Rules (`roadmaps`, `corporate`, `rules`)**: Delivers `--source <rel-path>` into `layers/<child>/<surface>`. If the target file already exists and `--force` is not passed (or if cross-owner), stages non-destructively at `layers/<child>/.agents/proposals/from-<parent-id>/<file>` and adds a `P0` review item in `layers/<child>/WORKTASK.md`.
    ```bash
-   make delegate CHILD=<child-layer-id> [TASK="<directive>"] [TICKET=<TICKET-ID>] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2]
+   make delegate CHILD=<child-layer-id> [TASK="<directive>"] [TICKET=<TICKET-ID>] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2] [CREATE_PR=1]
    ```
 
 ### 2. Child Execution (`make task`), Ephemeral Consultation (`make consult`) & Reciprocal Completion (`make complete`)

@@ -53,7 +53,7 @@ Commands:
       Run a zero-residue, one-shot read-only ephemeral consultation against a layer or template.
   delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>]
                     [--ticket <id>] [--priority <P0|P1|P2>] [--surface|--tracker <surface>]
-                    [--email <email>] [--force]
+                    [--email <email>] [--create-pr] [--force]
       Delegate a 1-hop downward directive or governance artifact into a child layer surface.
   manage-roster [<target-dir>] [--add <email>] [--remove <email>] [--role <owner|maintainer|validator|member>]
                 [--no-codeowners]

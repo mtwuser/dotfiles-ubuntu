@@ -268,6 +268,7 @@ def _sha256_file(path: Path) -> str:
 
 
 def _has_stale_schema(json_file: Path, expected_rev: str) -> bool:
+    """Return True if json_file exists and its schema_version differs from expected_rev."""
     return (
         json_file.is_file()
         and json.loads(json_file.read_text(encoding="utf-8")).get("schema_version") != expected_rev
@@ -275,12 +276,10 @@ def _has_stale_schema(json_file: Path, expected_rev: str) -> bool:
 
 
 def _stamp_schema_rev(json_file: Path, expected_rev: str) -> None:
+    """Update schema_version in json_file in place when stale."""
     if _has_stale_schema(json_file, expected_rev):
-        data = json.loads(json_file.read_text(encoding="utf-8"))
-        data["schema_version"] = expected_rev
-        json_file.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        data = {**json.loads(json_file.read_text("utf-8")), "schema_version": expected_rev}
+        json_file.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", "utf-8")
 
 
 def _inspect_mounted_children_drifts(

@@ -321,7 +321,8 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "delegate": (
         f'{_CLI_RUN} delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)" '
         "$(if $(TICKET),--ticket $(TICKET),) $(if $(PRIORITY),--priority $(PRIORITY),) "
-        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(SOURCE),--source $(SOURCE),)"
+        "$(if $(SURFACE),--surface $(SURFACE),) $(if $(SOURCE),--source $(SOURCE),) "
+        "$(if $(CREATE_PR),--create-pr,)"
     ),
     "mcp-test": f"{_CLI_RUN} list-templates $(CURDIR)",
 }
