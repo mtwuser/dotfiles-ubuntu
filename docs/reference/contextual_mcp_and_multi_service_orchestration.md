@@ -56,22 +56,18 @@ Instead of managing an unstructured list of disconnected MCP servers, the custom
 ```mermaid
 flowchart TD
     Agent["🤖 Orchestrating AI Agent\n(Google Antigravity 2.0 / VS Code Copilot)"]
-
     subgraph Tier1["Tier 1: Corporate Governance Fork"]
         CorpMCP["📡 mcp: dotfiles-corporate\n(layer_role: corporate)\n• Global Security & Compliance (AGENTS.md)\n• Approved Enterprise MCP Registry"]
     end
-
     subgraph Tier2["Tier 2: Squad / Domain Forks"]
         BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/tech-stack/fastapi-hexagonal/\n• API & Database Migration Standards"]
         DataMCP["📡 mcp: dotfiles-squad-ops\n(layer_role: squad)\n• templates/business-stack/corporate-ops-ledger/\n• templates/science-stack/scientific-knowledge-branch/"]
     end
-
     subgraph Tier3["Tier 3: Multi-Container / Multi-Server Application Nodes"]
         NodeAPI["📦 Container: checkout-api\n📡 mcp: dotfiles-node-api\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
         NodeWorker["📦 Container: payment-worker\n📡 mcp: dotfiles-node-worker\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
         NodeStaging["🖥️ Remote Server: staging-db-01\n📡 mcp: dotfiles-node-staging\n• SSH stdio transport\n•Federates: postgres-mcp, redis-mcp"]
     end
-
     Agent <-->|"1. Read Corporate Standards"| CorpMCP
     CorpMCP -.->|"Declares downstream squad layers"| BackendMCP
     CorpMCP -.->|"Declares downstream squad layers"| DataMCP
@@ -127,9 +123,7 @@ Add `dotfiles-ubuntu` under `"mcpServers"`:
   "mcpServers": {
     "dotfiles-local": {
       "command": "python3",
-      "args": [
-        "/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"
-      ]
+      "args": ["/home/<your-user>/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]
     }
   }
 }
@@ -146,19 +140,15 @@ Add `dotfiles-ubuntu` under `"mcpServers"`:
 ```mermaid
 flowchart LR
     IDE["🤖 IDE / AI Agent\n(Antigravity · Copilot · Cursor)"]
-
     subgraph PatA["Pattern A: Standalone Hermetic MCP Hub (docker run -i --rm)"]
         HubImg["🐳 Image: dotfiles-ubuntu-mcp:latest\n• Pre-packages Corporate + layers/dept-* subtrees\n• Runs with --read-only --network=none --cap-drop=ALL\n• Zero local git clone or Python setup required"]
     end
-
     subgraph PatB["Pattern B: Multi-Stage Sidecar Injection (COPY --from + docker exec -i)"]
         AppImg["📦 Running Service Container: checkout-api\n• Dockerfile: COPY --from=dotfiles-ubuntu-mcp /opt/dotfiles-ubuntu\n  (Zero Git SSH keys/tokens needed during docker build!)\n• Runs audit_node_drift inside the live service container"]
     end
-
     subgraph PatC["Pattern C: Local Compose Bind-Mount (-v :ro + docker exec -i)"]
         DevCont["🛠️ Local Devcontainer / Compose Service\n• Volume: ~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro\n• Instant live updates without rebuilding images"]
     end
-
     IDE <-->|"stdio: docker run -i --rm"| PatA
     IDE <-->|"stdio: docker exec -i"| PatB
     IDE <-->|"stdio: docker exec -i"| PatC
@@ -168,9 +158,7 @@ flowchart LR
 Build the repository (including any mounted `layers/*` subtrees) into a self-contained image:
 
 ```bash
-cd ~/dotfiles-ubuntu
-make docker-build        # Builds dotfiles-ubuntu-mcp:<version> and :latest
-make docker-self-test    # Verifies MCP self-test inside --read-only --network=none container
+cd ~/dotfiles-ubuntu && make docker-build && make docker-self-test
 ```
 
 Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent can run the Corporate/Departmental/Squad MCP Hub in a **kernel-isolated sandbox** (`--read-only --network=none --cap-drop=ALL`) without cloning the repositories locally:
@@ -180,16 +168,7 @@ Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent 
   "mcpServers": {
     "dotfiles-hermetic-hub": {
       "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "--read-only",
-        "--network=none",
-        "--cap-drop=ALL",
-        "dotfiles-ubuntu-mcp:latest",
-        "--no-log"
-      ]
+      "args": ["run", "-i", "--rm", "--read-only", "--network=none", "--cap-drop=ALL", "dotfiles-ubuntu-mcp:latest", "--no-log"]
     }
   }
 }
@@ -201,9 +180,7 @@ Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent 
 When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` to inspect the **actual runtime environment inside a microservice container** (`checkout-api`, `payment-worker`), you don't need to run `git clone` (or pass private Git SSH keys/tokens) inside the microservice's `Dockerfile`. Instead, copy `/opt/dotfiles-ubuntu` from your `dotfiles-ubuntu-mcp` image in a single line:
 
 ```dockerfile
-# Inside checkout-api/Dockerfile:
 FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.9.0 AS governance-layer
-
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
 COPY --from=governance-layer /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu
@@ -213,11 +190,9 @@ COPY --from=governance-layer /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu
 During local `dev` with Docker Compose, you can mount your local `~/dotfiles-ubuntu` directly into any running service container without modifying its `Dockerfile`:
 
 ```yaml
-# Inside docker-compose.yml:
 services:
   checkout-api:
-    volumes:
-      - ~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro
+    volumes: ["~/dotfiles-ubuntu:/opt/dotfiles-ubuntu:ro"]
 ```
 
 For both **Pattern B** and **Pattern C**, your host IDE connects to each running service container over `docker exec -i` (zero open network ports):
@@ -225,14 +200,8 @@ For both **Pattern B** and **Pattern C**, your host IDE connects to each running
 ```json
 {
   "mcpServers": {
-    "dotfiles-container-api": {
-      "command": "docker",
-      "args": ["exec", "-i", "checkout-api-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]
-    },
-    "dotfiles-container-worker": {
-      "command": "docker",
-      "args": ["exec", "-i", "payment-worker-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]
-    }
+    "dotfiles-container-api": {"command": "docker", "args": ["exec", "-i", "checkout-api-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]},
+    "dotfiles-container-worker": {"command": "docker", "args": ["exec", "-i", "payment-worker-container", "python3", "/opt/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py", "--no-log"]}
   }
 }
 ```
@@ -252,10 +221,7 @@ To give your local AI agent read-only visibility into the configuration, package
 ```json
 {
   "mcpServers": {
-    "dotfiles-staging-node": {
-      "command": "ssh",
-      "args": ["-T", "-o", "BatchMode=yes", "deploy@staging-node-01.internal", "python3", "/home/deploy/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]
-    }
+    "dotfiles-staging-node": {"command": "ssh", "args": ["-T", "-o", "BatchMode=yes", "deploy@staging-node-01.internal", "python3", "/home/deploy/dotfiles-ubuntu/scripts/dotfiles_mcp_server.py"]}
   }
 }
 ```
@@ -274,14 +240,8 @@ In an enterprise setting where a tech lead or architect works across organizatio
 ```json
 {
   "mcpServers": {
-    "dotfiles-layer-corporate": {
-      "command": "python3",
-      "args": ["/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py", "--layer-role", "corporate", "--layer-id", "acme-corp/dotfiles-enterprise"]
-    },
-    "dotfiles-layer-squad-backend": {
-      "command": "python3",
-      "args": ["/home/<your-user>/dotfiles-squad-backend/scripts/dotfiles_mcp_server.py", "--layer-role", "squad", "--layer-id", "acme-corp/dotfiles-backend-hexagonal"]
-    }
+    "dotfiles-layer-corporate": {"command": "python3", "args": ["/home/<your-user>/dotfiles-corporate/scripts/dotfiles_mcp_server.py", "--layer-role", "corporate", "--layer-id", "acme-corp/dotfiles-enterprise"]},
+    "dotfiles-layer-squad-backend": {"command": "python3", "args": ["/home/<your-user>/dotfiles-squad-backend/scripts/dotfiles_mcp_server.py", "--layer-role", "squad", "--layer-id", "acme-corp/dotfiles-backend-hexagonal"]}
   }
 }
 ```
@@ -309,11 +269,7 @@ When you fork `dotfiles-ubuntu` for a squad or attach it to a microservice conta
   "layer_role": "service-node",
   "precedence": 20,
   "description": "Checkout Service Ubuntu 26.04 Container Node (FastAPI Hexagonal + PostgreSQL)",
-  "upstream_layer": {
-    "layer_id": "acme-corp/dotfiles-backend-hexagonal",
-    "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git",
-    "branch": "main"
-  },
+  "upstream_layer": {"layer_id": "acme-corp/dotfiles-backend-hexagonal", "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git", "branch": "main"},
   "default_stack_templates": ["fastapi-hexagonal"],
   "baseline_guardrails": ["AGENTS.md §4 (Atomic Deliverable & Verification Inclusion) & technical-base.md (100% branch coverage)"],
   "surface_bindings": [
@@ -330,16 +286,8 @@ When you fork `dotfiles-ubuntu` for a squad or attach it to a microservice conta
     }
   ],
   "environments": {
-    "dev": {
-      "access_mode": "read-write-local",
-      "requirements_file": "requirements-dev.txt",
-      "default_guardrails": ["Run local unit & implementation (tests/imp/) tests before committing"]
-    },
-    "pre": {
-      "access_mode": "strictly-read-only",
-      "requirements_file": "requirements-pre.txt",
-      "default_guardrails": ["Strictly read-only schema & query introspection in pre-production"]
-    }
+    "dev": {"access_mode": "read-write-local", "requirements_file": "requirements-dev.txt", "default_guardrails": ["Run local unit & implementation (tests/imp/) tests before committing"]},
+    "pre": {"access_mode": "strictly-read-only", "requirements_file": "requirements-pre.txt", "default_guardrails": ["Strictly read-only schema & query introspection in pre-production"]}
   },
   "federated_mcps": [
     {
@@ -377,28 +325,18 @@ Instead of configuring 10 separate MCP server processes on every developer machi
 
 ```bash
 cd ~/dotfiles-ubuntu
-
 # 1. Vertical Sync: Pull latest baseline improvements from parent fork (Public or Corporate upstream)
 ./scripts/layer-subtree.sh sync-upstream
-
 # 2. Horizontal Mount: Attach Departmental & Sibling-Service forks under layers/<name>/ (--squash)
 ./scripts/layer-subtree.sh add dept-security git@github.com:acme-corp/dotfiles-dept-security.git main
 ./scripts/layer-subtree.sh add dept-data     git@github.com:acme-corp/dotfiles-dept-data.git main
 ./scripts/layer-subtree.sh add svc-fraud     git@github.com:acme-corp/dotfiles-svc-fraud.git main
-
 # 3. Inspect all mounted context layers (auto-discovered by dotfiles_mcp_server.py)
-./scripts/layer-subtree.sh list
-# Or via Makefile:
-make layer-list
-
+./scripts/layer-subtree.sh list   # Or: make layer-list
 # 4. Update a single mounted layer (auto-resolves repo URL & branch from layers/<name>/system/mcp-layer.json)
 ./scripts/layer-subtree.sh pull dept-security
-
 # 5. Update ALL mounted layers in layers/* in a single command
-./scripts/layer-subtree.sh pull-all
-# Or via Makefile:
-make layer-pull-all
-
+./scripts/layer-subtree.sh pull-all   # Or: make layer-pull-all
 # 6. Promote a reusable departmental rule or MCP guardrail upstream (/enrich -> subtree push)
 ./scripts/layer-subtree.sh push dept-data feat/enrich-bq-guardrail
 ```
@@ -442,4 +380,4 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
 | **Strictly read-only by default** | Zero tools for arbitrary shell commands, file editing, or package installation. Only deterministic read/audit operations (`verify-repo.sh`, `audit.sh`, doc/rule readers) are exposed. |
 | **Zero secret exposure** | Path containment locks all file reads strictly inside the repository root (`REPO_DIR`). Machine-local files (`~/.bashrc.local`, `~/.gitconfig.local`, `.env`, `~/.gemini/*.json`) cannot be read via MCP. |
 
-📖 **Normative Protocol, Schema & Engine References**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/05_ephemeral_forks_and_department_bots.md`](../architecture/05_ephemeral_forks_and_department_bots.md)**.
+📖 **Normative Protocol, Schema & Engine References**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, **[`docs/architecture/05_ephemeral_forks_and_department_bots.md`](../architecture/05_ephemeral_forks_and_department_bots.md)**, and **[`docs/architecture/06_layer_governance_and_promotion_engines.md`](../architecture/06_layer_governance_and_promotion_engines.md)**.

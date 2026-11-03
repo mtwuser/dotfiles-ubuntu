@@ -1,6 +1,6 @@
 """1:1 unit tests for scripts/dotfiles_mcp/governance/authority_engine.py.
 
-Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+Specification: docs/architecture/06_layer_governance_and_promotion_engines.md
 """
 
 from __future__ import annotations

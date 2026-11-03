@@ -37,7 +37,8 @@ for doc in README.md LICENSE CHANGELOG.md ACCESSIBILITY.md CODE_OF_CONDUCT.md CO
            docs/guides/01_ubuntu_system_and_multi_machine_guide.md docs/guides/02_hierarchical_layers_and_team_workflows.md \
            docs/architecture/01_system_and_stow_engine.md docs/architecture/02_antigravity_governance_and_hooks.md \
            docs/architecture/03_contextual_mcp_and_federation.md docs/architecture/04_compaction_surface_and_promotion_engines.md \
-           docs/architecture/05_ephemeral_forks_and_department_bots.md docs/reference/enterprise_pair_programming_governance.md \
+           docs/architecture/05_ephemeral_forks_and_department_bots.md docs/architecture/06_layer_governance_and_promotion_engines.md \
+           docs/reference/enterprise_pair_programming_governance.md docs/reference/cross_departmental_and_human_stack_matrix.md \
            docs/reference/contextual_mcp_and_multi_service_orchestration.md docs/reference/developer_and_extension_guide.md \
            .github/PULL_REQUEST_TEMPLATE.md .github/ISSUE_TEMPLATE/bug_report.yml \
            .github/ISSUE_TEMPLATE/feature_request.yml .github/ISSUE_TEMPLATE/config.yml; do
@@ -203,7 +204,7 @@ for alembic_sub in pre_tool_guard._DOCUMENTED_ALEMBIC_SUBCOMMANDS:
 
 agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
 arch_02 = (repo / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(encoding="utf-8")
-arch_mcp = "\n".join((repo / f"docs/architecture/{n}").read_text(encoding="utf-8") for n in ("03_contextual_mcp_and_federation.md", "04_compaction_surface_and_promotion_engines.md", "05_ephemeral_forks_and_department_bots.md"))
+arch_mcp = "\n".join((repo / f"docs/architecture/{n}").read_text(encoding="utf-8") for n in ("03_contextual_mcp_and_federation.md", "04_compaction_surface_and_promotion_engines.md", "05_ephemeral_forks_and_department_bots.md", "06_layer_governance_and_promotion_engines.md"))
 security_md = (repo / "SECURITY.md").read_text(encoding="utf-8")
 readme_md = (repo / "README.md").read_text(encoding="utf-8")
 ext_guide = (repo / "docs/reference/developer_and_extension_guide.md").read_text(encoding="utf-8")

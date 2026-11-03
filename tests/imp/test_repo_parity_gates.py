@@ -111,6 +111,7 @@ class TestRepoParityGates:
                 "03_contextual_mcp_and_federation.md",
                 "04_compaction_surface_and_promotion_engines.md",
                 "05_ephemeral_forks_and_department_bots.md",
+                "06_layer_governance_and_promotion_engines.md",
             )
         )
         security_md = (REPO_DIR / "SECURITY.md").read_text(encoding="utf-8")
@@ -289,6 +290,9 @@ class TestRepoParityGates:
         arch_05 = (
             REPO_DIR / "docs/architecture/05_ephemeral_forks_and_department_bots.md"
         ).read_text(encoding="utf-8")
+        arch_06 = (
+            REPO_DIR / "docs/architecture/06_layer_governance_and_promotion_engines.md"
+        ).read_text(encoding="utf-8")
         targets = sorted([
             REPO_DIR / "README.md", REPO_DIR / "CONTRIBUTING.md", REPO_DIR / "CHANGELOG.md",
             *list((REPO_DIR / "antigravity").rglob("*.md")),
@@ -325,9 +329,9 @@ class TestRepoParityGates:
             "promoter_codon",
             "_parse_capsule_envelope",
             "_resolve_ephemeral_issuer_meta",
-            "diff-project <dir> [--parent-dir <dir>]",
         ):
             assert canonical in arch_04
+        assert "diff-project <dir> [--parent-dir <dir>]" in arch_06
         for eph_canonical in (
             "ephemeral_capsules",
             "default_ephemeral_root",

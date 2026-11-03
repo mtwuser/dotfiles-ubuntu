@@ -1,6 +1,6 @@
 """Task-branch workflow onboarding and ephemeral consultation engine.
 
-Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+Specification: docs/architecture/06_layer_governance_and_promotion_engines.md
 """
 
 import json

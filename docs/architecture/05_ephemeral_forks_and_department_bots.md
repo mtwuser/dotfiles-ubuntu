@@ -1,6 +1,6 @@
 # 05 — Ephemeral Scoped Forks, OOP Capability Rings & Symbiotic Bots (`capability_registry.py`, `ephemeral_fork_engine.py`, `tools_ephemeral.py`)
 
-> **Navigation**: [`docs/README.md`](../README.md) · [`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md) · [`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md) · [`contextual_mcp_and_multi_service_orchestration.md`](../reference/contextual_mcp_and_multi_service_orchestration.md)
+> **Navigation**: [`docs/README.md`](../README.md) · [`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md) · [`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md) · [`06_layer_governance_and_promotion_engines.md`](06_layer_governance_and_promotion_engines.md) · [`contextual_mcp_and_multi_service_orchestration.md`](../reference/contextual_mcp_and_multi_service_orchestration.md)
 
 This document specifies the **3rd Orthogonal Governance Dimension** of `dotfiles-ubuntu`: **Ephemeral Scoped Forks, OOP Capability Inheritance & Symbiotic Department Bots** — a deterministic, rule-governed mechanism allowing an MCP node or CLI workflow to compose capability extensions by CRUD permission ring, materialize temporary TTL-bounded contextual forks (`layer_role: "ephemeral-bot"`), dynamically augment permanent MCP nodes while ephemeral leases are active, and seal/verify 4-Channel Executive Digests through the `rcap1` cryptographic membrane.
 

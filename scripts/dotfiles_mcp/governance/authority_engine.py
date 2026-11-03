@@ -1,6 +1,6 @@
 """Role & identity authority enforcement, OSS agnosticism, and upward PR promotion planner.
 
-Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+Specification: docs/architecture/06_layer_governance_and_promotion_engines.md
 """
 
 from __future__ import annotations

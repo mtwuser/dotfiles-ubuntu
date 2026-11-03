@@ -1,6 +1,6 @@
 """Unit tests for horizon_engine (1-hop horizon radar, section diffing, and sync reconciliation).
 
-Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
+Specification: docs/architecture/06_layer_governance_and_promotion_engines.md
 """
 
 from __future__ import annotations
