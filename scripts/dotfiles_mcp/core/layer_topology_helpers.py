@@ -56,7 +56,10 @@ def _resolve_layer_entity_identity(
     raw_ek = str(m.get("entity_kind", "")).strip().lower()
     if raw_ek in VALID_ENTITY_KINDS:
         ek = raw_ek
-    elif (lrole == "workstation" and lid != "dotfiles-workstation-root") or prec >= 85:
+    elif (
+        lrole == "workstation"
+        and lid not in ("dotfiles-ubuntu-default", "dotfiles-workstation-root")
+    ) or prec >= 85:
         ek = "individual"
     elif _is_oss_root_manifest(m):
         ek = "open-source"

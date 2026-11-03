@@ -97,12 +97,12 @@ Each `dotfiles-ubuntu` instance exposes nine canonical URI resources representin
 
 | Resource URI | MIME Type | Source Files in Repository | Returned Payload Description |
 |--------------|-----------|----------------------------|------------------------------|
-| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `/.dockerenv`, `git rev-parse` / `DOTFILES_GIT_COMMIT` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `department`, `squad`, `service-node`, `environment-cluster`, `workstation`), `hostname`, `in_container` (boolean), `os_pretty_name`, `git_commit`, and `upstream_layer`. |
+| `dotfiles://layer/identity` | `application/json` | `VERSION`, `system/mcp-layer.json`, `/etc/os-release`, `/.dockerenv`, `git rev-parse` / `DOTFILES_GIT_COMMIT` | Node & layer identity: SemVer `version`, `layer_id`, `layer_role` (`corporate`, `domain-policy`, `department`, `squad`, `service-node`, `environment-cluster`, `workstation`, `ephemeral-bot`), `entity_kind`, `governing_root_id`, `topological_class`, `hostname`, `in_container` (boolean), `os_pretty_name`, `git_commit`, and `upstream_layer`. |
 | `dotfiles://system/manifests` | `application/json` | `system/*.txt` (`packages-manual`, `snaps`, `npm-globals`, `nvm-default`, `external`, `gnome-extensions`) | Structured JSON dictionary containing counts and package lists for every declarative manifest tracked by this node/container. |
-| `dotfiles://governance/rules` | `text/markdown` | `antigravity/.gemini/config/AGENTS.md` | The complete `Layer A` universal behavioral and engineering rules active in this repository fork. |
+| `dotfiles://governance/rules` | `text/markdown` | `antigravity/.gemini/config/AGENTS.md` | The complete `Pillar A` (`Layer A`) universal behavioral and engineering rules active in this repository fork. |
 | `dotfiles://governance/hooks` | `application/json` | `antigravity/.gemini/config/hooks.json` | Lifecycle hook configuration (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`) active in this layer. |
 | `dotfiles://governance/skills` | `application/json` | `antigravity/.gemini/config/skills/*/SKILL.md` | Catalog of all global skills in this layer, extracted from YAML frontmatter (`name`, `description`, `path`, `line_count`). |
-| `dotfiles://governance/templates` | `application/json` | `templates/*/` | Inventory of `Layer B` stack starter templates available in this fork, including their `rules/`, `skills/`, and `governance/` files. |
+| `dotfiles://governance/templates` | `application/json` | `templates/*/` | Inventory of `Pillar B` (`Layer B`) base and specialization-stack starter templates available in this fork, including their `rules/`, `skills/`, and `governance/` files. |
 | `dotfiles://docs/index` | `text/markdown` | `docs/README.md` | The navigable documentation index and subsystem map for this repository or layer. |
 | `dotfiles://mcp/topology` | `application/json` | `system/mcp-layer.json`, `logs/ephemeral_forks/*` | Declarative federation manifest listing downstream or sibling MCP servers, governance guardrails, and live `capability_profile` (`resolve_mcp_capability_profile` — `granted_rings`, `symbiotic_state`, `active_ephemeral_leases`, `bot_archetype_families`). |
 | `dotfiles://mcp/diagnostics` | `application/json` | `logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl` | Live telemetry summary of recent MCP JSON-RPC calls (`total_events`, `error_events`, `max_response_bytes`, `recent_events`) and structured runtime warnings/alerts (`total_alerts`, `by_code`, `recent_alerts`). |
@@ -220,17 +220,18 @@ When a squad, department, or engineer forks `dotfiles-ubuntu` for a specific cor
 }
 ```
 
-### Valid `layer_role` Values
+### Valid `layer_role` Values (`VALID_LAYER_ROLES` — 8 Canonical Roles Across 3 Topological Classes)
 
-| `layer_role` | Typical Deployment Target | Primary Purpose in the Context Mesh |
-|--------------|---------------------------|-------------------------------------|
-| **`corporate`** | Organization-wide fork (`acme-corp/dotfiles-ubuntu`) | Exposes transverse `Layer A` security, typing, and testing mandates (`AGENTS.md`) plus enterprise-approved MCP catalog. |
-| **`department`** | Cross-cutting departmental fork (`acme-dept-security`, `acme-dept-data`, `acme-dept-legal`) | Exposes department-specific compliance rules, data/cloud governance docs, `surface_bindings`, and departmental MCP servers; mounted into squad/project repos via `git subtree` (`layers/<slug>`). |
-| **`domain-policy`** | Arbitrary regulatory, brand, or business-domain policy module (`layers/eu-gdpr`, `layers/brand-system`) | Exposes stack-agnostic `surface_bindings`, canonical templates, and domain invariants projected onto matching application surfaces via `resolve_surface_governance`. |
-| **`squad`** | Squad or domain fork (`acme-squad-payments`) | Exposes `Layer B` stack starter templates (`templates/<stack>/`), domain conventions, and shared squad MCP servers. |
-| **`service-node`** | Application container, Devcontainer, or sibling service fork (`layers/svc-*` or `/opt/dotfiles-ubuntu`) | Exposes the service's package manifest (`system/*`), drift status (`audit_node_drift`), service `docs/`, and service-local MCPs (database, cache, queue) across `dev`, `tst`, `pre`, `pro`. |
-| **`environment-cluster`** | Shared environment topology fork (`layers/env-pre-cluster`) | Exposes cluster-wide observability and deployment guardrails for a specific environment tier (`tst`, `pre`, `pro`). |
-| **`workstation`** | Developer PC (`~/dotfiles-ubuntu`) | Default role combining local GNU Stow management with local MCP introspection and mounted `layers/*` subtrees. |
+| `layer_role` | Topological Class (`Axis 2`) | Typical Deployment Target | Primary Purpose in the Context Mesh |
+|--------------|------------------------------|---------------------------|-------------------------------------|
+| **`corporate`** | `governance-layer` (`Tier 1 Root 0`) | Organization-wide or public-administration `Root 0` fork (`acme-corp-root`, `public-gov-root`) | Exposes transverse `Pillar A` security, SSoT ledger, and engineering mandates (`AGENTS.md`) plus enterprise-approved MCP catalog (`precedence: 1..2` for Public Admin, `10` for Enterprise). |
+| **`domain-policy`** | `governance-layer` (`Tier 2A Dept`) | Statutory, legal/IP, or regulatory department fork (`dept-justice`, `dept-tax`, `dept-territorial`, `dept-legal`) | Exposes high-precedence (`3..9`) `surface_bindings`, canonical templates, and statutory/regulatory invariants projected onto matching surfaces via `resolve_surface_governance`. |
+| **`department`** | `governance-layer` (`Tier 2B Dept`) | Functional department or sub-department fork (`dept-finance`, `dept-tech`, `dept-marketing`) | Exposes department-specific compliance rules, specialization-stack templates (`business-stack`, `science-stack`, `tech-stack`), domain docs, `surface_bindings`, and departmental MCP servers (`15..40`); mounted into child repos via `git subtree` (`layers/<slug>`). |
+| **`squad`** | `governance-layer` (`Tier 2C Sub-Dept / Unit`) | Sub-department, operational unit, research lab, or delivery squad fork (`acme-unit-patents`, `acme-squad-payments`) | Optional sub-department/unit role (`precedence: 50`) inheriting parent department rules and applying `business-stack`, `science-stack`, or `tech-stack` templates and shared unit MCP servers. |
+| **`service-node`** | `runtime-node` | Application container, Devcontainer, or transversal platform node (`layers/voip-platform` or `/opt/dotfiles-ubuntu`) | Exposes the service's package manifest (`system/*`), drift status (`audit_node_drift`), service `docs/`, and service-local MCPs across `dev`, `tst`, `pre`, `pro`. |
+| **`environment-cluster`** | `runtime-node` | Shared environment topology fork (`layers/env-pre-cluster`) | Exposes cluster-wide observability and deployment guardrails for a specific environment tier (`tst`, `pre`, `pro`). |
+| **`workstation`** | `runtime-node` | Developer PC (`~/dotfiles-ubuntu`) | Default role combining local GNU Stow management with local MCP introspection and mounted `layers/*` subtrees. |
+| **`ephemeral-bot`** | `ephemeral-sandbox` | TTL-bounded zero-copy sandbox (`logs/ephemeral_forks/<fork_id>`) | Materialized on demand via `orchestrate_ephemeral_fork` / `make consult` (`precedence: 15`) with scoped `MCP_PERMISSION_RINGS` and `rcap1` return digest membrane. |
 
 ---
 

@@ -1,6 +1,6 @@
-# Project Template: FastAPI + Hexagonal DDD (`fastapi-hexagonal`)
+# Tech-Stack Template: FastAPI + Hexagonal DDD (`fastapi-hexagonal`)
 
-Ready-to-apply **Layer 2/3 Tech-Stack Template Pack** (`kind: "tech-stack"`, `extends: "technical-base"`) for Python **FastAPI + Hexagonal Architecture (Domain-Driven Design / Ports & Adapters)** projects.
+Ready-to-apply **Tech-Stack Template Pack** (`kind: "tech-stack"`, `extends: "technical-base"`) for engineering departments, sub-departments/units/squads, and Python **FastAPI + Hexagonal Architecture (Domain-Driven Design / Ports & Adapters)** application workspaces.
 
 > **Clean Inheritance Design**:
 > - Universal workflow, commit discipline, and `< 465`-line modularity come from **`human-core`** (`~/.gemini/config/AGENTS.md`).

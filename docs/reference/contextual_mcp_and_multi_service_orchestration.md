@@ -89,7 +89,7 @@ flowchart TD
    - A feature works in `checkout-api` but fails in `payment-worker` due to a native library mismatch (`libpq` / `cairo` / Node version).
    - The agent calls `audit_node_drift` and reads `dotfiles://system/manifests` on both `dotfiles-node-api` and `dotfiles-node-worker`, immediately pinpointing the exact package discrepancy between the two containers.
 3. **Cross-Layer `/enrich` Discovery**:
-   - Using `compare_layer_patterns`, the agent compares a microservice's `.agents/rules/` and `.agents/skills/` against both `dotfiles-squad-backend` (`Layer B`) and `dotfiles-corporate` (`Layer A`), identifying which local rules should be promoted to the squad fork versus the corporate fork.
+   - Using `compare_layer_patterns`, the agent compares a microservice's `.agents/rules/` and `.agents/skills/` (`Pillar C` / `Level 4 Project`) against both `dotfiles-squad-backend` (`Pillar B` / `Level 3 Squad`) and `dotfiles-corporate` (`Pillar A` / `Level 1 Corporate Root 0`), identifying which local rules should be promoted to the squad fork versus the corporate fork.
 
 ---
 

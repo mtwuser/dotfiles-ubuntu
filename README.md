@@ -69,17 +69,17 @@ cd ~/dotfiles-ubuntu
 
 ### Path 3: Enterprise & Multi-Tier Human-AI Governance (With or Without MCP)
 
-Orchestrate Human-AI governance across **Open Source (`oss-dev` / `oss-readonly-appliance`) $\leftrightarrow$ Corporate (`corporate-root`) $\leftrightarrow$ Department (`domain-policy` / `department`) $\leftrightarrow$ Squad (`squad`) $\leftrightarrow$ Project (`project`)** tiers (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
+Orchestrate Human-AI governance across **Open Source (`oss-dev` / `oss-readonly-appliance`) $\leftrightarrow$ `Root 0` (`corporate-root`: Public Administration `1..2` \| Company `10`) $\leftrightarrow$ `Department` (`3..60`, recursive `1..N`: Statutory/Policy `3..9`, Functional `15..40`, Sub-Department / Unit / Squad `40..60`) $\leftrightarrow$ `Project / Case` (`project` `80`)** (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
 
 ```mermaid
 flowchart TD
     SUB["Intrinsic Runtime Substrate\n(C-Backed Python Stdlib · PEP 7 · Ubuntu 26.04 Core)"]
     OSS["Open Source Upstream & Contributor Clone\n(operating_state: oss-dev · DOTFILES_DEV_REPO_DIR)"]
     APP["Local Workstation Appliance\n(operating_state: oss-readonly-appliance · ~/dotfiles-ubuntu)"]
-    CORP["Level 1: Territorial / Public State / Corporate Root 0\n(operating_state: corporate-root · precedence: 1..10 · business-base)"]
-    DEPT["Level 2: Public Admin / Domain-Policy & Department Layers\n(operating_state: domain-policy [3..5] | department [15..40])"]
-    SQUAD["Level 3: Delivery Squad & Specialty Workspaces\n(operating_state: squad · precedence: 50 · business/science/tech-stack)"]
-    PROJ["Level 4: Application, Case & Service Projects\n(operating_state: project · precedence: 80 · Contextual Human-Stack 85..95)"]
+    CORP["Tier 1: Root 0 (Public Admin 1..2 | Enterprise Company 10)\n(operating_state: corporate-root · role: corporate · business-base)"]
+    DEPT["Tier 2A: Statutory & Functional Departments\n(operating_state: domain-policy [3..9] | department [15..40] · business/science/tech-stack)"]
+    SQUAD["Tier 2B: Sub-Departments, Operational Units & Delivery Squads\n(role: department | squad · precedence: 40..60 · business/science/tech-stack)"]
+    PROJ["Tier 3: Application, Case & Service Projects\n(operating_state: project · precedence: 80 · Contextual Human-Stack 85..95)"]
 
     SUB <-->|"C-Backed Primitives &\nOSS-to-OSS Contributions"| OSS
     OSS -->|"workstation-sync.sh --sync\n(Read-Only $HOME Runtime)"| APP
@@ -147,7 +147,7 @@ Every operator uses two orthogonal surfaces: **`$HOME` (`~/dotfiles-ubuntu` $\ri
 
 | Real-World Persona | `$HOME` Global Baseline (`~/dotfiles-ubuntu`) | Active `Workspace` & Crossed `layers/*` (`0..80`) | Specialization Stack & Contextual `Human-Stack` (`85..95`) | Effective Agent Behavior |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Public Administration Chain** *(State `Root 0` $\rightarrow$ Public Dept $\rightarrow$ Civil Servant)* | • **State Admin**: `human-core`<br/>• **Dept Maintainer**: `gov-country` (`2`)<br/>• **Civil Servant**: `dept-justice` (`3`) | • **State `Root 0`**: `gov-country` (`2`) + `layers/geo-region` (`1`)<br/>• **Public Dept**: `dept-justice` (`3`, statutes in `docs/`)<br/>• **Civil Servant**: `expediente-2026/` | `business-base` + `science-stack/scientific-knowledge-branch` (`domain-admin-law:L3`) | Enforces territorial (`1`), constitutional (`2`), and administrative law (`3`); queries modular statutory `docs/` on demand (`make consult`). |
+| **1. Public Administration Chain** *(Public `Root 0` $\rightarrow$ Public Dept $\rightarrow$ Civil Servant)* | • **Public Admin**: `human-core`<br/>• **Dept Maintainer**: `public-gov-root` (`1`)<br/>• **Civil Servant**: `dept-justice` (`3`) | • **Public `Root 0`**: `public-gov-root` (`1..2`)<br/>• **Public Dept**: `dept-justice` (`3`) & `dept-territorial` (`4`, statutes in `docs/`)<br/>• **Civil Servant**: `expediente-2026/` (`80`) | `business-base` + `science-stack/scientific-knowledge-branch` (`domain-admin-law:L3`) | Enforces constitutional `Root 0` (`1..2`), justice (`3`), and territorial (`4`) statutes; queries modular `docs/` on demand (`make consult`). |
 | **2. Company / Law Firm Member Crossing Public Admin** | `empresa-dept-legal` (`15`, inheriting `empresa-root` at `10`) | Client case `recurso-fiscal-cliente-x/` mounting `layers/dept-justice` (`3`) + `layers/dept-tax` (`4`) | `science-stack/scientific-knowledge-branch` + `business-stack` (`domain-civil-law:L4 + domain-tax-law:L2`) | Subordinates corporate strategy (`10..15`) to state justice/tax statutes (`3..4`); peer-level in civil law (`L4`), step-by-step verify on tax changes (`L2`). |
 | **3. Enterprise Tech Lead (`L4`) vs. Junior Squad Member (`L1`)** | Both stow `empresa-dept-tech` (`25`, inheriting `empresa-root` at `10`) | Both open `checkout-api/` (`50..80`) | Both apply `tech-stack/fastapi-hexagonal`; Lead sets `domain-python:L4`, Junior sets `domain-python:L1 + soft-socratic-coach` in `.agents/SESSION.md` | Identical `100%` test & architecture gates (`0..80`); Lead gets terse 4-channel execution (`L4`), Junior gets Socratic mentorship (`L1`). |
 | **4. Specialist Shifting Contexts** *(Same Person, Different Workspace)* | `dept-bio-lab` (`20`) or `dept-legal` (`15`) | • **Morning**: Primary lab/legal workspace<br/>• **Afternoon**: Cross-cutting tax/env filing or Python tool (`make setup-dev`) | • **Morning**: `science-stack` (`domain-biotech:L4`)<br/>• **Afternoon**: `tech-stack` (`domain-python:L1 + bridge-tech-for-business`) | Seniority is **contextual to the workspace**: direct executive synthesis in their core science (`L4`), didactic guided scaffolding when crossing into code or tax (`L1`). |

@@ -4,7 +4,7 @@
   "kind": "tech-stack",
   "stack_group": "tech-stack",
   "extends": "technical-base",
-  "target_role": "squad",
+  "target_role": "department",
   "description": "Pure FastAPI + Hexagonal DDD (Ports & Adapters, Bounded Contexts, SQLAlchemy Async, Pydantic v2, httpx.AsyncClient) stack rules, skills, and governance templates",
   "recommended_surface_bindings": [
     {

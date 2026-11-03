@@ -12,7 +12,7 @@ description: "Scientific, legal, and territorial knowledge-branch methodology, 3
 ## Scope & Surface Target
 
 - **Template Pack**: `templates/science-stack/scientific-knowledge-branch/` (`science-stack`, `extends: business-base`).
-- **Applies**: Territorial (`geo-*`), public-administration (`gov-*`, `dept-justice`, `dept-tax`, `dept-environment`), research/laboratory (`dept-bio-lab`), legal, and academic workspaces governing `docs/**`, `corporate/**`, and `surfaces/**`.
+- **Applies**: Public-administration (`public-gov-root` at `1..2`, and public departments `dept-justice`, `dept-tax`, `dept-territorial` / `geo-*`, `dept-environment` at `3..4`), research/laboratory (`dept-bio-lab`), legal, and academic workspaces governing `docs/**`, `corporate/**`, and `surfaces/**`.
 
 ---
 
@@ -27,7 +27,7 @@ description: "Scientific, legal, and territorial knowledge-branch methodology, 3
    - Structure domain knowledge from foundational axioms (`Trunk`: e.g., Constitutional/Administrative Law, General Ecology, Classical Mechanics) $\rightarrow$ specialized disciplines (`Branch`: e.g., Tax Law, Botany/Fauna, Organic Chemistry) $\rightarrow$ applied cross-domain practice (`Specialty`: e.g., R&D Tax Credits, Protected-Area Impact Assessment).
    - Every factual, statutory, or scientific statement in a deliverable MUST cite its verifiable primary record (`[LAW-ID · Art. N]`, `[ISO-NNNN]`, `[TAXON-ID]`, or `[DEPT]-[TYPE]-[YYYY]-[NNN]`) with exact SI/ISO units, dates, and tolerances.
 3. **`SCI-03` — Zero-Idle-Token Cross-Layer Consultation (`make consult`)**:
-   - When a workspace crosses multiple disciplines or public-administration layers (e.g., a corporate legal or bio-lab workspace consulting `layers/dept-justice`, `layers/dept-tax`, or `layers/geo-region`), query the target layer's `docs/` on demand via `./scripts/layer-config.sh consult-layer . --layer <id> --query "<text>"` (`make consult LAYER=<id> QUERY="<text>"`) rather than duplicating foreign reference libraries.
+   - When a workspace crosses multiple disciplines or public-administration layers (e.g., a corporate legal or bio-lab workspace consulting `layers/dept-justice`, `layers/dept-tax`, or `layers/dept-territorial`), query the target layer's `docs/` on demand via `./scripts/layer-config.sh consult-layer . --layer <id> --query "<text>"` (`make consult LAYER=<id> QUERY="<text>"`) rather than duplicating foreign reference libraries.
 4. **`SCI-04` — Contextual `Human-Stack` Didactic Adaptation (`L1..L4`)**:
    - Enforce `100%` of statutory, empirical, and *Lex Superior* (`0..80`) invariants regardless of operator seniority.
    - Adapt explanation depth to the operator's maturity in the **active workspace's branch**: provide step-by-step Socratic guidance and cross-discipline analogies when the operator is at `L1/L2` in that science branch, and execute directly with terse technical precision when the operator is at `L3/L4`.

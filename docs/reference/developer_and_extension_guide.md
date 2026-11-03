@@ -2,7 +2,7 @@
 
 > **Reference Guide — Evolving `dotfiles-ubuntu` Safely & Coherently**
 >
-> This guide provides step-by-step instructions for extending `dotfiles-ubuntu` itself — whether adding a new root directory, creating a new Layer 2 project starter template, adding an external package recipe, or modifying Antigravity 2.0 lifecycle hooks. AI agents and maintainers should consult this guide before modifying repository structure.
+> This guide provides step-by-step instructions for extending `dotfiles-ubuntu` itself — whether adding a new root directory, creating a new `Pillar B` (`Layer 2`) specialization-stack starter template, adding an external package recipe, or modifying Antigravity 2.0 lifecycle hooks. AI agents and maintainers should consult this guide before modifying repository structure.
 
 ---
 
@@ -34,6 +34,8 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --id acme-dept-legal \
      --role domain-policy \
      --precedence 5 \
+     --entity-kind enterprise \
+     --governing-root acme-corp-root \
      --upstream-url https://github.com/acme/dotfiles-corp.git \
      --prune-default-templates
    ```
@@ -74,12 +76,12 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
    ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
    ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
      --id dept-legal-ip --role domain-policy --precedence 5 \
-     --templates business-base
+     --parent-dir /path/to/corporate-root --templates business-base
    ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
    ./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
    ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
    ./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
-   ./scripts/layer-config.sh check-env-promotion /path/to/dept-legal --to-env pre --email "qa@acme.com"
+   ./scripts/layer-config.sh check-env-promotion /path/to/dept-legal --to-env pre --files "surfaces/web/terms.html" --email "qa@acme.com"
    ./scripts/layer-config.sh record-decision /path/to/dept-legal --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
    ./scripts/layer-config.sh status /path/to/dept-legal
    ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
@@ -196,7 +198,7 @@ While `dotfiles-ubuntu` enforces **Zero Third-Party Runtime Dependencies (`depen
 
 ### Strict 3-Way Separation Between `/enrich`, `/full-audit`, and Conscious `oss-contribute`
 
-1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates (`Layer C -> B -> A`)**:
+1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates (`Pillar C -> B -> A` & `Project -> Squad -> Department -> Root 0 -> OSS`)**:
    - `/enrich` operates along the `Project -> Squad -> Department -> Root 0 -> dotfiles-ubuntu` governance hierarchy and never exposes internal runtime or C-substrate workflows to `Root 0`, `Department`, `Squad`, or `~/dotfiles-ubuntu` (`readonly` appliance) workspaces.
 2. **Closed-World Gap Detection (`/full-audit`) vs. Conscious `oss-contribute` (`C3` Substrate & Upstream PRs)**:
    - `/full-audit` is strictly a **convergent compliance gate (`Regime 0`)** verifying zero discrepancies against specs, rules, `1:1:1` test symbiosis, and floor-version stdlib compliance.

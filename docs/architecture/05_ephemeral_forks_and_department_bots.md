@@ -2,7 +2,7 @@
 
 > **Navigation**: [`docs/README.md`](../README.md) · [`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md) · [`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md) · [`06_layer_governance_and_promotion_engines.md`](06_layer_governance_and_promotion_engines.md) · [`contextual_mcp_and_multi_service_orchestration.md`](../reference/contextual_mcp_and_multi_service_orchestration.md)
 
-This document specifies the **3rd Orthogonal Governance Dimension** of `dotfiles-ubuntu`: **Ephemeral Scoped Forks, OOP Capability Inheritance & Symbiotic Department Bots** — a deterministic, rule-governed mechanism allowing an MCP node or CLI workflow to compose capability extensions by CRUD permission ring, materialize temporary TTL-bounded contextual forks (`layer_role: "ephemeral-bot"`), dynamically augment permanent MCP nodes while ephemeral leases are active, and seal/verify 4-Channel Executive Digests through the `rcap1` cryptographic membrane.
+This document specifies the **Ephemeral Sandbox & Department Bot Dimension** (`Axis 2: ephemeral-sandbox` & `Axis 6: Channel 5 Ephemeral Consultation` in the 7-Axis Multidimensional Taxonomy — see [`cross_departmental_and_human_stack_matrix.md`](../reference/cross_departmental_and_human_stack_matrix.md#0-canonical-7-axis-multidimensional-taxonomy--perspective-matrix-root-0-rightarrow-child-departments-rightarrow-units--nodes)) of `dotfiles-ubuntu`: **Ephemeral Scoped Forks, OOP Capability Inheritance & Symbiotic Department Bots** — a deterministic, rule-governed mechanism allowing an MCP node or CLI workflow to compose capability extensions by CRUD permission ring, materialize temporary TTL-bounded contextual forks (`layer_role: "ephemeral-bot"`), dynamically augment permanent MCP nodes while ephemeral leases are active, and seal/verify 4-Channel Executive Digests through the `rcap1` cryptographic membrane.
 
 ---
 
@@ -61,7 +61,7 @@ Any `surface_binding` in `system/mcp-layer.json` (or `template.json` `recommende
 | `model_tier` | `"flash"` \| `"inherit"` \| `"pro"` | Target subagent model tier per `AGENTS.md §12` |
 | `access_mode` | `"strictly-read-only"` \| `"read-and-test-trigger"` \| `"read-write-scoped"` | Operational capability boundary enforced in the subagent brief |
 | `ephemeral_scope` | `"inter-layer"` \| `"intra-layer"` (default `"intra-layer"`) | Distinguishes cross-layer read-only consultations (`"inter-layer"`) from within-layer participant/bot execution (`"intra-layer"`) |
-| `actor_role` | `"owner"` \| `"maintainer"` \| `"validator"` \| `"member"` (default `"member"`) | Layer roster role of the participant spawning the ephemeral fork |
+| `actor_role` | `"owner"` \| `"maintainer"` \| `"validator"` \| `"member"` \| `"consumer"` (default `"member"`) | Layer roster role of the participant spawning the ephemeral fork (`"consumer"` is locked to `strictly-read-only`) |
 | `mount_templates` | `list[str]` | Subset of template packs activated in the ephemeral fork's `default_stack_templates` |
 | `resolution` | `"L0"` \| `"L1"` \| `"L2"` | Default context resolution for the bot's authoritative surface |
 | `ttl_seconds` | Integer `10..3600` (default `300`) | Time-to-live before automatic garbage collection (`reap_expired_ephemeral_forks`) |

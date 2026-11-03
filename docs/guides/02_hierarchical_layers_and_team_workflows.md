@@ -2,7 +2,7 @@
 
 > **Human & Architect Operator Manual (Tier 2 Progressive Disclosure)**
 >
-> Step-by-step guide to the 3-Layer Configuration Architecture, 3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`), 4-Level Organizational Hierarchy (`Corporate Root 0 <-> Department <-> Squad <-> Project`), Fill-in-the-Blanks Setup Blueprints & Initial Chat Kickoff Prompts, Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/06_layer_governance_and_promotion_engines.md`](../architecture/06_layer_governance_and_promotion_engines.md)**.
+> Step-by-step guide to the 4-Pillar Configuration Architecture (`Pillar A..D`), 3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`), Organizational Hierarchy (`Root 0 [Public Admin 1..2 | Company 10] <-> Department [1..N recursive: Statutory / Functional / Sub-Department or Unit/Squad] <-> Project / Case`), Fill-in-the-Blanks Setup Blueprints & Initial Chat Kickoff Prompts, Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/06_layer_governance_and_promotion_engines.md`](../architecture/06_layer_governance_and_promotion_engines.md)**.
 
 ---
 
@@ -265,18 +265,17 @@ Every person's environment is the combination of two clear choices:
 1. **`$HOME` (`~/dotfiles-ubuntu` $\rightarrow$ `~/.gemini/config/AGENTS.md`)**: *Which organization or department do you belong to permanently?*
 2. **`Workspace` (`<repo>/.agents/`)**: *What specific layer, case, or project are you working on today, which external layers (`layers/*`) does it cross, which specialization stack (`business-stack`, `science-stack`, `tech-stack`) does it use, and what is your contextual seniority (`Human-Stack` `L1..L4`) in that workspace?*
 
-#### Archetype 1 — Public Administration Chain (State `Root 0` $\rightarrow$ Public Department $\rightarrow$ Civil Servant)
+#### Archetype 1 — Public Administration Chain (Public `Root 0` $\rightarrow$ Public Department $\rightarrow$ Civil Servant)
 ```bash
-# A. State / Regional Root 0 Maintainer (precedence: 2, crossing Territorial Geo at precedence: 1):
-./scripts/layer-config.sh bootstrap-workspace ~/Projects/gov-country \
-  --id gov-country --role corporate --precedence 2 --templates business-base
-cd ~/Projects/gov-country && ./scripts/layer-subtree.sh add geo-region <geo-repo-url> master
+# A. Public Administration Root 0 Maintainer (precedence: 1, entity_kind: public-government):
+./scripts/layer-config.sh bootstrap-workspace ~/Projects/public-gov-root \
+  --id public-gov-root --role corporate --precedence 1 --entity-kind public-government --templates business-base
 
-# B. Public Administration Department Maintainer (e.g., Justice at precedence: 3, Tax at precedence: 4):
-#    $HOME stowed from gov-country; Workspace is dept-justice (statutes stored in modular docs/ < 465 lines)
+# B. Public Administration Department Maintainer (e.g., Justice at 3, Tax or Territorial at 4):
+#    Automatically inherits entity_kind="public-government" and governing_root_id="public-gov-root" from --parent-dir!
 ./scripts/layer-config.sh bootstrap-workspace ~/Projects/dept-justice \
   --id dept-justice --role domain-policy --precedence 3 \
-  --parent-dir ~/Projects/gov-country --templates business-base,scientific-knowledge-branch
+  --parent-dir ~/Projects/public-gov-root --templates business-base,scientific-knowledge-branch
 
 # C. Civil Servant (Funcionario) Working on Daily Administrative Cases:
 #    $HOME stowed from dept-justice; Workspace is the daily administrative expediente
