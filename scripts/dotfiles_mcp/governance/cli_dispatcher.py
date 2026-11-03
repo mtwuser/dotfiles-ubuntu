@@ -180,6 +180,7 @@ def _dispatch_c2_subcommand(
         vf: tuple[str, ...] = (
             "--id", "--role", "--precedence", "--description", "--parent-dir", "--upstream-url",
             "--upstream-id", "--upstream-branch", "--templates", "--template-name",
+            "--entity-kind", "--governing-root",
         )
         opts = _parse_opts(subcmd, rest[1:], vf, ("--no-scaffold-own",))
         lid = _req_opt(opts, "id", "Missing required --id <layer-id> for bootstrap-workspace.")
@@ -191,6 +192,8 @@ def _dispatch_c2_subcommand(
             upstream_layer_id=_opt_str(opts, "upstream_id"),
             parent_dir=_opt_path(opts, "parent_dir"), templates=_csv(opts.get("templates")),
             own_template_name=_opt_str(opts, "template_name"),
+            entity_kind=_opt_str(opts, "entity_kind"),
+            governing_root_id=_opt_str(opts, "governing_root"),
             scaffold_own_template=not bool(opts.get("no_scaffold_own", False)), dry_run=dry_run,
         )
     if subcmd == "sync-layer":

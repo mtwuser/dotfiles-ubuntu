@@ -322,6 +322,13 @@ class TestLayerTopologyHelpers:
             '"upstream_layer": {"layer_id": "acme-root"}}',
             encoding="utf-8",
         )
+        sub_sq = tmp_path / "unit-api"
+        (sub_sq / "system").mkdir(parents=True)
+        (sub_sq / "system/mcp-layer.json").write_text(
+            '{"layer_id": "unit-api", "layer_role": "squad", "precedence": 50, '
+            '"upstream_layer": {"layer_id": "acme-dept-tech"}}',
+            encoding="utf-8",
+        )
         (ext_dept / "system/mcp-layer.json").write_text(
             '{"layer_id": "partner-dept-sec", "layer_role": "department", "precedence": 30}',
             encoding="utf-8",
@@ -332,10 +339,12 @@ class TestLayerTopologyHelpers:
         ind_id = layer_topology_helpers._resolve_layer_entity_identity(ind_dir)
         exp_id = layer_topology_helpers._resolve_layer_entity_identity(exp_dir)
         up_id = layer_topology_helpers._resolve_layer_entity_identity(up_dir)
+        sub_sq_id = layer_topology_helpers._resolve_layer_entity_identity(sub_sq)
         ext_id = layer_topology_helpers._resolve_layer_entity_identity(
             ext_dept, parent_dir=acme_root
         )
         rel_int = layer_topology_helpers._classify_inter_layer_relationship(exp_id, up_id)
+        rel_sub = layer_topology_helpers._classify_inter_layer_relationship(exp_id, sub_sq_id)
         rel_gov = layer_topology_helpers._classify_inter_layer_relationship(exp_id, gov_id)
         ext_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
             ext_dept, actor_email="ceo@acme.com", parent_dir=acme_root
@@ -346,19 +355,27 @@ class TestLayerTopologyHelpers:
 
         # Assert
         assert no_parent_prof["upstream_layer_id"] is None
-        assert (gov_id["entity_kind"], gov_id["governing_root_id"]) == (
+        assert (
+            gov_id["entity_kind"],
+            gov_id["governing_root_id"],
+            gov_id["topological_class"],
+        ) == (
             "public-government",
             "gov-es-aepd",
+            "governance-layer",
         )
-        assert (ind_id["entity_kind"], ind_id["collective_scope"], ind_id["governing_root_id"]) == (
-            "individual",
-            "individual",
-            None,
-        )
+        assert (
+            ind_id["entity_kind"],
+            ind_id["collective_scope"],
+            ind_id["governing_root_id"],
+            ind_id["topological_class"],
+        ) == ("individual", "individual", None, "runtime-node")
         assert (exp_id["entity_kind"], exp_id["governing_root_id"]) == ("enterprise", "acme-root")
         assert up_id["governing_root_id"] == "acme-root"
+        assert sub_sq_id["governing_root_id"] == "acme-root"
         assert ext_id["governing_root_id"] == "partner-root"
         assert rel_int["relationship_scope"] == "internal"
+        assert rel_sub["relationship_scope"] == "internal"
         assert (rel_gov["relationship_scope"], rel_gov["external_category"]) == (
             "external",
             "external:public-government",

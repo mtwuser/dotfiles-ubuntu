@@ -244,7 +244,7 @@ class TestWorkspaceBootstrapper:
             layer_id="squad-patent-ops",
             layer_role="squad",
             parent_dir=target_dir,
-            templates=["human-core"],
+            templates=["human-core", "scientific-knowledge-branch"],
             scaffold_own_template=True,
             dry_run=False,
         )

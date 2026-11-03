@@ -24,6 +24,7 @@ from dotfiles_mcp.core.constants import (
     MAKEFILE_ROLE_HEADER_PREFIX,
     MCP_OPERATING_MODES,
     ROLE_DEFAULT_PRECEDENCE,
+    SCIENCE_MODE_TEMPLATES,
     STATUS_EXCERPT_MAX_LINES,
     TECHNICAL_MODE_RULE_FILES,
     TECHNICAL_MODE_TEMPLATES,
@@ -36,6 +37,7 @@ from dotfiles_mcp.core.layer_topology_helpers import (
     _render_layer_makefile,
     _render_layer_onboarding_readme,
     _resolve_default_parent_dir,
+    _resolve_layer_entity_identity,
     _sync_mounted_children_into_parent,
 )
 from dotfiles_mcp.core.manifest_helpers import (
@@ -190,6 +192,7 @@ def bootstrap_layer_workspace(
     upstream_repo: str | None = None, upstream_branch: str = "master",
     upstream_layer_id: str | None = None, parent_dir: Path | None = None,
     templates: list[str] | None = None, own_template_name: str | None = None,
+    entity_kind: str | None = None, governing_root_id: str | None = None,
     scaffold_own_template: bool = True, dry_run: bool = False,
 ) -> dict[str, Any]:  # fmt: skip
     """One-shot initializer for a corporate, domain-policy, department, or squad workspace."""
@@ -208,6 +211,9 @@ def bootstrap_layer_workspace(
     if parent_manifest_path.is_file():
         parent_manifest = json.loads(parent_manifest_path.read_text(encoding="utf-8"))
         if parent_manifest.get("layer_role") not in (None, "workstation"):
+            p_entity = _resolve_layer_entity_identity(effective_parent, parent_manifest)
+            entity_kind = entity_kind or str(p_entity["entity_kind"])
+            governing_root_id = governing_root_id or str(p_entity["governing_root_id"])
             upstream_layer_id = upstream_layer_id or parent_manifest.get("layer_id")
             upstream_repo = upstream_repo or parent_manifest.get("repository")
             if not upstream_repo and (effective_parent / ".git").exists():
@@ -226,7 +232,8 @@ def bootstrap_layer_workspace(
     cfg_kw: dict[str, Any] = {"layer_id": layer_id, "layer_role": layer_role, "dry_run": dry_run,
         "precedence": effective_prec, "description": description, "prune_default_templates": True,
         "upstream_url": upstream_repo, "upstream_branch": upstream_branch,
-        "upstream_id": upstream_layer_id}  # fmt: skip
+        "upstream_id": upstream_layer_id, "entity_kind": entity_kind,
+        "governing_root_id": governing_root_id}  # fmt: skip
     manifest_res = configure_fork_manifest(target_dir, **cfg_kw)
     own_tpl_id, all_tpls = own_template_name or layer_id, list(requested_templates)
     if scaffold_own_template and own_tpl_id not in all_tpls:
@@ -240,7 +247,8 @@ def bootstrap_layer_workspace(
     is_tech_sq = layer_role == "squad" and any(
         t in requested_templates for t in TECHNICAL_MODE_TEMPLATES
     )
-    own_kind = "tech-stack" if is_tech_sq else "business-stack"
+    is_sci = any(t in requested_templates for t in SCIENCE_MODE_TEMPLATES)
+    own_kind = "tech-stack" if is_tech_sq else ("science-stack" if is_sci else "business-stack")
     scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run,
         "description": description or f"{layer_id} ({layer_role}) governance pack",
         "register_binding": True, "rule_filename": f"{own_tpl_id}.md"}  # fmt: skip

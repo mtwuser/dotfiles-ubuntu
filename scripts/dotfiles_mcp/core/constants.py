@@ -18,6 +18,13 @@ VALID_LAYER_ROLES = (
     "corporate", "department", "domain-policy", "ephemeral-bot",
     "squad", "service-node", "environment-cluster", "workstation",
 )  # fmt: skip
+TOPOLOGICAL_ROLE_CLASSES: dict[str, str] = {
+    "corporate": "governance-layer", "domain-policy": "governance-layer",
+    "department": "governance-layer", "squad": "governance-layer",
+    "workstation": "runtime-node", "service-node": "runtime-node",
+    "environment-cluster": "runtime-node", "ephemeral-bot": "ephemeral-sandbox",
+    "project": "consumer-workspace",
+}  # fmt: skip
 MCP_OPERATING_MODES: dict[str, str] = {
     "oss-readonly-appliance": "workstation-baseline-provider",
     "oss-dev": "self-test-and-dev-only",
@@ -122,6 +129,7 @@ BUSINESS_MODE_RULE_FILES = (
     "business-base.md", "ops-ledger-architecture.md", "scientific-methodology.md",
 )  # fmt: skip
 TECHNICAL_MODE_TEMPLATES = ("technical-base", "fastapi-hexagonal")
+SCIENCE_MODE_TEMPLATES = ("scientific-knowledge-branch",)
 TECHNICAL_MODE_RULE_FILES = ("technical-base.md", "coding.md")
 VALID_TEMPLATE_KINDS = ("core-base", "business-stack", "science-stack", "tech-stack")
 ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {

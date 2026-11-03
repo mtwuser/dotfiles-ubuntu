@@ -28,6 +28,7 @@ from dotfiles_mcp.core.constants import (
     ROLE_ENVIRONMENT_PERMISSIONS,
     ROLE_ONBOARDING_SPECS,
     TEMPLATE_MANIFEST_CONTRACT_REV,
+    TOPOLOGICAL_ROLE_CLASSES,
     VALID_ENTITY_KINDS,
 )
 from dotfiles_mcp.core.manifest_helpers import (
@@ -76,7 +77,12 @@ def _resolve_layer_entity_identity(
             p_id = _resolve_layer_entity_identity(eff_p, pm)
             p_root = str(p_id["governing_root_id"] or pm.get("layer_id", eff_p.name))
             p_ek = str(p_id["entity_kind"])
-    org_pfx = lid.split("-dept-")[0] if "-dept-" in lid else ""
+    org_pfx = re.split(r"-(?:dept|squad)-", lid)[0] if ("-dept-" in lid or "-squad-" in lid) else ""
+    up_org_pfx = (
+        re.split(r"-(?:dept|squad)-", up_lid)[0]
+        if ("-dept-" in up_lid or "-squad-" in up_lid)
+        else ""
+    )
     conflict_pfx = bool(org_pfx and p_root and not p_root.startswith(org_pfx))
     if ek == "individual":
         gov_root: str | None = exp_root or None
@@ -84,15 +90,18 @@ def _resolve_layer_entity_identity(
         gov_root = exp_root
     elif lrole == "corporate" or ek == "open-source" or (ek == "public-government" and prec <= 2):
         gov_root = lid
-    elif up_lid:
-        gov_root = up_lid
     elif p_root and p_ek == ek and not conflict_pfx:
         gov_root = p_root
+    elif up_org_pfx:
+        gov_root = f"{up_org_pfx}-root"
+    elif up_lid:
+        gov_root = up_lid
     elif org_pfx:
         gov_root = f"{org_pfx}-root"
     else:
         gov_root = lid
-    return {"layer_id": lid, "layer_role": lrole, "precedence": prec,
+    t_cls = TOPOLOGICAL_ROLE_CLASSES.get(lrole, "consumer-workspace")
+    return {"layer_id": lid, "layer_role": lrole, "topological_class": t_cls, "precedence": prec,
         "entity_kind": ek, "collective_scope": cscope, "governing_root_id": gov_root}  # fmt: skip
 
 

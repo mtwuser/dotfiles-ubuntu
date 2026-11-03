@@ -68,11 +68,11 @@ flowchart TD
     SQUAD_BE -.->|"/enrich + make promote\n(1-Hop Upward Evolution)"| CORP
 ```
 
-### 2.1. Role of Each Organizational Tier (`Tier 0` $\rightarrow$ `Tier 3`)
+### 2.1. Role of Each Organizational Tier / Level (`Tier 0 / Level 0` $\rightarrow$ `Tier 3 / Level 4`)
 
-> **Distinguishing Organizational Tiers vs. Physical Context Pillars**:
-> - **Organizational Tiers (`Tier 0` $\rightarrow$ `Tier 3` below)** describe **who owns each Git repository** in the enterprise hierarchy and its deontic `layer_role` / `precedence` (`0..100`). Every organizational layer (`Tier 1`, `Tier 2A`, `Tier 2B`) is a full Git repository, and **any** parent or consumer layer (`Tier 1 Corporate Root 0` or `Tier 2B Squad`) can mount child or cross-cutting layers into `layers/<name>/` via `git subtree` (`layer-subtree.sh`).
-> - **Physical Context Pillars (`Layer A / B / C / D` in [Section 4 (The 4th Pillar)](#4-the-4th-pillar-navigable-repository-documentation-docs--google-ai-tooling) and [`docs/README.md`](../README.md))** describe the **four local file mechanisms** active inside a developer's workspace (`Layer A`: `~/.gemini/config/AGENTS.md` global baseline, `Layer B`: `templates/*` & mounted `layers/*` packs, `Layer C`: `<workspace>/.agents/` local rules/tasks, `Layer D`: 3-tier navigable `docs/`).
+> **Distinguishing Organizational Tiers (`Level 0..4`), Topological Classes (`Layer` vs. `Node`), and Physical Context Pillars (`Pillar A..D`)**:
+> - **Organizational Tiers / Levels (`Tier 0..3` $\leftrightarrow$ `Level 0..4` below)** describe **who owns each Git repository** in the hierarchy and its deontic `layer_role` / `precedence` (`0..100`). For the full **7-Axis Multidimensional Taxonomy** (`entity_kind`, `TOPOLOGICAL_ROLE_CLASSES` distinguishing `governance-layer` vs. `runtime-node` vs. `ephemeral-sandbox` vs. `consumer-workspace`, and `Root 0` / Department archetypes `D1..D4`), see **[`cross_departmental_and_human_stack_matrix.md` §0](cross_departmental_and_human_stack_matrix.md)**.
+> - **Physical Context Pillars (`Pillar A / B / C / D` in [Section 4 (The 4th Pillar)](#4-the-4th-pillar-navigable-repository-documentation-docs--google-ai-tooling) and [`docs/README.md`](../README.md))** describe the **four local disk mechanisms** active inside a workstation and workspace (`Pillar A`: `~/.gemini/config/AGENTS.md` global baseline, `Pillar B`: `templates/*` & mounted `layers/*` packs, `Pillar C`: `<workspace>/.agents/` local overlay, `Pillar D`: 3-tier navigable `docs/`).
 
 | Organizational Tier | `layer_role` & `precedence` | Repository / Location | What It Defines & How `git subtree` (`layers/*`) Applies | Who Owns It |
 |---------------------|-----------------------------|-----------------------|----------------------------------------------------------|-------------|

@@ -6,14 +6,15 @@
 
 ---
 
-## 1. Configuration Architecture & 3-Tier Profile Composition
+## 1. Configuration Architecture (`Pillar A..D`) & 3-Tier Profile Composition
 
-Configuration follows a 3-layer hierarchy where each layer extends the one above it:
+Local disk materialization follows **4 Physical Context Pillars (`Pillar A..D`)** where each pillar extends the one above it (for the full **7-Axis Multidimensional Taxonomy** distinguishing `Physical Context Pillars` from `Organizational Governance Layers`, `Runtime Nodes`, and `Ephemeral Bots`, see **[`docs/reference/cross_departmental_and_human_stack_matrix.md` §0](../reference/cross_departmental_and_human_stack_matrix.md)**):
 
 ```
-Layer 1: Shared (Global)         ← ~/dotfiles-ubuntu/antigravity/  (symlinked to ~/.gemini/config/)
-Layer 2: Templates (Reusable)    ← ~/dotfiles-ubuntu/templates/    (3 core bases: human-core, technical-base, business-base + 3 specialization stacks: business-stack, science-stack, tech-stack)
-Layer 3: Custom (Project-local)  ← <workspace>/.agents/            (projected rules, skills, SESSION.md & governance ledgers)
+Pillar A (Layer 1 — Shared Global)      ← ~/dotfiles-ubuntu/antigravity/  (symlinked to ~/.gemini/config/)
+Pillar B (Layer 2 — Templates/Subtrees) ← ~/dotfiles-ubuntu/templates/ & layers/ (3 core bases + 3 specialization stacks)
+Pillar C (Layer 3 — Workspace Overlay)  ← <workspace>/.agents/            (projected rules, skills, SESSION.md & governance ledgers)
+Pillar D (Layer 4 — Navigable Corpus)   ← <workspace>/docs/               (3-tier progressive disclosure & 1:1:1 specs)
 ```
 
 ### 1.1 Layer 1: Shared Global Baseline (`~/.gemini/config/`)
@@ -83,9 +84,10 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
 
 1. **CLI Setup (Standalone Layer Workspace or Direct Platform Fork)**:
    ```bash
-   # Option A: Standalone Corporate Root 0 workspace
+   # Option A: Standalone Corporate or Public-Government Root 0 workspace
    ./scripts/layer-config.sh bootstrap-workspace /path/to/corp-root \
      --id acme-corp-root --role corporate --precedence 10 --templates business-base \
+     --entity-kind enterprise --governing-root acme-corp-root \
      --upstream-url "https://github.com/mtwuser/dotfiles-ubuntu.git"
    ./scripts/layer-config.sh set-authority /path/to/corp-root \
      --owner-role "Principal Enterprise Architect" --emails "architect@acme.com"
