@@ -29,7 +29,7 @@ Commands:
   diff-project <target-project-dir> [--parent-dir <dir>]
       Compare SHA-256 digests between <target-project-dir>/.agents/ and fork layers/templates.
   promote-from-project <target-project-dir> --source <rel-path> [--to-layer <root|subtree>]
-                       [--to-template <template-name>] [--upstream-dir|--target-repo <dir>]
+                       [--to-template <template-name>] [--upstream-dir <dir>]
                        [--create-pr] [--email <proposer-email>] [--org <name>]
                        [--contributors <list>] [--context <text>]
       Promote a matured rule, skill, or asset from <target-project-dir> into the target layer.
@@ -52,7 +52,7 @@ Commands:
                 [--tier <flash|inherit|pro>]
       Run a zero-residue, one-shot read-only ephemeral consultation against a layer or template.
   delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>]
-                    [--ticket <id>] [--priority <P0|P1|P2>] [--surface|--tracker <surface>]
+                    [--ticket <id>] [--priority <P0|P1|P2>] [--surface <surface>]
                     [--email <email>] [--create-pr] [--force]
       Delegate a 1-hop downward directive or governance artifact into a child layer surface.
   manage-roster [<target-dir>] [--add <email>] [--remove <email>] [--role <owner|maintainer|validator|member>]
@@ -233,7 +233,7 @@ if subcmd == "promote-from-project":
         _die("Usage: ./scripts/layer-config.sh promote-from-project <target-project-dir> --source <rel-path> [options]")
     opts = _parse_opts(
         rest[1:],
-        {"--source": "src", "--to-layer": "layer", "--to-template": "tpl", "--upstream-dir": "up_dir", "--target-repo": "up_dir", "--email": "email", "--org": "org", "--contributors": "contrib", "--context": "ctx"},
+        {"--source": "src", "--to-layer": "layer", "--to-template": "tpl", "--upstream-dir": "up_dir", "--email": "email", "--org": "org", "--contributors": "contrib", "--context": "ctx"},
         {"--create-pr": "pr", "--force": "force"},
     )
     if not opts.get("src"):
@@ -371,7 +371,7 @@ if subcmd == "complete-task":
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
-if subcmd in ("compare-upstream", "upstream-diff"):
+if subcmd == "compare-upstream":
     target_dir, opts = _pos_opts(rest, {"--parent-dir": "parent", "--template": "tpl"}, {"--apply-safe": "apply_safe"})
     res = compare_upstream_templates(
         repo_dir, target_dir, parent_dir=_opt_path(opts, "parent"),
@@ -391,10 +391,10 @@ if subcmd == "consult-layer":
     print(json.dumps(res, indent=2))
     sys.exit(0)
 
-if subcmd in ("delegate-to-child", "deliver-to-child"):
+if subcmd == "delegate-to-child":
     target_dir, opts = _pos_opts(
         rest,
-        {"--to-child": "child", "--task": "task", "--source": "src", "--ticket": "tkt", "--priority": "prio", "--tracker": "trk", "--surface": "trk", "--email": "email"},
+        {"--to-child": "child", "--task": "task", "--source": "src", "--ticket": "tkt", "--priority": "prio", "--surface": "trk", "--email": "email"},
         {"--force": "force", "--create-pr": "create_pr"},
     )
     if not opts.get("child") or (not opts.get("task") and not opts.get("src")):

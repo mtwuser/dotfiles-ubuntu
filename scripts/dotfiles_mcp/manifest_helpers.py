@@ -278,7 +278,8 @@ def _is_makefile_outdated(ws_dir: Path, role: str) -> bool:
     req_t = LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"])
     mk_txt = (ws_dir / "Makefile").read_text("utf-8") if (ws_dir / "Makefile").is_file() else ""
     return mk_txt.startswith(MAKEFILE_ROLE_HEADER_PREFIX) and (
-        any(f"\n{t}:\n" not in mk_txt for t in req_t) or "--strategy $(STRATEGY)" not in mk_txt
+        any(f"\n{t}:\n" not in mk_txt for t in req_t)
+        or "--upstream-dir $(TARGET_REPO)" not in mk_txt
     )
 
 

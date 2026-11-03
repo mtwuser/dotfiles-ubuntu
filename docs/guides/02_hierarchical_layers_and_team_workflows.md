@@ -195,7 +195,7 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
 | **Edit `templates/<pack>/` or cut `/release` on the Layer Repo** | ✅ Allowed (`check-authority --op release` passes). | ❌ Blocked (`AUTHORITY_DENIED`); returns structured remediation to propose an upward PR from the consumer's own workspace. |
 | **Modify projected `.agents/rules/layer-<NN>-*.md` directly** | ❌ Blocked (`pre_tool_guard.py`); edit canonical source in `templates/<pack>/` and run `sync-layer`. | ❌ Blocked (`pre_tool_guard.py`); create a workspace-local rule in `.agents/rules/<local>.md` and promote upward. |
 | **Promote a matured rule upward (`promote-from-project`)** | ✅ Can apply directly or generate a child-contextualized PR (`--create-pr`). | ✅ Generates a child-contextualized branch (`promote/<child-layer>/<role>/<artifact>`) and `gh pr create` plan targeting its immediate 1-hop parent. |
-| **Promote from Corporate `Root 0` to Open Source (`dotfiles-ubuntu`)** | ✅ Supported with `--create-pr --target-repo ~/dotfiles-ubuntu`: enforces `OSS_AGNOSTICISM_VIOLATION` zero-leak gate, auto-routes to `templates/<pack>/...`, and anonymizes corporate/email metadata (`oss_anonymized: true`). | ❌ Blocked (`CROSS_TIER_PROMOTION_BYPASS` — only `Root 0` can promote to Open Source). |
+| **Promote from Corporate `Root 0` to Open Source (`dotfiles-ubuntu`)** | ✅ Supported with `--create-pr --upstream-dir ~/dotfiles-ubuntu`: enforces `OSS_AGNOSTICISM_VIOLATION` zero-leak gate, auto-routes to `templates/<pack>/...`, and anonymizes corporate/email metadata (`oss_anonymized: true`). | ❌ Blocked (`CROSS_TIER_PROMOTION_BYPASS` — only `Root 0` can promote to Open Source). |
 
 ```bash
 # Inspect 1-hop upstream/downstream horizon from any workspace:
@@ -210,7 +210,7 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
 # (or ~/Projects/dev-<repo>) when present, keeping ~/dotfiles-ubuntu as the clean runtime clone.
 ./scripts/layer-config.sh promote-from-project /path/to/corp-root \
   --source templates/business-base/rules/business-base.md \
-  --target-repo ~/dotfiles-ubuntu --to-template business-base --create-pr \
+  --upstream-dir ~/dotfiles-ubuntu --to-template business-base --create-pr \
   --org "Anonymous Organization (default)" \
   --contributors "Principal Enterprise Architect, CLO, CTO" \
   --context "Validated across Corporate Root 0 + 5 Department subtrees + Squad workspaces"

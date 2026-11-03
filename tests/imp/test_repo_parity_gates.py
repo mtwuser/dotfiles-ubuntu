@@ -187,13 +187,8 @@ class TestRepoParityGates:
             assert fw_reason == sh_redir_reason == sh_tee_reason == sh_sed_reason == sh_py_reason
         for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"):
             assert agents_token in agents_md
-        for budget_token in (
-            "18,000",
-            "80,000",
-            "TOKEN_BUDGET_EXCEEDED",
-            "WORKSPACE_RULES_BUDGET_EXCEEDED",
-        ):
-            assert budget_token in arch_02 and budget_token in arch_mcp
+        for bt in ("18,000", "80,000", "TOKEN_BUDGET_EXCEEDED", "WORKSPACE_RULES_BUDGET_EXCEEDED"):
+            assert bt in arch_02 and bt in arch_mcp
         for mcp_token in (
             "unfold_context_capsule", "resolve_surface_governance", "orchestrate_ephemeral_fork",
             "ephemeral_fork_policy", "surface_bindings", "collect_layer_effective_bindings",
@@ -214,10 +209,15 @@ class TestRepoParityGates:
             assert sub in readme_md and sub in ext_guide and sub in arch_mcp
         assert "All 26 Subcommands" in readme_md
         assert "all 26 subcommands" in (REPO_DIR / "scripts/layer-config.sh").read_text("utf-8")
+        recipes = mcp_constants.LAYER_MAKEFILE_RECIPES
         for flag in ("--ticket", "--priority", "--surface", "--source"):
-            assert flag in mcp_constants.LAYER_MAKEFILE_RECIPES["delegate"]
-        assert "--to-template" in mcp_constants.LAYER_MAKEFILE_RECIPES["promote"]
-        assert "--strategy" in mcp_constants.LAYER_MAKEFILE_RECIPES["sync"]
+            assert flag in recipes["delegate"]
+        for flag in ("--upstream-dir $(TARGET_REPO)", "--to-layer", "--to-template"):
+            assert flag in recipes["promote"]
+        for flag in ("--deliverable", "--summary", "--create-pr"):
+            assert flag in recipes["complete"]
+        assert "--apply-safe" in recipes["upstream-diff"] and "--remove" in recipes["roster"]
+        assert "--strategy" in recipes["sync"] and "--tier" in recipes["consult"]
 
     def test_single_language_english_purity_across_repository_files(self) -> None:
         """Verify 100% pure technical English across all repository docs, rules, and code."""

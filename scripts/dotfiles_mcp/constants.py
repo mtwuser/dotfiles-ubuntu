@@ -300,16 +300,26 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "task": (
         f'{_CLI_RUN} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)'
     ),
-    "complete": f'{_CLI_RUN} complete-task {_PF} --task "$(TASK)"',
-    "consult": f'{_CLI_RUN} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)"',
+    "complete": (
+        f'{_CLI_RUN} complete-task {_PF} --task "$(TASK)" '
+        '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",) '
+        '$(if $(SUMMARY),--summary "$(SUMMARY)",) $(if $(CREATE_PR),--create-pr,)'
+    ),
+    "consult": (
+        f'{_CLI_RUN} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
+        "$(if $(PATH_TARGET),--path $(PATH_TARGET),) $(if $(TIER),--tier $(TIER),)"
+    ),
     "horizon": f"{_CLI_RUN} inspect-horizon {_PF}",
     "sync": f"{_CLI_RUN} sync-layer {_PF} $(if $(STRATEGY),--strategy $(STRATEGY),)",
-    "upstream-diff": f"{_CLI_RUN} compare-upstream {_PF}",
+    "upstream-diff": (
+        f"{_CLI_RUN} compare-upstream {_PF} "
+        "$(if $(TEMPLATE),--template $(TEMPLATE),) $(if $(APPLY_SAFE),--apply-safe,)"
+    ),
     "diff": f"{_CLI_RUN} diff-project {_PF}",
     "authority": f"{_CLI_RUN} check-authority $(CURDIR) --op release",
     "roster": (
         f"{_CLI_RUN} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
-        "$(if $(ROLE),--role $(ROLE),)"
+        "$(if $(REMOVE),--remove $(REMOVE),) $(if $(ROLE),--role $(ROLE),)"
     ),
     "env-gate": f"{_CLI_RUN} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
     "decision": (
@@ -318,6 +328,8 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     ),
     "promote": (
         f"{_CLI_RUN} promote-from-project $(CURDIR) --source $(SOURCE) "
+        "$(if $(TARGET_REPO),--upstream-dir $(TARGET_REPO),) "
+        "$(if $(LAYER),--to-layer $(LAYER),) "
         "$(if $(TEMPLATE),--to-template $(TEMPLATE),) $(PR_FLAGS)"
     ),
     "delegate": (
