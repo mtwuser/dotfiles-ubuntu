@@ -20,7 +20,10 @@ from dotfiles_mcp.core.constants import (
     VALID_DELEGATION_SURFACES,
     VALID_TRACKER_FILES,
 )
-from dotfiles_mcp.core.layer_topology_helpers import _resolve_mounted_child_dir
+from dotfiles_mcp.core.layer_topology_helpers import (
+    _resolve_default_parent_dir,
+    _resolve_mounted_child_dir,
+)
 from dotfiles_mcp.core.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _load_manifest_dict,
@@ -227,15 +230,10 @@ def complete_task_workflow(
 
 
 def consult_layer_ephemeral(
-    repo_dir: Path,
-    workspace_dir: Path,
-    *,
-    target_layer: str,
-    query: str,
-    target_path: str = "corporate/policy.md",
-    model_tier: str = "flash",
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, workspace_dir: Path, *, target_layer: str, query: str,
+    target_path: str = "corporate/policy.md", model_tier: str = "flash",
+    parent_dir: Path | None = None, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Run a zero-residue, one-shot strictly-read-only ephemeral consultation against a layer."""
     clean_layer, clean_q = target_layer.strip(), query.strip()
     if not KEBAB_ID_RE.match(clean_layer):
@@ -248,10 +246,17 @@ def consult_layer_ephemeral(
         raise ValueError(f"Invalid model_tier {model_tier!r}: must be one of {VALID_AGENT_TIERS}")
 
     ws, root = workspace_dir.resolve(), repo_dir.resolve()
+    eff_p = _resolve_default_parent_dir(ws, parent_dir)
+    ws_id = str(_load_manifest_dict(ws).get("layer_id", ws.name))
+    p_id = str(_load_manifest_dict(eff_p).get("layer_id", eff_p.name)) if eff_p else ""
     layer_cands = [
+        ws if clean_layer in ("self", ws.name, ws_id) else None,
+        eff_p if eff_p and clean_layer in ("parent", "upstream", eff_p.name, p_id) else None,
         ws / "layers" / clean_layer,
+        eff_p / "layers" / clean_layer if eff_p else None,
         root / "layers" / clean_layer,
         _resolve_mounted_child_dir(ws, clean_layer),
+        _resolve_mounted_child_dir(eff_p, clean_layer) if eff_p else None,
         _resolve_mounted_child_dir(root, clean_layer),
         root if clean_layer == "root" else None,
     ]
@@ -263,8 +268,10 @@ def consult_layer_ephemeral(
         tpl_host = next(
             (
                 h
-                for h in (ws, root)
-                if _resolve_template_dir(h, clean_layer) and (h / "system/mcp-layer.json").is_file()
+                for h in (ws, eff_p, root)
+                if h
+                and _resolve_template_dir(h, clean_layer)
+                and (h / "system/mcp-layer.json").is_file()
             ),
             None,
         )

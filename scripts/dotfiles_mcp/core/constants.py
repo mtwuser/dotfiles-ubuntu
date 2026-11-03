@@ -323,12 +323,12 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
         f'{_CLI_RUN} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)'
     ),
     "complete": (
-        f'{_CLI_RUN} complete-task {_PF} --task "$(TASK)" '
-        '$(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",) '
+        f"{_CLI_RUN} complete-task $(CURDIR) $(if $(PARENT_SYNC),--parent-dir $(PARENT_DIR),) "
+        '--task "$(TASK)" $(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",) '
         '$(if $(SUMMARY),--summary "$(SUMMARY)",) $(if $(CREATE_PR),--create-pr,)'
     ),
     "consult": (
-        f'{_CLI_RUN} consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" '
+        f'{_CLI_RUN} consult-layer {_PF} --layer $(LAYER) --query "$(QUERY)" '
         "$(if $(PATH_TARGET),--path $(PATH_TARGET),) $(if $(TIER),--tier $(TIER),)"
     ),
     "horizon": f"{_CLI_RUN} inspect-horizon {_PF}",

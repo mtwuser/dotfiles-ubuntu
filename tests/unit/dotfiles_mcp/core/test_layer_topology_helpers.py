@@ -146,6 +146,18 @@ class TestLayerTopologyHelpers:
         (mounted_child / "templates/business-base/rules/business-base.md").write_text(
             "# Old v1\n", encoding="utf-8"
         )
+        (parent_ws / "WORKTASK.md").write_text(
+            "# Tasks\n## Outbound Delegations\n"
+            "- [/] **[ALPHA-2026-001 -> `dept-alpha` (stage: `delegated`)]**: Done in child\n"
+            "- [ ] Keep open\n",
+            encoding="utf-8",
+        )
+        (mounted_child / "WORKTASK.md").write_text(
+            "- [x] **[P0 · ALPHA-2026-001]**: Done in child\n", encoding="utf-8"
+        )
+        layer_topology_helpers._sync_mounted_children_into_parent(
+            parent_ws, mounted_entries, dry_run=False
+        )
         layer_topology_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
         )
@@ -186,6 +198,7 @@ class TestLayerTopologyHelpers:
         assert (org_child / "WORKTASK.md").read_text(
             encoding="utf-8"
         ) == "# Untouched External Repo\n"
+        assert "stage: `completed (pro)`" in (parent_ws / "WORKTASK.md").read_text(encoding="utf-8")
         assert drifts_after == []
 
     def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(

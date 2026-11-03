@@ -194,6 +194,14 @@ class TestWorkflowEngine:
         dry_res = consult_layer_ephemeral(
             root_dir, ws_dir, target_layer="dept-legal", query="GDPR", dry_run=True
         )
+        parent_res = consult_layer_ephemeral(
+            root_dir,
+            dept_dir,
+            target_layer="corp-root",
+            query="GDPR",
+            parent_dir=ws_dir,
+            dry_run=True,
+        )
         live_res = consult_layer_ephemeral(
             root_dir,
             ws_dir,
@@ -207,6 +215,7 @@ class TestWorkflowEngine:
         # Assert
         assert dry_res["dry_run"] is True and dry_res["auto_reaped"] is True
         assert dry_res["target_layer"] == "dept-legal"
+        assert parent_res["resolved_target_dir"] == str(ws_dir.resolve())
         assert live_res["access_mode"] == "strictly-read-only"
         assert live_res["auto_reaped"] is True
         assert not Path(live_res["ephemeral_fork_id"]).exists()

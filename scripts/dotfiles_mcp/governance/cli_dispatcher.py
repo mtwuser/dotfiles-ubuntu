@@ -161,13 +161,16 @@ def _dispatch_c1_subcommand(
         if not verdict["allowed"]:
             raise _CLIAuthorityBlockedError(verdict, str(verdict["remediation"]))
         return verdict
-    tdir, opts = _pos_opts(repo_dir, subcmd, rest, ("--layer", "--query", "--path", "--tier"))
+    tdir, opts = _pos_opts(
+        repo_dir, subcmd, rest, ("--layer", "--query", "--path", "--tier", "--parent-dir")
+    )
     u_msg = "Usage: ./scripts/layer-config.sh consult-layer [<dir>] --layer <id> --query <text>"
     return workflow_engine.consult_layer_ephemeral(
         repo_dir, tdir, target_layer=_req_opt(opts, "layer", u_msg),
         query=_req_opt(opts, "query", u_msg),
         target_path=str(opts.get("path", "corporate/policy.md")),
-        model_tier=str(opts.get("tier", "flash")), dry_run=dry_run,
+        model_tier=str(opts.get("tier", "flash")), parent_dir=_opt_path(opts, "parent_dir"),
+        dry_run=dry_run,
     )
 
 
@@ -364,9 +367,10 @@ def _dispatch_c3_subcommand(
         vf = ("--to-env", "--branch", "--email", "--parent-dir", "--files")
         tdir, opts = _pos_opts(repo_dir, subcmd, rest, vf)
         u_msg = "Usage: ./scripts/layer-config.sh check-env-promotion [<dir>] --to-env <env>"
+        eff_em = _opt_str(opts, "email") or authority_engine.resolve_git_user_email(tdir)
         res = git_governance_engine.evaluate_environment_promotion(
             tdir, target_env=_req_opt(opts, "to_env", u_msg),
-            current_branch=_opt_str(opts, "branch"), actor_email=_opt_str(opts, "email"),
+            current_branch=_opt_str(opts, "branch"), actor_email=eff_em,
             parent_dir=_opt_path(opts, "parent_dir"), changed_files=_csv(opts.get("files")),
             dry_run=dry_run,
         )
@@ -377,10 +381,11 @@ def _dispatch_c3_subcommand(
     vf = ("--item", "--decision", "--reason", "--tracker", "--email")
     tdir, opts = _pos_opts(repo_dir, subcmd, rest, vf)
     u_msg = "Usage: ./scripts/layer-config.sh record-decision [<dir>] --item <ref> --decision <dec>"
+    eff_em = _opt_str(opts, "email") or authority_engine.resolve_git_user_email(tdir)
     return git_governance_engine.record_governance_decision(
         tdir, item_ref=_req_opt(opts, "item", u_msg), decision=_req_opt(opts, "decision", u_msg),
         reason=_req_opt(opts, "reason", u_msg), tracker=str(opts.get("tracker", "WORKTASK.md")),
-        actor_email=str(opts.get("email", "")), dry_run=dry_run,
+        actor_email=eff_em, dry_run=dry_run,
     )
 
 

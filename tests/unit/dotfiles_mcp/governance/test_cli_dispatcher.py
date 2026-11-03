@@ -206,6 +206,7 @@ class TestCliDispatcher:
             patch.object(
                 authority_engine, "configure_layer_authority", return_value={"auth": True}
             ),
+            patch.object(authority_engine, "resolve_git_user_email", return_value="git@x.io"),
             patch.object(
                 git_governance_engine, "configure_git_governance_policy", return_value={"git": True}
             ),

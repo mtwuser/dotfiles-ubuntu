@@ -142,7 +142,11 @@ class TestMCPNodeBase:
         (tmp_path / "layers" / "sub-with-up" / "system").mkdir(parents=True)
         (tmp_path / "layers" / "sub-with-up" / "system/mcp-layer.json").write_text(
             json.dumps(
-                {"layer_id": "sub-with-up", "upstream_layer": {"repository": "https://x.git"}}
+                {
+                    "layer_id": "sub-with-up",
+                    "precedence": 5,
+                    "upstream_layer": {"repository": "https://x.git"},
+                }
             ),
             encoding="utf-8",
         )
@@ -189,6 +193,7 @@ class TestMCPNodeBase:
         assert rotated_after_below_cap is False
         assert rotated_at_exact_cap is True
         assert w_sub == [] and r_root == tmp_path and r_sub.name == "sub-with-up"
+        assert server._discover_mounted_layers()[0]["name"] == "sub-with-up"
         assert [w["code"] for w in w_15999] == [
             "TEMPLATE_PACK_MISSING",
             "SUBTREE_LINEAGE_WARNING",

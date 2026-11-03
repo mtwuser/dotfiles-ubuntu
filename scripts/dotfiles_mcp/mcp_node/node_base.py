@@ -212,6 +212,7 @@ class MCPNodeBase:
                     "federated_mcp_count": len(sub_manifest.get("federated_mcps", [])),
                 }
             )
+        discovered.sort(key=lambda item: (int(item["precedence"]), str(item["name"])))
         return discovered
 
     def _resolve_layer_dir(self, layer: str | None = None) -> Path:

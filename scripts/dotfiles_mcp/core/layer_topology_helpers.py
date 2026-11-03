@@ -43,15 +43,12 @@ from dotfiles_mcp.core.manifest_helpers import (
 
 
 def _resolve_layer_entity_identity(
-    target_dir: Path,
-    manifest: dict[str, Any] | None = None,
-    parent_dir: Path | None = None,
+    target_dir: Path, manifest: dict[str, Any] | None = None, parent_dir: Path | None = None
 ) -> dict[str, Any]:
     """Resolve entity_kind, collective_scope, and governing_root_id (Root 0) for a layer."""
     ws = target_dir.resolve()
     m = manifest if manifest is not None else _load_manifest_dict(ws)
-    lid = str(m.get("layer_id", ws.name))
-    lrole = str(m.get("layer_role", "project"))
+    lid, lrole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "project"))
     prec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(lrole, 80)))
     raw_ek = str(m.get("entity_kind", "")).strip().lower()
     if raw_ek in VALID_ENTITY_KINDS:
@@ -72,8 +69,7 @@ def _resolve_layer_entity_identity(
     up_raw = m.get("upstream_layer")
     raw_up_lid = str(up_raw.get("layer_id", "")).strip() if isinstance(up_raw, dict) else ""
     up_lid = "" if raw_up_lid == "dotfiles-workstation-root" else raw_up_lid
-    eff_p = _resolve_default_parent_dir(ws, parent_dir)
-    p_root, p_ek = "", ""
+    eff_p, p_root, p_ek = _resolve_default_parent_dir(ws, parent_dir), "", ""
     if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
         pm = _load_manifest_dict(eff_p)
         if not _is_oss_root_manifest(pm):
@@ -113,26 +109,23 @@ def _classify_inter_layer_relationship(
 ) -> dict[str, Any]:
     """Classify mutual relationship between layers (internal vs external collective/individual)."""
     src_ek, tgt_ek = str(source_identity["entity_kind"]), str(target_identity["entity_kind"])
-    src_root = source_identity.get("governing_root_id")
-    tgt_root = target_identity.get("governing_root_id")
+    src_root, tgt_root = (
+        source_identity.get("governing_root_id"),
+        target_identity.get("governing_root_id"),
+    )
     same_root = bool(
         src_root
-        and tgt_root
         and src_root == tgt_root
         and src_ek == tgt_ek
         and source_identity["collective_scope"] == "collective"
         and target_identity["collective_scope"] == "collective"
     )
     rel_scope = "internal" if same_root else "external"
-    return {
-        "relationship_scope": rel_scope,
+    return {"relationship_scope": rel_scope,
         "external_category": "internal" if same_root else f"external:{tgt_ek}",
-        "same_governing_root": same_root,
-        "source_governing_root_id": src_root,
-        "target_governing_root_id": tgt_root,
-        "target_entity_kind": tgt_ek,
-        "target_collective_scope": target_identity["collective_scope"],
-    }
+        "same_governing_root": same_root, "source_governing_root_id": src_root,
+        "target_governing_root_id": tgt_root, "target_entity_kind": tgt_ek,
+        "target_collective_scope": target_identity["collective_scope"]}  # fmt: skip
 
 
 def _match_manifest_actor_role(manifest: dict[str, Any], actor_email: str) -> tuple[str, bool]:
@@ -202,23 +195,13 @@ def _resolve_hierarchical_actor_profile(
             )
     rank = {"owner": 4, "maintainer": 3, "validator": 2, "member": 1, "consumer": 0}
     eff_role = up_role if (hier_ok and rank[up_role] > rank[local_role]) else local_role
-    return {
-        "layer_id": lid,
-        "layer_role": lrole,
-        "precedence": lprec,
-        "entity_identity": local_id_meta,
-        "actor_email": actor_email,
-        "local_role": local_role,
-        "has_configured_roster": has_roster,
-        "upstream_layer_id": up_id,
-        "upstream_precedence": up_prec,
-        "upstream_role": up_role,
-        "upstream_relationship": up_rel,
+    return {"layer_id": lid, "layer_role": lrole, "precedence": lprec,
+        "entity_identity": local_id_meta, "actor_email": actor_email, "local_role": local_role,
+        "has_configured_roster": has_roster, "upstream_layer_id": up_id,
+        "upstream_precedence": up_prec, "upstream_role": up_role, "upstream_relationship": up_rel,
         "upstream_read_only": up_role not in ("owner", "maintainer"),
-        "hierarchical_authority_granted": hier_ok,
-        "effective_role": eff_role,
-        "allowed_environments": list(ROLE_ENVIRONMENT_PERMISSIONS[eff_role]),
-    }
+        "hierarchical_authority_granted": hier_ok, "effective_role": eff_role,
+        "allowed_environments": list(ROLE_ENVIRONMENT_PERMISSIONS[eff_role])}  # fmt: skip
 
 
 def _is_git_historical_blob(src_tpl: Path, dest_rf: Path) -> bool:
@@ -301,6 +284,7 @@ def _is_makefile_outdated(ws_dir: Path, role: str) -> bool:
     return mk_txt.startswith(MAKEFILE_ROLE_HEADER_PREFIX) and (
         any(f"\n{t}:\n" not in mk_txt for t in req_t)
         or "--upstream-dir $(TARGET_REPO)" not in mk_txt
+        or "consult-layer $(CURDIR) $(PARENT_FLAG)" not in mk_txt
     )
 
 
@@ -393,6 +377,30 @@ def _sync_mounted_children_into_parent(
                 shutil.copy2(src_rf, dst_rf)
                 if (ag_rf := mdir / ".agents/rules" / src_rf.name).is_file():
                     shutil.copy2(src_rf, ag_rf)
+    p_wt = ws / "WORKTASK.md"
+    if not dry_run and p_wt.is_file() and (ws / "layers").is_dir():
+        done_tks = {
+            m.group(1).lower()
+            for cwt in (ws / "layers").glob("*/WORKTASK.md")
+            for ln in cwt.read_text("utf-8").splitlines()
+            if re.match(r"^\s*-\s*\[[xX]\]\s+", ln)
+            and (m := re.search(r"\b([A-Z]{2,12}-\d{2,6}(?:-\d{1,6})?)\b", ln))
+        }
+        p_txt = p_wt.read_text("utf-8")
+        p_lines = [
+            re.sub(r"^(\s*-\s*\[)[ /](\])", r"\1x\2", pl).replace(
+                "stage: `delegated`", "stage: `completed (pro)`"
+            )
+            if (
+                re.match(r"^\s*-\s*\[[ /]\]\s+", pl)
+                and "->" in pl
+                and any(tk in pl.lower() for tk in done_tks)
+            )
+            else pl
+            for pl in p_txt.splitlines()
+        ]
+        if (new_p_txt := "\n".join(p_lines) + "\n") != p_txt:
+            p_wt.write_text(new_p_txt, "utf-8")
     return synced
 
 

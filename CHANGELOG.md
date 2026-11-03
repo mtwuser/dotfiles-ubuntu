@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed & Changed
+- **Intra-Workspace `make complete` Containment (`PARENT_SYNC=1` Opt-In & Parent `make sync` Completion Reconciliation), 1-Hop Parent/Peer Resolution in `make consult`, Automatic `git config user.email` Resolution in `make env-gate` / `make decision` & Deontic `(precedence, name)` Mounted Subtree Ordering (`scripts/dotfiles_mcp/core/{constants,layer_topology_helpers}.py`, `scripts/dotfiles_mcp/mcp_node/node_base.py`, `scripts/dotfiles_mcp/governance/{workflow_engine,cli_dispatcher}.py`, `docs/architecture/06_layer_governance_and_promotion_engines.md`, `tests/unit/dotfiles_mcp/`)**:
+  - Updated `LAYER_MAKEFILE_RECIPES["complete"]` in [`constants.py`](scripts/dotfiles_mcp/core/constants.py) to run strictly inside `$(CURDIR)` by default (`$(if $(PARENT_SYNC),--parent-dir $(PARENT_DIR),)` opt-in) so completing a task in a child department repository never mutates an external parent repository's `WORKTASK.md` across workspaces, and extended [`_sync_mounted_children_into_parent`](scripts/dotfiles_mcp/core/layer_topology_helpers.py) so parent `make sync` automatically reconciles completed `[x]` child tasks from `layers/<child>/WORKTASK.md` into `## Outbound Delegations` (`stage: completed (pro)`) when the parent pulls the child subtree.
+  - Extended [`consult_layer_ephemeral`](scripts/dotfiles_mcp/governance/workflow_engine.py), [`cli_dispatcher.py`](scripts/dotfiles_mcp/governance/cli_dispatcher.py) (`consult-layer --parent-dir`), and `LAYER_MAKEFILE_RECIPES["consult"]` so `make consult LAYER=<id>` resolves `self`, the 1-hop upstream parent (`parent`/`upstream` or parent `layer_id`), peer sibling layers mounted in `parent_dir/layers/*`, and templates across `(workspace, parent_dir, repo_dir)`.
+  - Wired automatic [`resolve_git_user_email`](scripts/dotfiles_mcp/governance/authority_engine.py) fallback into `check-env-promotion` (`make env-gate`) and `record-decision` (`make decision`) in [`cli_dispatcher.py`](scripts/dotfiles_mcp/governance/cli_dispatcher.py) when `--email` is omitted on the CLI, and sorted [`MCPNodeBase._discover_mounted_layers`](scripts/dotfiles_mcp/mcp_node/node_base.py) by deontic `(precedence, name)` order (`*Lex Superior*`).
+
+---
+
 ## [3.0.0] - 2026-11-03
 
 ### Added & Changed
