@@ -141,6 +141,7 @@ fi
 shift
 
 cd "$REPO_DIR"
+git update-index -q --ignore-submodules --refresh 2>/dev/null || true
 
 case "$SUBCOMMAND" in
   list)
