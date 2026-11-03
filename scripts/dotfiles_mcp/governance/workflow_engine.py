@@ -79,10 +79,10 @@ def start_task_workflow(
 
     lines = trk_file.read_text(encoding="utf-8").splitlines()
     match_idx, matched_body = None, ""
+    norm_q = re.sub(r"[*_`~]", "", clean_q).lower()
     for idx, line in enumerate(lines):
-        if (m := _TASK_LINE_RE.match(line)) and clean_q.lower() in line.lower():
+        if (m := _TASK_LINE_RE.match(line)) and norm_q in re.sub(r"[*_`~]", "", line).lower():
             match_idx, matched_body = idx, m.group(4).strip()
-            lines[idx] = f"{m.group(1)}/{m.group(3)}{matched_body}"
             break
     if match_idx is None:
         raise ValueError(f"No task matching {clean_q!r} found in {tracker}")
@@ -96,6 +96,9 @@ def start_task_workflow(
 
     t_m = _TICKET_ID_RE.search(matched_body)
     eff_ticket = (ticket_id or "").strip().upper() or (t_m.group(1) if t_m else "")
+    if eff_ticket and not t_m:
+        matched_body = f"**[{eff_ticket}]** {matched_body}"
+    lines[match_idx] = f"{_TASK_LINE_RE.match(lines[match_idx]).group(1)}/] {matched_body}"  # type: ignore[union-attr]
     o_m = re.search(r"Delegated from\s+`?([a-z0-9-]+)`?", matched_body, re.IGNORECASE)
     origin_id = o_m.group(1) if o_m else ""
     slug = _derive_branch_slug(matched_body, strip_ticket=eff_ticket)
@@ -157,8 +160,9 @@ def complete_task_workflow(
     lines = trk_file.read_text(encoding="utf-8").splitlines()
     match_idx, matched_body = None, ""
     deliv_sfx = f" *(Deliverable: `{deliverable.strip()}`)*" if deliverable.strip() else ""
+    norm_q = re.sub(r"[*_`~]", "", clean_q).lower()
     for idx, line in enumerate(lines):
-        if (m := _TASK_LINE_RE.match(line)) and clean_q.lower() in line.lower():
+        if (m := _TASK_LINE_RE.match(line)) and norm_q in re.sub(r"[*_`~]", "", line).lower():
             match_idx, matched_body = idx, m.group(4).strip()
             new_b = matched_body if deliv_sfx in matched_body else f"{matched_body}{deliv_sfx}"
             lines[idx] = f"{m.group(1)}x{m.group(3)}{new_b}"
@@ -168,8 +172,8 @@ def complete_task_workflow(
     if not dry_run:
         trk_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    t_m = _TICKET_ID_RE.search(matched_body)
-    eff_ticket = t_m.group(1) if t_m else clean_q.upper()
+    t_m = _TICKET_ID_RE.search(matched_body) or _TICKET_ID_RE.search(clean_q.upper())
+    eff_ticket = t_m.group(1) if t_m else _derive_branch_slug(clean_q).upper()
     o_m = re.search(r"Delegated from\s+`?([a-z0-9-]+)`?", matched_body, re.IGNORECASE)
     origin_id = o_m.group(1) if o_m else up_id_default
     res_parent = (

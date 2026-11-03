@@ -95,7 +95,12 @@ class TestCliDispatcher:
 
         # Assert
         assert (c_lt1, c_lt2, c_st, c_ih, c_cu, c_dp1, c_dp2, c_ca, c_cl) == (0,) * 9
-        assert p_lt1 == {"count": 1, "templates": [{"name": "t1"}]}
+        assert p_lt1 == {
+            "count": 1,
+            "templates": [{"name": "t1"}],
+            "federated_mcps": [],
+            "ephemeral_bots": [],
+        }
         assert mock_diff.call_count == 2
 
     def test_dispatch_c2_subcommands_routes_all_eight_lifecycle_commands(

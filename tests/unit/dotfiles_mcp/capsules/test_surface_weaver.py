@@ -64,6 +64,7 @@ class TestSurfaceWeaver:
         # Arrange
         pres_path = "templates/checkout/partials/_summary.html"
         domain_path = "src/legal/service.py"
+        corp_path = "corporate/lab/lote_001.md"
         root_file = "README.md"
 
         # Act
@@ -71,6 +72,7 @@ class TestSurfaceWeaver:
         pres_scope = surface_weaver._infer_scope_from_path(pres_path)
         dom_plane = surface_weaver._infer_plane_from_path(domain_path)
         dom_scope = surface_weaver._infer_scope_from_path(domain_path)
+        corp_scope = surface_weaver._infer_scope_from_path(corp_path)
         root_plane = surface_weaver._infer_plane_from_path(root_file)
         root_scope = surface_weaver._infer_scope_from_path(root_file)
 
@@ -79,6 +81,7 @@ class TestSurfaceWeaver:
         assert pres_scope == "checkout"
         assert dom_plane == "domain"
         assert dom_scope == "legal"
+        assert corp_scope == "lab"
         assert root_plane == ""
         assert root_scope == ""
 

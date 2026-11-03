@@ -53,7 +53,7 @@ class TestWorkflowEngine:
             "Build OAuth2 login\n"
             "  - [ ] Add PKCE verifier\n"
             "  - [ ] Write unit tests\n\n"
-            "- [ ] Follow up local refactor\n",
+            "- [ ] Follow up `local` refactor\n",
             encoding="utf-8",
         )
 
@@ -61,7 +61,9 @@ class TestWorkflowEngine:
         dry_res = start_task_workflow(ws, task_query="TECH-042", dry_run=True)
         dry_session_exists = (ws / ".agents/SESSION.md").exists()
         live_res = start_task_workflow(ws, task_query="TECH-042", dry_run=False)
-        second_res = start_task_workflow(ws, task_query="local refactor", dry_run=False)
+        second_res = start_task_workflow(
+            ws, task_query="local refactor", ticket_id="WEB-101", dry_run=False
+        )
 
         # Assert
         assert dry_res["dry_run"] is True and dry_session_exists is False
@@ -73,11 +75,13 @@ class TestWorkflowEngine:
         )
         assert live_res["subtasks"] == ["- [ ] Add PKCE verifier", "- [ ] Write unit tests"]
         wt_text = (ws / "WORKTASK.md").read_text(encoding="utf-8")
-        assert "- [/] **[P0" in wt_text and "- [/] Follow up local refactor" in wt_text
+        assert (
+            "- [/] **[P0" in wt_text and "- [/] **[WEB-101]** Follow up `local` refactor" in wt_text
+        )
         session_text = (ws / ".agents/SESSION.md").read_text(encoding="utf-8")
         assert session_text.count("## Active Task") == 1
-        assert "feature/follow-up-local-refactor" in session_text
-        assert second_res["task_status"] == "in_progress" and second_res["ticket_id"] == ""
+        assert "feature/WEB-101-follow-up-local-refactor" in session_text
+        assert second_res["task_status"] == "in_progress" and second_res["ticket_id"] == "WEB-101"
         for bad_kw, err_pat in (
             ({"task_query": "   "}, "task_query must be a non-empty"),
             ({"task_query": "x", "tracker": "INVALID.md"}, "Invalid tracker"),

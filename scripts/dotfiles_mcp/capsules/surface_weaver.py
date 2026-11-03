@@ -92,7 +92,16 @@ def _binding_matches_surface(
     req_traits = {str(t).lower() for t in binding.get("traits", [])}
     glob_ok = not target_path or any(_glob_matches(target_path, g) for g in globs)
     plane_ok = not plane or "*" in planes or plane in planes
-    scope_ok = not scope or "*" in scopes or scope in scopes
+    glob_seg_ok = bool(
+        target_path
+        and scope
+        and any(
+            _glob_matches(target_path, g) and scope in g.lower().replace("\\", "/").split("/")
+            for g in globs
+            if g not in ("*", "**")
+        )
+    )
+    scope_ok = not scope or "*" in scopes or scope in scopes or glob_seg_ok
     traits_ok = not req_traits or "*" in req_traits or bool(req_traits & traits)
     return glob_ok and plane_ok and scope_ok and traits_ok
 

@@ -122,13 +122,19 @@ def _dispatch_c1_subcommand(
     """Dispatch Tier C1 (Discovery, Status, Horizon & Read-Only Consultation) subcommands."""
     if subcmd == "list-templates":
         tdir = Path(rest[0]).resolve() if rest and not rest[0].startswith("-") else repo_dir
-        layers = node_base.MCPNodeBase(repo_dir=tdir)._discover_mounted_layers()
-        cat = manifest_helpers.discover_templates_catalog(tdir, layers)
-        return {"count": len(cat), "templates": cat}
+        cat = manifest_helpers.discover_templates_catalog(
+            tdir, node_base.MCPNodeBase(repo_dir=tdir)._discover_mounted_layers()
+        )
+        m, efp = manifest_helpers._load_manifest_dict(tdir), "ephemeral_fork_policy"
+        mcps = [x for x in (m.get("federated_mcps") or []) if isinstance(x, dict)]
+        sbs = [b for b in (m.get("surface_bindings") or []) if isinstance(b, dict)]
+        bots = [b[efp] for b in sbs if isinstance(b.get(efp), dict)]
+        return {"count": len(cat), "templates": cat, "federated_mcps": mcps, "ephemeral_bots": bots}
     if subcmd == "status":
         tdir, opts = _pos_opts(repo_dir, subcmd, rest, ("--parent-dir",))
-        p_dir = _opt_path(opts, "parent_dir")
-        return workspace_bootstrapper.inspect_workspace_status(repo_dir, tdir, parent_dir=p_dir)
+        return workspace_bootstrapper.inspect_workspace_status(
+            repo_dir, tdir, parent_dir=_opt_path(opts, "parent_dir")
+        )
     if subcmd == "inspect-horizon":
         tdir, opts = _pos_opts(repo_dir, subcmd, rest, ("--parent-dir", "--email"))
         return horizon_engine.inspect_layer_horizon(

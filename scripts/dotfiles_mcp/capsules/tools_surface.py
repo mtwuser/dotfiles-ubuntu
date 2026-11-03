@@ -241,7 +241,11 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
 
         for b_prec, m_rank, neg_spec, lname, ldir, layer_id, layer_role, b in matched_records:
             mode = "authoritative" if m_rank == 0 else "transversal"
-            res = res_override or ("L2" if mode == "authoritative" else "L1")
+            b_res = str(b.get("default_resolution", "")).strip().upper()
+            def_res = (
+                b_res if b_res in VALID_RESOLUTIONS else ("L2" if mode == "authoritative" else "L1")
+            )
+            res = res_override or def_res
             binding_id = str(b.get("binding_id", f"{lname}-binding"))
             b_invariants = [str(inv) for inv in b.get("invariants", []) if str(inv).strip()]
             raw_templates = [

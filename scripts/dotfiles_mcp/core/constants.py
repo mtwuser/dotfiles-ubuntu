@@ -215,7 +215,8 @@ PLANE_PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 STRUCTURAL_PATH_SEGMENTS = frozenset({
     "src", "app", "internal", "pkg", "lib", "templates", "static", "partials", "components",
-    "css", "js", "tests", "unit", "imp", "e2e", "docs", "architecture", "reference",
+    "css", "js", "tests", "unit", "imp", "e2e", "docs", "architecture", "reference", "guides",
+    "corporate", "surfaces", "layers",
 })  # fmt: skip
 CAPSULE_PREFIX = "rcap1"
 VALID_BINDING_MODES = ("authoritative", "transversal")
