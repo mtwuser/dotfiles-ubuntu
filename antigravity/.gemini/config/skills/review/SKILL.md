@@ -53,11 +53,11 @@ grep -rn "\\\\u[0-9a-fA-F]\\{4\\}" system/ templates/ layers/ 2>/dev/null || tru
 
 Evaluate only the dimensions relevant to the selected target radius and `workspace_mode`:
 
-### Dimension 1 — `docs`: 3-Tier Documentation, Conceptual Isomorphism & 5-Link Change-Ripple
-- [ ] **3-Tier Progressive Disclosure & `< 465`-Line Gate**: Touched `README.md` ($\le 400$ target), `docs/guides/*.md`, `docs/architecture/*.md`, and `docs/reference/*.md` stay strictly `< 465` lines and match actual disk trees (`find` / `ls`).
-- [ ] **Conceptual & Semantic Prose Isomorphism**: Read touched documentation tables and prose word-for-word against `constants.py` and `templates/**/template.json` to ensure zero retired taxonomy terms (`core-base`, `business-stack`, `science-stack`, `tech-stack` only), complete skill/template inventories, domain-neutral Level 3 (**Squad, Case, or Operational Unit**) framing, and single-surface `antigravity-agents` guidance.
+### Dimension 1 — `docs`: 4-Level Documentation Cascade, Conceptual Isomorphism & 5-Link Change-Ripple
+- [ ] **4-Level Top-Down Cascade (`Gateway/Contribution [README.md, CONTRIBUTING.md, SECURITY.md, docs/README.md] -> Guides -> Specs/Refs -> Templates/Skills`) & `< 465`-Line Gate**: Touched `README.md` ($\le 400$ target), root contribution/security docs, `docs/guides/*.md`, `docs/architecture/*.md`, and `docs/reference/*.md` stay strictly `< 465` lines and match actual disk trees (`find` / `ls`).
+- [ ] **Conceptual, Backtick-Aware Count & Semantic Prose Isomorphism**: Read touched documentation tables and prose word-for-word against `constants.py` and `templates/**/template.json` (checking backticked counts `` `?N`? ``) to ensure zero retired taxonomy terms (`core-base`, `business-stack`, `science-stack`, `tech-stack` only) or stale module/skill/role counts, complete skill/template inventories, domain-neutral Level 3 (**Squad, Case, or Operational Unit**) framing, and single-surface `antigravity-agents` guidance.
 - [ ] **5-Link Change-Ripple & Flag-Signature Parity**: Any modified capability is synchronized across all 5 links (`1. Engine/Service Function <-> 2. CLI/Router Parser <-> 3. Makefile Recipe / Hook <-> 4. Spec Table (docs/architecture/) <-> 5. Root/Guide Docs & Parity Tests`), verifying that Link 3 (`Makefile` recipes) forwards all optional CLI flags exposed by Link 2.
-- [ ] **Links, Mermaid & Language Purity**: 100% of relative Markdown links resolve on disk, Mermaid node labels containing `()` or `[]` are double-quoted, and repository artifacts remain in 100% pure technical English.
+- [ ] **Descriptive Link Labels, Mermaid & Language Purity**: 100% of relative Markdown links resolve on disk and use descriptive non-numeric labels (`len(clean_label) > 2 and not clean_label.isdigit()`, never bare `[01]` or `[§4]`), Mermaid node labels containing `()` or `[]` are double-quoted, and repository artifacts remain in 100% pure technical English.
 
 ### Dimension 2 — `arch`: Pragmatic Code Architecture (`technical`) OR SSoT Ledgers (`business`)
 - **In `technical` / `hybrid` mode**:

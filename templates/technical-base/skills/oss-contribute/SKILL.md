@@ -15,7 +15,7 @@ description: "Conscious C3 workflow for empirical hot-path profiling, C-backed s
 | Workflow Skill | Consciousness Tier | Primary Responsibility | Boundary |
 | :--- | :--- | :--- | :--- |
 | **`/full-audit`** | `C2` (Convergent Gate) | **Closed-World Gap & Compliance Detection**: Verify `0` discrepancies against existing specs, rules, `1:1:1` test symbiosis, and 5-link parity before `/release`. | Never invents open-ended refactors, `PEP 7` extensions, or external OSS PRs when invariants pass. |
-| **`/architecture-review` + `refactoring`** | `C2 / C3` (Internal Evolution) | **Internal Architectural & Code Optimization**: Orthogonal dimension matrices, SSoT consolidation, and 5-Stage Evolution Ladder (`Inline -> Function -> Class -> Protocol -> 1:1:1 Module`). | Strictly internal to the active repository's domain architecture and module structure. |
+| **`/architecture-review` + `refactoring`** | `C2 / C3` (Internal Evolution) | **Internal Architectural & Code Optimization**: Orthogonal dimension matrices, SSoT consolidation, and 6-Stage Structural Evolution Ladder (`Inline -> Function -> Class -> Protocol/Catalog -> 1:1:1 Module -> 1:1:1 Bounded-Domain Subpackage`). | Strictly internal to the active repository's domain architecture and module structure. |
 | **`oss-contribute` (This Skill)** | `C3` (Conscious Culmination) | **C-Substrate Optimization & External `OSS-to-OSS` Contribution**: Empirical profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and upstream PRs to external open-source packages (`Tier -1`). | Invoked deliberately when pushing internal hot paths or upstream OSS dependencies to their performance ceiling. |
 
 ---

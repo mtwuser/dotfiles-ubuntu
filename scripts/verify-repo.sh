@@ -70,6 +70,9 @@ for md in sorted(repo.rglob("*.md")):
                 math_issues.append(f"{md}:{line_no}: {m.group(0)}")
     for m in link_re.finditer(re.sub(r"`\[[^\]]+\]\([^)]+\)`", "", stripped)):
         label, target = m.group(1), m.group(2).strip()
+        clean_lbl = re.sub(r"[`*_~]", "", label).strip()
+        if len(clean_lbl) <= 2 or clean_lbl.isdigit():
+            broken.append(f"{md}: non-descriptive link label [{label}]({target})")
         if not target.startswith(("http://", "https://", "mailto:")):
             path_part, _, anchor = target.partition("#")
             target_md = (md.parent / path_part).resolve() if path_part else md.resolve()

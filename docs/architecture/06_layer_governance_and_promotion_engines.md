@@ -4,7 +4,7 @@
 >
 > This document specifies the **`governance/`** bounded-domain subpackage (Subpackage 4 of `scripts/dotfiles_mcp/`) and its 26 CLI subcommands in [`scripts/layer-config.sh`](../../scripts/layer-config.sh):
 > 1. **Polymorphic Fork Configurator (`template-pack-v1`), Global Profile Composition & Workspace Bootstrapper (`fork_configurator.py`, `workspace_bootstrapper.py`)**
-> 2. **Layer Authority (`4`-Role Roster), 1-Hop Horizon Radar, 4-Mode Reconciliation & Upward Promotion (`authority_engine.py`, `horizon_engine.py`, `promotion_engine.py`)**
+> 2. **Layer Authority (`5` Effective Roles & `4`-Tier Roster), 1-Hop Horizon Radar (`layer_report`), 4-Mode Reconciliation & Upward Promotion (`authority_engine.py`, `horizon_engine.py`, `promotion_engine.py`)**
 > 3. **Task-Branch Workflow (`feature/<TICKET-ID>-<slug>`), 1-Hop Downward Delegation, Inter-Layer Consultation, `dev -> tst -> pre -> pro` Env Gates & Tiered CLI Dispatcher (`workflow_engine.py`, `git_governance_engine.py`, `cli_dispatcher.py`)**
 >
 > For core JSON-RPC 2.0 protocol contracts (`core/` & `mcp_node/`), see **[`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md)**; for `rcap1` compaction and `0..N` surface weaving (`capsules/`), see **[`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md)**; for OOP capability rings and ephemeral bots (`mcp_node/`), see **[`05_ephemeral_forks_and_department_bots.md`](05_ephemeral_forks_and_department_bots.md)**.

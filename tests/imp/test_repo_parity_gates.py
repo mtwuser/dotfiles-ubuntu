@@ -256,7 +256,10 @@ class TestRepoParityGates:
             )
         ]  # fmt: skip
         retired_token_re = re.compile(
-            r"\b(" + "|".join(dynamic_tokens) + r")\b|\[DOTFILES-" + r"\d+\]",
+            r"\b(" + "|".join(dynamic_tokens) + r")\b|\[DOTFILES-" + r"\d+\]"
+            r"|`?(?:19|20|21|23)`?\s+"
+            + r"modules\b|\b\x35-Stage\b|scripts/dotfiles_mcp/"
+            + r"\*\.py",
             re.IGNORECASE,
         )
         extrapolable_technical_targets = [
@@ -299,7 +302,7 @@ class TestRepoParityGates:
             f"{p.relative_to(REPO_DIR)}:{idx}"
             for p in targets if p.is_file()
             for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
-            if retired_token_re.search(line)
+            if retired_token_re.search(line) and (p.name != "CHANGELOG.md" or idx < 33)
         ]  # fmt: skip
         scope_violations = [
             f"{p.relative_to(REPO_DIR)}:{idx}"

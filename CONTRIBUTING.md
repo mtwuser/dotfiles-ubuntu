@@ -37,7 +37,7 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
 
 ### B. Adding or Updating an Antigravity Skill (`antigravity/.gemini/config/skills/` or `templates/technical-base/skills/`)
 
-1. Universal lifecycle, governance, and dual-mode audit skills (`sopen`, `sclose`, `continue`, `release`, `enrich`, `priority`, `review`, `full-audit`, `architecture-review`, `governance`) live in `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`, while software-engineering-specific skills (`testing`, `refactoring`, `validation`) live in `templates/technical-base/skills/<skill-name>/SKILL.md`.
+1. Universal lifecycle, governance, and dual-mode audit skills (`10` global skills: `sopen`, `sclose`, `continue`, `release`, `enrich`, `priority`, `review`, `full-audit`, `architecture-review`, `governance`) live in `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`, software-engineering-specific skills (`4` `technical-base` skills: `testing`, `refactoring`, `validation`, `oss-contribute`) live in `templates/technical-base/skills/<skill-name>/SKILL.md`, and specialization-stack skills (`5` skills across `business-stack` and `tech-stack`) live in `templates/{business-stack,tech-stack}/*/skills/<skill-name>/SKILL.md` (`19` total skills).
 2. Include valid YAML frontmatter at the top of `SKILL.md`:
    - `name:` **MUST** be `kebab-case` (lowercase letters, digits, and hyphens only, e.g., `name: architecture-review`).
    - `description:` A concise 1–2 sentence trigger description explaining *when* the agent should activate the skill.
@@ -49,11 +49,11 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
 
 ### C. Modifying Lifecycle Hooks (`antigravity/.gemini/config/hooks.json` & `scripts/`), the Contextual MCP Package (`scripts/dotfiles_mcp/` & `scripts/dotfiles_mcp_server.py`), or Layer/Subtree/Docker Tooling (`scripts/layer-config.sh`, `scripts/layer-subtree.sh`, `Dockerfile`)
 
-All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/*.py` (`20` modules) must:
+All Python modules in `antigravity/.gemini/config/scripts/*.py`, `scripts/dotfiles_mcp_server.py`, and `scripts/dotfiles_mcp/{core,capsules,mcp_node,governance}/*.py` (`24` modules across `4` bounded-domain subpackages) must:
 - Use **100% Python Standard Library** at runtime (zero external `pip` dependencies so runtime execution works out-of-the-box without a `venv`) and prefer C-backed floor-version stdlib primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`).
-- Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), follow the self-indexing file-prefix taxonomy (`tools_*`, `*_engine`, `NN_*`, `test_*`), stay strictly **`< 465` lines** (`<= 400` target via the 5-Stage Evolution Ladder), and pass `mypy --strict` and `ruff check` with 0 errors.
+- Include `from __future__ import annotations`, declare a `Specification: docs/architecture/<spec>.md` pointer in the module docstring (`1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Spec traceability), follow the self-indexing file-prefix taxonomy (`tools_*`, `*_engine`, `NN_*`, `test_*`), stay strictly **`< 465` lines** (`<= 400` target via the 6-Stage Structural Evolution Ladder, keeping `.sh` CLI wrappers `< 250` lines via `cli_dispatcher.py`), and pass `mypy --strict` and `ruff check` with 0 errors.
 - Centralize contract identifiers (`LAYER_MANIFEST_CONTRACT_REV`, `TEMPLATE_MANIFEST_CONTRACT_REV`), slice bounds, and domain cut-points in [`scripts/dotfiles_mcp/core/constants.py`](scripts/dotfiles_mcp/core/constants.py) with explicit absolute imports (zero magic numbers/raw slices, zero `import ... as c` aliases, `.get()` at external boundaries vs. `d["k"]` on guaranteed internal dicts, and `{...}` literals instead of `.update()` packing).
-- Keep `scripts/dotfiles_mcp/__init__.py` and all `tests/**/__init__.py` files at **`0 bytes`** (package marker purity).
+- Keep `scripts/dotfiles_mcp/**/__init__.py` and all `tests/**/__init__.py` files at **`0 bytes`** (package marker purity).
 - Maintain **100% isolated unit test coverage** (`tests/unit/dotfiles_mcp/`) and **100% total statement and branch coverage** across `tests/unit/`, `tests/imp/`, and `tests/e2e/` (`1` `Test<Module>` class per file, 1-line invariant docstring on every `test_*` method, explicit `# Arrange`, `# Act`, `# Assert` comments, exact boundary cut-points `N` vs `N ± 1`, bipolar guard assertions, and zero `# pragma: no cover` or blind `subprocess.run` lambdas).
 
 ---
