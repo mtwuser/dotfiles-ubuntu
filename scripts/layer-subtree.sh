@@ -6,7 +6,8 @@ set -euo pipefail
 export LC_ALL=C
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="${DOTFILES_REPO_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+DEFAULT_REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+if [ -z "${DOTFILES_REPO_DIR:-}" ] && [ -f "$PWD/system/mcp-layer.json" ]; then REPO_DIR="$PWD"; else REPO_DIR="${DOTFILES_REPO_DIR:-$DEFAULT_REPO_DIR}"; fi
 VERSION_STR="$({ tr -d '[:space:]' < "$REPO_DIR/VERSION"; } 2>/dev/null || echo "unknown")"
 DRY_RUN=false
 
@@ -53,6 +54,20 @@ validate_layer_name() {
 
 run_cmd() {
   if [ "$DRY_RUN" = true ]; then echo "[dry-run] $*"; else "$@"; fi
+}
+
+run_subtree_pull() {
+  local prefix="$1" repo_url="$2" branch="$3" unmerged
+  if [ "$DRY_RUN" = true ]; then echo "[dry-run] git subtree pull --prefix=$prefix $repo_url $branch --squash"; return 0; fi
+  if ! git subtree pull --prefix="$prefix" "$repo_url" "$branch" --squash; then
+    unmerged="$(git diff --name-only --diff-filter=U)"
+    if [ -n "$unmerged" ] && ! echo "$unmerged" | grep -qv "^${prefix}/"; then
+      echo "⚠️  Reconciling subtree conflict in '$prefix/' using authoritative child state..."
+      git checkout --theirs "$prefix/" && git add "$prefix/" && git commit --no-edit
+    else
+      return 1
+    fi
+  fi
 }
 
 subtree_manifest_helper() {
@@ -166,7 +181,7 @@ case "$SUBCOMMAND" in
       exit 1
     fi
     echo "🔄 Pulling latest subtree changes for '$TARGET_PREFIX' from $REPO_URL ($BRANCH)..."
-    run_cmd git subtree pull --prefix="$TARGET_PREFIX" "$REPO_URL" "$BRANCH" --squash
+    run_subtree_pull "$TARGET_PREFIX" "$REPO_URL" "$BRANCH"
     ;;
   pull-all)
     echo "═══ Pulling All Mounted Subtree Layers (layers/*) ═══"
@@ -183,7 +198,7 @@ case "$SUBCOMMAND" in
           exit 1
         fi
         echo "🔄 Pulling 'layers/$LAYER_NAME' from $LAYER_URL ($LAYER_BRANCH)..."
-        run_cmd git subtree pull --prefix="layers/$LAYER_NAME" "$LAYER_URL" "$LAYER_BRANCH" --squash
+        run_subtree_pull "layers/$LAYER_NAME" "$LAYER_URL" "$LAYER_BRANCH"
         PULLED_COUNT=$((PULLED_COUNT + 1))
       done
     fi

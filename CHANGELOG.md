@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed & Changed
+- **Remote Subtree Non-Mutation in Parent `make sync` & Authoritative Child Subtree Conflict Auto-Reconciliation in `layer-subtree.sh` (`scripts/dotfiles_mcp/core/layer_topology_helpers.py`, `scripts/layer-subtree.sh`, `tests/unit/dotfiles_mcp/core/test_layer_topology_helpers.py`)**:
+  - Updated [`_sync_mounted_children_into_parent`](scripts/dotfiles_mcp/core/layer_topology_helpers.py) so parent `make sync` skips in-place template/Makefile mutations on `mounted_layers` backed by an external `"repository"` URL (while still reconciling `[x]` completed child tasks into `WORKTASK.md`), preventing parent-vs-child subtree divergence.
+  - Extended [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh) to auto-detect `REPO_DIR="$PWD"` when invoked from any workspace containing `system/mcp-layer.json`, and added `run_subtree_pull()` to automatically resolve `git subtree pull` merge conflicts strictly scoped inside `layers/<layer-name>/` in favor of the authoritative child state (`--theirs`).
+
+---
+
 ## [3.0.2] - 2026-11-03
 
 ### Fixed & Changed

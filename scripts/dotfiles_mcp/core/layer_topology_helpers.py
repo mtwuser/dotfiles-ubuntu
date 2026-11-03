@@ -328,11 +328,8 @@ def _inspect_mounted_children_drifts(
         cm_f = mdir / "system/mcp-layer.json"
         cm = json.loads(cm_f.read_text("utf-8")) if cm_f.is_file() else {}
         crole = str(cm.get("layer_role") or entry.get("layer_role") or "department")
-        c_files = (
-            ["system/mcp-layer.json"]
-            if _has_stale_schema(cm_f, LAYER_MANIFEST_CONTRACT_REV)
-            else []
-        )
+        stale_cm = _has_stale_schema(cm_f, LAYER_MANIFEST_CONTRACT_REV)
+        c_files = ["system/mcp-layer.json"] if stale_cm else []
         if _is_makefile_outdated(mdir, crole):
             c_files.append("Makefile")
         for tname, ctdir in _iter_layer_template_dirs(mdir):
@@ -345,11 +342,10 @@ def _inspect_mounted_children_drifts(
                     c_files.append(str(dst_rf.relative_to(mdir)).replace("\\", "/"))
         if c_files:
             br = str(entry.get("branch") or "master").strip()
-            push_cmd = f"./scripts/layer-subtree.sh push {cname} {br}"
-            pull_cmd = f"./scripts/layer-subtree.sh pull {cname}"
+            push_c = f"./scripts/layer-subtree.sh push {cname} {br}"
             drifts.append({"layer_id": cname, "mounted_path": f"layers/{cname}",
-                "drift_files": c_files, "subtree_push_command": push_cmd,
-                "subtree_pull_command": pull_cmd})  # fmt: skip
+                "drift_files": c_files, "subtree_push_command": push_c,
+                "subtree_pull_command": f"./scripts/layer-subtree.sh pull {cname}"})  # fmt: skip
     return drifts
 
 
@@ -358,7 +354,13 @@ def _sync_mounted_children_into_parent(
 ) -> list[str]:
     """Synchronize parent contracts, Makefile, and shared templates into layers/<child>/."""
     ws = target_dir.resolve()
-    synced = [str(d["layer_id"]) for d in _inspect_mounted_children_drifts(ws, mounted_layers)]
+    rem = {
+        str(e.get("name") or e.get("layer_id") or "").strip()
+        for e in (mounted_layers or [])
+        if isinstance(e, dict) and str(e.get("repository") or "").strip()
+    }
+    drifts = _inspect_mounted_children_drifts(ws, mounted_layers)
+    synced = [str(d["layer_id"]) for d in drifts if str(d["layer_id"]) not in rem]
     for cname in () if dry_run else synced:
         mdir, cm_f = ws / "layers" / cname, ws / "layers" / cname / "system/mcp-layer.json"
         _stamp_schema_rev(cm_f, LAYER_MANIFEST_CONTRACT_REV)
@@ -391,11 +393,9 @@ def _sync_mounted_children_into_parent(
             re.sub(r"^(\s*-\s*\[)[ /](\])", r"\1x\2", pl).replace(
                 "stage: `delegated`", "stage: `completed (pro)`"
             )
-            if (
-                re.match(r"^\s*-\s*\[[ /]\]\s+", pl)
-                and "->" in pl
-                and any(tk in pl.lower() for tk in done_tks)
-            )
+            if re.match(r"^\s*-\s*\[[ /]\]\s+", pl)
+            and "->" in pl
+            and any(tk in pl.lower() for tk in done_tks)
             else pl
             for pl in p_txt.splitlines()
         ]

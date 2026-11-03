@@ -161,8 +161,14 @@ class TestLayerTopologyHelpers:
         layer_topology_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
         )
+        remote_synced = layer_topology_helpers._sync_mounted_children_into_parent(
+            parent_ws,
+            [{"name": "dept-alpha", "repository": "https://example.com/a.git", "branch": "master"}],
+            dry_run=False,
+        )
 
         # Assert
+        assert remote_synced == []
         assert newer_missing is False
         assert newer_true is True
         assert newer_equal is False
