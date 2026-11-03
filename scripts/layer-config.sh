@@ -118,16 +118,16 @@ dry_run = sys.argv[3].lower() == "true" or "--dry-run" in sys.argv[5:] or "-n" i
 subcmd, rest = sys.argv[4], [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
 
 sys.path.insert(0, str(script_dir))
-from dotfiles_mcp.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
-from dotfiles_mcp.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
-from dotfiles_mcp.fork_configurator import apply_fork_to_project, configure_fork_manifest, scaffold_template_pack  # noqa: E402
-from dotfiles_mcp.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, manage_layer_roster, record_governance_decision  # noqa: E402
-from dotfiles_mcp.horizon_engine import compare_upstream_templates, inspect_layer_horizon  # noqa: E402
-from dotfiles_mcp.manifest_helpers import discover_templates_catalog  # noqa: E402
-from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
-from dotfiles_mcp.promotion_engine import diff_project_against_layers, promote_project_asset_to_layer  # noqa: E402
-from dotfiles_mcp.workflow_engine import complete_task_workflow, consult_layer_ephemeral, delegate_directive_to_child, start_task_workflow  # noqa: E402
-from dotfiles_mcp.workspace_bootstrapper import bootstrap_layer_workspace, inspect_workspace_status, register_mounted_subtree, set_global_agents_profile, sync_layer_workspace  # noqa: E402
+from dotfiles_mcp.governance.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
+from dotfiles_mcp.mcp_node.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
+from dotfiles_mcp.governance.fork_configurator import apply_fork_to_project, configure_fork_manifest, scaffold_template_pack  # noqa: E402
+from dotfiles_mcp.governance.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, manage_layer_roster, record_governance_decision  # noqa: E402
+from dotfiles_mcp.governance.horizon_engine import compare_upstream_templates, inspect_layer_horizon  # noqa: E402
+from dotfiles_mcp.core.manifest_helpers import discover_templates_catalog  # noqa: E402
+from dotfiles_mcp.mcp_node.node_base import MCPNodeBase  # noqa: E402
+from dotfiles_mcp.governance.promotion_engine import diff_project_against_layers, promote_project_asset_to_layer  # noqa: E402
+from dotfiles_mcp.governance.workflow_engine import complete_task_workflow, consult_layer_ephemeral, delegate_directive_to_child, start_task_workflow  # noqa: E402
+from dotfiles_mcp.governance.workspace_bootstrapper import bootstrap_layer_workspace, inspect_workspace_status, register_mounted_subtree, set_global_agents_profile, sync_layer_workspace  # noqa: E402
 
 
 def _die(msg: str, code: int = 1) -> None:

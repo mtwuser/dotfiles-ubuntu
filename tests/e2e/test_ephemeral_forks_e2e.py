@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from dotfiles_mcp.capsule_engine import CapsuleError
-from dotfiles_mcp.constants import MAX_ACTIVE_EPHEMERAL_FORKS
-from dotfiles_mcp.server import DotfilesMCPServer
+from dotfiles_mcp.capsules.capsule_engine import CapsuleError
+from dotfiles_mcp.core.constants import MAX_ACTIVE_EPHEMERAL_FORKS
+from dotfiles_mcp.mcp_node.server import DotfilesMCPServer
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 MCP_ENTRYPOINT = REPO_DIR / "scripts" / "dotfiles_mcp_server.py"

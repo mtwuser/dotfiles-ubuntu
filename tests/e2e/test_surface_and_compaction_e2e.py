@@ -100,7 +100,7 @@ def _run_mcp_stdio_batch(
     env = {**os.environ, "DOTFILES_MCP_LOG_DIR": str(log_dir)}
     runner_code = (
         f"import pathlib, sys; sys.path.insert(0, {str(REPO_DIR / 'scripts')!r}); "
-        "from dotfiles_mcp import server as m; "
+        "from dotfiles_mcp.mcp_node import server as m; "
         f"srv = m.DotfilesMCPServer(repo_dir=pathlib.Path({str(repo_dir)!r}), "
         f"log_dir=pathlib.Path({str(log_dir)!r})); m.run_stdio_loop(srv)"
     )

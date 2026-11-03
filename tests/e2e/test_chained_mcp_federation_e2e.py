@@ -11,16 +11,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotfiles_mcp.fork_configurator import (
+from dotfiles_mcp.governance.fork_configurator import (
     apply_fork_to_project,
     configure_fork_manifest,
     scaffold_template_pack,
 )
-from dotfiles_mcp.promotion_engine import (
+from dotfiles_mcp.governance.promotion_engine import (
     diff_project_against_layers,
     promote_project_asset_to_layer,
 )
-from dotfiles_mcp.server import DotfilesMCPServer
+from dotfiles_mcp.mcp_node.server import DotfilesMCPServer
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 MCP_SERVER = REPO_DIR / "scripts" / "dotfiles_mcp_server.py"
@@ -96,7 +96,7 @@ def _run_mcp_stdio_batch(
     runner_code = (
         "import pathlib, sys; "
         f"sys.path.insert(0, {str(REPO_DIR / 'scripts')!r}); "
-        "from dotfiles_mcp import server as m; "
+        "from dotfiles_mcp.mcp_node import server as m; "
         f"srv = m.DotfilesMCPServer(repo_dir=pathlib.Path({str(repo_dir)!r}), "
         f"log_dir=pathlib.Path({str(log_dir)!r})); "
         "m.run_stdio_loop(srv)"

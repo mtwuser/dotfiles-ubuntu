@@ -18,9 +18,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-from dotfiles_mcp.constants import REPO_DIR, VALID_LAYER_ROLES
-from dotfiles_mcp.manifest_helpers import _read_version
-from dotfiles_mcp.server import DotfilesMCPServer, run_stdio_loop
+from dotfiles_mcp.core.constants import REPO_DIR, VALID_LAYER_ROLES
+from dotfiles_mcp.core.manifest_helpers import _read_version
+from dotfiles_mcp.mcp_node.server import DotfilesMCPServer, run_stdio_loop
 
 
 def _require(condition: bool, message: str) -> None:

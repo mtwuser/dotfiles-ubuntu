@@ -242,26 +242,31 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   ├── antigravity-install.sh         ←   Install/update Antigravity binaries from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
 │   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (22 modules, < 465 lines each)
-│   │   ├── constants.py, catalogs.py  ←     Declarative constants, regexes & MCP resource/tool/prompt catalogs
-│   │   ├── manifest_helpers.py        ←     System manifest, skill frontmatter, SHA-256 & template schema helpers
-│   │   ├── layer_topology_helpers.py  ←     Layer Makefile renderer, mounted child drift sync & onboarding README/lineage renderers
-│   │   ├── fork_configurator.py       ←     Fork parameterization (init-fork), template scaffolding & apply-project
-│   │   ├── workspace_bootstrapper.py  ←     Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
-│   │   ├── workflow_engine.py         ←     Task-branch workflow (start/complete-task), 1-hop delegation & consult-layer
-│   │   ├── git_governance_engine.py   ←     Git branch policy, dev->tst->pre->pro env gates, non-destructive staging & audit ledger
-│   │   ├── authority_engine.py        ←     Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
-│   │   ├── promotion_engine.py        ←     Multi-layer pattern routing, diff-project & promote-from-project (incl. Root 0 -> OSS)
-│   │   ├── horizon_engine.py          ←     1-hop horizon radar (inspect-horizon), upstream section diff & 4-mode template reconciliation
-│   │   ├── ephemeral_fork_engine.py   ←     Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
-│   │   ├── surface_weaver.py          ←     Stack-agnostic surface selector inference & Lex Specialis scoring
-│   │   ├── capsule_engine.py          ←     Resonant rcap1 Matryoshka L0->L3 encryption & compression engine
-│   │   ├── node_base.py, resources.py ←     Base node path-containment, warnings & 9 MCP resource readers
-│   │   ├── tools_federation.py        ←     Overview, drift audit, doc reader & federated MCP discovery tools
-│   │   ├── tools_compaction.py        ←     Multi-resolution query_governance_rules & capsule minting
-│   │   ├── tools_unfold.py            ←     Hop-by-hop unfold_context_capsule & TOCTOU line-drift relocation
-│   │   ├── tools_surface.py           ←     0..N resolve_surface_governance weaver & delegation advisories
-│   │   └── tools_ephemeral.py, server.py←   orchestrate_ephemeral_fork tool & JSON-RPC 2.0 dispatcher
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (4 domain subpackages, 23 modules)
+│   │   ├── core/                      ←     1. Base Contracts, Catalogs & Topology Primitives (0 engine dependencies)
+│   │   │   ├── constants.py, catalogs.py  ←   Declarative constants, regexes & MCP resource/tool/prompt catalogs
+│   │   │   ├── manifest_helpers.py        ←   System manifest, skill frontmatter, SHA-256 & template schema helpers
+│   │   │   └── layer_topology_helpers.py  ←   Layer Makefile renderer, mounted child drift sync & onboarding renderers
+│   │   ├── capsules/                  ←     2. Cryptographic Encapsulation (rcap1), Decapsulation & Surface Filtering
+│   │   │   ├── capsule_engine.py          ←   Resonant rcap1 L0->L3 sealing, HMAC-SHA256 & ephemeral return digest membrane
+│   │   │   ├── surface_weaver.py          ←   Stack-agnostic surface selector inference & Lex Specialis scoring
+│   │   │   ├── tools_compaction.py        ←   Multi-resolution query_governance_rules & capsule minting
+│   │   │   ├── tools_unfold.py            ←   Hop-by-hop unfold_context_capsule & TOCTOU line-drift relocation
+│   │   │   └── tools_surface.py           ←   0..N resolve_surface_governance weaver & delegation advisories
+│   │   ├── mcp_node/                  ←     3. OOP MCP Kernel, Capability Rings, Bot Catalog & Permanent <-> Ephemeral Symbiosis
+│   │   │   ├── node_base.py, resources.py ←   Base node path-containment, warnings & 9 MCP resource readers
+│   │   │   ├── capability_registry.py     ←   OOP CRUD permission rings, 4-family bot catalog & symbiotic hot-plug resolver
+│   │   │   ├── tools_federation.py        ←   Overview, drift audit, doc reader & federated MCP discovery tools
+│   │   │   ├── ephemeral_fork_engine.py   ←   Zero-copy ephemeral Department Bot forks, project bridges & TTL GC
+│   │   │   └── tools_ephemeral.py, server.py← orchestrate_ephemeral_fork tool & JSON-RPC 2.0 dispatcher
+│   │   └── governance/                ←     4. Inter-Layer Lifecycle, 1-Hop Horizon, RBAC Authority & Promotion Engines
+│   │       ├── fork_configurator.py       ←   Fork parameterization (init-fork), template scaffolding & apply-project
+│   │       ├── workspace_bootstrapper.py  ←   Global profile composer (set-global-profile), subtree registrar & bootstrap-workspace
+│   │       ├── workflow_engine.py         ←   Task-branch workflow (start/complete-task), 1-hop delegation & consult-layer
+│   │       ├── git_governance_engine.py   ←   Git branch policy, dev->tst->pre->pro env gates, non-destructive staging & audit ledger
+│   │       ├── authority_engine.py        ←   Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
+│   │       ├── promotion_engine.py        ←   Multi-layer pattern routing, diff-project & promote-from-project (incl. Root 0 -> OSS)
+│   │       └── horizon_engine.py          ←   1-hop horizon radar (inspect-horizon), upstream section diff & 4-mode template reconciliation
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
 │   ├── layer-config.sh                ←   Layer parameterization, workspace bootstrap, authority, horizon & promotion CLI
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)

@@ -12,11 +12,11 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from dotfiles_mcp.promotion_engine import (
+from dotfiles_mcp.governance.promotion_engine import (
     diff_project_against_layers,
     promote_project_asset_to_layer,
 )
-from dotfiles_mcp.server import DotfilesMCPServer
+from dotfiles_mcp.mcp_node.server import DotfilesMCPServer
 
 REPO_DIR = Path(__file__).resolve().parents[2]
 LAYER_CONFIG_SCRIPT = REPO_DIR / "scripts" / "layer-config.sh"

@@ -17,7 +17,7 @@ Check `operating_state` and `workspace_mode` (`"technical"`, `"business"`, or `"
 | Invocation | Target Radius Inspected | When to Use |
 | :--- | :--- | :--- |
 | **`/review`** *(no args — default)* | **Active Session / Git Delta (`git status --short` / modified files)** | Default mid-session check before `/continue`: evaluates Dimensions 1–4 **only on files touched in the current task**. |
-| **`/review <path>`** | **Specific Module, Directory, or Template Pack** | After editing a specific module (`scripts/dotfiles_mcp/capsule_engine.py`), directory (`corporate/`), or template pack (`templates/tech-stack/fastapi-hexagonal/`). |
+| **`/review <path>`** | **Specific Module, Directory, or Template Pack** | After editing a specific module (`scripts/dotfiles_mcp/capsules/capsule_engine.py`), directory (`corporate/`), or template pack (`templates/tech-stack/fastapi-hexagonal/`). |
 | **`/review docs`** | **Dimension 1 Only (`3-Tier Docs & 5-Link Ripple`)** | After updating CLI flags, `Makefile` targets, architecture specs, or user guides. |
 | **`/review arch`** | **Dimension 2 Only (`Technical Code` or `Business Ledgers`)** | After refactoring code (`technical`) or updating policies, ledgers, and `surfaces/` (`business`). |
 | **`/review 1:1:1`** | **Dimension 3 Only (`Spec <-> Source <-> Test` or `Policy <-> Ledger <-> Gate`)** | After adding/modifying functions, unit tests (`Test<Module>`), or normative policy checklists. |

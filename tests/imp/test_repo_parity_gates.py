@@ -21,7 +21,7 @@ class TestRepoParityGates:
         # Arrange
         init_files = sorted(
             [
-                REPO_DIR / "scripts" / "dotfiles_mcp" / "__init__.py",
+                *list((REPO_DIR / "scripts" / "dotfiles_mcp").rglob("__init__.py")),
                 *list((REPO_DIR / "tests").rglob("__init__.py")),
             ]
         )
@@ -30,16 +30,17 @@ class TestRepoParityGates:
         non_empty = [str(p.relative_to(REPO_DIR)) for p in init_files if p.stat().st_size != 0]
 
         # Assert
-        assert len(init_files) == 6
+        assert len(init_files) == 14
         assert non_empty == []
 
     def test_one_to_one_unit_test_mapping_and_file_size_discipline(self) -> None:
         """Verify 1:1:1 source-to-test-to-spec mapping and < 465-line file size discipline."""
         # Arrange
         declarative_only = {"__init__.py", "constants.py", "catalogs.py"}
+        mcp_root = REPO_DIR / "scripts" / "dotfiles_mcp"
         pkg_modules = sorted(
-            p.stem
-            for p in (REPO_DIR / "scripts" / "dotfiles_mcp").glob("*.py")
+            p.relative_to(mcp_root)
+            for p in mcp_root.rglob("*.py")
             if p.name not in declarative_only
         )
         all_sized_files = sorted([
@@ -47,7 +48,7 @@ class TestRepoParityGates:
             *list((REPO_DIR / "scripts").glob("*.sh")),
             *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
             *list((REPO_DIR / "scripts").glob("*.py")),
-            *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
+            *list(mcp_root.rglob("*.py")),
             *list((REPO_DIR / "tests").rglob("*.py")), *list((REPO_DIR / "docs").rglob("*.md")),
             *list((REPO_DIR / "templates").rglob("*.md")),
         ])  # fmt: skip
@@ -58,19 +59,22 @@ class TestRepoParityGates:
             [
                 *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
                 REPO_DIR / "scripts/dotfiles_mcp_server.py",
-                *[
-                    p
-                    for p in (REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")
-                    if p.name != "__init__.py"
-                ],
+                *[p for p in mcp_root.rglob("*.py") if p.name != "__init__.py"],
             ]
         )
 
         # Act
         missing_unit_tests = [
-            mod
-            for mod in pkg_modules
-            if not (REPO_DIR / "tests" / "unit" / "dotfiles_mcp" / f"test_{mod}.py").is_file()
+            str(rel_mod)
+            for rel_mod in pkg_modules
+            if not (
+                REPO_DIR
+                / "tests"
+                / "unit"
+                / "dotfiles_mcp"
+                / rel_mod.parent
+                / f"test_{rel_mod.stem}.py"
+            ).is_file()
         ]
         oversized_files = [
             f"{p.relative_to(REPO_DIR)} ({len(p.read_text(encoding='utf-8').splitlines())} lines)"
@@ -91,7 +95,7 @@ class TestRepoParityGates:
         ]
 
         # Assert
-        assert len(pkg_modules) == 20
+        assert len(pkg_modules) == 21
         assert len(template_rules) == 9
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
@@ -112,7 +116,7 @@ class TestRepoParityGates:
         # Arrange
         import post_invocation_lint
         import pre_tool_guard
-        from dotfiles_mcp import constants as mcp_constants
+        from dotfiles_mcp.core import constants as mcp_constants
 
         config_dir = REPO_DIR / "antigravity/.gemini/config"
         hooks_data = json.loads((config_dir / "hooks.json").read_text(encoding="utf-8"))
@@ -355,7 +359,7 @@ class TestRepoParityGates:
             [
                 *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
                 *list((REPO_DIR / "scripts").glob("*.py")),
-                *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
+                *list((REPO_DIR / "scripts/dotfiles_mcp").rglob("*.py")),
             ]
         )
         test_py = sorted(p for p in (REPO_DIR / "tests").rglob("test_*.py"))
@@ -444,11 +448,12 @@ class TestRepoParityGates:
                     blind_subprocess_mocks.append(f"{rel_tp}:{node.lineno}")
 
         # Assert
-        assert (len(prod_py), len(test_py)) == (28, 33)
+        assert (len(prod_py), len(test_py)) == (33, 34)
         assert pragma_violations == [] and prod_style_violations == []
         assert unmatched_raises == [] and blind_subprocess_mocks == []
         assert structure_violations == []
-        const_text = (REPO_DIR / "scripts/dotfiles_mcp/constants.py").read_text(encoding="utf-8")
+        const_p = REPO_DIR / "scripts/dotfiles_mcp/core/constants.py"
+        const_text = const_p.read_text(encoding="utf-8")
         other_py = "\n".join(
             p.read_text(encoding="utf-8") for p in [*prod_py, *test_py] if p.name != "constants.py"
         )

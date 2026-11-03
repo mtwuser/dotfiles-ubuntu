@@ -130,7 +130,7 @@ for py_file in antigravity/.gemini/config/scripts/*.py scripts/*.py; do
   [ -x "$py_file" ] || fail "$py_file is not executable (chmod +x)"
   python3 -B -c 'import pathlib, sys; compile(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), sys.argv[1], "exec")' "$py_file" || fail "Python bytecode compilation failed on $py_file"
 done
-for pkg_py in scripts/dotfiles_mcp/*.py; do
+for pkg_py in scripts/dotfiles_mcp/__init__.py scripts/dotfiles_mcp/*/*.py; do
   [ -f "$pkg_py" ] || continue
   PY_COUNT=$((PY_COUNT + 1))
   python3 -B -c 'import pathlib, sys; compile(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"), sys.argv[1], "exec")' "$pkg_py" || fail "Python bytecode compilation failed on $pkg_py"
@@ -188,7 +188,7 @@ if not commands or any(not (config_dir / c.removeprefix("./")).is_file() for c i
 sys.path.insert(0, str(config_dir / "scripts"))
 sys.path.insert(0, str(repo / "scripts"))
 import pre_tool_guard, post_invocation_lint  # noqa: E402
-from dotfiles_mcp import constants as mcp_constants  # noqa: E402
+from dotfiles_mcp.core import constants as mcp_constants  # noqa: E402
 
 if event_matchers.get("PreToolUse") != set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"} or event_matchers.get("PostToolUse") != set(pre_tool_guard._FILE_WRITE_TOOLS):
     sys.exit("hooks.json matcher mismatch")
@@ -321,7 +321,7 @@ fi
 # 7. Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest
 echo ""
 echo "[7/8] Contextual MCP Server, Subtree Orchestrator & Layer Topology Manifest"
-if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib, sys; sys.path.insert(0, "scripts"); from dotfiles_mcp.constants import LAYER_MANIFEST_CONTRACT_REV, TEMPLATE_MANIFEST_CONTRACT_REV; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); tpls = list(pathlib.Path("templates").rglob("template.json")); assert d.get("schema_version") == LAYER_MANIFEST_CONTRACT_REV and "federated_mcps" in d and "environments" in d and "surface_bindings" in d and len(tpls) >= 5 and all(json.loads(p.read_text()).get("schema_version") == TEMPLATE_MANIFEST_CONTRACT_REV for p in tpls)'; then
+if [ -s "system/mcp-layer.json" ] && python3 -c 'import json, pathlib, sys; sys.path.insert(0, "scripts"); from dotfiles_mcp.core.constants import LAYER_MANIFEST_CONTRACT_REV, TEMPLATE_MANIFEST_CONTRACT_REV; d = json.loads(pathlib.Path("system/mcp-layer.json").read_text()); tpls = list(pathlib.Path("templates").rglob("template.json")); assert d.get("schema_version") == LAYER_MANIFEST_CONTRACT_REV and "federated_mcps" in d and "environments" in d and "surface_bindings" in d and len(tpls) >= 5 and all(json.loads(p.read_text()).get("schema_version") == TEMPLATE_MANIFEST_CONTRACT_REV for p in tpls)'; then
   pass "system/mcp-layer.json (LAYER_MANIFEST_CONTRACT_REV) & templates/**/template.json (TEMPLATE_MANIFEST_CONTRACT_REV) contracts verified"
 else
   fail "system/mcp-layer.json is missing or invalid"
@@ -346,7 +346,7 @@ if [ "$RUNTIME_CONTAINER_MODE" = true ]; then
   pass "Runtime container mode (/.dockerenv without tests/): test suite excluded from production image via .dockerignore"
 else
   INIT_ERRORS=0
-  for init_file in scripts/dotfiles_mcp/__init__.py tests/__init__.py tests/unit/__init__.py tests/unit/dotfiles_mcp/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
+  for init_file in scripts/dotfiles_mcp/__init__.py scripts/dotfiles_mcp/*/__init__.py tests/__init__.py tests/unit/__init__.py tests/unit/dotfiles_mcp/__init__.py tests/unit/dotfiles_mcp/*/__init__.py tests/imp/__init__.py tests/e2e/__init__.py; do
     if [ ! -f "$init_file" ] || [ -s "$init_file" ]; then
       fail "$init_file must exist and be 0 bytes (package marker purity)"
       INIT_ERRORS=$((INIT_ERRORS + 1))
@@ -359,14 +359,21 @@ from pathlib import Path
 import sys
 
 repo = Path(".").resolve()
-for mod in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
-    if mod.name not in {"__init__.py", "constants.py", "catalogs.py"} and not (repo / "tests/unit/dotfiles_mcp" / f"test_{mod.stem}.py").is_file():
+mcp_root = repo / "scripts/dotfiles_mcp"
+for mod in sorted(mcp_root.rglob("*.py")):
+    rel_sub = mod.relative_to(mcp_root).parent
+    if mod.name not in {"__init__.py", "constants.py", "catalogs.py"} and not (repo / "tests/unit/dotfiles_mcp" / rel_sub / f"test_{mod.stem}.py").is_file():
         sys.exit(f"Missing 1:1 unit test file for {mod}")
+
+for pkg_dir in [mcp_root, *sorted(d for d in mcp_root.iterdir() if d.is_dir())]:
+    py_mods = [p for p in pkg_dir.glob("*.py") if p.name != "__init__.py"]
+    if len(py_mods) >= 15:
+        sys.exit(f"{pkg_dir.relative_to(repo)}: {len(py_mods)} modules (exceeds 14-module directory fan-out cap)")
 
 all_sized_files = sorted([
     repo / "README.md", *list(repo.glob("*.sh")), *list((repo / "scripts").glob("*.sh")),
     *list((repo / "antigravity/.gemini/config/scripts").glob("*.py")), *list((repo / "scripts").glob("*.py")),
-    *list((repo / "scripts/dotfiles_mcp").glob("*.py")), *list((repo / "tests").rglob("*.py")),
+    *list(mcp_root.rglob("*.py")), *list((repo / "tests").rglob("*.py")),
     *list((repo / "docs").rglob("*.md")), *list((repo / "templates").rglob("*.md")),
 ])
 for p in all_sized_files:
