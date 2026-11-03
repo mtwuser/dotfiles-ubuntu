@@ -51,22 +51,32 @@ class TestPostInvocationLint:
         # Assert
         assert found == "/usr/bin/ruff"
 
-    def test_find_venv_python_returns_path_or_none(self, tmp_path: Path) -> None:
-        """Return the first existing virtualenv python path or None when absent."""
+    def test_find_venv_python_returns_path_or_none(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Return the first existing virtualenv python path or None and report availability."""
         # Arrange
-        ws1 = tmp_path / "ws1"
-        ws2 = tmp_path / "ws2"
+        ws1, ws2 = tmp_path / "ws1", tmp_path / "ws2"
         venv_py = ws2 / "venv" / "bin" / "python"
         venv_py.parent.mkdir(parents=True)
         venv_py.write_text("#!/bin/sh\n", encoding="utf-8")
+        monkeypatch.setattr("post_invocation_lint._DOTFILES_REPO_DIR", tmp_path)
+        monkeypatch.setattr("shutil.which", lambda _name: None)
 
         # Act
         found = post_invocation_lint.find_venv_python([str(ws1), str(ws2)])
         missing = post_invocation_lint.find_venv_python([str(ws1)])
+        avail = post_invocation_lint.inspect_checker_availability([str(ws1), str(ws2)])
 
         # Assert
-        assert found == str(venv_py)
-        assert missing is None
+        assert (found, missing) == (str(venv_py), None)
+        assert avail == {
+            "ruff_available": False,
+            "ruff_path": None,
+            "venv_python_available": True,
+            "venv_python_path": str(venv_py),
+            "structural_checks_available": True,
+        }
 
     def test_get_changed_python_files_filters_docs_and_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -312,9 +322,8 @@ class TestPostInvocationLint:
         result = json.loads(stdout_buf.getvalue())
         assert "terminationBehavior" not in result
         msg = result["injectSteps"][0]["ephemeralMessage"]
-        assert "F401 unused import" in msg
-        assert "... (" not in msg
-        assert "--no-fix" in mock_run.call_args.args[0]
+        assert "F401 unused import" in msg and "Circuit breaker reached (5/5 passes)" in msg
+        assert "... (" not in msg and "--no-fix" in mock_run.call_args.args[0]
 
     def test_check_rules_token_budget_detects_agents_cap_and_workspace_budget(
         self, tmp_path: Path
@@ -366,32 +375,23 @@ class TestPostInvocationLint:
         no_git_repo.mkdir()
 
         # Act
-        empty_res = post_invocation_lint.resolve_effective_workspaces(
-            [], dotfiles_repo=fake_dotfiles
-        )
-        added_res = post_invocation_lint.resolve_effective_workspaces(
-            ["/workspace/app"], dotfiles_repo=fake_dotfiles
-        )
+        empty_res = post_invocation_lint.resolve_effective_workspaces([], fake_dotfiles)
+        added_res = post_invocation_lint.resolve_effective_workspaces(["/ws/app"], fake_dotfiles)
         dedup_res = post_invocation_lint.resolve_effective_workspaces(
-            [str(fake_dotfiles)], dotfiles_repo=fake_dotfiles
+            [str(fake_dotfiles)], fake_dotfiles
         )
-        no_git_res = post_invocation_lint.resolve_effective_workspaces(
-            ["/workspace/app"], dotfiles_repo=no_git_repo
-        )
+        no_git_res = post_invocation_lint.resolve_effective_workspaces(["/ws/app"], no_git_repo)
 
         # Assert
-        assert empty_res == []
-        assert added_res == ["/workspace/app", str(fake_dotfiles)]
-        assert dedup_res == [str(fake_dotfiles)]
-        assert no_git_res == ["/workspace/app"]
+        assert (empty_res, dedup_res) == ([], [str(fake_dotfiles)])
+        assert added_res == ["/ws/app", str(fake_dotfiles)] and no_git_res == ["/ws/app"]
 
     def test_check_universal_python_structure_flags_oversized_and_missing_aaa(
         self, tmp_path: Path
     ) -> None:
         """Detect missing Specification:, missing AAA, >464 lines, dirty __init__, and alembic."""
         # Arrange
-        missing_file = tmp_path / "missing.py"
-        init_file = tmp_path / "__init__.py"
+        missing_file, init_file = tmp_path / "missing.py", tmp_path / "__init__.py"
         init_file.write_text("", encoding="utf-8")
         sibling_with_spec = tmp_path / "sibling.py"
         sibling_with_spec.write_text(
@@ -413,9 +413,8 @@ class TestPostInvocationLint:
             "        # Assert\n        assert y == 1\n",
             encoding="utf-8",
         )
-        syntax_err_test = tmp_path / "test_syntax_err.py"
+        syntax_err_test, bad_test = tmp_path / "test_syntax_err.py", tmp_path / "test_bad_aaa.py"
         syntax_err_test.write_text("def test_broken(:\n", encoding="utf-8")
-        bad_test = tmp_path / "test_missing_aaa.py"
         bad_test.write_text(
             "class TestBad:\n    def test_bad(self) -> None:\n        assert 1 == 1\n",
             encoding="utf-8",
@@ -431,23 +430,22 @@ class TestPostInvocationLint:
         manual_migration = tmp_path / "alembic" / "versions" / "001_manual.py"
         manual_migration.parent.mkdir(parents=True)
         manual_migration.write_text("def upgrade() -> None: pass\n", encoding="utf-8")
+        files = [
+            missing_file,
+            init_file,
+            sibling_with_spec,
+            missing_spec_mod,
+            plain_mod,
+            clean_test,
+            syntax_err_test,
+            bad_test,
+            oversized_mod,
+            dirty_init,
+            manual_migration,
+        ]
 
         # Act
-        violations = post_invocation_lint.check_universal_python_structure(
-            [
-                str(missing_file),
-                str(init_file),
-                str(sibling_with_spec),
-                str(missing_spec_mod),
-                str(plain_mod),
-                str(clean_test),
-                str(syntax_err_test),
-                str(bad_test),
-                str(oversized_mod),
-                str(dirty_init),
-                str(manual_migration),
-            ]
-        )
+        violations = post_invocation_lint.check_universal_python_structure([str(f) for f in files])
 
         # Assert
         assert len(violations) == 6

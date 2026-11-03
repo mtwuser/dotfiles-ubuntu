@@ -183,6 +183,20 @@ def find_venv_python(workspace_paths: list[str]) -> str | None:
     return None
 
 
+def inspect_checker_availability(workspace_paths: list[str]) -> dict[str, object]:
+    """Return availability and resolved paths for ruff, venv_python, and structural checks."""
+    effective = resolve_effective_workspaces(workspace_paths)
+    ruff = find_ruff(effective)
+    venv_py = find_venv_python(effective)
+    return {
+        "ruff_available": ruff is not None,
+        "ruff_path": ruff,
+        "venv_python_available": venv_py is not None,
+        "venv_python_path": venv_py,
+        "structural_checks_available": True,
+    }
+
+
 def get_changed_python_files(workspace_path: str) -> list[str]:
     """Get Python files with uncommitted changes (unstaged, staged, or untracked)."""
     git_bin = shutil.which("git") or "git"
@@ -351,18 +365,27 @@ def main() -> None:
     else:
         summary = "\n".join(all_lines)
 
+    can_continue = invocation_num < _MAX_FORCE_CONTINUE_INVOCATIONS
+    footer = (
+        "Fix these before stopping."
+        if can_continue
+        else (
+            f"Circuit breaker reached ({invocation_num}/{_MAX_FORCE_CONTINUE_INVOCATIONS} "
+            "passes); auto-continue halted. Resolve remaining issues before committing."
+        )
+    )
     response: dict[str, object] = {
         "injectSteps": [
             {
                 "ephemeralMessage": (
                     f"⚠️ Lint / architecture issues detected in modified files:\n\n"
                     f"```\n{summary}\n```\n\n"
-                    f"Fix these before stopping."
+                    f"{footer}"
                 ),
             }
         ],
     }
-    if invocation_num < _MAX_FORCE_CONTINUE_INVOCATIONS:
+    if can_continue:
         response["terminationBehavior"] = "force_continue"
 
     json.dump(response, sys.stdout)

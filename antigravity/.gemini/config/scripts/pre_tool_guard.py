@@ -21,6 +21,7 @@ import json
 import re
 import shlex
 import sys
+from pathlib import Path
 
 _FILE_WRITE_TOOLS = frozenset(
     {
@@ -50,7 +51,31 @@ _SEPARATOR_CHARS = frozenset(";&|()\n")
 _OUTPUT_REDIRECT_OPS = frozenset({">", ">>", ">|", "&>", "&>>", ">&"})
 _FILE_MUTATING_PROGS = frozenset({"tee", "cp", "mv", "install", "touch", "truncate"})
 _INPLACE_EDIT_PROGS = frozenset({"sed", "perl"})
-_COMMAND_WRAPPERS = frozenset({"env", "command", "sudo", "nohup", "nice", "time"})
+_COMMAND_WRAPPERS = frozenset(
+    {
+        "env",
+        "command",
+        "sudo",
+        "nohup",
+        "nice",
+        "time",
+        "timeout",
+        "stdbuf",
+        "ionice",
+        "chrt",
+        "taskset",
+    }
+)
+_WRAPPER_FLAGS_WITH_ARG: dict[str, frozenset[str]] = {
+    "sudo": frozenset({"-u", "-g", "-C", "-h", "-p", "-r", "-t", "-U", "-D"}),
+    "env": frozenset({"-u", "-C", "-S"}),
+    "nice": frozenset({"-n", "--adjustment"}),
+    "timeout": frozenset({"-s", "--signal", "-k", "--kill-after"}),
+    "ionice": frozenset({"-c", "-n", "-p", "-P", "-u"}),
+    "stdbuf": frozenset({"-i", "-o", "-e"}),
+    "chrt": frozenset({"-p"}),
+    "taskset": frozenset({"-c", "-p"}),
+}
 _SHELL_BINARIES = frozenset({"sh", "bash", "zsh", "dash"})
 _GIT_FLAGS_WITH_ARG = frozenset(
     {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix", "--config-env"}
@@ -147,12 +172,15 @@ def _strip_leading_env_and_wrappers(tokens: list[str]) -> list[str]:
             continue
         prog = tok.rsplit("/", 1)[-1]
         if prog in _COMMAND_WRAPPERS:
+            arg_flags = _WRAPPER_FLAGS_WITH_ARG.get(prog, frozenset())
             idx += 1
             while idx < n and tokens[idx].startswith("-"):
                 flag = tokens[idx]
                 idx += 1
-                if flag in {"-u", "-g", "-C"}:
+                if flag in arg_flags:
                     idx += 1
+            if prog == "timeout" and idx < n:
+                idx += 1
             continue
         if prog.startswith("python") and idx + 1 < n and tokens[idx + 1] == "-m":
             idx += 2
@@ -307,6 +335,31 @@ def _inspect_command_string(cmd: str) -> str | None:
     return None
 
 
+def _init_write_leaves_non_empty(target: str, args: dict[str, object]) -> bool:
+    """Return True if a write/edit operation on __init__.py leaves non-empty content."""
+    content = str(args.get("Content") or args.get("Replacement") or args.get("CodeContent") or "")
+    chunks = args.get("ReplacementChunks")
+    has_non_empty_chunks = isinstance(chunks, list) and any(
+        isinstance(c, dict) and str(c.get("ReplacementContent") or "") for c in chunks
+    )
+    if content or has_non_empty_chunks:
+        return True
+    p = Path(target)
+    existing = p.read_text(encoding="utf-8", errors="ignore") if p.is_file() else ""
+    if not existing:
+        return False
+    if bool(args.get("Append")):
+        return True
+    if "Target" in args:
+        return bool(existing.replace(str(args.get("Target") or ""), ""))
+    if isinstance(chunks, list):
+        rem = existing
+        for c in chunks:
+            rem = rem.replace(str(c.get("TargetContent") or ""), "")
+        return bool(rem)
+    return False
+
+
 def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
     """Validate file write/edit targets against architectural invariants."""
     target = str(args.get("Path") or args.get("TargetFile") or "").replace("\\", "/")
@@ -323,16 +376,8 @@ def _check_file_write(args: dict[str, object]) -> tuple[bool, str]:
         return False, _MATERIALIZED_LAYER_RULE_MSG
 
     # 2. 0-byte __init__.py purity in consumer src/** and all tests/**
-    if kind == "init_purity":
-        content = str(
-            args.get("Content") or args.get("Replacement") or args.get("CodeContent") or ""
-        )
-        chunks = args.get("ReplacementChunks")
-        has_non_empty_chunks = isinstance(chunks, list) and any(
-            isinstance(c, dict) and str(c.get("ReplacementContent") or "") for c in chunks
-        )
-        if content or has_non_empty_chunks:
-            return False, _INIT_PURITY_MSG
+    if kind == "init_purity" and _init_write_leaves_non_empty(target, args):
+        return False, _INIT_PURITY_MSG
 
     return True, ""
 

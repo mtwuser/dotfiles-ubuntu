@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING
 import pre_tool_guard
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import pytest
 
 
@@ -27,120 +29,116 @@ class TestPreToolGuard:
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is True
-        assert reason == ""
+        assert (allowed, reason) == (True, "")
 
     def test_check_file_write_blocks_alembic_version_python_file(self) -> None:
         """Block direct edits to Python migration files inside alembic/versions/."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/app/alembic/versions/001_initial.py",
-            "Content": "def upgrade(): pass",
-        }
+        args: dict[str, object] = {"Path": "alembic/versions/001_init.py", "Content": "pass"}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is False
-        assert "Zero-Touch Migration Policy" in reason
+        assert allowed is False and "Zero-Touch Migration Policy" in reason
 
     def test_check_file_write_allows_non_python_in_alembic_versions(self) -> None:
         """Allow non-Python documentation files inside alembic/versions/."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/app/alembic/versions/README.md",
-            "Content": "# Migrations",
-        }
+        args: dict[str, object] = {"Path": "alembic/versions/README.md", "Content": "# Docs"}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is True
-        assert reason == ""
+        assert (allowed, reason) == (True, "")
 
     def test_check_file_write_blocks_non_empty_consumer_src_init(self) -> None:
         """Block non-empty writes to consumer src/**/__init__.py package markers."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/app/src/orders/__init__.py",
-            "Content": "__all__ = ['Order']",
-        }
+        args: dict[str, object] = {"Path": "src/orders/__init__.py", "Content": "x = 1"}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is False
-        assert "__init__.py Purity" in reason
+        assert allowed is False and "__init__.py Purity" in reason
 
-    def test_check_file_write_blocks_non_empty_tests_init_with_replacement_chunks(self) -> None:
-        """Block non-empty ReplacementChunks on tests/**/__init__.py while allowing 0-byte clear."""
+    def test_check_file_write_blocks_non_empty_tests_init_with_replacement_chunks(
+        self, tmp_path: Path
+    ) -> None:
+        """Block non-empty or partial edits on __init__.py while allowing verified 0-byte clears."""
         # Arrange
-        args_non_empty: dict[str, object] = {
-            "TargetFile": "/workspace/app/tests/unit/__init__.py",
-            "ReplacementChunks": [{"TargetContent": "", "ReplacementContent": "x = 1"}],
-        }
-        args_empty_chunk: dict[str, object] = {
-            "TargetFile": "/workspace/app/tests/unit/__init__.py",
-            "ReplacementChunks": [{"TargetContent": "x = 1", "ReplacementContent": ""}],
-        }
+        on_disk = tmp_path / "tests" / "unit" / "__init__.py"
+        on_disk.parent.mkdir(parents=True)
+        on_disk.write_text("x = 1\ny = 2\n", encoding="utf-8")
+        p_str = str(on_disk)
+        c_part = [{"TargetContent": "x = 1\n", "ReplacementContent": ""}]
+        c_full = [{"TargetContent": "x = 1\ny = 2\n", "ReplacementContent": ""}]
+        c_dirty = [{"TargetContent": "", "ReplacementContent": "x = 1"}]
 
         # Act
-        allowed, reason = pre_tool_guard._check_file_write(args_non_empty)
-        allowed_empty, reason_empty = pre_tool_guard._check_file_write(args_empty_chunk)
+        allowed, reason = pre_tool_guard._check_file_write(
+            {"TargetFile": "tests/unit/__init__.py", "ReplacementChunks": c_dirty}
+        )
+        allowed_empty, reason_empty = pre_tool_guard._check_file_write(
+            {"TargetFile": "tests/unit/__init__.py", "ReplacementChunks": c_part}
+        )
+        ok_append, _ = pre_tool_guard._check_file_write(
+            {"Path": p_str, "Content": "", "Append": True}
+        )
+        ok_part_edit, _ = pre_tool_guard._check_file_write(
+            {"Path": p_str, "Target": "x = 1\n", "Replacement": ""}
+        )
+        ok_full_edit, _ = pre_tool_guard._check_file_write(
+            {"Path": p_str, "Target": "x = 1\ny = 2\n", "Replacement": ""}
+        )
+        ok_part_chunk, _ = pre_tool_guard._check_file_write(
+            {"TargetFile": p_str, "ReplacementChunks": c_part}
+        )
+        ok_full_chunk, _ = pre_tool_guard._check_file_write(
+            {"TargetFile": p_str, "ReplacementChunks": c_full}
+        )
+        ok_overwrite, _ = pre_tool_guard._check_file_write({"Path": p_str, "Content": ""})
 
         # Assert
-        assert allowed is False
-        assert "__init__.py Purity" in reason
-        assert allowed_empty is True
-        assert reason_empty == ""
+        assert allowed is False and "__init__.py Purity" in reason
+        assert (allowed_empty, reason_empty) == (True, "")
+        assert (ok_append, ok_part_edit, ok_part_chunk) == (False, False, False)
+        assert (ok_full_edit, ok_full_chunk, ok_overwrite) == (True, True, True)
 
     def test_check_file_write_allows_empty_consumer_src_init(self) -> None:
         """Allow 0-byte writes to consumer src/**/__init__.py."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/app/src/orders/__init__.py",
-            "Content": "",
-        }
+        args: dict[str, object] = {"Path": "src/orders/__init__.py", "Content": ""}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is True
-        assert reason == ""
+        assert (allowed, reason) == (True, "")
 
     def test_check_file_write_allows_framework_package_internal_init(self) -> None:
         """Allow non-empty __init__.py inside core_framework internal packages."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/core/src/core_framework/kernel/__init__.py",
-            "Content": "from .types import Identifier",
-        }
+        args: dict[str, object] = {"Path": "src/core_framework/__init__.py", "Content": "x = 1"}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is True
-        assert reason == ""
+        assert (allowed, reason) == (True, "")
 
     def test_check_file_write_allows_regular_python_module(self) -> None:
         """Allow writes to normal Python source modules."""
         # Arrange
-        args: dict[str, object] = {
-            "Path": "/workspace/app/src/orders/service.py",
-            "Content": "class OrderService: pass",
-        }
+        args: dict[str, object] = {"Path": "src/orders/service.py", "Content": "x = 1"}
 
         # Act
         allowed, reason = pre_tool_guard._check_file_write(args)
 
         # Assert
-        assert allowed is True
-        assert reason == ""
+        assert (allowed, reason) == (True, "")
 
     def test_check_command_allows_empty_command(self) -> None:
         """Allow empty CommandLine payloads."""
@@ -212,6 +210,7 @@ class TestPreToolGuard:
         cmd_subshell_alembic = "/bin/sh -x -c 'alembic -c alembic.ini --raiseerr downgrade -1'"
         cmd_py_m_alembic = "python3 -m alembic upgrade head"
         cmd_uv_run_alembic = "uv run alembic revision -m 'init'"
+        cmd_nice_timeout = "nice -n 5 timeout -k 5 30 git push origin main"
 
         # Act
         ok_flags, _ = pre_tool_guard._check_command({"CommandLine": cmd_global_flags})
@@ -224,10 +223,11 @@ class TestPreToolGuard:
         )
         ok_py_m, _ = pre_tool_guard._check_command({"CommandLine": cmd_py_m_alembic})
         ok_uv_run, _ = pre_tool_guard._check_command({"CommandLine": cmd_uv_run_alembic})
+        ok_nice_to, _ = pre_tool_guard._check_command({"CommandLine": cmd_nice_timeout})
 
         # Assert
         assert (ok_flags, ok_reset, ok_clean, ok_clean_long) == (False,) * 4
-        assert (ok_sub_git, ok_sub_alembic, ok_py_m, ok_uv_run) == (False,) * 4
+        assert (ok_sub_git, ok_sub_alembic, ok_py_m, ok_uv_run, ok_nice_to) == (False,) * 5
         assert "Migration Policy" in reason_alembic
 
     def test_check_command_ignores_quoted_strings_and_non_mutating_variants(self) -> None:
@@ -241,7 +241,8 @@ class TestPreToolGuard:
         cmd_clean_dry = "git clean -n -d"
         cmd_subtree_list = "git subtree split --prefix=layers/sec"
         cmd_bare_git_flags = (
-            "(git --version ; alembic --help ; FOO=bar ; sudo -u root ; uv --version ; bash -i);"
+            "(git --version ; alembic --help ; FOO=bar ; sudo -u root ; "
+            "timeout --help ; uv --version ; bash -i);"
         )
         cmd_benign_subshell = "bash -c 'git status && echo ok'"
 
