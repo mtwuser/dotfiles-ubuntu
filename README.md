@@ -1,7 +1,7 @@
 # dotfiles-ubuntu
 
 [![CI](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml/badge.svg)](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)](VERSION)
 [![Coverage](https://img.shields.io/badge/coverage-100%25%20(unit%20%2B%20branch)-brightgreen.svg)](scripts/verify-repo.sh)
 [![Python](https://img.shields.io/badge/python-3.14%20(zero--deps)-3776AB.svg)](pyproject.toml)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
@@ -10,10 +10,18 @@
 
 Declarative system manager, dotfile engine, and **Distributed Human-AI Governance ("pAIr programming") Platform** for **Ubuntu 26.04 LTS ("Resolute Raccoon")** and **Google Antigravity 2.0 / Gemini** *(directly extrapolable to **VS Code & GitHub Copilot**, **Cursor**, and **Claude Code**)*.
 
-This repository is modular — adopt the full platform or pick only the pieces you need:
-1. **Ubuntu System Backup, Audit & Restore ([`backup.sh`](backup.sh), [`audit.sh`](audit.sh), [`bootstrap.sh`](bootstrap.sh))** — snapshot installed APT packages, Snaps, NPM globals, external recipes, and GNOME desktop settings into plain-text manifests, audit system drift, or rebuild a machine from scratch.
+This repository is modular and grounded in **one unified fractal pattern** (*every governed directory combines a manifest, Markdown rules/skills, and task ledgers across `Root 0 -> Department (1..N) -> Project` using **3 Core Bases** $\times$ **3 Specialization Stacks**, executed deterministically via plain files, Git, and zero-dependency Python 3.14*):
+1. **Ubuntu System Backup, Audit & Restore ([`backup.sh`](backup.sh), [`audit.sh`](audit.sh), [`bootstrap.sh`](bootstrap.sh))** — snapshot installed APT packages, Snaps, NPM globals, external recipes, and GNOME desktop settings into plain-text `system/*` manifests, audit system drift, or rebuild a machine from scratch.
 2. **Dotfile Symlink Management (`bash/`, `git/`)** — manage `~/.bashrc`, `~/.profile`, and `~/.gitconfig` via [GNU Stow](https://www.gnu.org/software/stow/) while keeping personal identity and secrets in untracked local overrides (`~/.bashrc.local`, `~/.gitconfig.local`).
-3. **Google Antigravity 2.0 & Multi-Tier AI Governance (`antigravity/`, `templates/`, `scripts/`, `docs/`)** — composable `AGENTS.md` baselines (`human-core`, `technical-base`, `business-base`), 4 Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), 19 reusable skills (`10` global + `4` `technical-base` + `5` specialization-stack across `/sopen`, `/sclose`, `/continue`, `/release`, `/enrich`, `/priority`, `/review`, `/full-audit`, `oss-contribute`, `ledger-surface-audit`, `fastapi-testing`, etc.), polymorphic specialization stacks (`business-stack`, `science-stack`, `tech-stack`), and a zero-dependency **Contextual MCP Server** ([`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py)) shared across **Antigravity 2.0 (`antigravity-agents`)** (`/opt/antigravity-agents`) and **Antigravity CLI (`agy`)**.
+3. **Local Antigravity 2.0 Governance (`antigravity/`, `templates/`)** — composable `AGENTS.md` baselines (`human-core`, `technical-base`, `business-base`), 4 deterministic Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), 19 reusable skills (`10` global + `4` `technical-base` + `5` specialization-stack across `/sopen`, `/sclose`, `/continue`, `/release`, `/enrich`, `/priority`, `/review`, `/full-audit`, `oss-contribute`, `ledger-surface-audit`, `fastapi-testing`, etc.), and 3 ready-to-use specialization stacks ([`corporate-ops-ledger`](templates/business-stack/corporate-ops-ledger/README.md), [`scientific-knowledge-branch`](templates/science-stack/scientific-knowledge-branch/README.md), [`fastapi-hexagonal`](templates/tech-stack/fastapi-hexagonal/README.md)).
+4. **Multi-Layer Orchestrator & Contextual MCP Server ([`scripts/layer-config.sh`](scripts/layer-config.sh), [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh), [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py))** — deterministic file/Git/SHA-256 orchestrator (`bootstrap-workspace`, `apply-project`, `make sync`, `make delegate`, `make task`, `make complete`, `make promote`) plus a zero-dependency `stdio` JSON-RPC MCP server indexing layer Markdown into signed `rcap1` (`zlib + HMAC-SHA256`) capsules (`make consult`).
+
+| Progressive Adoption Mode | Who It Is For | What Executes on Disk (`0` External Servers Required) |
+| :--- | :--- | :--- |
+| **Mode 1 — Individual Workstation** | Solo developer or manager on Ubuntu | `./bootstrap.sh --workstation` + `set-global-profile` symlinks `~/.gemini/config/` and keeps `$HOME` synced via `dotfiles-sync`. |
+| **Mode 2 — Standalone Project + Stack** | Any single software, ops, or research repo | `./scripts/layer-config.sh apply-project <dir> --template <stack>` projects `.agents/rules/` and `.agents/skills/` with `SHA-256` drift tracking. |
+| **Mode 3 — Multi-Layer Organization** | `Root 0 -> Department (1..N) -> Project` | `bootstrap-workspace` + `layers/<child>/` (`git subtree`) + `make delegate` / `make complete` / `make consult` (`rcap1` capsules). |
+| **Mode 4 — Engine Contributor (`oss-dev`)** | Maintaining or extending `dotfiles-ubuntu` | `make setup-dev` + `make verify` runs the 8-stage deterministic verification gate (`100%` isolated `1:1` branch coverage). |
 
 ---
 
@@ -348,6 +356,6 @@ make docker-build && make docker-self-test    # (Optional) Build & verify Ubuntu
 
 ### Versioning, Security & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`2.9.0`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`3.0.0`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
 - **Security & Secret Isolation**: Personal Git identity (`~/.gitconfig.local`) and shell secrets (`~/.bashrc.local`) are strictly isolated from tracked files; see [`SECURITY.md`](SECURITY.md).
 - **Contributing & Extending**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md).

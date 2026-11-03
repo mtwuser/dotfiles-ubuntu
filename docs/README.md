@@ -88,6 +88,23 @@ flowchart TD
     L4 -->|"Indexed via dotfiles://docs/index"| MCPSRV
 ```
 
+### 2.1 Unified Fractal Mental Model & Deterministic Execution Map
+
+Every feature in `dotfiles-ubuntu` is a concrete application of **one recursive rule** (*a governed node holds a manifest, Markdown rules/skills, and task ledgers across `Root 0 -> Department (1..N) -> Project`, combining **3 Core Bases** $\times$ **3 Specialization Stacks***) implemented through **4 independent, zero-dependency capabilities**:
+
+| Independent Capability | Physical Execution on Disk (Zero External Infrastructure) | Canonical Entry Points |
+| :--- | :--- | :--- |
+| **1. Ubuntu 26.04 & GNU Stow Engine** | Reads/writes plain-text package and GNOME manifests in `system/*` and unfolds dotfile symlinks into `$HOME`. | [`backup.sh`](../backup.sh), [`audit.sh`](../audit.sh), [`bootstrap.sh`](../bootstrap.sh) |
+| **2. Local Antigravity Governance** | Projects `AGENTS.md` and `19` skills into `~/.gemini/config/` or `<repo>/.agents/`; `4` Python hooks intercept tool calls (`pre_tool_guard.py`, `post_invocation_lint.py`). | [`AGENTS.md`](../antigravity/.gemini/config/AGENTS.md), [`hooks.json`](../antigravity/.gemini/config/hooks.json) |
+| **3. Layer & Task-Branch Orchestrator** | Scaffolds `mcp-layer.json` + `Makefile` (`bootstrap-workspace`), projects templates with `SHA-256` reconciliation (`apply-project`, `make sync`), and tracks `[ ] -> [/] -> [x]` tasks across `layers/<child>/` (`make delegate`, `make task`, `make complete`). | [`scripts/layer-config.sh`](../scripts/layer-config.sh), [`scripts/layer-subtree.sh`](../scripts/layer-subtree.sh) |
+| **4. Contextual MCP & `rcap1` Capsules** | Stdlib Python 3.14 JSON-RPC `stdio` server that indexes layer `.md` files into `L1/L2/L3` excerpts, seals `zlib + HMAC-SHA256` (`rcap1`) capsules (`make consult`), and enforces `R0..W` capability rings on `.agents/ephemeral/` leases. | [`scripts/dotfiles_mcp_server.py`](../scripts/dotfiles_mcp_server.py) |
+
+| Canonical Specialization Stack (`templates/`) | Target Domain & Structure | Included Stack Skills |
+| :--- | :--- | :--- |
+| **[`business-stack/corporate-ops-ledger`](../templates/business-stack/corporate-ops-ledger/README.md)** | Enterprise operations, SOPs & compliance (`corporate/ledgers/` $\rightarrow$ `corporate/{policies,sops}/` Business `AAA` $\rightarrow$ `surfaces/{web,forms,print}/`). | `ledger-surface-audit` |
+| **[`science-stack/scientific-knowledge-branch`](../templates/science-stack/scientific-knowledge-branch/README.md)** | Scientific research, regulatory/statutory bodies & territorial registries (`< 465`-line modular `docs/` corpus queried via `make consult`). | *(Inherits global + `business-base`)* |
+| **[`tech-stack/fastapi-hexagonal`](../templates/tech-stack/fastapi-hexagonal/README.md)** | Software engineering with FastAPI + Hexagonal DDD (`domain/` zero-I/O `Protocol` ports $\rightarrow$ `application/` $\rightarrow$ `infrastructure/` + `1:1:1` tests). | `start`, `fastapi-testing`, `database`, `frontend` |
+
 ---
 
 ## 3. Quick Lookup for Humans & AI Agents Working on `dotfiles-ubuntu`
