@@ -168,18 +168,27 @@ class CompactionToolsMixin(MCPNodeBase):
         else:
             layer_dirs = [self._resolve_layer_dir(layer_arg)]
 
+        raw_tpath = str(args.get("target_path", "")).strip()
         candidate_files: list[tuple[str, Path, Path]] = []
         for ldir in layer_dirs:
             lname = "root" if ldir == self.repo_dir else ldir.name
+            if raw_tpath:
+                candidate_files.append((lname, ldir, ldir / raw_tpath))
             if scope in ("all", "global"):
                 candidate_files.append((lname, ldir, ldir / "antigravity/.gemini/config/AGENTS.md"))
             if scope in ("all", "templates"):
                 for _tname, tdir in _iter_layer_template_dirs(ldir):
                     for tf in sorted((tdir / "rules").glob("*.md")):
                         candidate_files.append((lname, ldir, tf))
+                    for sf in sorted((tdir / "skills").rglob("*.md")) if scope == "all" else ():
+                        candidate_files.append((lname, ldir, sf))
             if scope in ("all", "docs"):
-                for df in sorted((ldir / "docs").rglob("*.md")):
-                    candidate_files.append((lname, ldir, df))
+                if scope == "all":
+                    candidate_files.append((lname, ldir, ldir / "README.md"))
+                doc_subs = ("docs", "corporate", "surfaces") if scope == "all" else ("docs",)
+                for sub in doc_subs:
+                    for df in sorted((ldir / sub).rglob("*.md")):
+                        candidate_files.append((lname, ldir, df))
 
         matches: list[dict[str, Any]] = []
         excerpt_truncated = False
@@ -187,9 +196,19 @@ class CompactionToolsMixin(MCPNodeBase):
         q_tokens = [
             tok for tok in re.findall(r"[a-z0-9_-]{3,}", q_lower) if tok not in CODON_STOPWORDS
         ]
+        t_set = {(ldir / raw_tpath).resolve() for ldir in layer_dirs} if raw_tpath else set()
+        seen_files: set[tuple[str, Path]] = set()
         for lname, ldir, file_path in candidate_files:
-            if not file_path.is_file() or not file_path.resolve().is_relative_to(ldir.resolve()):
+            res_fp = file_path.resolve()
+            if (
+                file_path.suffix != ".md"
+                or not file_path.is_file()
+                or not res_fp.is_relative_to(ldir.resolve())
+                or (lname, res_fp) in seen_files
+            ):
                 continue
+            seen_files.add((lname, res_fp))
+            min_toks = 1 if (res_fp in t_set and len(q_tokens) >= 3) else 2
             lines = file_path.read_text(encoding="utf-8").splitlines()
             for heading, start_line, end_line, body in _iter_markdown_sections(
                 lines, file_path.name
@@ -197,7 +216,7 @@ class CompactionToolsMixin(MCPNodeBase):
                 joined = "\n".join(body)
                 haystack = f"{heading}\n{joined}".lower()
                 if q_lower in haystack or (
-                    len(q_tokens) >= 2 and all(t in haystack for t in q_tokens)
+                    len(q_tokens) >= 2 and sum(1 for t in q_tokens if t in haystack) >= min_toks
                 ):
                     if resolution == "L2" and len(joined) > L2_EXCERPT_MAX_CHARS:
                         excerpt_truncated = True

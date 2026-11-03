@@ -176,11 +176,7 @@ def complete_task_workflow(
     eff_ticket = t_m.group(1) if t_m else _derive_branch_slug(clean_q).upper()
     o_m = re.search(r"Delegated from\s+`?([a-z0-9-]+)`?", matched_body, re.IGNORECASE)
     origin_id = o_m.group(1) if o_m else up_id_default
-    res_parent = (
-        parent_dir.resolve()
-        if parent_dir
-        else (_resolve_mounted_child_dir(ws, origin_id) if origin_id else None)
-    )
+    res_parent = parent_dir.resolve() if parent_dir else None
     parent_updated, staged_receipt = False, None
     comp_line = (
         f"- [x] **[{eff_ticket} -> `{layer_id}` (`{tracker}`, stage: `completed (pro)`)]**: "
@@ -294,9 +290,9 @@ def consult_layer_ephemeral(
     res_key = str(spawned["session_resonance_key"])
     node_dir = Path(str(spawned["fork_dir"])) if not dry_run else eval_root
     node = SurfaceToolsMixin(repo_dir=node_dir, log_dir=None)
-    q_resp = node._tool_query_governance_rules(
-        {"query": clean_q, "resolution": "L1", "layer": "root", "resonance_key": res_key}
-    )
+    q_res = "L1" if clean_tier == "flash" else "L2"
+    q_args = {"query": clean_q, "resolution": q_res, "layer": "root", "target_path": clean_path}
+    q_resp = node._tool_query_governance_rules({**q_args, "resonance_key": res_key})
     q_payload = json.loads(q_resp["content"][0]["text"])
     s_kw = {"target_path": clean_path, "resolution_override": "L2", "include_capsules": True}
     s_all = {**s_kw, "resonance_key": res_key}

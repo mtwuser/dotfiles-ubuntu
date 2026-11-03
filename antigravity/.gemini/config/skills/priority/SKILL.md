@@ -21,6 +21,7 @@ All work plans and tasks are centralized at the repository root.
 1. **Task tracker first** — in-progress (`[/]`) and pending (`[ ]`) tasks promoted from the active roadmap/backlog
 2. **Within the task tracker**, follow top-to-bottom priority order (`P0` before `P1`)
 3. **Never ask** "where do you want to continue?" — the chain answers that
+4. **Hierarchical `1-Hop Parent (RO)` consultation & strict workspace containment (`make consult`)** — when a child layer (`Department`, `Squad`, `Project/Case`) needs normative or structural context from its 1-hop parent (`PARENT_DIR`) or from published peer snapshots mounted inside `PARENT_DIR/layers/<peer>/`, query them **exclusively via `make consult LAYER=<id> QUERY="<keywords>" [PATH_TARGET=<rel-path>] [TIER=pro]`** (`strictly-read-only` `L2` excerpt). **NEVER** run `git -C` or read files directly from external sibling working clones (`*-org/*` or `../*`) outside the current workspace.
 
 ## Naming Convention
 

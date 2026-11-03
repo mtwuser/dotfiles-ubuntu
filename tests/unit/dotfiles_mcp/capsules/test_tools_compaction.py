@@ -68,6 +68,15 @@ class TestCompactionToolsMixin:
         tpl_rules = tmp_path / "templates" / "fastapi-hexagonal" / "rules"
         tpl_rules.mkdir(parents=True)
         (tpl_rules / "coding.md").write_text("# Coding\nStrict typing.\n", encoding="utf-8")
+        tpl_skills = tmp_path / "templates" / "fastapi-hexagonal" / "skills" / "start"
+        tpl_skills.mkdir(parents=True)
+        (tpl_skills / "SKILL.md").write_text("# Start Skill\nBoot uvicorn.\n", encoding="utf-8")
+        (tmp_path / "README.md").write_text(
+            "# Root Readme\n## Topology Overview\nDirect 3-tier hierarchy.\n", encoding="utf-8"
+        )
+        corp_dir = tmp_path / "corporate"
+        corp_dir.mkdir()
+        (corp_dir / "ledger.md").write_text("# Ledger\n## Patent Asset\nPAT-01\n", encoding="utf-8")
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
         spec_md = docs_dir / "spec.md"
@@ -121,7 +130,23 @@ class TestCompactionToolsMixin:
         q_l2_short = json.loads(
             server.call_tool(
                 "query_governance_rules",
-                {"query": "Lead prose", "scope": "all", "resolution": "L2"},
+                {
+                    "query": "Lead prose",
+                    "scope": "all",
+                    "resolution": "L2",
+                    "target_path": "README.md",
+                },
+            )["content"][0]["text"]
+        )
+        q_readme = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {
+                    "query": "Topology hierarchy absentword",
+                    "scope": "all",
+                    "resolution": "L2",
+                    "target_path": "README.md",
+                },
             )["content"][0]["text"]
         )
         q_l2_trunc = json.loads(
@@ -142,6 +167,7 @@ class TestCompactionToolsMixin:
         assert "folded in rcap1:L1" in q_l1["matches"][0]["axiom_skeleton"]
         assert q_l2_short["match_count"] == 1
         assert q_l2_short["truncated"] is False
+        assert q_readme["match_count"] == 1 and q_readme["matches"][0]["file"] == "README.md"
         assert q_l2_trunc["truncated"] is True
 
     def test_query_governance_rules_exact_boundary_cutpoints_for_excerpt_and_match_cap(

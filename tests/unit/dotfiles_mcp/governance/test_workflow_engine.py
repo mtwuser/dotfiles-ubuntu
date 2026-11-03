@@ -142,12 +142,11 @@ class TestWorkflowEngine:
         staged_res = complete_task_workflow(
             ws,
             task_query="TECH-042",
+            parent_dir=parent_dir,
             actor_email="dev@acme.com",
             create_pr=True,
         )
-        no_parent_res = complete_task_workflow(
-            ws, task_query="TECH-042", parent_dir=tmp_path / "missing-parent"
-        )
+        no_parent_res = complete_task_workflow(ws, task_query="TECH-042")
 
         # Assert
         assert dry_res["dry_run"] is True and auth_res["parent_tracker_updated"] is True

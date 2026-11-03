@@ -257,23 +257,16 @@ def _resolve_default_parent_dir(workspace_dir: Path, parent_dir: Path | None) ->
 
 
 def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | None:
-    """Resolve a 1-hop child layer directory, prioritizing mounted layers/<child> inside ws."""
-    ws = workspace_dir.resolve()
-    roots = [ws / "layers", ws.parent / f"{ws.name}-org", ws.parent]
-    for r in roots:
-        cand = r / child_name
-        if cand.resolve() != ws and (cand / "system" / "mcp-layer.json").is_file():
-            return cand.resolve()
-    for r in roots:
-        if not r.is_dir():
-            continue
-        for sub in sorted(r.iterdir()):
-            mf = sub / "system" / "mcp-layer.json"
-            if sub.is_dir() and sub.resolve() != ws and mf.is_file():
-                with contextlib.suppress(json.JSONDecodeError, OSError):
-                    data = json.loads(mf.read_text(encoding="utf-8"))
-                    if isinstance(data, dict) and data.get("layer_id") == child_name:
-                        return sub.resolve()
+    """Resolve a 1-hop child layer directory strictly inside mounted ws/layers/<child>."""
+    layers_dir = workspace_dir.resolve() / "layers"
+    cand = layers_dir / child_name
+    if (cand / "system" / "mcp-layer.json").is_file():
+        return cand.resolve()
+    for mf in sorted(layers_dir.glob("*/system/mcp-layer.json")):
+        with contextlib.suppress(json.JSONDecodeError, OSError):
+            data = json.loads(mf.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and data.get("layer_id") == child_name:
+                return mf.parent.parent.resolve()
     return None
 
 

@@ -331,7 +331,10 @@ def spawn_ephemeral_fork(
     if not dry_run:
         for subdir in ("system", "layers", "logs"):
             (fork_dir / subdir).mkdir(parents=True, exist_ok=True)
-        for item in ("antigravity", "docs", "templates", "VERSION"):
+        copy_items = (
+            "antigravity", "docs", "templates", "corporate", "surfaces", "README.md", "VERSION",
+        )  # fmt: skip
+        for item in copy_items:
             if (repo_dir / item).exists() and not (fork_dir / item).exists():
                 _copy_zero_copy(repo_dir / item, fork_dir / item)
         for lname in selected_layers:

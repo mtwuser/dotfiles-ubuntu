@@ -97,9 +97,14 @@ class TestLayerTopologyHelpers:
         org_child = tmp_path / "corp-root-org/dept-beta-repo"
         (org_child / "system").mkdir(parents=True)
         (org_child / "system/mcp-layer.json").write_text(
-            '{"layer_id": "dept-beta"}', encoding="utf-8"
+            '{"layer_id": "dept-external"}', encoding="utf-8"
         )
         (org_child / "WORKTASK.md").write_text("# Untouched External Repo\n", encoding="utf-8")
+        alias_child = parent_ws / "layers/dept-beta-dir"
+        (alias_child / "system").mkdir(parents=True)
+        (alias_child / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-beta"}', encoding="utf-8"
+        )
         direct_sib = tmp_path / "dept-direct"
         (direct_sib / "system").mkdir(parents=True)
         (direct_sib / "system/mcp-layer.json").write_text(
@@ -116,6 +121,7 @@ class TestLayerTopologyHelpers:
         missing_resolved = layer_topology_helpers._resolve_mounted_child_dir(
             parent_ws, "dept-missing"
         )
+        alpha_resolved = layer_topology_helpers._resolve_mounted_child_dir(parent_ws, "dept-alpha")
         direct_resolved = layer_topology_helpers._resolve_mounted_child_dir(
             parent_ws, "dept-direct"
         )
@@ -176,8 +182,9 @@ class TestLayerTopologyHelpers:
         assert newer_git_local_blob is True
         assert newer_reconciled is True
         assert missing_resolved is None
-        assert direct_resolved == direct_sib.resolve()
-        assert beta_resolved == org_child.resolve()
+        assert alpha_resolved == mounted_child.resolve()
+        assert direct_resolved is None
+        assert beta_resolved == alias_child.resolve()
         assert explicit_parent == parent_ws
         assert mounted_parent == parent_ws.resolve()
         assert mk_parent == parent_ws.resolve()
