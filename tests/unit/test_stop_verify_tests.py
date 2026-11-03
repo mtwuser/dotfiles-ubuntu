@@ -102,9 +102,10 @@ class TestStopVerifyTests:
         passed, summary = stop_verify_tests.run_tests(tmp_path / "python", str(tmp_path))
 
         # Assert
+        expected_prefix = [str(tmp_path / "python"), "-m", "pytest"]
         assert passed is True
         assert summary == "line2\nline3\n5 passed in 0.12s"
-        assert recorded_cmds[0][:3] == [str(tmp_path / "python"), "-m", "pytest"]
+        assert recorded_cmds[0][: len(expected_prefix)] == expected_prefix
 
     def test_run_tests_returns_false_with_stderr_on_failure(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

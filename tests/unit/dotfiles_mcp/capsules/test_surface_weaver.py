@@ -258,12 +258,13 @@ class TestSurfaceWeaver:
         ]
         role_member = {"effective_role": "member", "precedence": 30}
         wt_div = (
+            "# Tasks\n"
             "- [x] [GOVERNANCE DECISION: APPROVED by `other`] (unrelated/file.md)\n"
-            "- [x] [GOVERNANCE DECISION: APPROVED by `cmo@acme.com`] (campaigns/q4.html)\n"
             "- [x] [GOVERNANCE DECISION: APPROVED by `cto@acme.com`] (campaigns/q4.html)\n"
             "- [ ] [GOVERNANCE DECISION: REJECTED by `clo@acme.com`] (campaigns/q4.html)\n"
         )
         wt_blk = wt_div + (
+            "- [x] [GOVERNANCE DECISION: APPROVED by `cmo@acme.com`] (campaigns/q4.html)\n"
             "- [ ] [GOVERNANCE DECISION: BLOCKED by `clo@acme.com`] (campaigns/q4.html)\n"
         )
         wt_root_resolved = wt_blk + (

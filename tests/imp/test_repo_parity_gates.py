@@ -278,15 +278,11 @@ class TestRepoParityGates:
             r"|\x69ntegration\s+tests?|\x69ntegration\s+tier)\b",
             re.IGNORECASE,
         )
-        arch_04 = (
-            REPO_DIR / "docs/architecture/04_compaction_surface_and_promotion_engines.md"
-        ).read_text(encoding="utf-8")
-        arch_05 = (
-            REPO_DIR / "docs/architecture/05_ephemeral_forks_and_department_bots.md"
-        ).read_text(encoding="utf-8")
-        arch_06 = (
-            REPO_DIR / "docs/architecture/06_layer_governance_and_promotion_engines.md"
-        ).read_text(encoding="utf-8")
+        arch_dir = REPO_DIR / "docs/architecture"
+        arch_04 = (arch_dir / "04_compaction_surface_and_promotion_engines.md").read_text("utf-8")
+        arch_05 = (arch_dir / "05_ephemeral_forks_and_department_bots.md").read_text("utf-8")
+        arch_06 = (arch_dir / "06_layer_governance_and_promotion_engines.md").read_text("utf-8")
+        bus_md = (REPO_DIR / "templates/business-base/rules/business-base.md").read_text("utf-8")
         targets = sorted([
             REPO_DIR / "README.md", REPO_DIR / "CONTRIBUTING.md", REPO_DIR / "CHANGELOG.md",
             *list((REPO_DIR / "antigravity").rglob("*.md")),
@@ -301,11 +297,10 @@ class TestRepoParityGates:
         # Act
         violations = [
             f"{p.relative_to(REPO_DIR)}:{idx}"
-            for p in targets
-            if p.is_file()
+            for p in targets if p.is_file()
             for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
             if retired_token_re.search(line)
-        ]
+        ]  # fmt: skip
         scope_violations = [
             f"{p.relative_to(REPO_DIR)}:{idx}"
             for p in extrapolable_technical_targets
@@ -314,8 +309,7 @@ class TestRepoParityGates:
         ]
 
         # Assert
-        assert violations == []
-        assert scope_violations == []
+        assert violations == [] and scope_violations == []
         assert "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base" in (
             REPO_DIR / "Makefile"
         ).read_text(encoding="utf-8")
@@ -324,14 +318,17 @@ class TestRepoParityGates:
             for c in ("promoter_codon", "_parse_capsule_envelope", "_resolve_ephemeral_issuer_meta")
         )
         assert all(
+            c in arch_06 and c in bus_md
+            for c in ("RECONCILED_FLOW", "ESCALATE_TO_ROOT", "ESCALATE_INTER_ENTITY_ROOTS")
+        )
+        assert all(
             c in arch_06
             for c in (
-                "diff-project <dir> [--parent-dir <dir>]",
-                "configure_fork_manifest",
-                "inspect_layer_horizon",
-                "verify_layer_operation_authority",
+                "diff-project <dir> [--parent-dir <dir>]", "configure_fork_manifest",
+                "inspect_layer_horizon", "verify_layer_operation_authority",
             )
-        )
+        )  # fmt: skip
+        assert "entity_kind" in bus_md
         assert all(
             c in arch_05
             for c in ("ephemeral_capsules", "default_ephemeral_root", "_copy_zero_copy")
@@ -399,11 +396,10 @@ class TestRepoParityGates:
             rel_tp = str(tp.relative_to(REPO_DIR))
             tree = ast.parse(tp.read_text(encoding="utf-8"), filename=str(tp))
             top_tests = [
-                s.name
-                for s in tree.body
+                s.name for s in tree.body
                 if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef))
                 and s.name.startswith("test_")
-            ]
+            ]  # fmt: skip
             test_classes = [
                 s for s in tree.body if isinstance(s, ast.ClassDef) and s.name.startswith("Test")
             ]
@@ -413,16 +409,18 @@ class TestRepoParityGates:
                 or len(test_classes) != 1
                 or "Specification: docs/architecture/" not in mod_doc
             ):
-                structure_violations.append(
-                    f"{rel_tp}: classes={[c.name for c in test_classes]}, top_tests={top_tests}"
-                )
+                structure_violations.append(f"{rel_tp}: classes={len(test_classes)}")
             for node in ast.walk(tree):
+                has_raw_slice = isinstance(node, ast.Slice) and any(
+                    isinstance(b, ast.Constant) and isinstance(b.value, int) and abs(b.value) > 2
+                    for b in (node.lower, node.upper)
+                )
                 if (
                     isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and not node.name.startswith("_")
                     and not ast.get_docstring(node)
-                ):
-                    structure_violations.append(f"{rel_tp}:{node.lineno}:{node.name}")
+                ) or has_raw_slice:
+                    structure_violations.append(f"{rel_tp}:{getattr(node, 'lineno', 0)}")
                 if (
                     isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Attribute)

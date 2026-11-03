@@ -402,10 +402,28 @@ PYEOF
 
   PYTEST_BIN="$(resolve_tool pytest)"
   if [ -n "$PYTEST_BIN" ]; then
-    if UNIT_COV_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/dotfiles_mcp/ -q --tb=short --cov=scripts/dotfiles_mcp --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
-      pass "Isolated 1:1 unit test coverage verified (100.00% on scripts/dotfiles_mcp without E2E/self-test masking)"
+    if UNIT_COV_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/dotfiles_mcp/ -q --tb=short --cov=scripts/dotfiles_mcp --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)" && \
+       python3 - "$REPO_DIR" "$PYTEST_BIN" << 'PYCOV'
+from concurrent.futures import ThreadPoolExecutor
+import os, subprocess, sys, tempfile
+from pathlib import Path
+repo, pytest_bin = Path(sys.argv[1]), sys.argv[2]
+mods = sorted(p for p in (repo / "scripts/dotfiles_mcp").rglob("*.py") if p.name not in ("__init__.py", "constants.py", "catalogs.py"))
+def _run(m: Path) -> str | None:
+    sub = m.parent.name
+    tf = repo / "tests/unit/dotfiles_mcp" / sub / f"test_{m.name}"
+    with tempfile.TemporaryDirectory() as td:
+        env = {**os.environ, "COVERAGE_FILE": f"{td}/.coverage", "PYTHONDONTWRITEBYTECODE": "1"}
+        r = subprocess.run([pytest_bin, str(tf), f"--cov=dotfiles_mcp.{sub}.{m.stem}", "--cov-branch", "--cov-fail-under=100", "-q", "-o", f"cache_dir={td}/c"], capture_output=True, text=True, env=env)
+        return f"{sub}/{m.name}:\n{r.stdout}{r.stderr}" if r.returncode != 0 else None
+with ThreadPoolExecutor(max_workers=8) as ex:
+    errs = [e for e in ex.map(_run, mods) if e]
+if errs: sys.exit("\n".join(errs))
+PYCOV
+    then
+      pass "Isolated 1:1 single-file and package unit test coverage verified (100.00% on all 22 executable scripts/dotfiles_mcp modules with 0 cross-unit masking)"
     else
-      echo "$UNIT_COV_OUT" >&2; fail "Isolated unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
+      echo "$UNIT_COV_OUT" >&2; fail "Isolated 1:1 unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
     fi
     if PYTEST_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
       pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"

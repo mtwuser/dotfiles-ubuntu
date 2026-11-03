@@ -98,7 +98,7 @@ Identify the concrete human archetypes served by the repository and simulate eac
 - [ ] **Generic vs. Local Rule Purity**: Confirm that reusable base rules (`technical-base`) and shared skills contain zero hardcoded counts, paths, or assumptions tied to a single repository.
 - [ ] **Outbound / Cross-Perspective Non-Restriction Check**: Confirm that tightening a rule, default, or guard in Perspective A does not restrict or pollute a valid outbound workflow in Perspective B (e.g., non-technical forks, read-only mounts, or downstream consumer repositories).
 
-Record all findings in a structured table (`[P1-01]`, `[P1-02]`, ...) with severity, conflicting perspectives, exact `file:line` evidence, and clean-cutover remediation.
+Record all findings in a structured table using **descriptive domain-slugged IDs (`[P1-DOCS-<slug>]`, `[P1-LAYER-<slug>]`)** (never generic `[P1-01]` counters that look identical across audits) with severity, conflicting perspectives, exact `file:line` evidence, and clean-cutover remediation.
 
 ---
 
@@ -118,7 +118,7 @@ Once conceptual and normative requirements from Pass 1 are aligned, audit their 
    - Verify explicit parameter and return types on 100% of functions/methods, 1-line docstrings on 100% of public functions/methods, specific domain exceptions/error codes, and zero linter or type-checker warnings.
    - **Never prune an unreferenced constant, helper, or test by reflex**: inspect `git log -S <symbol> -p` and `docs/architecture/` first and classify it explicitly as **`[WIRE]`** (*unconnected design intent* $\rightarrow$ wire into its consumer engine and add bipolar tests), **`[CONSOLIDATE]`** (*duplicate SSoT* $\rightarrow$ merge into the canonical dict/catalog without losing values), or **`[PRUNE]`** (*proven obsolete residue* $\rightarrow$ remove cleanly).
 
-Record all technical improvements in a structured table (`[P2-01]`, `[P2-02]`, ...) with `file:line` references and concrete refactoring actions.
+Record all technical improvements in a structured table using **descriptive domain-slugged IDs (`[P2-ARCH-<slug>]`)** (and **`[P3-111-<slug>]`** in Pass 3) with `file:line` references, concrete refactoring actions, and a **`C2 -> C1` Self-Hardening Ratchet** (wiring any newly discovered check asymmetry into `make verify` / `test_repo_parity_gates.py` so `C1` catches it automatically on future edits).
 
 ---
 

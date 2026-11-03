@@ -298,7 +298,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ```bash
 # Template discovery, fork parameterization & static project projection:
 ./scripts/layer-config.sh list-templates
-./scripts/layer-config.sh init-fork --id acme-dept-design --role department --precedence 30 --prune-default-templates
+./scripts/layer-config.sh init-fork --id acme-dept-design --role department --precedence 30 --entity-kind enterprise --governing-root acme-corp-root --prune-default-templates
 ./scripts/layer-config.sh scaffold-template brand-design-system --kind business-stack --register-binding
 ./scripts/layer-config.sh apply-project <your-project> --template fastapi-hexagonal --layers all
 
@@ -314,7 +314,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
 ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
 ./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
-./scripts/layer-config.sh check-env-promotion <your-project> --to-env pre --email "qa@acme.com"
+./scripts/layer-config.sh check-env-promotion <your-project> --to-env pre --files "surfaces/web/terms.html" --email "qa@acme.com"
 ./scripts/layer-config.sh record-decision <your-project> --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
 ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
 ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe

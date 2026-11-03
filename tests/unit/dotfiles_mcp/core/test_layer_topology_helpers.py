@@ -340,8 +340,12 @@ class TestLayerTopologyHelpers:
         ext_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
             ext_dept, actor_email="ceo@acme.com", parent_dir=acme_root
         )
+        no_parent_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            ext_dept, actor_email="ceo@acme.com", parent_dir=tmp_path / "no-manifest-dir"
+        )
 
         # Assert
+        assert no_parent_prof["upstream_layer_id"] is None
         assert (gov_id["entity_kind"], gov_id["governing_root_id"]) == (
             "public-government",
             "gov-es-aepd",
