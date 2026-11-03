@@ -71,12 +71,18 @@ for md in sorted(repo.rglob("*.md")):
                 math_issues.append(f"{md}:{line_no}: {m.group(0)}")
     for m in link_re.finditer(re.sub(r"`\[[^\]]+\]\([^)]+\)`", "", stripped)):
         label, target = m.group(1), m.group(2).strip()
-        if not target.startswith(("http://", "https://", "mailto:", "#")):
-            path_part = target.split("#")[0]
+        if not target.startswith(("http://", "https://", "mailto:")):
+            path_part, _, anchor = target.partition("#")
+            target_md = (md.parent / path_part).resolve() if path_part else md.resolve()
             if path_part:
                 checked += 1
-                if not (md.parent / path_part).resolve().exists():
+                if not target_md.exists():
                     broken.append(f"{md}: [{label}]({target})")
+                    continue
+            if anchor and target_md.is_file() and target_md.suffix == ".md":
+                slugs = {re.sub(r"\s", "-", re.sub(r"[^\w\s-]", "", hm.group(1).strip().lower())) for hm in re.finditer(r"^#{1,6}\s+(.+)$", target_md.read_text(encoding="utf-8"), re.MULTILINE)}
+                if anchor not in slugs:
+                    broken.append(f"{md}: broken anchor #{anchor} in [{label}]({target})")
 if broken or math_issues:
     sys.exit("\n".join((*broken, *math_issues)))
 print(f"  Verified {checked} relative Markdown links and GitHub LaTeX math syntax across all .md files")
