@@ -320,8 +320,40 @@ class TestManifestHelpers:
         is_corp = manifest_helpers._is_oss_root_manifest(
             {"layer_id": "acme-root", "layer_role": "corporate"}
         )
+        w_empty = manifest_helpers._count_result_warnings({})
+        w_nonjson = manifest_helpers._count_result_warnings({"content": [{"text": "plain"}]})
+        w_top = manifest_helpers._count_result_warnings({"content": [{"text": '{"warnings":[1]}'}]})
+        w_ch3 = manifest_helpers._count_result_warnings(
+            {"content": [{"text": '{"channel_3_active_invariants_and_hooks":{"warnings":[1,2]}}'}]}
+        )
+        w_zero = manifest_helpers._count_result_warnings({"content": [{"text": "{}"}]})
+        c_empty = manifest_helpers._extract_compaction_event_fields("query_governance_rules", {})
+        c_plain = manifest_helpers._extract_compaction_event_fields(
+            "query_governance_rules", {"content": [{"text": "plain"}]}
+        )
+        c_query = manifest_helpers._extract_compaction_event_fields(
+            "query_governance_rules",
+            {"content": [{"text": '{"token_compaction_metrics":{"tokens_saved":5}}'}]},
+        )
+        c_unfold = manifest_helpers._extract_compaction_event_fields(
+            "unfold_context_capsule",
+            {"content": [{"text": '{"unfolded_level":"L2","decrypted_hops":1}'}]},
+        )
+        c_other = manifest_helpers._extract_compaction_event_fields(
+            "other_tool", {"content": [{"text": "{}"}]}
+        )
+        dest_root = manifest_helpers._resolve_template_dest_dir(tmp_path, "new-root-pack")
+        sha_hex = manifest_helpers._sha256_file(root_tpl / "template.json")
+        stale_missing = manifest_helpers._has_stale_schema(tmp_path / "missing.json", "v1")
+        manifest_helpers._stamp_schema_rev(root_tpl / "template.json", "template-pack-v1")
+        manifest_helpers._stamp_schema_rev(root_tpl / "template.json", "template-pack-v2")
 
         # Assert
+        assert (w_empty, w_nonjson, w_top, w_ch3, w_zero) == (0, 0, 1, 2, 0)
+        assert (c_empty, c_plain, c_other) == ({}, {}, {})
+        assert c_query["tokens_saved"] == 5 and c_unfold["unfolded_level"] == "L2"
+        assert dest_root == tmp_path / "templates" / "new-root-pack"
+        assert len(sha_hex) == 64 and stale_missing is False
         assert empty_names == []
         assert empty_m == {}
         assert is_oss is True

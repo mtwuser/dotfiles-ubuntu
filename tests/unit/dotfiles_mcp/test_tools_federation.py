@@ -320,8 +320,14 @@ class TestFederationToolsMixin:
             "compare_layer_patterns",
             {"project_rules": ["coding.md"], "project_skills": ["sopen", "novel"]},
         )
+        res_root = server.call_tool(
+            "compare_layer_patterns",
+            {"layer": "root", "project_rules": ["coding.md"], "project_skills": ["sopen"]},
+        )
 
         # Assert
         parsed = json.loads(res["content"][0]["text"])
+        parsed_root = json.loads(res_root["content"][0]["text"])
         assert parsed["already_in_layer_a_skills"] == ["sopen"]
         assert parsed["candidates_for_upward_promotion"]["novel_skills"] == ["novel"]
+        assert parsed_root["compared_against_layer"] == "dotfiles-ubuntu-default"

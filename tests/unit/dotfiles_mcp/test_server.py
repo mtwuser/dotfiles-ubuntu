@@ -20,16 +20,46 @@ if TYPE_CHECKING:
 class TestDotfilesMCPServer:
     """Verify JSON-RPC 2.0 request dispatching, error handling, and stdio framing loop."""
 
-    def test_call_tool_raises_on_unknown_tool(self) -> None:
-        """Raise ValueError when invoking an unknown tool name."""
+    def test_call_tool_dispatches_all_tools_and_raises_on_unknown_tool(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Dispatch all 9 registered MCP tools and raise ValueError on unknown tool name."""
         # Arrange
         server = DotfilesMCPServer()
+        monkeypatch.setattr(
+            server,
+            "_tool_audit_node_drift",
+            lambda _a: {"content": [{"type": "text", "text": "{}"}]},
+        )
 
         # Act
+        for tname, targs in (
+            ("get_layer_overview", {}),
+            ("audit_node_drift", {}),
+            ("read_layer_document", {"relative_path": "README.md"}),
+            ("query_governance_rules", {"query": "Mandate"}),
+            ("discover_federated_mcps", {}),
+            ("compare_layer_patterns", {}),
+            ("resolve_surface_governance", {"target_path": "scripts/verify-repo.sh"}),
+            ("orchestrate_ephemeral_fork", {"action": "inspect"}),
+        ):
+            assert "content" in server.call_tool(tname, targs)
+        cap_err_resp = server.handle_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 99,
+                "method": "tools/call",
+                "params": {
+                    "name": "unfold_context_capsule",
+                    "arguments": {"capsule_token": "bad"},
+                },
+            }
+        )
         with pytest.raises(ValueError, match="Unknown tool name"):
             server.call_tool("nonexistent_tool", {})
 
         # Assert
+        assert cap_err_resp is not None and cap_err_resp["error"]["code"] == -32602
         assert len(server.list_tools()) == 9
 
     def test_handle_request_covers_notifications_ping_templates_and_errors(

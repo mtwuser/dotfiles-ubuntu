@@ -74,6 +74,7 @@ class TestPromotionEngine:
         # Arrange
         for sub in (
             "system",
+            "antigravity/.gemini/config/skills/root-sk",
             "templates/web-starter/rules",
             "templates/web-starter/skills/start",
             "templates/.hidden",
@@ -87,6 +88,10 @@ class TestPromotionEngine:
                 "system/mcp-layer.json",
                 '{"schema_version":"mcp-layer-v1","layer_id":"acme-corp","layer_role":"corporate",'
                 '"default_stack_templates":["web-starter"]}',
+            ),
+            (
+                "antigravity/.gemini/config/skills/root-sk/SKILL.md",
+                "---\nname: root-sk\ndescription: r\n---\n",
             ),
             ("templates/web-starter/rules/coding.md", "# Code\n"),
             (
@@ -333,18 +338,30 @@ class TestPromotionEngine:
             upstream_dir=repo_dir / "layers" / "dept-legal",
             dry_run=True,
         )
+        oss_root_dir = tmp_path / "oss-root"
+        (oss_root_dir / "system").mkdir(parents=True)
+        (oss_root_dir / "templates/business-base/rules").mkdir(parents=True)
+        (oss_root_dir / "templates/business-base/assets").mkdir(parents=True)
+        (oss_root_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id":"root","layer_role":"root"}', encoding="utf-8"
+        )
+        (proj_dir / "system").mkdir(parents=True, exist_ok=True)
+        (proj_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id":"squad-a","layer_role":"corporate","upstream_layer":{"layer_id":"root"}}',
+            encoding="utf-8",
+        )
         (proj_dir / "templates/business-base/rules").mkdir(parents=True)
         (proj_dir / "templates/business-base/assets").mkdir(parents=True)
         (proj_dir / "templates/business-base/rules/business-base.md").write_text("# v2\n", "utf-8")
         (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", "utf-8")
         oss_tpl_res = _prom(
             "templates/business-base/rules/business-base.md",
-            upstream_dir=repo_dir / "layers" / "dept-legal",
+            upstream_dir=oss_root_dir,
             dry_run=True,
         )
         oss_asset_res = _prom(
             "templates/business-base/assets/a.md",
-            upstream_dir=repo_dir / "layers" / "dept-legal",
+            upstream_dir=oss_root_dir,
             dry_run=True,
         )
 

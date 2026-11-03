@@ -198,7 +198,12 @@ class TestCompactionToolsMixin:
         res_multi_miss = json.loads(
             server.call_tool(
                 "query_governance_rules",
-                {"query": "Cap15 and absentkeyword", "scope": "docs", "resolution": "L0"},
+                {
+                    "query": "Cap15 and absentkeyword",
+                    "scope": "docs",
+                    "resolution": "L0",
+                    "layer": "root",
+                },
             )["content"][0]["text"]
         )
 

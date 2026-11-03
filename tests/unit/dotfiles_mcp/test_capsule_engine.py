@@ -26,11 +26,15 @@ class TestCapsuleEngine:
         # Act
         empty_slug = capsule_engine._slugify_codon("!!!")
         tags = capsule_engine._extract_codon_tags(heading, body)
+        short_tags = capsule_engine._extract_codon_tags("Alpha", "**beta**")
+        dig = capsule_engine._compute_digest16("a", "b")
 
         # Assert
         assert empty_slug == "section"
         assert len(tags) == 5
         assert tags[0] == "resonant"
+        assert short_tags == ["alpha", "beta"]
+        assert len(dig) == 16
 
     def test_extract_axiom_skeleton_folds_tables_code_and_overflow_bullets(self) -> None:
         """Retain quotes, mandates, and up to 4 bullets while folding code and tables."""
@@ -57,6 +61,13 @@ class TestCapsuleEngine:
         unfolded_skeleton = capsule_engine._extract_axiom_skeleton(
             "Short Section", ["## Short Section", "- Bullet 1", "- Bullet 2", "- Bullet 3"]
         )
+        prose_first = capsule_engine._extract_axiom_skeleton(
+            "Prose", ["## Prose", "First prose line.", "Second prose line."]
+        )
+        secs = capsule_engine._iter_markdown_sections(
+            ["# Title", "Intro", "## Sub 1", "Body 1", "### Sub 2", "Body 2"], "Default"
+        )
+        empty_secs = capsule_engine._iter_markdown_sections([], "Default")
 
         # Assert
         assert "Core mandate quote" in skeleton
@@ -64,6 +75,8 @@ class TestCapsuleEngine:
         assert "Bullet 5" not in skeleton
         assert "folded in rcap1:L1]" in skeleton
         assert "[+" not in unfolded_skeleton
+        assert "First prose line." in prose_first
+        assert len(secs) == 3 and empty_secs == []
 
     def test_seal_and_parse_capsule_envelope_roundtrip_and_invalid_tokens(
         self,
@@ -80,6 +93,7 @@ class TestCapsuleEngine:
         docs_dir.mkdir()
         linked = docs_dir / "linked.md"
         linked.write_text("# Linked\n", encoding="utf-8")
+        (tmp_path / "secret.txt").write_text("deny\n", encoding="utf-8")
 
         # Act
         parsed_hdr, signing_prefix, cipher_bytes, sig_hex = capsule_engine._parse_capsule_envelope(
@@ -87,7 +101,8 @@ class TestCapsuleEngine:
         )
         links = capsule_engine._extract_l3_links(
             docs_dir / "source.md",
-            "See [Linked](linked.md) and [Web](https://example.com).",
+            "See [Linked](linked.md), [Dup](docs/linked.md), [Secret](secret.txt), "
+            "[Missing](missing.md), and [Web](https://example.com).",
             tmp_path,
         )
         with pytest.raises(ValueError, match="Malformed rcap1"):

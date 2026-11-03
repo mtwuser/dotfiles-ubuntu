@@ -378,11 +378,23 @@ class TestUnfoldToolsMixin:
         # Arrange
         eph_root = tmp_path / "eph_root"
         monkeypatch.setenv("DOTFILES_EPHEMERAL_ROOT", str(eph_root))
-        (eph_root / "eph-other/system").mkdir(parents=True)
-        (eph_root / "eph-other/system/mcp-layer.json").write_text(
-            json.dumps({"ephemeral_metadata": {"parent_layer_id": "different-parent"}}),
-            encoding="utf-8",
-        )
+        for sub, pid in (
+            ("eph-other", "different-parent"),
+            ("eph-disk", "dotfiles-ubuntu-workstation"),
+        ):
+            (eph_root / sub / "system").mkdir(parents=True)
+            (eph_root / sub / "system/mcp-layer.json").write_text(
+                json.dumps(
+                    {
+                        "ephemeral_metadata": {
+                            "parent_layer_id": pid,
+                            "expires_at_epoch": 9999999999.0,
+                            "session_resonance_key": "k-disk",
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
         proj = tmp_path / "consumer_proj"
         (proj / ".agents/rules").mkdir(parents=True)
         (proj / ".agents/rules/dom.md").write_text(
@@ -398,8 +410,12 @@ class TestUnfoldToolsMixin:
 
         # Act
         mem_meta = server._resolve_ephemeral_issuer_meta("eph-mem", "dotfiles-ubuntu-workstation")
+        disk_meta = server._resolve_ephemeral_issuer_meta("eph-disk", "dotfiles-ubuntu-workstation")
         mismatch_meta = server._resolve_ephemeral_issuer_meta(
             "eph-other", "dotfiles-ubuntu-workstation"
+        )
+        missing_meta = server._resolve_ephemeral_issuer_meta(
+            "eph-no-such", "dotfiles-ubuntu-workstation"
         )
         eval_res = json.loads(
             server.call_tool(
@@ -433,6 +449,7 @@ class TestUnfoldToolsMixin:
 
         # Assert
         assert mem_meta == {"session_resonance_key": "k-mem"}
-        assert mismatch_meta is None
+        assert disk_meta is not None and disk_meta["session_resonance_key"] == "k-disk"
+        assert mismatch_meta is None and missing_meta is None
         assert unfolded_l2["unfolded_level"] == "L2"
         assert "Detail line." in unfolded_l2["content"]["full_section"]

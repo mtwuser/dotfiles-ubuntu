@@ -110,6 +110,15 @@ class TestHorizonEngine:
             is_local_newer=True,
         )
         merged_txt = (dest_tpl / "rules/business-base.md").read_text(encoding="utf-8")
+        acc_dry, _ = reconcile_template_pack_sync(
+            ws,
+            "business-base",
+            src_tpl,
+            dest_tpl,
+            strategy="accept-upstream",
+            is_local_newer=True,
+            dry_run=True,
+        )
         acc_copied, _ = reconcile_template_pack_sync(
             ws,
             "business-base",
@@ -142,7 +151,7 @@ class TestHorizonEngine:
         )
         assert merge_copied is True and merge_conflicts == []
         assert "Upstream v2." in merged_txt and "## Local Annex" in merged_txt
-        assert acc_copied is True and "## Local Annex" not in acc_txt
+        assert acc_dry is True and acc_copied is True and "## Local Annex" not in acc_txt
         assert grp_copied is True and not flat_leg.exists() and "## Custom Hex" in grp_txt
 
     def test_parse_markdown_sections_map_and_compare_upstream_templates(

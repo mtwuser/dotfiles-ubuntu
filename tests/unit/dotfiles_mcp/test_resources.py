@@ -49,10 +49,22 @@ class TestResourcesMixin:
         # Assert
         assert templates_res == {"count": 0, "templates": []}
 
-    def test_read_all_nine_resources_verifies_contract_schemas(self) -> None:
+    def test_read_all_nine_resources_verifies_contract_schemas(self, tmp_path: Path) -> None:
         """Verify all 9 MCP resources return valid schema payloads with expected keys."""
         # Arrange
-        server = DotfilesMCPServer()
+        log_dir = tmp_path / "logs"
+        log_dir.mkdir()
+        (log_dir / "mcp_events.jsonl").write_text(
+            '{"status":"ok","response_bytes":120,"resolution":"L0","tokens_saved":40}\n'
+            '{"status":"error","response_bytes":50,"unfolded_level":"L2","agent_tier":"pro","decrypted_hops":2}\n'
+            '{"status":"ok","response_bytes":10}\n',
+            encoding="utf-8",
+        )
+        (log_dir / "mcp_alerts.jsonl").write_text(
+            '{"code":"CAPSULE_CHAIN_BROKEN"}\n{"code":"CAPSULE_CHAIN_BROKEN"}\n',
+            encoding="utf-8",
+        )
+        server = DotfilesMCPServer(log_dir=log_dir)
 
         # Act
         identity = json.loads(server.read_resource("dotfiles://layer/identity")["text"])

@@ -321,6 +321,12 @@ class TestEphemeralForkEngine:
             mount_project_rules_from=proj_empty,
             dry_run=False,
         )
+        no_bridge_res = spawn_ephemeral_fork(
+            repo,
+            {},
+            bot_role="plain-bot",
+            dry_run=False,
+        )
         brief_no_cap = build_subagent_invocation_brief(
             dry_res["manifest"], "", {"effective_invariants": ["I1"]}, None
         )
@@ -332,6 +338,7 @@ class TestEphemeralForkEngine:
         assert dry_res["dry_run"] is True
         assert not Path(dry_res["fork_dir"]).exists()
         assert live_res["bridged_project_files"] == []
+        assert no_bridge_res["bridged_project_files"] == []
         assert brief_no_cap["capsule_token"] is None
         assert "Sealed Context Capsule" in brief_with_cap["prompt"]
 

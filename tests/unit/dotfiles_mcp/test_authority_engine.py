@@ -173,7 +173,10 @@ class TestAuthorityEngine:
             squad_dir, operation="record-decision", actor_email="qa@squad.acme.com"
         )
         b_val_maint = verify_layer_operation_authority(
-            squad_dir, operation="scaffold-template", actor_email="qa@squad.acme.com"
+            squad_dir,
+            operation="scaffold-template",
+            actor_email="qa@squad.acme.com",
+            record_blocked=False,
         )
         ok_glob = verify_layer_operation_authority(
             squad_dir, operation="release", actor_email="director@managers.acme.com"

@@ -332,6 +332,8 @@ class TestForkConfigurator:
         no_sys_fork = tmp_path / "no_sys_fork"
         no_sys_fork.mkdir()
         apply_fork_to_project(no_sys_fork, tmp_path / "no_sys_proj", dry_run=False)
+        apply_fork_to_project(fork_dir, fork_dir, dry_run=True)
+        apply_fork_to_project(fork_dir, fork_dir, dry_run=False)
 
         # Assert
         assert dry_res["dry_run"] is True

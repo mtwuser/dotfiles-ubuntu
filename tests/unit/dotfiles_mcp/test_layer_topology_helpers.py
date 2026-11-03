@@ -188,7 +188,9 @@ class TestLayerTopologyHelpers:
         ) == "# Untouched External Repo\n"
         assert drifts_after == []
 
-    def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(self) -> None:
+    def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(
+        self, tmp_path: Path
+    ) -> None:
         """Render role-specific Layer Setup Blueprints and Level 4 Project Lineage prompts."""
         # Arrange
         corp_args = ("corp-root", "corporate", 10, "corp-root", ["business-base"], None)
@@ -209,8 +211,12 @@ class TestLayerTopologyHelpers:
         lineage_md = layer_topology_helpers._render_lineage_markdown(
             "technical-base", ["| `50` | `root` | `squad-api` | `squad` | `1` |"]
         )
+        missing_child = layer_topology_helpers._resolve_mounted_child_dir(
+            tmp_path / "nonexistent-sub/nonexistent-ws", "missing-child"
+        )
 
         # Assert
+        assert missing_child is None
         assert "Level 1 — Root 0" in corp_md
         assert "`open-source-root`" in corp_md
         assert "Human-Stack Profile (Optional)" in corp_md

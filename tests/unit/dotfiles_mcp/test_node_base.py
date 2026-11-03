@@ -32,10 +32,12 @@ class TestMCPNodeBase:
 
         # Act
         manifest = server._load_layer_manifest()
+        empty_layers = server._discover_mounted_layers()
 
         # Assert
         assert manifest["layer_id"] == "acme-corp"
         assert manifest["layer_role"] == "corporate"
+        assert empty_layers == []
 
     def test_load_layer_manifest_ignores_non_dict_json_and_rejects_bad_schema(
         self,
@@ -74,10 +76,13 @@ class TestMCPNodeBase:
         outside_file.write_text("secret", encoding="utf-8")
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
+        (docs_dir / "ok.md").write_text("# OK\n", encoding="utf-8")
         escape_link = docs_dir / "escape.md"
         escape_link.symlink_to(outside_file)
 
         # Act
+        ok_path = server._resolve_safe_path("docs/ok.md")
+        server._write_jsonl("ignored.jsonl", {"x": 1})
         with pytest.raises(ValueError, match="Invalid or forbidden"):
             server._resolve_safe_path("")
         with pytest.raises(ValueError, match="Invalid or forbidden"):
@@ -92,6 +97,7 @@ class TestMCPNodeBase:
         # Assert
         outside_file.unlink()
         assert escape_link.is_symlink()
+        assert ok_path.name == "ok.md"
 
     def test_list_prompts_and_get_prompt_rejects_unknown_prompt(self) -> None:
         """Return all 3 prompt templates and raise ValueError on unknown prompt names."""
@@ -122,6 +128,24 @@ class TestMCPNodeBase:
 
         (tmp_path / "system").mkdir(parents=True)
         (tmp_path / "templates" / "existing-pack").mkdir(parents=True)
+        (tmp_path / "layers" / ".hidden").mkdir(parents=True)
+        (tmp_path / "layers" / "stray.txt").write_text("x", encoding="utf-8")
+        (tmp_path / "layers" / "sub-bare").mkdir(parents=True)
+        (tmp_path / "layers" / "sub-minimal" / "system").mkdir(parents=True)
+        (tmp_path / "layers" / "sub-minimal" / "system/mcp-layer.json").write_text(
+            json.dumps({"layer_id": "sub-minimal"}), encoding="utf-8"
+        )
+        (tmp_path / "layers" / "sub-no-up" / "system").mkdir(parents=True)
+        (tmp_path / "layers" / "sub-no-up" / "system/mcp-layer.json").write_text(
+            json.dumps({"layer_id": "sub-no-up", "upstream_layer": {}}), encoding="utf-8"
+        )
+        (tmp_path / "layers" / "sub-with-up" / "system").mkdir(parents=True)
+        (tmp_path / "layers" / "sub-with-up" / "system/mcp-layer.json").write_text(
+            json.dumps(
+                {"layer_id": "sub-with-up", "upstream_layer": {"repository": "https://x.git"}}
+            ),
+            encoding="utf-8",
+        )
         (tmp_path / "system/mcp-layer.json").write_text(
             json.dumps(
                 {
@@ -153,22 +177,34 @@ class TestMCPNodeBase:
         w_16000 = server._evaluate_layer_warnings(tmp_path, 16000)
         w_18000 = server._evaluate_layer_warnings(tmp_path, 18000)
         w_18001 = server._evaluate_layer_warnings(tmp_path, 18001)
+        w_sub = server._evaluate_layer_warnings(tmp_path / "layers/sub-with-up", 100)
+        r_root = server._resolve_layer_dir("root")
+        r_sub = server._resolve_layer_dir("sub-with-up")
+        with pytest.raises(ValueError, match="Unknown or unmounted layer"):
+            server._resolve_layer_dir("unknown-layer")
 
         # Assert
         assert reaped == ["f-exact"]
         assert list(server._ephemeral_memory_store) == ["f-future"]
         assert rotated_after_below_cap is False
         assert rotated_at_exact_cap is True
-        assert [w["code"] for w in w_15999] == ["TEMPLATE_PACK_MISSING"]
+        assert w_sub == [] and r_root == tmp_path and r_sub.name == "sub-with-up"
+        assert [w["code"] for w in w_15999] == [
+            "TEMPLATE_PACK_MISSING",
+            "SUBTREE_LINEAGE_WARNING",
+        ]
         assert [w["code"] for w in w_16000] == [
             "TOKEN_BUDGET_NEAR_LIMIT",
             "TEMPLATE_PACK_MISSING",
+            "SUBTREE_LINEAGE_WARNING",
         ]
         assert [w["code"] for w in w_18000] == [
             "TOKEN_BUDGET_NEAR_LIMIT",
             "TEMPLATE_PACK_MISSING",
+            "SUBTREE_LINEAGE_WARNING",
         ]
         assert [w["code"] for w in w_18001] == [
             "TOKEN_BUDGET_EXCEEDED",
             "TEMPLATE_PACK_MISSING",
+            "SUBTREE_LINEAGE_WARNING",
         ]
