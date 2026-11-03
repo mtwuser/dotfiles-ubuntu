@@ -17,6 +17,7 @@ from dotfiles_mcp.core.constants import (
     CHARS_PER_TOKEN_ESTIMATE,
     MAX_RECOMMENDED_MCP_FANOUT,
     MCP_OPERATING_MODES,
+    REPO_DIR,
     VALID_ENVIRONMENTS,
 )
 from dotfiles_mcp.core.layer_topology_helpers import _resolve_layer_entity_identity
@@ -150,9 +151,19 @@ class FederationToolsMixin(MCPNodeBase):
         results: dict[str, Any] = {"mode": mode, "healthy": True, "checks": {}}
         scripts_to_run: list[tuple[str, list[str]]] = []
         if mode in ("verify-repo", "both"):
-            scripts_to_run.append(("verify_repo", [str(self.repo_dir / "scripts/verify-repo.sh")]))
+            v_sh = self.repo_dir / "scripts/verify-repo.sh"
+            v_cmd = (
+                [str(v_sh)]
+                if v_sh.is_file() or self.repo_dir == REPO_DIR
+                else [str(REPO_DIR / "scripts/layer-config.sh"), "diff-project", str(self.repo_dir)]
+            )
+            scripts_to_run.append(("verify_repo", v_cmd))
         if mode in ("system-audit", "both"):
-            scripts_to_run.append(("system_audit", [str(self.repo_dir / "audit.sh")]))
+            a_sh = self.repo_dir / "audit.sh"
+            a_target = (
+                a_sh if a_sh.is_file() or self.repo_dir == REPO_DIR else REPO_DIR / "audit.sh"
+            )
+            scripts_to_run.append(("system_audit", [str(a_target)]))
 
         for key, cmd in scripts_to_run:
             proc = subprocess.run(  # noqa: S603

@@ -251,7 +251,9 @@ def consult_layer_ephemeral(
     p_id = str(_load_manifest_dict(eff_p).get("layer_id", eff_p.name)) if eff_p else ""
     layer_cands = [
         ws if clean_layer in ("self", ws.name, ws_id) else None,
-        eff_p if eff_p and clean_layer in ("parent", "upstream", eff_p.name, p_id) else None,
+        eff_p
+        if eff_p and clean_layer in ("parent", "upstream", "root", eff_p.name, p_id)
+        else None,
         ws / "layers" / clean_layer,
         eff_p / "layers" / clean_layer if eff_p else None,
         root / "layers" / clean_layer,

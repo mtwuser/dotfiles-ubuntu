@@ -54,11 +54,14 @@ class TestFederationToolsMixin:
 
     def test_call_tool_audit_node_drift_supports_individual_modes_and_passing_checks(
         self,
+        tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Execute verify-repo and system-audit modes individually when checks pass."""
+        """Execute verify-repo and system-audit modes on workstation and child workspace_dir."""
         # Arrange
         server = DotfilesMCPServer()
+        (tmp_path / "system").mkdir()
+        (tmp_path / "system/mcp-layer.json").write_text('{"layer_id":"dept-x"}', encoding="utf-8")
         recorded_cmds: list[list[str]] = []
         ok_proc = subprocess.CompletedProcess(
             args=["verify"], returncode=0, stdout="OK\n", stderr=""
@@ -73,15 +76,25 @@ class TestFederationToolsMixin:
         # Act
         verify_only = server.call_tool("audit_node_drift", {"mode": "verify-repo"})
         audit_only = server.call_tool("audit_node_drift", {"mode": "system-audit"})
+        child_both = server.call_tool(
+            "audit_node_drift", {"mode": "both", "workspace_dir": str(tmp_path)}
+        )
 
         # Assert
         v_parsed = json.loads(verify_only["content"][0]["text"])
         a_parsed = json.loads(audit_only["content"][0]["text"])
-        assert v_parsed["healthy"] is True
+        c_parsed = json.loads(child_both["content"][0]["text"])
+        assert v_parsed["healthy"] is True and a_parsed["healthy"] is True
+        assert c_parsed["healthy"] is True
         assert list(v_parsed["checks"].keys()) == ["verify_repo"]
-        assert a_parsed["healthy"] is True
         assert list(a_parsed["checks"].keys()) == ["system_audit"]
-        assert [c[0].rsplit("/", 1)[-1] for c in recorded_cmds] == ["verify-repo.sh", "audit.sh"]
+        assert [c[0].rsplit("/", 1)[-1] for c in recorded_cmds] == [
+            "verify-repo.sh",
+            "audit.sh",
+            "layer-config.sh",
+            "audit.sh",
+        ]
+        assert recorded_cmds[2][1:] == ["diff-project", str(tmp_path.resolve())]
 
     def test_call_tool_discover_federated_mcps_with_filter(self) -> None:
         """Filter federated MCPs by role and environment and reject invalid environments."""
