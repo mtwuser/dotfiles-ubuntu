@@ -365,10 +365,13 @@ def apply_fork_to_project(
     resolved_tpl_name = ",".join(t[0] for t in resolved_templates)
     mat_templates = list(resolved_templates)
     seen_names = {t[0] for t in mat_templates}
-    for grp, base_id in (("tech-stack", "technical-base"), ("business-stack", "business-base")):
+    for grps, base_id in (
+        (("tech-stack",), "technical-base"),
+        (("business-stack", "science-stack"), "business-base"),
+    ):
         if (
             base_id not in seen_names
-            and any(d.parent.name == grp for _n, d in resolved_templates)
+            and any(d.parent.name in grps for _n, d in resolved_templates)
             and (
                 base_dir := _resolve_template_dir(repo_dir, base_id)
                 or _resolve_template_dir(REPO_DIR, base_id)

@@ -108,17 +108,19 @@ JSONRPC_PARSE_ERROR = -32700
 JSONRPC_METHOD_NOT_FOUND = -32601
 JSONRPC_INVALID_PARAMS = -32602
 JSONRPC_INTERNAL_ERROR = -32603
-TEMPLATE_STACK_GROUP_DIRS = ("business-stack", "squad-stack", "tech-stack")
+TEMPLATE_STACK_GROUP_DIRS = ("business-stack", "science-stack", "tech-stack")
 PRUNABLE_STARTER_TEMPLATES = (
-    "agile-task-branch", "business-base", "corporate-ops-ledger",
-    "fastapi-hexagonal", "human-core", "technical-base",
+    "business-base", "corporate-ops-ledger", "fastapi-hexagonal",
+    "human-core", "scientific-knowledge-branch", "technical-base",
 )  # fmt: skip
-BUSINESS_MODE_TEMPLATES = ("business-base", "corporate-ops-ledger")
-BUSINESS_MODE_RULE_FILES = ("business-base.md", "ops-ledger-architecture.md")
+BUSINESS_MODE_TEMPLATES = ("business-base", "corporate-ops-ledger", "scientific-knowledge-branch")
+BUSINESS_MODE_RULE_FILES = (
+    "business-base.md", "ops-ledger-architecture.md", "scientific-methodology.md",
+)  # fmt: skip
 TECHNICAL_MODE_TEMPLATES = ("technical-base", "fastapi-hexagonal")
 TECHNICAL_MODE_RULE_FILES = ("technical-base.md", "coding.md")
 VALID_TEMPLATE_KINDS = (
-    "core-base", "business-stack", "squad-stack", "tech-stack",
+    "core-base", "business-stack", "science-stack", "tech-stack",
     "stack-starter", "domain-policy-pack", "department-pack", "project-overlay",
 )  # fmt: skip
 ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {

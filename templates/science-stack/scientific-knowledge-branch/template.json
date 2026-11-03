@@ -1,0 +1,32 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "scientific-knowledge-branch",
+  "kind": "science-stack",
+  "stack_group": "science-stack",
+  "extends": "business-base",
+  "target_role": "department",
+  "description": "Scientific, legal, and territorial knowledge-branch pack: lightweight epistemic routing rules, 3-tier indexed reference docs (docs/), Trunk -> Branch -> Specialty taxonomy, SI/ISO precision, and on-demand consultation (make consult)",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "scientific-knowledge-branch-and-indexed-docs",
+      "description": "Epistemic routing rules, 3-tier navigable knowledge trees (docs/), primary source/statute citation traceability, and Trunk -> Branch -> Specialty methodology",
+      "mode": "transversal",
+      "target_globs": ["docs/**", "corporate/**", "surfaces/**", "*.md", "*.json"],
+      "architectural_planes": ["*"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Keep active .agents/rules/*.md concise as epistemic routers defining domain methodology and indexing where detailed statutes, taxonomies, or datasets live in docs/reference/ or corporate/",
+        "Organize disciplinary knowledge into modular < 465-line files under docs/ (README.md index -> guides/ procedures -> reference/ primary articles, species, or empirical tables) queried on demand via make consult",
+        "Cite authoritative source identifiers ([BOE-A-YYYY-NNNNN], [ISO-NNNN], [TAXON-ID], [DEPT]-[TYPE]-[YYYY]-[NNN]) with exact SI/ISO units and confidence bounds"
+      ],
+      "rule_files": [
+        "templates/science-stack/scientific-knowledge-branch/rules/scientific-methodology.md"
+      ],
+      "canonical_templates": [
+        "templates/science-stack/scientific-knowledge-branch/rules/scientific-methodology.md"
+      ]
+    }
+  ]
+}

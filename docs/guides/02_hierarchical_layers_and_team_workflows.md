@@ -158,9 +158,13 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
 
 1. **CLI Setup (Project Under a `Department` or `Squad`, or In-Layer Technical Mode via `make setup-dev`)**:
    ```bash
-   # Option A: Project workspace under a parent Department or Squad (inherits parent domain rules + tech stack)
+   # Option A1: Technical project workspace under a parent Department or Squad
    ./scripts/layer-config.sh apply-project /path/to/patent-api \
-     --parent-dir /path/to/squad-patent-ops --template fastapi-hexagonal,agile-task-branch
+     --parent-dir /path/to/squad-patent-ops --template fastapi-hexagonal
+
+   # Option A2: Legal, scientific, or administrative case workspace (science-stack + business-base)
+   ./scripts/layer-config.sh apply-project /path/to/recurso-fiscal-cliente-x \
+     --parent-dir /path/to/empresa-dept-legal --template scientific-knowledge-branch --layers all
 
    # Option B: In-layer technical dev mode inside Root 0, a Department, or a Squad (local .agents/ hybrid overlay)
    cd /path/to/dept-legal && make setup-dev   # Overlays technical-base onto business rules (make sync restores business mode)
@@ -239,7 +243,70 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
      - `make decision ITEM=<ref> DEC=<approve|reject|defer|blocked> [REASON=<text>]` — Records a human governance review decision in `WORKTASK.md` and `logs/governance_audit.jsonl`.
      - `make env-gate ENV=<tst|pre|pro>` — Evaluates isomorphic Business & Technical `dev -> tst -> pre -> pro` promotion invariants (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` + `validator_emails` gate for `pre`, `CHANGELOG.md` + `layer_authority` for `pro`).
      - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr` (staging non-destructively at `.agents/proposals/to-<layer>/` when target files already exist or caller lacks direct release authority, unless `--force` is passed).
-     - `make delegate CHILD=<layer-id> TASK="<directive>" [TICKET=<id>] [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface, records `- [/] **[<TICKET-ID> -> <child> (stage: delegated)]**` under `## Outbound Delegations` in the parent layer's `WORKTASK.md`, and stages existing files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed.
+     - `make delegate CHILD=<layer-id> TASK="<directive>" [TICKET=<id>] [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface (`layers/<child>/`), records `- [/] **[<TICKET-ID> -> <child> (stage: delegated)]**` under `## Outbound Delegations` in the parent layer's `WORKTASK.md`, and stages existing files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed.
+
+### 3.7 Concrete `$HOME` vs. `Workspace` Setup Recipes Across the 5 Real-World Archetypes
+
+Every person's environment is the combination of two clear choices:
+1. **`$HOME` (`~/dotfiles-ubuntu` $\rightarrow$ `~/.gemini/config/AGENTS.md`)**: *Which organization or department do you belong to permanently?*
+2. **`Workspace` (`<repo>/.agents/`)**: *What specific layer, case, or project are you working on today, which external layers (`layers/*`) does it cross, which specialization stack (`business-stack`, `science-stack`, `tech-stack`) does it use, and what is your contextual seniority (`Human-Stack` `L1..L4`) in that workspace?*
+
+#### Archetype 1 — Public Administration Chain (State `Root 0` $\rightarrow$ Public Department $\rightarrow$ Civil Servant)
+```bash
+# A. State / Regional Root 0 Maintainer (precedence: 2, crossing Territorial Geo at precedence: 1):
+./scripts/layer-config.sh bootstrap-workspace ~/Projects/gov-country \
+  --id gov-country --role corporate --precedence 2 --templates business-base
+cd ~/Projects/gov-country && ./scripts/layer-subtree.sh add geo-region <geo-repo-url> master
+
+# B. Public Administration Department Maintainer (e.g., Justice at precedence: 3, Tax at precedence: 4):
+#    $HOME stowed from gov-country; Workspace is dept-justice (statutes stored in modular docs/ < 465 lines)
+./scripts/layer-config.sh bootstrap-workspace ~/Projects/dept-justice \
+  --id dept-justice --role domain-policy --precedence 3 \
+  --parent-dir ~/Projects/gov-country --templates business-base,scientific-knowledge-branch
+
+# C. Civil Servant (Funcionario) Working on Daily Administrative Cases:
+#    $HOME stowed from dept-justice; Workspace is the daily administrative expediente
+git clone <dept-justice-repo-url> ~/dotfiles-ubuntu && cd ~/dotfiles-ubuntu && ./bootstrap.sh --antigravity
+./scripts/layer-config.sh apply-project ~/Projects/expediente-2026-042 \
+  --parent-dir ~/dotfiles-ubuntu --template scientific-knowledge-branch
+```
+
+#### Archetype 2 — Company / Law Firm Member Crossing Public Administration Layers (`dept-justice` & `dept-tax`)
+```bash
+# 1. Once inside empresa-dept-legal (precedence: 15, inheriting empresa-root at 10), mount public layers:
+cd ~/Projects/empresa-dept-legal
+./scripts/layer-subtree.sh add dept-justice <public-dept-justice-url> master   # precedence: 3
+./scripts/layer-subtree.sh add dept-tax     <public-dept-tax-url>     master   # precedence: 4
+
+# 2. The Lawyer stows their company department in $HOME, and opens a client case in Workspace:
+git clone <empresa-dept-legal-url> ~/dotfiles-ubuntu && cd ~/dotfiles-ubuntu && ./bootstrap.sh --antigravity
+./scripts/layer-config.sh apply-project ~/Projects/recurso-fiscal-cliente-x \
+  --parent-dir ~/dotfiles-ubuntu --template scientific-knowledge-branch,corporate-ops-ledger --layers all
+# Query statutory articles on demand without bloating always-on context:
+cd ~/Projects/recurso-fiscal-cliente-x && make consult LAYER=dept-tax QUERY="articulo aplicable IVA intracomunitario"
+```
+
+#### Archetype 3 — Enterprise Tech Lead (`L4`) vs. Junior Squad Member (`L1`) on the Same Project
+```bash
+# Both stow empresa-dept-tech (precedence: 25) in $HOME and open the same microservice workspace:
+./scripts/layer-config.sh apply-project ~/Projects/checkout-api \
+  --parent-dir ~/dotfiles-ubuntu --template fastapi-hexagonal
+# Same 100% test & hexagonal gates (0..80); each sets their contextual Human-Stack (85..95) in .agents/SESSION.md:
+# - Tech Lead (.agents/SESSION.md):   Human-Stack: domain-python:L4 | soft-deep-flow
+# - Junior Dev (.agents/SESSION.md):  Human-Stack: domain-python:L1 | soft-socratic-coach | hat-onboarding-explorer
+```
+
+#### Archetype 4 — Specialist Shifting Contexts (`science-stack` vs. `Human-Stack` Contextual Seniority)
+- **Morning (Core Discipline Workspace — `~/Projects/ensayo-clinico-fase2`)**: Applies `science-stack/scientific-knowledge-branch` with `Human-Stack: domain-biotech:L4` in `.agents/SESSION.md` $\rightarrow$ agent acts as a peer-level scientific synthesizer.
+- **Afternoon (Cross-Domain Workspace — `~/Projects/grant-tax-compliance` or `make setup-dev` script)**: Opens a workspace crossing `layers/dept-tax` (`4`) or `technical-base` (`25`) with `Human-Stack: domain-tax:L1 | domain-python:L1 | bridge-tech-for-business | soft-socratic-coach` $\rightarrow$ agent switches to didactic, step-by-step guidance while enforcing `100%` of the tax/code verification gates.
+
+#### Archetype 5 — Individual Professional / Freelancer (Zero Corporate Overhead)
+```bash
+# $HOME uses the default read-only Open Source appliance (human-core):
+./scripts/workstation-sync.sh --setup
+# Apply any specialization stack directly to a personal or client repository:
+./scripts/layer-config.sh apply-project ~/Projects/my-project --template scientific-knowledge-branch
+```
 
 ---
 

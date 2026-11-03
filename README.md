@@ -76,10 +76,10 @@ flowchart TD
     SUB["Intrinsic Runtime Substrate\n(C-Backed Python Stdlib · PEP 7 · Ubuntu 26.04 Core)"]
     OSS["Open Source Upstream & Contributor Clone\n(operating_state: oss-dev · DOTFILES_DEV_REPO_DIR)"]
     APP["Local Workstation Appliance\n(operating_state: oss-readonly-appliance · ~/dotfiles-ubuntu)"]
-    CORP["Level 1: Corporate Root 0\n(operating_state: corporate-root · precedence: 10 · business-base)"]
-    DEPT["Level 2: Domain-Policy & Department Layers\n(operating_state: domain-policy [5] | department [30])"]
-    SQUAD["Level 3: Delivery Squad Workspaces\n(operating_state: squad · precedence: 50 · agile-task-branch)"]
-    PROJ["Level 4: Application & Service Projects\n(operating_state: project · precedence: 80 · 1:1:1 Spec-Source-Test)"]
+    CORP["Level 1: Territorial / Public State / Corporate Root 0\n(operating_state: corporate-root · precedence: 1..10 · business-base)"]
+    DEPT["Level 2: Public Admin / Domain-Policy & Department Layers\n(operating_state: domain-policy [3..5] | department [15..40])"]
+    SQUAD["Level 3: Delivery Squad & Specialty Workspaces\n(operating_state: squad · precedence: 50 · business/science/tech-stack)"]
+    PROJ["Level 4: Application, Case & Service Projects\n(operating_state: project · precedence: 80 · Contextual Human-Stack 85..95)"]
 
     SUB <-->|"C-Backed Primitives &\nOSS-to-OSS Contributions"| OSS
     OSS -->|"workstation-sync.sh --sync\n(Read-Only $HOME Runtime)"| APP
@@ -141,7 +141,19 @@ When a business need crosses specialties (for example, *Legal needs a software t
 | **5. Transversal Enterprise Platform** *(e.g., **Company-Wide `VoIP` Service**)* | Platform `service-node` / `squad` (`25`) | **Inward**: `Legal` (`5`, call consent) $\rightarrow$ `Ops` (`20`, SLA) $\rightarrow$ `Tech/VoIP` (`25`)<br/>**Outward**: Exports `templates/voip-pack` + `federated_mcps` | Any department mounts `layers/voip-platform` or applies `voip-pack` | **Critical Infrastructure Provider (inward) / Governed Capability (outward)** |
 | **6. Punctual Cross-Departmental Audit** *(e.g., Design checks Patent Gate with Legal)* | Any consumer layer | Active workspace + **Ephemeral `rcap1` Capsule (`kr: true`)** | `make consult LAYER=dept-legal QUERY="..."` | **Zero-Residue Read-Only Inter-Departmental Advisor** (`inter-layer`) |
 
-📖 Full business & architectural walkthroughs (**LegalTech MCP**, **Marketing Social Media Engine**, and **Transversal `VoIP` Platform**): **[`docs/reference/enterprise_pair_programming_governance.md §2.3`](docs/reference/enterprise_pair_programming_governance.md#23-cross-departmental--multi-specialty-composition-matrix-legaltech-governed-marketing--transversal-platforms-voip)**.
+##### Crystal-Clear Mental Model: `$HOME` (Organizational Membership) vs. `Workspace` (Active Case & Crossed Layers)
+
+Every operator uses two orthogonal surfaces: **`$HOME` (`~/dotfiles-ubuntu` $\rightarrow$ `~/.gemini/config/AGENTS.md`)** defines *which organization or department you belong to*, while **the active `Workspace` (`<repo>/.agents/`)** defines *what project, case, or administrative expediente you are solving today*, which external layers it crosses (`layers/*`), which specialization stack (`business-stack`, `science-stack`, `tech-stack`) applies, and your contextual seniority (`Human-Stack` `L1..L4` at `precedence: 85..95`):
+
+| Real-World Persona | `$HOME` Global Baseline (`~/dotfiles-ubuntu`) | Active `Workspace` & Crossed `layers/*` (`0..80`) | Specialization Stack & Contextual `Human-Stack` (`85..95`) | Effective Agent Behavior |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Public Administration Chain** *(State `Root 0` $\rightarrow$ Public Dept $\rightarrow$ Civil Servant)* | • **State Admin**: `human-core`<br/>• **Dept Maintainer**: `gov-country` (`2`)<br/>• **Civil Servant**: `dept-justice` (`3`) | • **State `Root 0`**: `gov-country` (`2`) + `layers/geo-region` (`1`)<br/>• **Public Dept**: `dept-justice` (`3`, statutes in `docs/`)<br/>• **Civil Servant**: `expediente-2026/` | `business-base` + `science-stack/scientific-knowledge-branch` (`domain-admin-law:L3`) | Enforces territorial (`1`), constitutional (`2`), and administrative law (`3`); queries modular statutory `docs/` on demand (`make consult`). |
+| **2. Company / Law Firm Member Crossing Public Admin** | `empresa-dept-legal` (`15`, inheriting `empresa-root` at `10`) | Client case `recurso-fiscal-cliente-x/` mounting `layers/dept-justice` (`3`) + `layers/dept-tax` (`4`) | `science-stack/scientific-knowledge-branch` + `business-stack` (`domain-civil-law:L4 + domain-tax-law:L2`) | Subordinates corporate strategy (`10..15`) to state justice/tax statutes (`3..4`); peer-level in civil law (`L4`), step-by-step verify on tax changes (`L2`). |
+| **3. Enterprise Tech Lead (`L4`) vs. Junior Squad Member (`L1`)** | Both stow `empresa-dept-tech` (`25`, inheriting `empresa-root` at `10`) | Both open `checkout-api/` (`50..80`) | Both apply `tech-stack/fastapi-hexagonal`; Lead sets `domain-python:L4`, Junior sets `domain-python:L1 + soft-socratic-coach` in `.agents/SESSION.md` | Identical `100%` test & architecture gates (`0..80`); Lead gets terse 4-channel execution (`L4`), Junior gets Socratic mentorship (`L1`). |
+| **4. Specialist Shifting Contexts** *(Same Person, Different Workspace)* | `dept-bio-lab` (`20`) or `dept-legal` (`15`) | • **Morning**: Primary lab/legal workspace<br/>• **Afternoon**: Cross-cutting tax/env filing or Python tool (`make setup-dev`) | • **Morning**: `science-stack` (`domain-biotech:L4`)<br/>• **Afternoon**: `tech-stack` (`domain-python:L1 + bridge-tech-for-business`) | Seniority is **contextual to the workspace**: direct executive synthesis in their core science (`L4`), didactic guided scaffolding when crossing into code or tax (`L1`). |
+| **5. Individual Practitioner / Freelancer** | Default `human-core` (`workstation-sync.sh --setup`) | Any client or personal repo (`apply-project`) optionally mounting public `layers/geo-*` or `layers/dept-*` | `science-stack`, `business-stack`, or `tech-stack` + optional personal `Human-Stack` in `.agents/SESSION.md` | Full task-branch rigor (`make task`, `make status`, `/review`, `/sclose`) without needing a corporate `Root 0`. |
+
+📖 Full business, public-administration & architectural walkthroughs (**Full `0..100` Deontic Spectrum**, **5 `$HOME` vs. `Workspace` Personas**, **LegalTech MCP**, **Marketing Social Media Engine**, and **Transversal `VoIP` Platform**): **[`docs/reference/enterprise_pair_programming_governance.md §2.3–§2.5`](docs/reference/enterprise_pair_programming_governance.md#23-cross-departmental--multi-specialty-composition-matrix-legaltech-governed-marketing--transversal-platforms-voip)**.
 
 ---
 
@@ -225,7 +237,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
 │       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
-├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/corporate-ops-ledger, squad-stack/agile-task-branch, tech-stack/fastapi-hexagonal)
+├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/corporate-ops-ledger, science-stack/scientific-knowledge-branch, tech-stack/fastapi-hexagonal)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity IDE & Agents from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans

@@ -384,7 +384,7 @@ class TestForkConfigurator:
         minimal_res = apply_fork_to_project(
             bare_fork,
             tmp_path / "minimal_proj",
-            template_ref="minimal-tpl,agile-task-branch,fastapi-hexagonal,corporate-ops-ledger",
+            template_ref="minimal-tpl,scientific-knowledge-branch,fastapi-hexagonal,corporate-ops-ledger",
             include_layer_defaults=False,
             dry_run=False,
         )
@@ -425,11 +425,12 @@ class TestForkConfigurator:
         assert bare_res["applied_template"] is None
         assert (
             minimal_res["applied_template"]
-            == "minimal-tpl,agile-task-branch,fastapi-hexagonal,corporate-ops-ledger"
+            == "minimal-tpl,scientific-knowledge-branch,fastapi-hexagonal,corporate-ops-ledger"
         )
         assert (tmp_path / "minimal_proj/.agents/skills/testing/SKILL.md").is_file()
         assert (tmp_path / "minimal_proj/.agents/skills/fastapi-testing/SKILL.md").is_file()
         assert (tmp_path / "minimal_proj/.agents/rules/business-base.md").is_file()
+        assert (tmp_path / "minimal_proj/.agents/rules/scientific-methodology.md").is_file()
         assert (tmp_path / "minimal_proj/.agents/rules/ops-ledger-architecture.md").is_file()
         assert (tmp_path / "minimal_proj/.agents/skills/ledger-surface-audit/SKILL.md").is_file()
         assert inc_def_res["applied_template"] == "web-starter,gdpr-pack"

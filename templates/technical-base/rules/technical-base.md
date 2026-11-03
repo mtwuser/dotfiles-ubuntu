@@ -15,10 +15,8 @@ description: "Universal software engineering, 1:1:1 traceability, refactoring, a
 
 1. **Utility, Stdlib & Import Gate**: Search (`grep`/semantic) before writing helpers, use floor-version C-backed stdlib symbols (`hashlib.file_digest`, `stat.S_IWUSR`, `HTTPStatus`), and use explicit absolute imports (zero `import ... as c` aliases).
 2. **Strict Linter, Compiler & Typing Integrity**: Zero compiler, type-checker, or linter (`ruff`/`mypy --strict`, `tsc --noEmit`, `cargo clippy`, `shellcheck`) warnings/errors. Prefer `unknown`/`Protocol`/`interface` over `Any`/`any`.
-3. **`1:1:1` Symbiosis & Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code`)**: Read `docs/{guides,architecture}/` first, `tests/{e2e,imp,unit}/` (`Test<Module>`) second, and code last. Modules declare `Specification: docs/architecture/<spec>.md` and specs (`< 465` lines) keep a `1:1:1` table.
-4. **Generated Output & Package-Marker Purity**: Verify `import` packages exist, generated files pass linters, zero placeholders (`my_app`), and `src/**/__init__.py` / `tests/**/__init__.py` stay `0 bytes`.
-5. **Pre-Debug Diagnostic Sweep**: Run `make doctor` / `make verify` before blind-debugging; crystallize repeated checks into `Makefile` targets.
-6. **Constants, Cut-Points, Data Symmetry & 5-Link Ripple**: Zero magic numbers, raw modes (`0o644`), numeric schema IDs (`"1.2"`), raw slices (`[:24]`), or `.update()` packing. Use stdlib symbols, nominal constants (`*_CONTRACT_REV`, `MAX_*`, `MIN_*`, `DEFAULT_*`, `VALID_*`), `{...}` literals, boundary `.get()`, and internal `d["k"]`. Propagate across **5 ripple links**: `1. Function -> 2. CLI -> 3. Makefile/Hook -> 4. Spec Table -> 5. Docs/Tests`.
+3. **`1:1:1` Symbiosis & Package-Marker Purity**: Read `docs/{guides,architecture}/` first, `tests/{e2e,imp,unit}/` (`Test<Module>`) second, and code last. Modules declare `Specification: docs/architecture/<spec>.md`, specs (`< 465` lines) keep a `1:1:1` table, and `src/**/__init__.py` / `tests/**/__init__.py` stay `0 bytes`.
+4. **Constants, Cut-Points & Data Symmetry**: Zero magic numbers, raw modes (`0o644`), numeric schema IDs (`"1.2"`), raw slices (`[:24]`), or `.update()` packing. Use stdlib symbols, nominal constants (`*_CONTRACT_REV`, `MAX_*`, `MIN_*`, `DEFAULT_*`, `VALID_*`), `{...}` literals, boundary `.get()`, and internal `d["k"]`.
 
 ---
 
@@ -28,8 +26,7 @@ description: "Universal software engineering, 1:1:1 traceability, refactoring, a
 - **Applies**: All source code files
 
 1. **Behavioral Invariant & Atomic `1:1:1` Alignment**: When splitting modules, tests pass identically, test count never decreases, coverage stays 100%, and `1:1:1` tests/specs align in the SAME iteration.
-2. **Zero-Residue, Age Review & File-Prefix Naming**: Remove replaced symbols atomically (zero shims). Review older (`> 90d`) or compressed code: consolidate if aligned, or escalate (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), name files by role (`tools_*`, `*_engine`, `NN_*`, `test_*`), and log in `BACKLOG.md`.
-3. **Forensic Intent Resolution (`[WIRE]` / `[CONSOLIDATE]` / `[PRUNE]`) & 3-Step Pruning**: Check `git log -S` + `docs/architecture/` before deleting unreferenced items: **`[WIRE]`** (*unconnected intent* $\rightarrow$ wire + bipolar tests), **`[CONSOLIDATE]`** (*duplicate SSoT* $\rightarrow$ merge), or **`[PRUNE]`** (*residue* $\rightarrow$ `1:1` file/symbol purge, non-default tests, zero-literal exclusion).
+2. **Age Review, 5-Stage Escalation & 3-Step Pruning**: Review older (`> 90d`) or compressed code: consolidate if aligned, or escalate (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), name files by role (`tools_*`, `*_engine`, `NN_*`, `test_*`), and execute `[WIRE]` / `[CONSOLIDATE]` / `[PRUNE]` (`1:1` file/symbol purge, non-default tests, zero-literal exclusion).
 
 ---
 

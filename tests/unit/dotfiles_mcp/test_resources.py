@@ -76,11 +76,11 @@ class TestResourcesMixin:
         assert any(s["name"] == "sopen" for s in skills["skills"])
         assert templates["count"] == 6
         assert [t["template_name"] for t in templates["templates"]] == [
-            "agile-task-branch",
             "business-base",
             "corporate-ops-ledger",
             "fastapi-hexagonal",
             "human-core",
+            "scientific-knowledge-branch",
             "technical-base",
         ]
         tech_tpl = next(t for t in templates["templates"] if t["template_name"] == "technical-base")

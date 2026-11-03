@@ -36,23 +36,23 @@ Verify these mandates before proposing solutions or modifying files in any works
 #### 4. Atomic Deliverable & Verification Inclusion
 > *"Never deliver a change without its corresponding verification."*
 
-**Mandate:** Logic, schemas, or policies and their verification criteria form one atomic unit. Pair software repos with `templates/technical-base/` and corporate repos with `templates/business-base/`.
+**Mandate:** Logic, schemas, or policies and their `AAA` verification criteria form one atomic unit. Pair software repos with `templates/technical-base/` and corporate repos with `templates/business-base/`.
 
-#### 5. Specification Hierarchy & Discrepancy Scans
-> *"Review canonical specifications first and proactively detect discrepancies."*
+#### 5. Specification Hierarchy, Reading Priority & 5-Surface Ripple
+> *"Review canonical specifications first and propagate changes across all linked surfaces."*
 
-**Mandate:** Approach `docs/`, `corporate/`, and architectural specs as supreme law. Parse specs first when planning changes; flag and unify workspace-to-spec drift immediately as a P0 discrepancy.
-- **Generation Rule:** Derive templates, scaffolds, or contracts strictly from `docs/` or `corporate/` specs — never from memory: (1) Locate spec $\rightarrow$ (2) Extract invariants $\rightarrow$ (3) Instantiate $\rightarrow$ (4) Cross-verify diff.
+**Mandate:** Run `make status` / `make verify` first, follow **`1. Guides/Specs/Policies -> 2. Verification/Tests -> 3. Implementation`**, and treat `docs/`, `corporate/`, and specs as supreme law.
+- **Generation & 5-Surface Ripple:** Derive artifacts from `docs/` or `corporate/` specs (`Locate -> Extract -> Instantiate -> Cross-verify`) and propagate across **5 surfaces**: `1. Rule/Function -> 2. CLI/Process -> 3. Makefile/Hook -> 4. Spec/Ledger Table -> 5. Docs/Verification`.
 
 #### 6. Continuous Consolidation
 > *"Consolidate and complete documentation continuously over time."*
 
 **Mandate:** Treat documentation and governance ledgers as living code. Update `WORKTASK.md`, `BACKLOG.md`, `CHANGELOG.md`, and architecture guides upon completing a phase.
 
-#### 7. The Zero-Backward Law (Clean Cutovers)
-> *"Never leave backward-compatibility shims or legacy fallbacks during refactors — always execute a clean cutover."*
+#### 7. The Zero-Backward Law & Forensic Intent Resolution (`[WIRE]` / `[CONSOLIDATE]` / `[PRUNE]`)
+> *"Never leave backward-compatibility shims or delete unreferenced items without forensic check."*
 
-**Mandate:** Execute surgical replacements when upgrading code, schemas, policies, or manifests (`schema_version`, JSON/YAML/TOML contracts). Never leave legacy polyfills, dummy aliases (`OldType = NewType`), shims, `if legacy:` branches, or `@deprecated` markers.
+**Mandate:** Execute clean cutovers when upgrading code, schemas, policies, or manifests (`schema_version`, JSON/YAML/TOML contracts) — zero legacy polyfills, aliases (`OldType = NewType`), shims, `if legacy:` branches, or `@deprecated` markers. Before deleting unreferenced items, check `git log -S` + `docs/` and classify as **`[WIRE]`** (*reconnect intent*), **`[CONSOLIDATE]`** (*merge SSoT*), or **`[PRUNE]`** (*remove residue*).
 
 #### 8. Mandatory Pre-Commit Hygiene & Zero-Literal Exclusion (Anti-Streisand Gate)
 > *"Never finish a task leaving behind script residue, broken side effects, or self-defeating exclusion literals."*
@@ -74,16 +74,15 @@ Verify these mandates before proposing solutions or modifying files in any works
    - **Tier 3 (`docs/architecture/*.md` & `docs/reference/*.md`, `< 465` lines)**: Normative `1:1:1` specs (`Specification:`) and technical playbooks.
 2. **Post-Move/Rename Coherence**: Sync `README.md` and `docs/README.md` trees against `find`/`ls`, verify links (`test -f`), sweep `.md` files (`grep -rn`), and leave zero orphans.
 
-#### 11. `dotfiles-ubuntu` Native Self-Guidance & Scaffolding-First Mandate
+#### 11. `dotfiles-ubuntu` Native Self-Guidance, Task-Branch & Inter-Layer Lifecycle
 > *"Use the platform's deterministic CLI orchestrators (`layer-config.sh`, `layer-subtree.sh`) instead of ad-hoc manual steps."*
 
-**Mandate:** Operate the `dotfiles-ubuntu` multi-layer architecture natively:
-1. **CLI Over Manual**: Use `./scripts/layer-config.sh` (`bootstrap-workspace`, `sync-layer`, `init-fork`, `scaffold-template`, `apply-project`, `diff-project`, `promote-from-project`, `set-global-profile`, `register-subtree`, `set-authority`, `check-authority`, `inspect-horizon`, `spawn-ephemeral`) and `./scripts/layer-subtree.sh` (`add`, `pull`, `push`, `pull-all`, `sync-upstream`) first.
-2. **3-Tier Profile & Workspace Scope (`human-core`, `technical-base`, `business-base`)**:
-   - **`human-core`**: Default read-only `$HOME` baseline (`~/.gemini/config/AGENTS.md` via `workstation-sync.sh`).
-   - **`technical-base`** (`templates/technical-base/`): Stack-general engineering, `1:1:1` traceability, refactoring, and 100% AAA testing rules (`.agents/rules/technical-base.md`).
-   - **`business-base`** (`templates/business-base/`): Corporate ledger integrity, *Lex Superior* IP/compliance, cross-surface cascade, and functional verification.
-   - Switch global profile via `./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> --stow`.
+**Mandate:** Operate the `dotfiles-ubuntu` multi-layer architecture natively across all workspaces:
+1. **CLI & Task-Branch Cycle (`make status`, `make task`, `make complete`, `make consult`, `make delegate`, `make promote`, `make sync`)**:
+   - Claim tasks via `make task TASK="<id>"` (`start-task` marks `[/]` in `WORKTASK.md`, updates `.agents/SESSION.md`, and emits `git checkout -b feature/<TICKET-ID>-<slug>`), preserving `[DEPT-YYYY-NNN]` tags; close via `make complete TASK="<id>"` (`complete-task` marks `[x]` and updates parent `## Outbound Delegations` or stages a PR).
+   - Query layers via read-only `make consult LAYER=<id> QUERY="<text>"` (`rcap1`), delegate 1 hop downward via `make delegate` strictly inside `layers/<child>/` (propagating via `./scripts/layer-subtree.sh push`), and propose 1 hop upward via `make promote` (`promote-from-project --create-pr`).
+2. **3 Core Bases (`human-core`, `business-base`, `technical-base`) + 3 Specialization Stacks (`science-stack`, `business-stack`, `tech-stack`)**:
+   - **`$HOME` vs. `Workspace` Rule**: `$HOME` (`~/.gemini/config/AGENTS.md`) holds the parent organizational baseline; `Workspace` (`<repo>/.agents/`) projects the active layer/case + crossed `layers/*` (`0..80`: territorial/public-admin `1..4`, corporate/dept/squad `5..80`) + contextual `Human-Stack` (`85..95`: `L1..L2` didactic vs. `L3..L4` direct). Switch global profile via `./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> --stow`.
 3. **`antigravity-ide` vs. `antigravity-agents` & Layer Authority**: `antigravity-ide` provides a 360° visual/terminal view; `antigravity-agents` scopes rules per Workspace Root (`.agents/rules/layer-<NN>-<name>.md` by `precedence` `0..100`, `Non-Workspace File Access: allow|deny|ask`). Layer owners (`set-authority` / `check-authority`) govern releases; consumers propose upward PRs (`promote-from-project --create-pr`) within a 1-hop horizon (`inspect-horizon`).
 4. **Workstation Hook Gates (`pre_tool_guard.py`)**: Blocks automated mutating Git commands (`git add`, `git commit`, `git push`, `git reset --hard`, `git clean -f`, `git subtree`), `alembic` migrations, edits to `alembic/versions/*.py` or `.agents/rules/layer-*.md`, and non-empty writes (`> 0 bytes`) to `src/**/__init__.py` or `tests/**/__init__.py`.
 
