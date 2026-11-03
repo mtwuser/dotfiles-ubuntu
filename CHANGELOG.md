@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.0.2] - 2026-11-03
+
+### Fixed & Changed
+- **Local `DOTFILES_DEV_REPO_DIR` Appliance Fast-Forward in `workstation-sync.sh` (`scripts/workstation-sync.sh`)**:
+  - Extended `run_sync()` in [`scripts/workstation-sync.sh`](scripts/workstation-sync.sh) so that when a local development workspace (`DOTFILES_DEV_REPO_DIR` / `detect_dev_repo`) has local `[Unreleased]` commits ahead of `origin/master`, `~/dotfiles-ubuntu` (`RUNTIME_DIR`) fast-forwards directly to `dev_dir`'s `HEAD` during `./scripts/workstation-sync.sh --sync` without requiring `git push` before a formal `/release`.
+
+---
+
 ## [3.0.1] - 2026-11-03
 
 ### Fixed & Changed

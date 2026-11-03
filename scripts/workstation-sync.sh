@@ -126,6 +126,19 @@ run_sync() {
             git -C "$RUNTIME_DIR" reset --hard "origin/$cur_branch" -q 2>/dev/null || true
         fi
       fi
+      local dev_dir
+      dev_dir="$(detect_dev_repo)"
+      if [ -n "$dev_dir" ] && [ -d "$dev_dir/.git" ] && [ "$dev_dir" != "$RUNTIME_DIR" ]; then
+        if git -C "$RUNTIME_DIR" fetch "$dev_dir" HEAD -q 2>/dev/null; then
+          if ! git -C "$RUNTIME_DIR" merge --ff-only FETCH_HEAD -q 2>/dev/null && [ "$DOTFILES_WORKSTATION_MODE" = "readonly" ]; then
+            local rt_branch
+            rt_branch="$(git -C "$RUNTIME_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "master")"
+            if git -C "$RUNTIME_DIR" merge-base --is-ancestor "origin/$rt_branch" FETCH_HEAD 2>/dev/null; then
+              git -C "$RUNTIME_DIR" reset --hard FETCH_HEAD -q 2>/dev/null || true
+            fi
+          fi
+        fi
+      fi
     fi
   fi
 
