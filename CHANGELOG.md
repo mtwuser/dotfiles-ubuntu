@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [2.9.0] - 2026-11-03
 
-### Changed
+### Added & Changed
 - **Lifecycle Hook Hardening for Resulting-File `__init__.py` Purity, Wrapper Option Arguments & Checker Availability (`antigravity/.gemini/config/scripts/pre_tool_guard.py`, `antigravity/.gemini/config/scripts/post_invocation_lint.py`, `docs/architecture/02_antigravity_governance_and_hooks.md`, `tests/unit/test_pre_tool_guard.py`, `tests/unit/test_post_invocation_lint.py`)**:
   - Hardened [`_init_write_leaves_non_empty`](antigravity/.gemini/config/scripts/pre_tool_guard.py) in [`pre_tool_guard.py`](antigravity/.gemini/config/scripts/pre_tool_guard.py) so partial `edit_file` (`Target`/`Replacement`), partial `ReplacementChunks` (`replace_file_content` / `multi_replace_file_content`), and `Append=True` writes on existing non-empty consumer `src/**/__init__.py` or `tests/**/__init__.py` files are blocked unless the resulting on-disk content is verified to be `0 bytes` (`""`), expanded `_COMMAND_WRAPPERS` (`timeout`, `stdbuf`, `ionice`, `chrt`, `taskset`) and `_WRAPPER_FLAGS_WITH_ARG` (`-n`, `--adjustment`, `-s`, `-k`, etc., plus `timeout` positional duration consumption) in [`_strip_leading_env_and_wrappers`](antigravity/.gemini/config/scripts/pre_tool_guard.py), and added [`inspect_checker_availability`](antigravity/.gemini/config/scripts/post_invocation_lint.py) plus an explicit `Circuit breaker reached (5/5 passes)` footer at `_MAX_FORCE_CONTINUE_INVOCATIONS` in [`post_invocation_lint.py`](antigravity/.gemini/config/scripts/post_invocation_lint.py).
 - **3 Core Bases (`human-core`, `business-base`, `technical-base`) + 3 Specialization Stacks (`business-stack`, `science-stack`, `tech-stack`), Universal Task-Branch Lifecycle in `human-core` & Full Deontic Spectrum (`1..95`) (`templates/human-core/rules/human-core.md`, `templates/business-base/rules/business-base.md`, `templates/technical-base/rules/technical-base.md`, `templates/science-stack/scientific-knowledge-branch/`, `antigravity/.gemini/config/AGENTS.md`, `antigravity/.gemini/config/skills/{full-audit,review,governance,priority}/SKILL.md`, `scripts/dotfiles_mcp/constants.py`, `scripts/dotfiles_mcp/fork_configurator.py`, `README.md`, `docs/`, `tests/unit/dotfiles_mcp/`)**:
