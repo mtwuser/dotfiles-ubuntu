@@ -263,8 +263,8 @@ flowchart TD
 
 1. **Vertical Inheritance via `git fork` (`./scripts/layer-subtree.sh sync-upstream`)**:
    - Keeps the repository's primary root synchronized with its upstream parent (`Public → Corporate → Squad`).
-2. **Horizontal / Cross-Departmental Composition via `git subtree` (`./scripts/layer-subtree.sh add | pull | push`)**:
-   - Secondary forks (Departmental governance repos, sibling service MCP repos, or cluster topologies) are mounted under the non-stow **`layers/<layer-name>/`** directory using `git subtree --squash`.
+2. **Horizontal / Cross-Departmental Composition via `git subtree` (`./scripts/layer-subtree.sh add | pull | push | pull-all | list`)**:
+   - Secondary forks (Departmental governance repos, sibling service MCP repos, or cluster topologies) are mounted under the non-stow **`layers/<layer-name>/`** directory using `git subtree --squash`. When invoked inside any workspace containing `system/mcp-layer.json`, `scripts/layer-subtree.sh` automatically resolves `REPO_DIR="$PWD"`, and `run_subtree_pull()` automatically reconciles subtree merge conflicts strictly scoped inside `layers/<layer-name>/` in favor of the authoritative child repository (`--theirs`).
    - Because `bootstrap.sh` and `audit.sh` skip `layers/`, mounted subtrees add **0 bytes** to the `always_on` `~/.gemini/config/AGENTS.md` token budget.
    - Instead, `scripts/dotfiles_mcp_server.py` automatically discovers every subtree under `layers/*/` and exposes its `docs/`, `AGENTS.md`, `templates/`, and `federated_mcps` on demand (`layer="all"` or `layer="<layer-name>"`).
 3. **Transversal Environment Profiles (`environments: {dev, tst, pre, pro}` + `requirements-<env>.txt`)**:
