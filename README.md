@@ -245,7 +245,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   ├── antigravity-install.sh         ←   Install/update Antigravity binaries from ~/Downloads/
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
 │   ├── workstation-sync.sh            ←   Workstation appliance setup (--setup), boot auto-sync & dotfiles-sync CLI
-│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (4 domain subpackages, 23 modules)
+│   ├── dotfiles_mcp/                  ←   Modular Contextual MCP & Layer Orchestration package (4 domain subpackages, 24 modules)
 │   │   ├── core/                      ←     1. Base Contracts, Catalogs & Topology Primitives (0 engine dependencies)
 │   │   │   ├── constants.py, catalogs.py  ←   Declarative constants, regexes & MCP resource/tool/prompt catalogs
 │   │   │   ├── manifest_helpers.py        ←   System manifest, skill frontmatter, SHA-256 & template schema helpers
@@ -269,7 +269,8 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   │       ├── git_governance_engine.py   ←   Git branch policy, dev->tst->pre->pro env gates, non-destructive staging & audit ledger
 │   │       ├── authority_engine.py        ←   Layer owner vs. consumer authority gate (set/check-authority) & upward PR planner
 │   │       ├── promotion_engine.py        ←   Multi-layer pattern routing, diff-project & promote-from-project (incl. Root 0 -> OSS)
-│   │       └── horizon_engine.py          ←   1-hop horizon radar (inspect-horizon), upstream section diff & 4-mode template reconciliation
+│   │       ├── horizon_engine.py          ←   1-hop horizon radar (inspect-horizon), upstream section diff & 4-mode template reconciliation
+│   │       └── cli_dispatcher.py          ←   Tiered 26-subcommand CLI dispatcher (C1/C2/C3/Ephemeral families) for layer-config.sh
 │   ├── dotfiles_mcp_server.py         ←   Zero-dependency read-only Contextual MCP Server CLI entrypoint (stdio)
 │   ├── layer-config.sh                ←   Layer parameterization, workspace bootstrap, authority, horizon & promotion CLI
 │   ├── layer-subtree.sh               ←   Upstream fork sync & git subtree context graph manager (layers/*)

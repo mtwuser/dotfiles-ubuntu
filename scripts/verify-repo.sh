@@ -58,8 +58,7 @@ from pathlib import Path
 import re, sys
 
 repo = Path(".")
-link_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
-latex_re = re.compile(r"\\text(?:tt|rm|sf|it|bf)?\{[^}]*_[^}]*\}")
+link_re, latex_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)"), re.compile(r"\\text(?:tt|rm|sf|it|bf)?\{[^}]*_[^}]*\}")
 broken, math_issues, checked = [], [], 0
 for md in sorted(repo.rglob("*.md")):
     if any(p in {".git", "venv", ".venv", ".agents"} for p in md.parts):
@@ -110,8 +109,7 @@ SH_COUNT=0
 SH_FILES=()
 for sh_file in bootstrap.sh backup.sh audit.sh scripts/*.sh system/external/*/*.sh; do
   [ -f "$sh_file" ] || continue
-  SH_COUNT=$((SH_COUNT + 1))
-  SH_FILES+=("$sh_file")
+  SH_COUNT=$((SH_COUNT + 1)); SH_FILES+=("$sh_file")
   bash -n "$sh_file" || fail "Syntax error in $sh_file"
 done
 for exec_sh in bootstrap.sh backup.sh audit.sh scripts/*.sh; do
@@ -169,8 +167,7 @@ if python3 - <<'PYEOF'
 import json, re, sys
 from pathlib import Path
 
-repo = Path(".").resolve()
-config_dir = repo / "antigravity/.gemini/config"
+repo, config_dir = Path(".").resolve(), Path("antigravity/.gemini/config").resolve()
 data = json.loads((config_dir / "hooks.json").read_text(encoding="utf-8"))
 if not isinstance(data, dict) or not data:
     sys.exit("hooks.json must be a non-empty JSON object")
@@ -196,6 +193,7 @@ sys.path.insert(0, str(config_dir / "scripts"))
 sys.path.insert(0, str(repo / "scripts"))
 import pre_tool_guard, post_invocation_lint  # noqa: E402
 from dotfiles_mcp.core import constants as mcp_constants  # noqa: E402
+from dotfiles_mcp.governance import cli_dispatcher  # noqa: E402
 
 if event_matchers.get("PreToolUse") != set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"} or event_matchers.get("PostToolUse") != set(pre_tool_guard._FILE_WRITE_TOOLS):
     sys.exit("hooks.json matcher mismatch")
@@ -211,8 +209,7 @@ for alembic_sub in pre_tool_guard._DOCUMENTED_ALEMBIC_SUBCOMMANDS:
 agents_md = (config_dir / "AGENTS.md").read_text(encoding="utf-8")
 arch_02 = (repo / "docs/architecture/02_antigravity_governance_and_hooks.md").read_text(encoding="utf-8")
 arch_mcp = "\n".join((repo / f"docs/architecture/{n}").read_text(encoding="utf-8") for n in ("03_contextual_mcp_and_federation.md", "04_compaction_surface_and_promotion_engines.md", "05_ephemeral_forks_and_department_bots.md", "06_layer_governance_and_promotion_engines.md"))
-security_md = (repo / "SECURITY.md").read_text(encoding="utf-8")
-readme_md = (repo / "README.md").read_text(encoding="utf-8")
+security_md, readme_md = (repo / "SECURITY.md").read_text(encoding="utf-8"), (repo / "README.md").read_text(encoding="utf-8")
 ext_guide = (repo / "docs/reference/developer_and_extension_guide.md").read_text(encoding="utf-8")
 
 for doc_text in (arch_02, security_md, readme_md):
@@ -249,10 +246,10 @@ for mod_py in sorted((repo / "scripts/dotfiles_mcp").rglob("*.py")):
         if code not in arch_mcp:
             sys.exit(f"Warning-to-doc drift: '{code}'")
 
-for cli_sub in ("init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project", "promote-from-project", "spawn-ephemeral", "inspect-ephemeral", "reap-ephemeral", "set-global-profile", "register-subtree", "bootstrap-workspace", "sync-layer", "set-authority", "check-authority", "inspect-horizon", "status", "start-task", "complete-task", "compare-upstream", "consult-layer", "delegate-to-child", "manage-roster", "configure-git-policy", "check-env-promotion", "record-decision"):
+all_subs = (*cli_dispatcher.C1_DISCOVERY_SUBCOMMANDS, *cli_dispatcher.C2_LIFECYCLE_SUBCOMMANDS, *cli_dispatcher.C3_GOVERNANCE_SUBCOMMANDS, *cli_dispatcher.EPHEMERAL_BOT_SUBCOMMANDS)
+for cli_sub in all_subs:
     if cli_sub not in readme_md or cli_sub not in ext_guide or cli_sub not in arch_mcp:
         sys.exit(f"CLI-to-doc drift: '{cli_sub}'")
-
 if "(v1.1)" in (repo / "docs/README.md").read_text(encoding="utf-8"):
     sys.exit("Stale schema version '(v1.1)' in docs/README.md")
 print(f"  Verified {len(commands)} lifecycle hook command(s) and full hook-to-doc contract parity")
@@ -303,8 +300,7 @@ if python3 - <<'PYEOF'
 from pathlib import Path
 import re, sys
 
-kebab_re = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-yaml_unsafe_re = re.compile(r'^(?:[{[\*&!|>%@`]|[^"\']*:\s)')
+kebab_re, yaml_unsafe_re = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$"), re.compile(r'^(?:[{[\*&!|>%@`]|[^"\']*:\s)')
 skill_files = sorted(list(Path("antigravity/.gemini/config/skills").glob("*/SKILL.md")) + list(Path("templates").rglob("skills/*/SKILL.md")))
 if not skill_files:
     sys.exit("No SKILL.md files found")
@@ -362,8 +358,8 @@ else
   [ "$INIT_ERRORS" -eq 0 ] && pass "All package and test __init__.py files are 0 bytes (package marker purity)"
 
   if python3 - <<'PYEOF'
+import ast, sys
 from pathlib import Path
-import sys
 
 repo = Path(".").resolve()
 mcp_root = repo / "scripts/dotfiles_mcp"
@@ -388,7 +384,6 @@ for p in all_sized_files:
     if lines >= 465:
         sys.exit(f"{p.relative_to(repo)}: {lines} lines (exceeds 465-line cap)")
 
-import ast
 for tp in sorted((repo / "tests").rglob("test_*.py")):
     tree = ast.parse(tp.read_text(encoding="utf-8"), filename=str(tp))
     top_tests = [s.name for s in tree.body if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name.startswith("test_")]
@@ -410,14 +405,12 @@ PYEOF
     if UNIT_COV_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/dotfiles_mcp/ -q --tb=short --cov=scripts/dotfiles_mcp --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
       pass "Isolated 1:1 unit test coverage verified (100.00% on scripts/dotfiles_mcp without E2E/self-test masking)"
     else
-      echo "$UNIT_COV_OUT" >&2
-      fail "Isolated unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
+      echo "$UNIT_COV_OUT" >&2; fail "Isolated unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
     fi
     if PYTEST_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
       pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"
     else
-      echo "$PYTEST_OUT" >&2
-      fail "pytest suite or 100% branch coverage gate failed"
+      echo "$PYTEST_OUT" >&2; fail "pytest suite or 100% branch coverage gate failed"
     fi
   else
     fail "pytest not found (run 'make install' or 'pip install -r requirements-dev.txt')"
@@ -426,9 +419,7 @@ fi
 
 echo ""
 if [ "$FAILURES" -eq 0 ]; then
-  echo "🎉 All verification checks passed (0 errors)!"
-  exit 0
+  echo "🎉 All verification checks passed (0 errors)!"; exit 0
 else
-  echo "❌ $FAILURES verification check(s) failed." >&2
-  exit 1
+  echo "❌ $FAILURES verification check(s) failed." >&2; exit 1
 fi

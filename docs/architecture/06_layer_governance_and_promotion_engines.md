@@ -1,11 +1,11 @@
 # Architecture 06: Multi-Layer Governance, 1-Hop Horizon, Authority & Promotion Engines (`governance/`)
 
-> **Normative Specification — Subsystem 3D (`scripts/dotfiles_mcp/governance/{fork_configurator,workspace_bootstrapper,promotion_engine,horizon_engine,authority_engine,workflow_engine,git_governance_engine}.py` & [`scripts/layer-config.sh`](../../scripts/layer-config.sh))**
+> **Normative Specification — Subsystem 3D (`scripts/dotfiles_mcp/governance/{fork_configurator,workspace_bootstrapper,promotion_engine,horizon_engine,authority_engine,workflow_engine,git_governance_engine,cli_dispatcher}.py` & [`scripts/layer-config.sh`](../../scripts/layer-config.sh))**
 >
 > This document specifies the **`governance/`** bounded-domain subpackage (Subpackage 4 of `scripts/dotfiles_mcp/`) and its 26 CLI subcommands in [`scripts/layer-config.sh`](../../scripts/layer-config.sh):
 > 1. **Polymorphic Fork Configurator (`template-pack-v1`), Global Profile Composition & Workspace Bootstrapper (`fork_configurator.py`, `workspace_bootstrapper.py`)**
 > 2. **Layer Authority (`4`-Role Roster), 1-Hop Horizon Radar, 4-Mode Reconciliation & Upward Promotion (`authority_engine.py`, `horizon_engine.py`, `promotion_engine.py`)**
-> 3. **Task-Branch Workflow (`feature/<TICKET-ID>-<slug>`), 1-Hop Downward Delegation, Inter-Layer Consultation & `dev -> tst -> pre -> pro` Env Gates (`workflow_engine.py`, `git_governance_engine.py`)**
+> 3. **Task-Branch Workflow (`feature/<TICKET-ID>-<slug>`), 1-Hop Downward Delegation, Inter-Layer Consultation, `dev -> tst -> pre -> pro` Env Gates & Tiered CLI Dispatcher (`workflow_engine.py`, `git_governance_engine.py`, `cli_dispatcher.py`)**
 >
 > For core JSON-RPC 2.0 protocol contracts (`core/` & `mcp_node/`), see **[`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md)**; for `rcap1` compaction and `0..N` surface weaving (`capsules/`), see **[`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md)**; for OOP capability rings and ephemeral bots (`mcp_node/`), see **[`05_ephemeral_forks_and_department_bots.md`](05_ephemeral_forks_and_department_bots.md)**.
 
@@ -24,6 +24,7 @@ Every module in `scripts/dotfiles_mcp/governance/` maintains a strict `1:1:1` al
 | **`governance/` — Layer Authority & Upward PR Planner** | [`governance/authority_engine.py`](../../scripts/dotfiles_mcp/governance/authority_engine.py) | [`governance/test_authority_engine.py`](../../tests/unit/dotfiles_mcp/governance/test_authority_engine.py) (`TestAuthorityEngine`) | **§3 & §5**: `resolve_git_user_email`, `resolve_actor_layer_role`, `configure_layer_authority`, `verify_layer_operation_authority`, `build_upward_promotion_pr_plan`, `scan_open_source_agnosticism` |
 | **`governance/` — Task-Branch Workflow, 1-Hop Delegation & Consultation** | [`governance/workflow_engine.py`](../../scripts/dotfiles_mcp/governance/workflow_engine.py) | [`governance/test_workflow_engine.py`](../../tests/unit/dotfiles_mcp/governance/test_workflow_engine.py) (`TestWorkflowEngine`) | **§4 & §5**: `start_task_workflow`, `complete_task_workflow`, `_derive_branch_slug`, `delegate_directive_to_child`, `consult_layer_ephemeral` |
 | **`governance/` — Git Branch Policy, Roster, Env Gates & Staging** | [`governance/git_governance_engine.py`](../../scripts/dotfiles_mcp/governance/git_governance_engine.py) | [`governance/test_git_governance_engine.py`](../../tests/unit/dotfiles_mcp/governance/test_git_governance_engine.py) (`TestGitGovernanceEngine`) | **§4 & §5**: `record_governance_event`, `stage_non_destructive_proposal`, `configure_git_governance_policy`, `manage_layer_roster`, `inspect_git_governance_state`, `evaluate_environment_promotion`, `record_governance_decision` |
+| **`governance/` — Tiered `layer-config.sh` CLI Dispatcher (`C1`/`C2`/`C3`/Bots)** | [`governance/cli_dispatcher.py`](../../scripts/dotfiles_mcp/governance/cli_dispatcher.py) | [`governance/test_cli_dispatcher.py`](../../tests/unit/dotfiles_mcp/governance/test_cli_dispatcher.py) (`TestCliDispatcher`) | **§5**: `C1_DISCOVERY_SUBCOMMANDS`, `C2_LIFECYCLE_SUBCOMMANDS`, `C3_GOVERNANCE_SUBCOMMANDS`, `EPHEMERAL_BOT_SUBCOMMANDS`, `dispatch_layer_config_cli`, `main` |
 
 ---
 

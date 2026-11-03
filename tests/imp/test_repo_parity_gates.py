@@ -81,7 +81,7 @@ class TestRepoParityGates:
         ]  # fmt: skip
 
         # Assert
-        assert (len(pkg_modules), len(template_rules)) == (21, 9)
+        assert (len(pkg_modules), len(template_rules)) == (22, 9)
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
         assert (
@@ -98,6 +98,7 @@ class TestRepoParityGates:
         import post_invocation_lint
         import pre_tool_guard
         from dotfiles_mcp.core import constants as mcp_constants
+        from dotfiles_mcp.governance import cli_dispatcher
 
         config_dir = REPO_DIR / "antigravity/.gemini/config"
         hooks_data = json.loads((config_dir / "hooks.json").read_text(encoding="utf-8"))
@@ -125,13 +126,20 @@ class TestRepoParityGates:
         full_audit_skill = (
             REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md"
         ).read_text(encoding="utf-8")
+        layer_cfg_sh = (REPO_DIR / "scripts/layer-config.sh").read_text(encoding="utf-8")
 
         # Act
         pre_matcher = set(hooks_data["pre-tool-guard"]["PreToolUse"][0]["matcher"].split("|"))
         post_matcher = set(hooks_data["auto-format"]["PostToolUse"][0]["matcher"].split("|"))
+        all_subs = (
+            *cli_dispatcher.C1_DISCOVERY_SUBCOMMANDS,
+            *cli_dispatcher.C2_LIFECYCLE_SUBCOMMANDS,
+            *cli_dispatcher.C3_GOVERNANCE_SUBCOMMANDS,
+            *cli_dispatcher.EPHEMERAL_BOT_SUBCOMMANDS,
+        )
 
         # Assert
-        assert "--upstream-repo" not in guide_02
+        assert "--upstream-repo" not in guide_02 and len(all_subs) == 26
         assert "Vertical Human Persona & Use-Case Journey Matrix" in full_audit_skill
         assert "Conceptual & Semantic Documentation Reading Pass" in full_audit_skill
         assert mcp_constants.VALID_TEMPLATE_KINDS == (
@@ -157,20 +165,14 @@ class TestRepoParityGates:
             fw_ok, fw_reason = pre_tool_guard._check_file_write(
                 {"Path": f"/workspace/app/{protected_target}", "Content": "x = 1"}
             )
-            sh_redir_ok, sh_redir_reason = pre_tool_guard._check_command(
-                {"CommandLine": f"echo 'x = 1' > {protected_target}"}
-            )
-            sh_tee_ok, sh_tee_reason = pre_tool_guard._check_command(
-                {"CommandLine": f"echo 'x = 1' | tee {protected_target}"}
-            )
-            sh_sed_ok, sh_sed_reason = pre_tool_guard._check_command(
-                {"CommandLine": f"sed -i 's/a/b/' {protected_target}"}
-            )
-            sh_py_ok, sh_py_reason = pre_tool_guard._check_command(
-                {"CommandLine": f"python3 -c \"open('{protected_target}', 'w').write('x')\""}
-            )
-            assert (fw_ok, sh_redir_ok, sh_tee_ok, sh_sed_ok, sh_py_ok) == (False,) * 5
-            assert fw_reason == sh_redir_reason == sh_tee_reason == sh_sed_reason == sh_py_reason
+            for cmd in (
+                f"echo 'x = 1' > {protected_target}",
+                f"echo 'x = 1' | tee {protected_target}",
+                f"sed -i 's/a/b/' {protected_target}",
+                f"python3 -c \"open('{protected_target}', 'w').write('x')\"",
+            ):
+                sh_ok, sh_reason = pre_tool_guard._check_command({"CommandLine": cmd})
+                assert not fw_ok and not sh_ok and fw_reason == sh_reason
         for agents_token in ("0 bytes", "__init__.py", "NEVER run mutating git commands"):
             assert agents_token in agents_md
         for bt in ("18,000", "80,000", "TOKEN_BUDGET_EXCEEDED", "WORKSPACE_RULES_BUDGET_EXCEEDED"):
@@ -187,17 +189,9 @@ class TestRepoParityGates:
             "SURFACE_BOUNDARY_VIOLATION",
         ):  # fmt: skip
             assert mcp_token in arch_mcp
-        for sub in (
-            "init-fork", "list-templates", "scaffold-template", "apply-project", "diff-project",
-            "promote-from-project", "spawn-ephemeral", "inspect-ephemeral", "reap-ephemeral",
-            "set-global-profile", "register-subtree", "bootstrap-workspace", "sync-layer",
-            "set-authority", "check-authority", "inspect-horizon", "status", "start-task",
-            "complete-task", "compare-upstream", "consult-layer", "delegate-to-child",
-            "manage-roster", "configure-git-policy", "check-env-promotion", "record-decision",
-        ):  # fmt: skip
-            assert sub in readme_md and sub in ext_guide and sub in arch_mcp
-        assert "All 26 Subcommands" in readme_md
-        assert "all 26 subcommands" in (REPO_DIR / "scripts/layer-config.sh").read_text("utf-8")
+        for sub in all_subs:
+            assert sub in readme_md and sub in ext_guide and sub in arch_mcp and sub in layer_cfg_sh
+        assert "All 26 Subcommands" in readme_md and "all 26 subcommands" in layer_cfg_sh
         recipes = mcp_constants.LAYER_MAKEFILE_RECIPES
         del_flags = ("--ticket", "--priority", "--surface", "--source")
         prom_flags = ("--upstream-dir $(TARGET_REPO)", "--to-layer", "--to-template")
@@ -448,7 +442,7 @@ class TestRepoParityGates:
                     blind_subprocess_mocks.append(f"{rel_tp}:{node.lineno}")
 
         # Assert
-        assert (len(prod_py), len(test_py)) == (33, 34)
+        assert (len(prod_py), len(test_py)) == (34, 35)
         assert pragma_violations == [] and prod_style_violations == []
         assert unmatched_raises == [] and blind_subprocess_mocks == []
         assert structure_violations == []
