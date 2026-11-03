@@ -5,6 +5,7 @@ Specification: docs/architecture/03_contextual_mcp_and_federation.md
 
 from __future__ import annotations
 
+import json
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -263,3 +264,71 @@ class TestManifestHelpers:
         assert dest_from_src == up_repo / "templates/tech-stack/fastapi-hexagonal"
         assert dest_existing_flat == up_repo / "templates/fastapi-hexagonal"
         assert dest_from_kind == up_repo / "templates/business-stack/crm-ops"
+
+    def test_load_manifest_dict_and_discover_templates_catalog_across_layers(
+        self, tmp_path: Path
+    ) -> None:
+        """Load manifest dictionaries, detect OSS roots, and discover template catalogs."""
+        # Arrange
+        empty_names = manifest_helpers.discover_layer_template_names(tmp_path)
+        empty_m = manifest_helpers._load_manifest_dict(tmp_path)
+        root_tpl = tmp_path / "templates" / "web-stack"
+        (root_tpl / "rules").mkdir(parents=True)
+        (root_tpl / "skills" / "web-start").mkdir(parents=True)
+        (root_tpl / "governance").mkdir(parents=True)
+        (root_tpl / "assets").mkdir(parents=True)
+        (tmp_path / "templates" / ".hidden").mkdir(parents=True)
+        (tmp_path / "templates" / "not-a-dir.txt").write_text("ignore", encoding="utf-8")
+        (root_tpl / "template.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": "template-pack-v1",
+                    "template_id": "web-stack",
+                    "kind": "tech-stack",
+                    "target_role": "squad",
+                    "description": "Web starter pack",
+                }
+            ),
+            encoding="utf-8",
+        )
+        (root_tpl / "rules" / "coding.md").write_text("# Coding\n", encoding="utf-8")
+        (root_tpl / "skills" / "web-start" / "SKILL.md").write_text(
+            "---\nname: web-start\ndescription: start\n---\n", encoding="utf-8"
+        )
+        (root_tpl / "governance" / "WORKTASK.md").write_text("# Tasks\n", encoding="utf-8")
+        (root_tpl / "assets" / "base.html").write_text("<html></html>\n", encoding="utf-8")
+
+        sub_layer = tmp_path / "layers" / "dept-legal"
+        sub_tpl = sub_layer / "templates" / "gdpr-pack"
+        (sub_tpl / "rules").mkdir(parents=True)
+        (sub_tpl / "template.json").write_text("[]", encoding="utf-8")
+        (sub_tpl / "rules" / "privacy.md").write_text("# Privacy\n", encoding="utf-8")
+        bare_tpl = sub_layer / "templates" / "no-meta-pack"
+        bare_tpl.mkdir(parents=True)
+        no_tpl_layer = tmp_path / "layers" / "dept-empty"
+        no_tpl_layer.mkdir(parents=True)
+        mounted = [
+            {"name": "dept-legal", "relative_path": "layers/dept-legal"},
+            {"name": "dept-empty", "relative_path": "layers/dept-empty"},
+            {"name": "invalid", "relative_path": ""},
+        ]
+
+        # Act
+        found_names = manifest_helpers.discover_layer_template_names(tmp_path)
+        catalog = manifest_helpers.discover_templates_catalog(tmp_path, mounted)
+        is_oss = manifest_helpers._is_oss_root_manifest({"layer_role": "workstation"})
+        is_corp = manifest_helpers._is_oss_root_manifest(
+            {"layer_id": "acme-root", "layer_role": "corporate"}
+        )
+
+        # Assert
+        assert empty_names == []
+        assert empty_m == {}
+        assert is_oss is True
+        assert is_corp is False
+        assert found_names == ["web-stack"]
+        assert len(catalog) == 3
+        assert catalog[0]["template_name"] == "web-stack"
+        assert catalog[0]["assets"] == ["templates/web-stack/assets/base.html"]
+        assert catalog[1]["template_name"] == "gdpr-pack"
+        assert catalog[2]["template_name"] == "no-meta-pack"

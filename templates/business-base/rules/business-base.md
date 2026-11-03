@@ -15,12 +15,12 @@ description: Universal corporate ledger integrity, Lex Superior IP firewall, cro
 
 1. **Single Source of Truth Ledger Integrity (`corporate/`)**:
    - Official records under `corporate/` (IP/patent registries, contracts, BOM/CAPEX ledgers, batch logs) carry production-schema strictness.
-   - **Zero Approximations & Atomic Sync**: Never invent, round, or estimate financial figures, royalty/dilution percentages, tolerances, or legal clauses. Claims in `docs/` or `surfaces/` MUST cite their `corporate/` ledger (`[DEPT]-[TYPE]-[YYYY]-[NNN]`) and update atomically.
+   - **Zero Approximations & Atomic Sync**: Never invent, round, or estimate financial figures, percentages, tolerances, or clauses. Claims in `docs/` or `surfaces/` MUST cite their `corporate/` ledger (`[DEPT]-[TYPE]-[YYYY]-[NNN]`) and update atomically.
 2. **Deontic Precedence (*Lex Superior*) & Confidentiality Firewall**:
-   - Enforce `precedence` (`0..100`) in `system/mcp-layer.json`: Territorial/Geo (`1`) $\rightarrow$ Public State `Root 0` (`2`) $\rightarrow$ Public Admin Dept (`3..4`) $\rightarrow$ Legal/IP (`5`) $\rightarrow$ Corporate (`10`) $\rightarrow$ Finance (`15`) $\rightarrow$ Ops/HSE (`20`) $\rightarrow$ Tech (`25`) $\rightarrow$ Brand (`30`) $\rightarrow$ Squad (`50`) $\rightarrow$ Contextual `Human-Stack` (`85..95`).
-   - Verify zero unpatented inventions (*World Novelty Gates*) or trade secrets leak into `surfaces/{web,forms,print}/`. Reference restricted items by ID (`<PAT-ID>`, `<TS-ID>`, `Batch #NNN`), never embedding secret formulas in rules; use `ISO` and `20/80` disclosure gates.
+   - Enforce `precedence` (`0..100`) in `system/mcp-layer.json`: Territorial/Geo (`1`) $\rightarrow$ State `Root 0` (`2`) $\rightarrow$ Public Dept (`3..4`) $\rightarrow$ Legal/IP (`5`) $\rightarrow$ Corporate (`10`) $\rightarrow$ Finance (`15`) $\rightarrow$ Ops (`20`) $\rightarrow$ Tech (`25`) $\rightarrow$ Brand (`30`) $\rightarrow$ Squad (`50`) $\rightarrow$ `Human-Stack` (`85..95`).
+   - Verify zero unpatented inventions or trade secrets leak into `surfaces/{web,forms,print}/`. Reference restricted items by ID (`<PAT-ID>`, `<TS-ID>`, `Batch #NNN`), never embedding secret formulas in rules; use `ISO` and `20/80` disclosure gates.
 3. **Cross-Surface Cascade & Escalation SLAs**:
-   - Audit policy, spec, pricing, or brand changes across `surfaces/web/**`, `surfaces/forms/**`, and `surfaces/print/**`, enforcing SLAs (`P0 < 1h`, `P1 < 4h`, `P2 < 24h`).
+   - Audit policy, spec, pricing, or brand changes across `surfaces/{web,forms,print}/**`, enforcing SLAs (`P0 < 1h`, `P1 < 4h`, `P2 < 24h`).
 
 ---
 

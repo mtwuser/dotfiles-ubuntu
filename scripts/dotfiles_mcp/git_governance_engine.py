@@ -31,12 +31,7 @@ from dotfiles_mcp.constants import (
     VALID_ROSTER_ROLES,
 )
 from dotfiles_mcp.layer_topology_helpers import _is_makefile_outdated
-
-
-def _load_manifest(target_dir: Path) -> dict[str, Any]:
-    mpath = target_dir / "system" / "mcp-layer.json"
-    loaded = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
-    return loaded if isinstance(loaded, dict) else {}
+from dotfiles_mcp.manifest_helpers import _load_manifest_dict
 
 
 def _append_tracker_line(ws: Path, tracker: str, line: str, title_id: str) -> None:
@@ -53,7 +48,7 @@ def record_governance_event(
     message: str = "", remediation: str = "", dry_run: bool = False,
 ) -> dict[str, Any]:  # fmt: skip
     """Persist a governance/permission event to logs/governance_audit.jsonl and SESSION.md."""
-    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
+    ws, manifest = workspace_dir.resolve(), _load_manifest_dict(workspace_dir.resolve())
     layer_id = str(manifest.get("layer_id", ws.name))
     event: dict[str, Any] = {
         "ts": datetime.now(UTC).isoformat(), "workspace_dir": str(ws), "layer_id": layer_id,
@@ -121,7 +116,7 @@ def configure_git_governance_policy(
     ws, mpath = target_dir.resolve(), target_dir.resolve() / "system" / "mcp-layer.json"
     if not mpath.is_file():
         raise ValueError(f"Missing layer manifest: {mpath}")
-    manifest = _load_manifest(ws)
+    manifest = _load_manifest_dict(ws)
     layer_id = str(manifest.get("layer_id", ws.name))
     prot = [b.strip() for b in (protected_branches or DEFAULT_PROTECTED_BRANCHES) if b.strip()]
     git_gov: dict[str, Any] = {"protected_branches": prot,
@@ -162,7 +157,7 @@ def inspect_git_governance_state(
     workspace_dir: Path, *, current_branch: str | None = None
 ) -> dict[str, Any]:
     """Inspect active Git branch, inferred process stage, environment, and governance alerts."""
-    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
+    ws, manifest = workspace_dir.resolve(), _load_manifest_dict(workspace_dir.resolve())
     raw_gg = manifest.get("git_governance")
     gg = raw_gg if isinstance(raw_gg, dict) else {}
     prot = [str(b) for b in gg.get("protected_branches", DEFAULT_PROTECTED_BRANCHES)]
@@ -232,7 +227,7 @@ def evaluate_environment_promotion(
     clean_env = target_env.strip().lower()
     if clean_env not in VALID_ENVIRONMENTS:
         raise ValueError(f"Invalid target_env {target_env!r}: must be one of {VALID_ENVIRONMENTS}")
-    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
+    ws, manifest = workspace_dir.resolve(), _load_manifest_dict(workspace_dir.resolve())
     raw_auth = manifest.get("layer_authority")
     auth = raw_auth if isinstance(raw_auth, dict) else {}
     auth_emails = [str(e).lower() for e in auth.get("authorized_emails", []) if str(e).strip()]
@@ -291,7 +286,7 @@ def record_governance_decision(
         )
     if not clean_ref or not clean_reason:
         raise ValueError("Both item_ref and reason must be non-empty strings")
-    ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
+    ws, manifest = workspace_dir.resolve(), _load_manifest_dict(workspace_dir.resolve())
     lid = str(manifest.get("layer_id", ws.name))
     status_map = {"approve": "approved", "reject": "rejected",
         "defer": "deferred", "blocked": "blocked"}  # fmt: skip
@@ -328,7 +323,7 @@ def manage_layer_roster(
         raise ValueError(
             f"Invalid member_role {member_role!r}: must be one of {VALID_ROSTER_ROLES}"
         )
-    manifest = _load_manifest(ws)
+    manifest = _load_manifest_dict(ws)
     layer_id = str(manifest.get("layer_id", ws.name))
     raw_auth = manifest.get("layer_authority")
     auth: dict[str, Any] = dict(raw_auth) if isinstance(raw_auth, dict) else {}

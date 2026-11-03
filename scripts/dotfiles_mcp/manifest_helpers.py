@@ -233,3 +233,75 @@ def _resolve_oss_contrib_repo_dir(up: Path) -> Path:
         if (cand / "system" / "mcp-layer.json").is_file():
             return cand.resolve()
     return up
+
+
+def _load_manifest_dict(target_dir: Path) -> dict[str, Any]:
+    """Load <target_dir>/system/mcp-layer.json as a dictionary, or {} if missing/invalid."""
+    mpath = target_dir / "system" / "mcp-layer.json"
+    loaded = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
+    """Return True when manifest represents the Open-Source community root layer."""
+    role = str(manifest.get("layer_role", ""))
+    return str(manifest.get("layer_id", "")) == "root" or role in ("root", "workstation")
+
+
+def discover_layer_template_names(layer_dir: Path) -> list[str]:
+    """Return sorted template directory names present under layer_dir/templates."""
+    return [name for name, _path in _iter_layer_template_dirs(layer_dir)]
+
+
+def _inspect_single_template_dir(
+    tpl_dir: Path, layer_dir: Path, source_layer: str
+) -> dict[str, Any]:
+    """Build catalog metadata for a single template pack directory."""
+    meta_file = tpl_dir / "template.json"
+    loaded = json.loads(meta_file.read_text(encoding="utf-8")) if meta_file.is_file() else {}
+    meta: dict[str, Any] = loaded if isinstance(loaded, dict) else {}
+    rules = [str(p.relative_to(layer_dir)) for p in sorted((tpl_dir / "rules").glob("*.md"))]
+    skills = [
+        _parse_skill_frontmatter(p, layer_dir)
+        for p in sorted((tpl_dir / "skills").glob("*/SKILL.md"))
+    ]
+    gov = [str(p.relative_to(layer_dir)) for p in sorted((tpl_dir / "governance").glob("*.md"))]
+    assets_dir = tpl_dir / "assets"
+    assets = (
+        [str(p.relative_to(layer_dir)) for p in sorted(assets_dir.rglob("*")) if p.is_file()]
+        if assets_dir.is_dir()
+        else []
+    )
+    parent_grp = tpl_dir.parent.name if tpl_dir.parent.name in TEMPLATE_STACK_GROUP_DIRS else "core"
+    raw_k = str(meta.get("kind", "tech-stack"))
+    return {
+        "template_name": tpl_dir.name,
+        "source_layer": source_layer,
+        "kind": raw_k if raw_k in VALID_TEMPLATE_KINDS else "tech-stack",
+        "stack_group": str(meta.get("stack_group", parent_grp)),
+        "target_role": str(meta.get("target_role", "squad")),
+        "description": str(meta.get("description", f"Template pack {tpl_dir.name}")),
+        "rules": rules,
+        "skills": skills,
+        "governance_files": gov,
+        "assets": assets,
+        "recommended_surface_bindings": list(meta.get("recommended_surface_bindings", [])),
+    }
+
+
+def discover_templates_catalog(
+    repo_dir: Path,
+    mounted_layers: list[dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    """Discover all template packs across the root layer and mounted subtrees."""
+    catalog: list[dict[str, Any]] = []
+    search_targets: list[tuple[str, Path]] = [("root", repo_dir)]
+    for entry in mounted_layers or []:
+        rel = str(entry.get("relative_path", ""))
+        if rel:
+            search_targets.append((str(entry.get("name", rel)), repo_dir / rel))
+
+    for source_layer, ldir in search_targets:
+        for _tpl_name, tpl_dir in _iter_layer_template_dirs(ldir):
+            catalog.append(_inspect_single_template_dir(tpl_dir, ldir, source_layer))
+    return catalog

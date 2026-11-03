@@ -14,8 +14,6 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.authority_engine import (
-    _is_oss_root_manifest,
-    _load_manifest_dict,
     verify_layer_operation_authority,
     verify_oss_promotion_agnosticism,
 )
@@ -26,7 +24,9 @@ from dotfiles_mcp.layer_topology_helpers import (
     _resolve_default_parent_dir,
 )
 from dotfiles_mcp.manifest_helpers import (
+    _is_oss_root_manifest,
     _iter_layer_template_dirs,
+    _load_manifest_dict,
     _resolve_oss_contrib_repo_dir,
     _resolve_template_dir,
     _sha256_file,

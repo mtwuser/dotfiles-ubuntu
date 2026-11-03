@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.authority_engine import _load_manifest_dict, verify_layer_operation_authority
+from dotfiles_mcp.authority_engine import verify_layer_operation_authority
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
     MAX_BRANCH_SLUG_CHARS,
@@ -23,7 +23,11 @@ from dotfiles_mcp.constants import (
 from dotfiles_mcp.ephemeral_fork_engine import reap_ephemeral_fork, spawn_ephemeral_fork
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.layer_topology_helpers import _resolve_mounted_child_dir
-from dotfiles_mcp.manifest_helpers import _ensure_rule_file_frontmatter, _resolve_template_dir
+from dotfiles_mcp.manifest_helpers import (
+    _ensure_rule_file_frontmatter,
+    _load_manifest_dict,
+    _resolve_template_dir,
+)
 from dotfiles_mcp.tools_surface import SurfaceToolsMixin
 
 VALID_TASK_TRACKERS: tuple[str, ...] = VALID_TRACKER_FILES
@@ -45,9 +49,7 @@ def _derive_branch_slug(task_text: str, *, strip_ticket: str = "") -> str:
 
 
 def _load_ws_manifest(ws: Path) -> tuple[dict[str, Any], str, str]:
-    m_path = ws / "system" / "mcp-layer.json"
-    m_raw = json.loads(m_path.read_text(encoding="utf-8")) if m_path.is_file() else {}
-    m = m_raw if isinstance(m_raw, dict) else {}
+    m = _load_manifest_dict(ws)
     return m, str(m.get("layer_id", ws.name)), str(m.get("layer_role", "project"))
 
 

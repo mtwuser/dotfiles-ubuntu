@@ -389,6 +389,12 @@ class TestRepoParityGates:
                 and (not n.name.startswith("_") or n.name == "__init__")
                 and not ast.get_docstring(n)
             )
+            or (
+                p.name.endswith("_engine.py")
+                and isinstance(n, ast.ImportFrom)
+                and bool(n.module and n.module.endswith("_engine"))
+                and any(a.name.startswith("_") for a in n.names)
+            )
         ]
         unmatched_raises, blind_subprocess_mocks, structure_violations = [], [], []
         for tp in test_py:

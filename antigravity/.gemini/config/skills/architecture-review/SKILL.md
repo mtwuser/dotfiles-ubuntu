@@ -42,6 +42,7 @@ to discover unifying concepts (e.g., how a unified execution policy emerges from
 - A configuration requires choosing values from two independent dimensions
 - A developer asks "how do I combine X with Y?" and no single answer exists
 - Documentation describes the same concept under different names in different contexts
+- **`[CLUSTER_CONSOLIDATION_CANDIDATE]` from `/full-audit` (Probe E) or `/review`**: When $\ge 2$ coupled modules exceed `385` lines with combined **Relational Cluster Mass $M_{\text{cluster}} \ge 1{,}200$ lines** (or share `_private` helpers across peer `*_engine.py` modules), use `architecture-review` (Stage 3) to map the functional affinity matrix across those files, define the clean `1:1:1` module boundary (`*_engine.py` vs. `*_helpers.py` vs. `tools_*.py`), and update the normative `docs/architecture/` table before handing off physical extraction to `refactoring` (Stage 4)
 
 ### Anti-Pattern: Premature Intersection
 

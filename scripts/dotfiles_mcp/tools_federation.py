@@ -19,7 +19,6 @@ from dotfiles_mcp.constants import (
     MCP_OPERATING_MODES,
     VALID_ENVIRONMENTS,
 )
-from dotfiles_mcp.fork_configurator import discover_layer_template_names
 from dotfiles_mcp.manifest_helpers import (
     _is_running_in_container,
     _merge_unique_strings,
@@ -28,6 +27,7 @@ from dotfiles_mcp.manifest_helpers import (
     _read_non_empty_lines,
     _read_os_pretty_name,
     _read_version,
+    discover_layer_template_names,
 )
 from dotfiles_mcp.node_base import MCPNodeBase
 from dotfiles_mcp.promotion_engine import compare_project_patterns_multilayer

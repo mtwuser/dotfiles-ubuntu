@@ -15,7 +15,6 @@ from dotfiles_mcp.constants import (
     DIAGNOSTICS_RECENT_ALERTS_LIMIT,
     DIAGNOSTICS_RECENT_EVENTS_LIMIT,
 )
-from dotfiles_mcp.fork_configurator import discover_templates_catalog
 from dotfiles_mcp.manifest_helpers import (
     _is_running_in_container,
     _parse_skill_frontmatter,
@@ -23,6 +22,7 @@ from dotfiles_mcp.manifest_helpers import (
     _read_non_empty_lines,
     _read_os_pretty_name,
     _read_version,
+    discover_templates_catalog,
 )
 from dotfiles_mcp.node_base import MCPNodeBase
 

@@ -22,8 +22,11 @@ from dotfiles_mcp.constants import (
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
 )
-from dotfiles_mcp.fork_configurator import discover_layer_template_names
-from dotfiles_mcp.manifest_helpers import _read_version, _resolve_template_dir
+from dotfiles_mcp.manifest_helpers import (
+    _read_version,
+    _resolve_template_dir,
+    discover_layer_template_names,
+)
 
 
 class MCPNodeBase:

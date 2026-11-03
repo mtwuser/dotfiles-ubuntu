@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.authority_engine import (
-    _is_oss_root_manifest,
-    _load_manifest_dict,
     build_upward_promotion_pr_plan,
     verify_layer_operation_authority,
     verify_oss_promotion_agnosticism,
@@ -37,7 +35,9 @@ from dotfiles_mcp.constants import (
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
+    _is_oss_root_manifest,
     _iter_layer_template_dirs,
+    _load_manifest_dict,
     _parse_skill_frontmatter,
     _resolve_template_dest_dir,
     _resolve_template_dir,

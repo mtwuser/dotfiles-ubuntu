@@ -29,6 +29,7 @@ from dotfiles_mcp.constants import (
     VALIDATOR_ALLOWED_OPS,
 )
 from dotfiles_mcp.git_governance_engine import record_governance_event
+from dotfiles_mcp.manifest_helpers import _is_oss_root_manifest, _load_manifest_dict
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -46,12 +47,6 @@ def resolve_git_user_email(target_dir: Path) -> str:
     except OSError:
         return ""
     return ""
-
-
-def _load_manifest_dict(target_dir: Path) -> dict[str, Any]:
-    mpath = target_dir / "system" / "mcp-layer.json"
-    loaded = json.loads(mpath.read_text(encoding="utf-8")) if mpath.is_file() else {}
-    return loaded if isinstance(loaded, dict) else {}
 
 
 def configure_layer_authority(
@@ -182,12 +177,6 @@ def verify_layer_operation_authority(
     return {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation,
         "layer_id": layer_id, "actor_email": eff_email, "owner_role": owner_role,
         "remediation": None}  # fmt: skip
-
-
-def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
-    """Return True when manifest represents the Open-Source community root layer."""
-    role = str(manifest.get("layer_role", ""))
-    return str(manifest.get("layer_id", "")) == "root" or role in ("root", "workstation")
 
 
 def verify_oss_promotion_agnosticism(project_dir: Path, content: str, source_rel: str) -> None:
