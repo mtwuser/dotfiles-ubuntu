@@ -57,6 +57,9 @@ class TestWorkspaceBootstrapper:
             full_res = set_global_agents_profile(
                 tmp_path, "full", run_stow=True, home_dir=tmp_path / "home"
             )
+            repeat_res = set_global_agents_profile(
+                tmp_path, "full", run_stow=True, home_dir=tmp_path / "home"
+            )
 
         # Assert
         assert dry_res["dry_run"] is True
@@ -66,6 +69,12 @@ class TestWorkspaceBootstrapper:
         assert biz_res["profile"] == "business"
         assert full_res["profile"] == "full"
         assert full_res["stow_executed"] is True
+        assert repeat_res["stow_executed"] is True
+        mcp_cfg = json.loads(
+            (tmp_path / "home/.gemini/config/mcp_config.json").read_text(encoding="utf-8")
+        )
+        assert "dotfiles-mcp" in mcp_cfg["mcpServers"]
+        assert (tmp_path / "home/.gemini/antigravity/mcp_config.json").is_symlink()
         written = (tmp_path / "antigravity/.gemini/config/AGENTS.md").read_text(encoding="utf-8")
         assert "Core rule 1." in written
         assert "Tech rule 1." in written

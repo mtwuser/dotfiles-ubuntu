@@ -248,10 +248,12 @@ AGENTS_MD_WARN_BYTES = 16000
 AGENTS_MD_MAX_BYTES = 18000
 MCP_PAYLOAD_WARN_BYTES = 16000
 MAX_LOG_FILE_BYTES = 524288
-ALLOWED_READ_PREFIXES = ("docs/", "templates/", "antigravity/", "system/")
+ALLOWED_READ_PREFIXES = (
+    "docs/", "templates/", "antigravity/", "system/", "corporate/", "surfaces/", "roadmaps/",
+)  # fmt: skip
 ALLOWED_ROOT_FILES = {
     "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
-    "ACCESSIBILITY.md", "CODE_OF_CONDUCT.md", "VERSION",
+    "ACCESSIBILITY.md", "CODE_OF_CONDUCT.md", "VERSION", *VALID_TRACKER_FILES,
 }  # fmt: skip
 ANSI_ESCAPE_RE = re.compile(r"\x1b\[[0-9;]*[a-zA-Z]")
 KEBAB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")

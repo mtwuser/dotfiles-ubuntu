@@ -88,6 +88,22 @@ def _strip_secondary_header(markdown_text: str) -> str:
     return "\n".join(lines[idx:]).strip()
 
 
+def _ensure_fixed_mcp_registered(repo_dir: Path, target_home: Path) -> None:
+    """Idempotently register dotfiles-mcp in <home>/.gemini/{config,antigravity}/mcp_config.json."""
+    cfg_p, ag_p = (
+        target_home / ".gemini/config/mcp_config.json",
+        target_home / ".gemini/antigravity/mcp_config.json",
+    )
+    cfg_p.parent.mkdir(parents=True, exist_ok=True)
+    data: dict[str, Any] = json.loads(cfg_p.read_text("utf-8")) if cfg_p.is_file() else {}
+    srv_arg = str((repo_dir / "scripts/dotfiles_mcp_server.py").resolve())
+    data.setdefault("mcpServers", {})["dotfiles-mcp"] = {"command": "python3", "args": [srv_arg]}
+    cfg_p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    ag_p.parent.mkdir(parents=True, exist_ok=True)
+    if not ag_p.exists() and not ag_p.is_symlink():
+        ag_p.symlink_to(cfg_p)
+
+
 def set_global_agents_profile(
     repo_dir: Path, profile: str, *, run_stow: bool = False,
     home_dir: Path | None = None, dry_run: bool = False,
@@ -117,9 +133,11 @@ def set_global_agents_profile(
         target_agents.parent.mkdir(parents=True, exist_ok=True)
         target_agents.write_text(composed, encoding="utf-8")
         if run_stow:
+            target_home = home_dir or Path.home()
             stow_bin = shutil.which("stow") or "/usr/bin/stow"
-            cmd = [stow_bin, "-t", str(home_dir or Path.home()), "-R", "antigravity"]
+            cmd = [stow_bin, "-t", str(target_home), "-R", "antigravity"]
             subprocess.run(cmd, cwd=repo_dir, check=True, capture_output=True, text=True)  # noqa: S603
+            _ensure_fixed_mcp_registered(repo_dir, target_home)
             stow_executed = True
 
     return {"profile": profile, "source_files": source_files, "dry_run": dry_run,

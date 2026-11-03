@@ -73,6 +73,11 @@ MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
     },
 )
 
+_WS_DIR_PROP: dict[str, str] = {
+    "type": "string",
+    "description": "Optional target workspace directory (defaults to server repo_dir).",
+}
+
 MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     {
         "name": "get_layer_overview",
@@ -80,7 +85,8 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
-                "layer": {"type": "string", "description": "Target layer ('root' or subtree)."}
+                "workspace_dir": _WS_DIR_PROP,
+                "layer": {"type": "string", "description": "Target layer ('root' or subtree)."},
             },
             "additionalProperties": False,
         },
@@ -91,12 +97,13 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "mode": {
                     "type": "string",
                     "enum": ["verify-repo", "system-audit", "both"],
                     "default": "verify-repo",
                     "description": "Audit mode ('verify-repo', 'system-audit', or 'both').",
-                }
+                },
             },
             "additionalProperties": False,
         },
@@ -107,6 +114,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "relative_path": {"type": "string", "description": "Path relative to layer root."},
                 "layer": {"type": "string", "description": "Optional layer ('root' or subtree)."},
             },
@@ -120,6 +128,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "query": {"type": "string", "description": "Keyword or phrase to search."},
                 "scope": {
                     "type": "string",
@@ -160,6 +169,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "capsule_token": {"type": "string", "description": "Chained rcap1 capsule token."},
                 "target_level": {
                     "type": "string",
@@ -189,6 +199,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "filter_role": {"type": "string", "description": "Optional role substring filter."},
                 "environment": {
                     "type": "string",
@@ -210,6 +221,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "project_rules": {
                     "type": "array",
                     "items": {"type": "string"},
@@ -235,6 +247,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "target_path": {"type": "string", "description": "Optional relative file path."},
                 "architectural_plane": {
                     "type": "string",
@@ -273,6 +286,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
         "inputSchema": {
             "type": "object",
             "properties": {
+                "workspace_dir": _WS_DIR_PROP,
                 "action": {
                     "type": "string",
                     "enum": list(VALID_EPHEMERAL_ACTIONS),

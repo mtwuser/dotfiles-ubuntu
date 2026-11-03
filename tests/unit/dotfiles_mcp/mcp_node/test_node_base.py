@@ -77,12 +77,23 @@ class TestMCPNodeBase:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir()
         (docs_dir / "ok.md").write_text("# OK\n", encoding="utf-8")
+        corp_dir = tmp_path / "corporate"
+        corp_dir.mkdir()
+        (corp_dir / "charter.md").write_text("# Charter\n", encoding="utf-8")
+        (tmp_path / "WORKTASK.md").write_text("# Tasks\n", encoding="utf-8")
         escape_link = docs_dir / "escape.md"
         escape_link.symlink_to(outside_file)
 
         # Act
         ok_path = server._resolve_safe_path("docs/ok.md")
+        corp_path = server._resolve_safe_path("corporate/charter.md")
+        trk_path = server._resolve_safe_path("WORKTASK.md")
+        default_ws = server._resolve_workspace_override("")
         server._write_jsonl("ignored.jsonl", {"x": 1})
+        with pytest.raises(ValueError, match="Invalid workspace_dir"):
+            server._resolve_workspace_override(str(tmp_path / "nonexistent"))
+        (tmp_path / ".agents").mkdir()
+        override_ws = server._resolve_workspace_override(str(tmp_path))
         with pytest.raises(ValueError, match="Invalid or forbidden"):
             server._resolve_safe_path("")
         with pytest.raises(ValueError, match="Invalid or forbidden"):
@@ -98,6 +109,10 @@ class TestMCPNodeBase:
         outside_file.unlink()
         assert escape_link.is_symlink()
         assert ok_path.name == "ok.md"
+        assert corp_path.name == "charter.md"
+        assert trk_path.name == "WORKTASK.md"
+        assert default_ws == tmp_path.resolve()
+        assert override_ws == tmp_path.resolve()
 
     def test_list_prompts_and_get_prompt_rejects_unknown_prompt(self) -> None:
         """Return all 3 prompt templates and raise ValueError on unknown prompt names."""

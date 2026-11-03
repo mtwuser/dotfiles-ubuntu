@@ -21,11 +21,20 @@ class TestDotfilesMCPServer:
     """Verify JSON-RPC 2.0 request dispatching, error handling, and stdio framing loop."""
 
     def test_call_tool_dispatches_all_tools_and_raises_on_unknown_tool(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Dispatch all 9 registered MCP tools and raise ValueError on unknown tool name."""
         # Arrange
         server = DotfilesMCPServer()
+        orig_repo_dir = server.repo_dir
+        alt_ws = tmp_path / "alt-ws"
+        (alt_ws / "system").mkdir(parents=True)
+        (alt_ws / "system/mcp-layer.json").write_text(
+            '{"schema_version": "mcp-layer-v1", "layer_id": "alt-ws", "layer_role": "department"}',
+            encoding="utf-8",
+        )
+        (alt_ws / "corporate").mkdir(parents=True)
+        (alt_ws / "corporate/policy.md").write_text("# Alt Policy\n", encoding="utf-8")
         monkeypatch.setattr(
             server,
             "_tool_audit_node_drift",
@@ -37,6 +46,10 @@ class TestDotfilesMCPServer:
             ("get_layer_overview", {}),
             ("audit_node_drift", {}),
             ("read_layer_document", {"relative_path": "README.md"}),
+            (
+                "read_layer_document",
+                {"workspace_dir": str(alt_ws), "relative_path": "corporate/policy.md"},
+            ),
             ("query_governance_rules", {"query": "Mandate"}),
             ("discover_federated_mcps", {}),
             ("compare_layer_patterns", {}),
@@ -44,6 +57,7 @@ class TestDotfilesMCPServer:
             ("orchestrate_ephemeral_fork", {"action": "inspect"}),
         ):
             assert "content" in server.call_tool(tname, targs)
+        assert server.repo_dir == orig_repo_dir
         cap_err_resp = server.handle_request(
             {
                 "jsonrpc": "2.0",

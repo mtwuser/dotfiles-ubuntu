@@ -43,25 +43,30 @@ class DotfilesMCPServer(ResourcesMixin, FederationToolsMixin, EphemeralToolsMixi
     def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> dict[str, Any]:
         """Dispatch an MCP tool invocation by name and return its structured JSON payload."""
         args = arguments or {}
-        if name == "get_layer_overview":
-            return self._tool_get_layer_overview(args)
-        if name == "audit_node_drift":
-            return self._tool_audit_node_drift(args)
-        if name == "read_layer_document":
-            return self._tool_read_layer_document(args)
-        if name == "query_governance_rules":
-            return self._tool_query_governance_rules(args)
-        if name == "unfold_context_capsule":
-            return self._tool_unfold_context_capsule(args)
-        if name == "discover_federated_mcps":
-            return self._tool_discover_federated_mcps(args)
-        if name == "compare_layer_patterns":
-            return self._tool_compare_layer_patterns(args)
-        if name == "resolve_surface_governance":
-            return self._tool_resolve_surface_governance(args)
-        if name == "orchestrate_ephemeral_fork":
-            return self._tool_orchestrate_ephemeral_fork(args)
-        raise ValueError(f"Unknown tool name: {name!r}")
+        prev_repo_dir = self.repo_dir
+        self.repo_dir = self._resolve_workspace_override(args.get("workspace_dir"))
+        try:
+            if name == "get_layer_overview":
+                return self._tool_get_layer_overview(args)
+            if name == "audit_node_drift":
+                return self._tool_audit_node_drift(args)
+            if name == "read_layer_document":
+                return self._tool_read_layer_document(args)
+            if name == "query_governance_rules":
+                return self._tool_query_governance_rules(args)
+            if name == "unfold_context_capsule":
+                return self._tool_unfold_context_capsule(args)
+            if name == "discover_federated_mcps":
+                return self._tool_discover_federated_mcps(args)
+            if name == "compare_layer_patterns":
+                return self._tool_compare_layer_patterns(args)
+            if name == "resolve_surface_governance":
+                return self._tool_resolve_surface_governance(args)
+            if name == "orchestrate_ephemeral_fork":
+                return self._tool_orchestrate_ephemeral_fork(args)
+            raise ValueError(f"Unknown tool name: {name!r}")
+        finally:
+            self.repo_dir = prev_repo_dir
 
     def handle_request(self, message: dict[str, Any]) -> dict[str, Any] | None:
         """Process a single JSON-RPC 2.0 request message and return the response envelope."""

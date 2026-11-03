@@ -215,6 +215,22 @@ class MCPNodeBase:
         discovered.sort(key=lambda item: (int(item["precedence"]), str(item["name"])))
         return discovered
 
+    def _resolve_workspace_override(self, workspace_dir: object) -> Path:
+        raw = str(workspace_dir or "").strip()
+        if not raw:
+            return self.repo_dir
+        candidate = Path(raw).expanduser().resolve()
+        has_marker = (
+            (candidate / "system" / "mcp-layer.json").is_file()
+            or (candidate / ".agents").is_dir()
+            or (candidate / ".git").exists()
+        )
+        if not candidate.is_dir() or not has_marker:
+            raise ValueError(
+                f"Invalid workspace_dir {raw!r}: must be an existing layer or git/agent workspace."
+            )
+        return candidate
+
     def _resolve_layer_dir(self, layer: str | None = None) -> Path:
         clean = (layer or "").strip()
         root_id = str(self._load_layer_manifest().get("layer_id", ""))

@@ -84,6 +84,9 @@ if [ "$MODE" = "--antigravity" ]; then
     fi
   done < <(find antigravity -type f -printf '%P\n')
   stow -t "$HOME" antigravity
+  if [ -x "$SCRIPT_DIR/scripts/layer-config.sh" ]; then
+    "$SCRIPT_DIR/scripts/layer-config.sh" set-global-profile "${DOTFILES_GLOBAL_PROFILE:-human-core}" --stow >/dev/null 2>&1 || true
+  fi
   echo "✅ Antigravity rules, skills, and hooks linked to ~/.gemini/config/"
   exit 0
 fi
