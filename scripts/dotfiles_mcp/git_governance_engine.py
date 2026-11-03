@@ -32,7 +32,7 @@ from dotfiles_mcp.constants import (
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
 )
-from dotfiles_mcp.manifest_helpers import _resolve_template_dir
+from dotfiles_mcp.manifest_helpers import _resolve_template_dir, _sha256_file
 
 
 def _load_manifest(target_dir: Path) -> dict[str, Any]:
@@ -43,11 +43,8 @@ def _load_manifest(target_dir: Path) -> dict[str, Any]:
 
 def _append_tracker_line(ws: Path, tracker: str, line: str, title_id: str) -> None:
     trk_file = ws / tracker
-    cur = (
-        trk_file.read_text("utf-8")
-        if trk_file.is_file()
-        else f"# Active Work Tasks — {title_id}\n\n"
-    )
+    def_txt = f"# Active Work Tasks — {title_id}\n\n"
+    cur = trk_file.read_text("utf-8") if trk_file.is_file() else def_txt
     if line not in cur:
         trk_file.write_text(f"{cur}{'' if cur.endswith('\n') else '\n'}{line}\n", encoding="utf-8")
 
@@ -114,8 +111,10 @@ def stage_non_destructive_proposal(
     return staged_file
 
 
-def _clear_upstream_proposal_residue(target_dir: Path, prop_dir: Path, tpl_name: str) -> None:
-    """Remove resolved upstream proposal files and their pending tracker/session alerts."""
+def _clear_upstream_proposal_residue(
+    target_dir: Path, prop_dir: Path, tpl_name: str, src_tpl: Path, local_tpl: Path
+) -> None:
+    """Remove resolved upstream proposal files, alerts, and stamp reconciled upstream hashes."""
     for pf in prop_dir.glob(f"{tpl_name}-*.md"):
         pf.unlink(missing_ok=True)
     with contextlib.suppress(OSError):
@@ -128,6 +127,14 @@ def _clear_upstream_proposal_residue(target_dir: Path, prop_dir: Path, tpl_name:
             kept = [ln for ln in raw.splitlines() if token not in ln]
             cleaned = "\n".join(kept).removesuffix("\n\n## Governance Alerts & Pending Decisions")
             fp.write_text(f"{cleaned.rstrip()}\n", encoding="utf-8")
+    local_tpl.mkdir(parents=True, exist_ok=True)
+    tj = local_tpl / "template.json"
+    td: dict[str, Any] = json.loads(tj.read_text("utf-8")) if tj.is_file() else {}
+    rdir = src_tpl / "rules"
+    td["reconciled_upstream_sha256"] = {
+        rf.name: _sha256_file(rf) for rf in (sorted(rdir.glob("*.md")) if rdir.is_dir() else ())
+    }
+    tj.write_text(json.dumps(td, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 def reconcile_template_pack_sync(
@@ -139,11 +146,20 @@ def reconcile_template_pack_sync(
     local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
     if strategy == "keep-local" and local_tpl.is_dir():
         if not dry_run:
-            _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name)
+            _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name, src_tpl, local_tpl)
         return False, []
     if strategy == "reconcile" and is_local_newer:
+        tj = local_tpl / "template.json"
+        t_dict: dict[str, Any] = json.loads(tj.read_text("utf-8")) if tj.is_file() else {}
+        raw_rec = t_dict.get("reconciled_upstream_sha256")
+        rec_map: dict[str, Any] = raw_rec if isinstance(raw_rec, dict) else {}
         conflicts: list[dict[str, Any]] = []
         for src_rf in sorted((src_tpl / "rules").glob("*.md")):
+            src_sha, loc_rf = _sha256_file(src_rf), local_tpl / "rules" / src_rf.name
+            if (loc_rf.is_file() and _sha256_file(loc_rf) == src_sha) or rec_map.get(
+                src_rf.name
+            ) == src_sha:
+                continue
             staged = stage_non_destructive_proposal(
                 target_dir, scope_tag="from-upstream", file_name=f"{tpl_name}-{src_rf.name}",
                 content=src_rf.read_text(encoding="utf-8"), operation="sync-layer",
@@ -173,13 +189,14 @@ def reconcile_template_pack_sync(
         dest_tpl.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(src_tpl, dest_tpl)
         for rname, blocks in preserved.items():
-            rf = dest_tpl / "rules" / rname
-            rf.write_text(
-                f"{rf.read_text(encoding='utf-8').rstrip()}\n\n" + "\n\n".join(blocks) + "\n",
-                encoding="utf-8",
-            )
-        _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name)
+            rf, joined = dest_tpl / "rules" / rname, "\n\n".join(blocks)
+            rf.write_text(f"{rf.read_text('utf-8').rstrip()}\n\n{joined}\n", encoding="utf-8")
+        _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name, src_tpl, dest_tpl)
     return True, []
+
+
+def _fmt_codeowner_group(emails: tuple[str, ...], fallback: str) -> str:
+    return " ".join(dict.fromkeys(e for e in emails if "@" in e and "*" not in e)) or fallback
 
 
 def configure_git_governance_policy(
@@ -201,20 +218,12 @@ def configure_git_governance_policy(
     manifest["git_governance"] = git_gov
     raw_auth = manifest.get("layer_authority")
     auth = raw_auth if isinstance(raw_auth, dict) else {}
-    emails = [str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()]
-    maint_ems = [str(e).strip() for e in auth.get("maintainer_emails", []) if str(e).strip()]
-    val_ems = [str(e).strip() for e in auth.get("validator_emails", []) if str(e).strip()]
-    owners_str = " ".join(e for e in emails if "@" in e and "*" not in e) or "@layer-owners"
-    maint_str = (
-        " ".join(dict.fromkeys(e for e in (*emails, *maint_ems) if "@" in e and "*" not in e))
-        or owners_str
-    )
-    val_str = (
-        " ".join(
-            dict.fromkeys(e for e in (*emails, *maint_ems, *val_ems) if "@" in e and "*" not in e)
-        )
-        or maint_str
-    )
+    emails = tuple(str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip())
+    maint_ems = tuple(str(e).strip() for e in auth.get("maintainer_emails", []) if str(e).strip())
+    val_ems = tuple(str(e).strip() for e in auth.get("validator_emails", []) if str(e).strip())
+    owners_str = _fmt_codeowner_group(emails, "@layer-owners")
+    maint_str = _fmt_codeowner_group((*emails, *maint_ems), owners_str)
+    val_str = _fmt_codeowner_group((*emails, *maint_ems, *val_ems), maint_str)
     codeowners_rel = ".github/CODEOWNERS"
     codeowners_content = (
         f"# Auto-generated by dotfiles-ubuntu layer-config.sh configure-git-policy ({layer_id})\n"
@@ -259,14 +268,10 @@ def inspect_git_governance_state(
         (str(st) for st, pfx in prefixes.items() if eff_branch.startswith(str(pfx))),
         "protected-main" if eff_branch in ("main", "master") else "environment-branch",
     )
-    if eff_branch in ("main", "master", "env/pro") or eff_branch.startswith("release/v"):
-        active_env = "pro"
-    elif eff_branch == "env/pre" or eff_branch.startswith("pre/"):
-        active_env = "pre"
-    elif eff_branch == "env/tst" or eff_branch.startswith("tst/"):
-        active_env = "tst"
-    else:
-        active_env = "dev"
+    is_pro = eff_branch in ("main", "master", "env/pro") or eff_branch.startswith("release/v")
+    is_pre = eff_branch == "env/pre" or eff_branch.startswith("pre/")
+    is_tst = eff_branch == "env/tst" or eff_branch.startswith("tst/")
+    active_env = "pro" if is_pro else ("pre" if is_pre else ("tst" if is_tst else "dev"))
 
     audit_file = ws / "logs" / "governance_audit.jsonl"
     raw_lines = (
@@ -329,9 +334,8 @@ def evaluate_environment_promotion(
     ) or bool(set(BUSINESS_MODE_TEMPLATES) & def_tpls)  # fmt: skip
     sem_map = BUSINESS_PHASE_SEMANTICS if is_biz else TECHNICAL_PHASE_SEMANTICS
     failed_gates: list[str] = []
-    wt_file, wv_file = ws / "WORKTASK.md", ws / "WORKVALI.md"
-    wt_txt = wt_file.read_text(encoding="utf-8") if wt_file.is_file() else ""
-    wv_txt = wv_file.read_text(encoding="utf-8") if wv_file.is_file() else ""
+    wt_txt = (ws / "WORKTASK.md").read_text("utf-8") if (ws / "WORKTASK.md").is_file() else ""
+    wv_txt = (ws / "WORKVALI.md").read_text("utf-8") if (ws / "WORKVALI.md").is_file() else ""
 
     if clean_env in ("tst", "pre", "pro") and re.search(r"^\s*-\s*\[ \]\s*.*P0", wt_txt, re.M):
         failed_gates.append("OPEN_P0_WORKTASKS: Resolve all unchecked P0 items in WORKTASK.md.")
@@ -350,7 +354,6 @@ def evaluate_environment_promotion(
                 f"UNAUTHORIZED_PRO_RELEASE: Actor '{actor_email or '<unset>'}' is not in "
                 f"layer_authority.authorized_emails ({', '.join(auth_emails)})."
             )
-
     allowed, req_branch = len(failed_gates) == 0, DEFAULT_ENV_BRANCH_MAP[clean_env]
     git_state = inspect_git_governance_state(ws, current_branch=current_branch)
     if not allowed:
@@ -371,12 +374,11 @@ def record_governance_decision(
     actor_email: str = "", tracker: str = "WORKTASK.md", dry_run: bool = False,
 ) -> dict[str, Any]:  # fmt: skip
     """Record a human governance review decision (approve, reject, defer, blocked) in tracker."""
-    clean_dec = decision.strip().lower()
+    clean_dec, clean_ref, clean_reason = decision.strip().lower(), item_ref.strip(), reason.strip()
     if clean_dec not in VALID_GOVERNANCE_DECISIONS:
         raise ValueError(
             f"Invalid decision {decision!r}: must be one of {VALID_GOVERNANCE_DECISIONS}"
         )
-    clean_ref, clean_reason = item_ref.strip(), reason.strip()
     if not clean_ref or not clean_reason:
         raise ValueError("Both item_ref and reason must be non-empty strings")
     ws, manifest = workspace_dir.resolve(), _load_manifest(workspace_dir.resolve())
@@ -390,11 +392,12 @@ def record_governance_decision(
     )
     if not dry_run:
         _append_tracker_line(ws, tracker, line, lid)
-    ev_kw: dict[str, Any] = {"operation": "record-decision", "status": mapped_status,
-        "actor_email": actor_email, "source_rel_path": clean_ref, "dry_run": dry_run,
-        "reason_code": f"HUMAN_DECISION_{mapped_status.upper()}",
-        "message": f"{clean_ref}: {clean_reason}"}  # fmt: skip
-    ev = record_governance_event(ws, **ev_kw)
+    ev = record_governance_event(
+        ws, operation="record-decision", status=mapped_status, actor_email=actor_email,
+        source_rel_path=clean_ref, dry_run=dry_run,
+        reason_code=f"HUMAN_DECISION_{mapped_status.upper()}",
+        message=f"{clean_ref}: {clean_reason}",
+    )  # fmt: skip
     return {"workspace_dir": str(ws), "layer_id": lid, "item_ref": clean_ref,
         "decision": clean_dec, "status": mapped_status, "tracker": tracker, "dry_run": dry_run,
         "recorded_entry": line, "audit_event": ev}  # fmt: skip
@@ -405,11 +408,12 @@ def manage_layer_roster(
     title: str = "", squad: str = "", remove_email: str | None = None, dry_run: bool = False,
 ) -> dict[str, Any]:  # fmt: skip
     """Maintain CO/Department/Squad roster (owners, validators, members) and sync CODEOWNERS."""
-    ws = target_dir.resolve()
-    mpath = ws / "system" / "mcp-layer.json"
+    ws, mpath, clean_role = (
+        target_dir.resolve(), target_dir.resolve() / "system/mcp-layer.json",
+        member_role.strip().lower(),
+    )  # fmt: skip
     if not mpath.is_file():
         raise ValueError(f"Missing layer manifest: {mpath}")
-    clean_role = member_role.strip().lower()
     if clean_role not in VALID_ROSTER_ROLES:
         raise ValueError(
             f"Invalid member_role {member_role!r}: must be one of {VALID_ROSTER_ROLES}"
@@ -424,29 +428,27 @@ def manage_layer_roster(
     roster: dict[str, list[dict[str, str]]] = {
         k: [dict(x) for x in raw_roster.get(k, []) if isinstance(x, dict)] for k in r_keys
     }
-    if remove_email and remove_email.strip():
-        rem_low = remove_email.strip().lower()
-        for k in r_keys:
-            roster[k] = [m for m in roster[k] if m.get("email", "").lower() != rem_low]
-        for ek in ("authorized_emails", "maintainer_emails", "validator_emails"):
-            auth[ek] = [e for e in auth.get(ek, []) if str(e).lower() != rem_low]
-    if add_email and add_email.strip():
-        clean_em = add_email.strip()
-        em_low = clean_em.lower()
-        for k in r_keys:
-            roster[k] = [m for m in roster[k] if m.get("email", "").lower() != em_low]
-        roster[f"{clean_role}s"].append(
-            {"email": clean_em, "title": title.strip() or clean_role, "squad": squad.strip()}
-        )
+    for em_arg, do_add in ((remove_email, False), (add_email, True)):
+        if em_arg and em_arg.strip():
+            clean_em, em_low = em_arg.strip(), em_arg.strip().lower()
+            for k in r_keys:
+                roster[k] = [m for m in roster[k] if m.get("email", "").lower() != em_low]
+            if do_add:
+                item = {"email": clean_em, "title": title.strip() or clean_role,
+                    "squad": squad.strip()}  # fmt: skip
+                roster[f"{clean_role}s"].append(item)
+            else:
+                for ek in ("authorized_emails", "maintainer_emails", "validator_emails"):
+                    auth[ek] = [e for e in auth.get(ek, []) if str(e).lower() != em_low]
     owner_ems = [m["email"] for m in roster["owners"] if m.get("email")]
     maint_ems = [m["email"] for m in roster["maintainers"] if m.get("email")]
     val_ems = [m["email"] for m in roster["validators"] if m.get("email")]
     cur_auth = [str(e).strip() for e in auth.get("authorized_emails", []) if str(e).strip()]
-    auth["roster"] = roster
-    auth["authorized_emails"] = list(dict.fromkeys([*cur_auth, *owner_ems]))
-    auth["maintainer_emails"] = list(dict.fromkeys(maint_ems))
-    auth["validator_emails"] = list(dict.fromkeys(val_ems))
-    manifest["layer_authority"] = auth
+    new_auth = {**auth, "roster": roster,
+        "authorized_emails": list(dict.fromkeys([*cur_auth, *owner_ems])),
+        "maintainer_emails": list(dict.fromkeys(maint_ems)),
+        "validator_emails": list(dict.fromkeys(val_ems))}  # fmt: skip
+    manifest["layer_authority"] = new_auth
     if not dry_run:
         mpath.write_text(
             json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -454,6 +456,6 @@ def manage_layer_roster(
         if (ws / ".github/CODEOWNERS").is_file() or add_email or remove_email:
             configure_git_governance_policy(ws, sync_codeowners=True, dry_run=False)
     return {"target_dir": str(ws), "layer_id": layer_id, "roster": roster, "dry_run": dry_run,
-        "authorized_emails": auth["authorized_emails"],
-        "maintainer_emails": auth["maintainer_emails"],
-        "validator_emails": auth["validator_emails"]}  # fmt: skip
+        "authorized_emails": new_auth["authorized_emails"],
+        "maintainer_emails": new_auth["maintainer_emails"],
+        "validator_emails": new_auth["validator_emails"]}  # fmt: skip

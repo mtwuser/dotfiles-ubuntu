@@ -203,36 +203,49 @@ class TestManifestHelpers:
         newer_true = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
         os.utime(dest_rf, ns=(1_000_000_000, 1_000_000_000))
         newer_equal = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+        src_sha = manifest_helpers._sha256_file(src_rf)
+        (dest_tpl / "template.json").write_text(
+            f'{{"reconciled_upstream_sha256": {{"base.md": "{src_sha}"}}}}',
+            encoding="utf-8",
+        )
+        newer_reconciled = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
 
         parent_ws = tmp_path / "corp-root"
         (parent_ws / "system").mkdir(parents=True)
         (parent_ws / "system/mcp-layer.json").write_text(
             '{"layer_id": "corp-root"}', encoding="utf-8"
         )
+        (parent_ws / "templates/business-base/rules").mkdir(parents=True)
+        (parent_ws / "templates/business-base/rules/business-base.md").write_text(
+            "# Parent v2\n", encoding="utf-8"
+        )
+        (parent_ws / "templates/business-base/rules/extra-policy.md").write_text(
+            "# Extra\n", encoding="utf-8"
+        )
         mounted_child = parent_ws / "layers/dept-alpha"
         (mounted_child / "system").mkdir(parents=True)
         (mounted_child / "system/mcp-layer.json").write_text(
-            '{"layer_id": "dept-alpha"}', encoding="utf-8"
+            '{"schema_version": "1.0", "layer_id": "dept-alpha"}', encoding="utf-8"
         )
-        (mounted_child / "README.md").write_text("# Old\n", encoding="utf-8")
+        (mounted_child / "templates/business-base/rules").mkdir(parents=True)
+        (mounted_child / "templates/business-base/template.json").write_text(
+            '{"schema_version": "1.0"}', encoding="utf-8"
+        )
+        (mounted_child / "templates/business-base/rules/business-base.md").write_text(
+            "# Old v1\n", encoding="utf-8"
+        )
+        (mounted_child / "templates/dept-alpha/rules").mkdir(parents=True)
+        (mounted_child / ".agents/rules").mkdir(parents=True)
+        (mounted_child / ".agents/rules/business-base.md").write_text(
+            "# Old v1\n", encoding="utf-8"
+        )
 
-        org_child = tmp_path / "corp-root-org/dept-alpha-repo"
+        org_child = tmp_path / "corp-root-org/dept-beta-repo"
         (org_child / "system").mkdir(parents=True)
         (org_child / "system/mcp-layer.json").write_text(
-            '{"layer_id": "dept-alpha"}', encoding="utf-8"
+            '{"layer_id": "dept-beta"}', encoding="utf-8"
         )
-        (org_child / "README.md").write_text("# New\n", encoding="utf-8")
-        (org_child / "WORKTASK.md").write_text("# Old Task\n", encoding="utf-8")
-        (mounted_child / "WORKTASK.md").write_text("# Delegated Newer Task\n", encoding="utf-8")
-        os.utime(org_child / "WORKTASK.md", ns=(1_000_000_000, 1_000_000_000))
-        os.utime(mounted_child / "WORKTASK.md", ns=(2_000_000_000, 2_000_000_000))
-        (org_child / "docs").mkdir(parents=True)
-        (org_child / "docs/guide.md").write_text("# Guide\n", encoding="utf-8")
-        (org_child / "docs/sub").mkdir(parents=True)
-        (org_child / "templates/dept-alpha/rules").mkdir(parents=True)
-        (org_child / "templates/dept-alpha/rules/alpha.md").write_text(
-            "# Alpha\n", encoding="utf-8"
-        )
+        (org_child / "WORKTASK.md").write_text("# Untouched External Repo\n", encoding="utf-8")
         direct_sib = tmp_path / "dept-direct"
         (direct_sib / "system").mkdir(parents=True)
         (direct_sib / "system/mcp-layer.json").write_text(
@@ -242,12 +255,13 @@ class TestManifestHelpers:
             "invalid",
             {"name": ""},
             {"name": "dept-missing"},
-            {"name": "dept-alpha"},
+            {"name": "dept-alpha", "branch": "master"},
         ]
 
         # Act
         missing_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-missing")
         direct_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-direct")
+        beta_resolved = manifest_helpers._resolve_mounted_child_dir(parent_ws, "dept-beta")
         explicit_parent = manifest_helpers._resolve_default_parent_dir(mounted_child, parent_ws)
         mounted_parent = manifest_helpers._resolve_default_parent_dir(mounted_child, None)
         (org_child / "Makefile").write_text(f"PARENT_DIR ?= {parent_ws}\n", encoding="utf-8")
@@ -260,7 +274,9 @@ class TestManifestHelpers:
         dry_synced = manifest_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=True
         )
-        readme_after_dry = (mounted_child / "README.md").read_text(encoding="utf-8")
+        rule_after_dry = (
+            mounted_child / "templates/business-base/rules/business-base.md"
+        ).read_text(encoding="utf-8")
         live_synced = manifest_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
         )
@@ -270,21 +286,34 @@ class TestManifestHelpers:
         assert newer_missing is False
         assert newer_true is True
         assert newer_equal is False
+        assert newer_reconciled is True
         assert missing_resolved is None
         assert direct_resolved == direct_sib.resolve()
+        assert beta_resolved == org_child.resolve()
         assert explicit_parent == parent_ws
         assert mounted_parent == parent_ws.resolve()
         assert mk_parent == parent_ws.resolve()
         assert self_parent is None
         assert len(drifts_before) == 1
-        assert "README.md" in drifts_before[0]["drift_files"]
-        assert "docs/guide.md" in drifts_before[0]["drift_files"]
+        assert "system/mcp-layer.json" in drifts_before[0]["drift_files"]
+        assert "templates/business-base/template.json" in drifts_before[0]["drift_files"]
+        assert "templates/business-base/rules/business-base.md" in drifts_before[0]["drift_files"]
+        assert (
+            drifts_before[0]["subtree_push_command"]
+            == "./scripts/layer-subtree.sh push dept-alpha master"
+        )
         assert dry_synced == ["dept-alpha"]
-        assert readme_after_dry == "# Old\n"
+        assert rule_after_dry == "# Old v1\n"
         assert live_synced == ["dept-alpha"]
-        assert (mounted_child / "README.md").read_text(encoding="utf-8") == "# New\n"
-        assert (org_child / "WORKTASK.md").read_text(encoding="utf-8") == "# Delegated Newer Task\n"
-        assert (mounted_child / "docs/guide.md").is_file()
+        assert (mounted_child / "templates/business-base/rules/business-base.md").read_text(
+            encoding="utf-8"
+        ) == "# Parent v2\n"
+        assert (mounted_child / ".agents/rules/business-base.md").read_text(
+            encoding="utf-8"
+        ) == "# Parent v2\n"
+        assert (org_child / "WORKTASK.md").read_text(
+            encoding="utf-8"
+        ) == "# Untouched External Repo\n"
         assert drifts_after == []
 
     def test_ensure_rule_file_frontmatter_normalizes_missing_and_preserves_existing(

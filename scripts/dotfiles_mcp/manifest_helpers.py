@@ -17,8 +17,10 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.constants import (
+    LAYER_MANIFEST_CONTRACT_REV,
     MISSING_VERSION_SENTINEL,
     REPO_DIR,
+    TEMPLATE_MANIFEST_CONTRACT_REV,
     TEMPLATE_STACK_GROUP_DIRS,
 )
 
@@ -201,15 +203,23 @@ def _resolve_template_dest_dir(
 
 
 def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
-    """Return True if dest_tpl has a modified rule file with a newer timestamp than src_tpl."""
+    """Return True if dest_tpl has a modified rule file with newer mtime or reconciled sha."""
     if not (dest_tpl / "rules").is_dir() or not (src_tpl / "rules").is_dir():
         return False
+    tj = dest_tpl / "template.json"
+    t_dict: dict[str, Any] = json.loads(tj.read_text("utf-8")) if tj.is_file() else {}
+    raw_rec = t_dict.get("reconciled_upstream_sha256")
+    rec_map: dict[str, Any] = raw_rec if isinstance(raw_rec, dict) else {}
     for dest_rf in sorted((dest_tpl / "rules").glob("*.md")):
         src_rf = src_tpl / "rules" / dest_rf.name
         if src_rf.is_file():
-            dest_sha = hashlib.sha256(dest_rf.read_bytes()).hexdigest()
-            src_sha = hashlib.sha256(src_rf.read_bytes()).hexdigest()
-            if dest_sha != src_sha and dest_rf.stat().st_mtime_ns > src_rf.stat().st_mtime_ns:
+            dest_sha, src_sha = _sha256_file(dest_rf), _sha256_file(src_rf)
+            rec_sha = rec_map.get(dest_rf.name)
+            if dest_sha != src_sha and (
+                dest_sha != rec_sha
+                if isinstance(rec_sha, str)
+                else dest_rf.stat().st_mtime_ns > src_rf.stat().st_mtime_ns
+            ):
                 return True
     return False
 
@@ -231,9 +241,9 @@ def _resolve_default_parent_dir(workspace_dir: Path, parent_dir: Path | None) ->
 
 
 def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | None:
-    """Resolve the live sibling checkout for a mounted child layer by folder name or layer_id."""
+    """Resolve a 1-hop child layer directory, prioritizing mounted layers/<child> inside ws."""
     ws = workspace_dir.resolve()
-    roots = [ws.parent / f"{ws.name}-org", ws.parent]
+    roots = [ws / "layers", ws.parent / f"{ws.name}-org", ws.parent]
     for r in roots:
         cand = r / child_name
         if cand.resolve() != ws and (cand / "system" / "mcp-layer.json").is_file():
@@ -251,84 +261,79 @@ def _resolve_mounted_child_dir(workspace_dir: Path, child_name: str) -> Path | N
     return None
 
 
-_CHILD_TRACKED_REL_PATHS: tuple[str, ...] = (
-    "antigravity/.gemini/config/AGENTS.md", "system/mcp-layer.json", "README.md",
-    "CHANGELOG.md", "WORKROAD.md", "ROADMAP.md", "WORKTASK.md", "BACKLOG.md",
-    "WORKVALI.md", "Makefile", "VERSION",
-)  # fmt: skip
-
-
 def _sha256_file(path: Path) -> str:
     """Compute SHA-256 hex digest using C-backed hashlib.file_digest without heap-loading."""
     with path.open("rb") as f:
         return hashlib.file_digest(f, "sha256").hexdigest()
 
 
+def _has_stale_schema(json_file: Path, expected_rev: str) -> bool:
+    return (
+        json_file.is_file()
+        and json.loads(json_file.read_text(encoding="utf-8")).get("schema_version") != expected_rev
+    )
+
+
+def _stamp_schema_rev(json_file: Path, expected_rev: str) -> None:
+    if _has_stale_schema(json_file, expected_rev):
+        data = json.loads(json_file.read_text(encoding="utf-8"))
+        data["schema_version"] = expected_rev
+        json_file.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+
+
 def _inspect_mounted_children_drifts(
     workspace_dir: Path, mounted_layers: list[Any]
 ) -> list[dict[str, Any]]:
-    """Detect 1-hop downstream mounted layers with newer/changed sibling files."""
-    ws = workspace_dir.resolve()
-    drifts: list[dict[str, Any]] = []
-    for entry in mounted_layers or []:
-        if not isinstance(entry, dict):
+    """Detect contract or shared-template drift inside mounted layers/<child>/ subtrees."""
+    ws, drifts = workspace_dir.resolve(), []
+    for entry in (e for e in (mounted_layers or []) if isinstance(e, dict)):
+        cname = str(entry.get("name") or entry.get("layer_id") or "").strip()
+        mdir = ws / "layers" / cname
+        if not cname or not mdir.is_dir():
             continue
-        child_name = str(entry.get("name") or entry.get("layer_id") or "").strip()
-        mounted_dir = ws / "layers" / child_name
-        child_ws = _resolve_mounted_child_dir(ws, child_name) if child_name else None
-        if not child_name or not mounted_dir.is_dir() or child_ws is None:
-            continue
-        changed_files: list[str] = [
-            rel
-            for rel in _CHILD_TRACKED_REL_PATHS
-            if (child_ws / rel).is_file()
-            and (
-                not (mounted_dir / rel).is_file()
-                or _sha256_file(child_ws / rel) != _sha256_file(mounted_dir / rel)
-            )
-        ]
-        for sub_name in ("docs", "templates", "roadmaps", "corporate"):
-            sub_dir = child_ws / sub_name
-            for src_f in sorted(sub_dir.rglob("*")) if sub_dir.is_dir() else []:
-                if not src_f.is_file():
-                    continue
-                rel_d = str(src_f.relative_to(child_ws)).replace("\\", "/")
-                dst_f = mounted_dir / rel_d
-                if not dst_f.is_file() or _sha256_file(src_f) != _sha256_file(dst_f):
-                    changed_files.append(rel_d)
-        if changed_files:
-            drifts.append({"layer_id": child_name, "child_workspace_dir": str(child_ws),
-                "mounted_path": f"layers/{child_name}", "drift_files": changed_files})  # fmt: skip
+        c_files = (
+            ["system/mcp-layer.json"]
+            if _has_stale_schema(mdir / "system/mcp-layer.json", LAYER_MANIFEST_CONTRACT_REV)
+            else []
+        )
+        for tname, ctdir in _iter_layer_template_dirs(mdir):
+            if _has_stale_schema(tj := ctdir / "template.json", TEMPLATE_MANIFEST_CONTRACT_REV):
+                c_files.append(str(tj.relative_to(mdir)).replace("\\", "/"))
+            ptdir = _resolve_template_dir(ws, tname)
+            for src_rf in sorted((ptdir / "rules").glob("*.md")) if ptdir else ():
+                dst_rf = ctdir / "rules" / src_rf.name
+                if not dst_rf.is_file() or _sha256_file(src_rf) != _sha256_file(dst_rf):
+                    c_files.append(str(dst_rf.relative_to(mdir)).replace("\\", "/"))
+        if c_files:
+            br = str(entry.get("branch") or "master").strip()
+            push_cmd = f"./scripts/layer-subtree.sh push {cname} {br}"
+            pull_cmd = f"./scripts/layer-subtree.sh pull {cname}"
+            drifts.append({"layer_id": cname, "mounted_path": f"layers/{cname}",
+                "drift_files": c_files, "subtree_push_command": push_cmd,
+                "subtree_pull_command": pull_cmd})  # fmt: skip
     return drifts
 
 
 def _sync_mounted_children_into_parent(
     target_dir: Path, mounted_layers: list[Any], *, dry_run: bool = False
 ) -> list[str]:
-    """Synchronize mounted layers/<child>/ and child template packs from live sibling checkouts."""
+    """Synchronize parent contracts and shared templates into mounted layers/<child>/ subtrees."""
     ws = target_dir.resolve()
-    drifts = _inspect_mounted_children_drifts(ws, mounted_layers)
-    synced: list[str] = []
-    for d_info in drifts:
-        child_name = str(d_info["layer_id"])
-        child_ws = Path(d_info["child_workspace_dir"])
-        mounted_dir = ws / "layers" / child_name
-        synced.append(child_name)
-        if dry_run:
-            continue
-        for rel in _CHILD_TRACKED_REL_PATHS:
-            src_f, dst_f = child_ws / rel, mounted_dir / rel
-            if src_f.is_file():
-                dst_f.parent.mkdir(parents=True, exist_ok=True)
-                if dst_f.is_file() and dst_f.stat().st_mtime_ns > src_f.stat().st_mtime_ns:
-                    shutil.copy2(dst_f, src_f)
-                else:
-                    shutil.copy2(src_f, dst_f)
-        for sub_name in ("docs", ".agents", "templates", "roadmaps", "corporate"):
-            src_sub, dst_sub = child_ws / sub_name, mounted_dir / sub_name
-            if src_sub.is_dir():
-                shutil.rmtree(dst_sub, ignore_errors=True)
-                shutil.copytree(src_sub, dst_sub)
+    synced = [str(d["layer_id"]) for d in _inspect_mounted_children_drifts(ws, mounted_layers)]
+    for cname in () if dry_run else synced:
+        mdir = ws / "layers" / cname
+        _stamp_schema_rev(mdir / "system/mcp-layer.json", LAYER_MANIFEST_CONTRACT_REV)
+        for tname, ctdir in _iter_layer_template_dirs(mdir):
+            _stamp_schema_rev(ctdir / "template.json", TEMPLATE_MANIFEST_CONTRACT_REV)
+            ptdir = _resolve_template_dir(ws, tname)
+            for src_rf in sorted((ptdir / "rules").glob("*.md")) if ptdir else ():
+                dst_rf = ctdir / "rules" / src_rf.name
+                dst_rf.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src_rf, dst_rf)
+                if (ag_rf := mdir / ".agents/rules" / src_rf.name).is_file():
+                    shutil.copy2(src_rf, ag_rf)
     return synced
 
 

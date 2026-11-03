@@ -85,11 +85,13 @@ Match execution autonomy to the operation's cadence, consolidation level, and bl
 
 ### 1. Top-Down 1-Hop Directive & Artifact Delivery (`make delegate` / `delegate-to-child`)
 
-1. **Enforce the 1-Hop Horizon & Role Authority (`owner` or `maintainer`)**:
-   - `Root 0` (`corporate`) delivers exclusively to its immediate child `Department` / `domain-policy` layers (`Department` delivers to `Squad`). Never skip tiers.
+1. **Enforce the 1-Hop Horizon, Strict Intra-Workspace Subtree Containment (`layers/<child>/`) & Dual Authority Gate**:
+   - `Root 0` (`corporate`) delivers exclusively to its immediate child `Department` / `domain-policy` layers mounted under `layers/<child-layer-id>/` (`Department` delivers to `Squad`). Never skip tiers and **never mutate or suggest `cd <sibling-repo> && git commit` on external sibling directories outside `<PROJECT_ROOT>`**.
+   - **Same-Owner Direct Subtree Mode (`delivery_mode: "direct_subtree"`)**: When the parent actor is also an authorized `owner` or `maintainer` of `layers/<child>/system/mcp-layer.json`, `make delegate` updates `layers/<child>/<surface>` in place and emits `./scripts/layer-subtree.sh push <child> <branch>`.
+   - **Cross-Owner Proposal / PR Mode (`delivery_mode: "proposal_pr"`, `--create-pr` or `CROSS_OWNER_CHILD_DELEGATION`)**: When the parent actor is not an authorized owner/maintainer of the child layer (or `--create-pr` is passed), `make delegate` stages the directive or artifact non-destructively under `layers/<child>/.agents/proposals/from-<parent-id>/`, adds a `P0` review item in `layers/<child>/WORKTASK.md`, and emits `./scripts/layer-subtree.sh push <child> delegate/<TICKET-ID>` for child-owner PR review.
 2. **Traceable Ticket Registration (`## Outbound Delegations`) & Non-Destructive Staging**:
-   - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable directive (`- [ ] **[P1 · [<TICKET-ID>] · Delegated from '<parent-id>']**: ...`) into the child's tracker and logs `- [/] **[<TICKET-ID> -> <child-id> (<surface>, stage: delegated)]**` under `## Outbound Delegations` in the parent's `WORKTASK.md`.
-   - **Roadmaps, Corporate Ledgers & Rules (`roadmaps`, `corporate`, `rules`)**: Delivers `--source <rel-path>` into the child surface. If the target file already exists and `--force` is not passed, stages non-destructively at `<child>/.agents/proposals/from-<parent-id>/<file>` and adds a `P0` review item in `<child>/WORKTASK.md`.
+   - **Trackers (`WORKTASK.md`, `BACKLOG.md`, `WORKROAD.md`, `ROADMAP.md`, `WORKVALI.md`)**: Appends a traceable directive (`- [ ] **[P1 · [<TICKET-ID>] · Delegated from '<parent-id>']**: ...`) into `layers/<child>/<tracker>` (or stages a proposal if cross-owner) and logs `- [/] **[<TICKET-ID> -> <child-id> (<surface>, stage: delegated)]**` under `## Outbound Delegations` in the parent's `WORKTASK.md`.
+   - **Roadmaps, Corporate Ledgers & Rules (`roadmaps`, `corporate`, `rules`)**: Delivers `--source <rel-path>` into `layers/<child>/<surface>`. If the target file already exists and `--force` is not passed (or if cross-owner), stages non-destructively at `layers/<child>/.agents/proposals/from-<parent-id>/<file>` and adds a `P0` review item in `layers/<child>/WORKTASK.md`.
    ```bash
    make delegate CHILD=<child-layer-id> [TASK="<directive>"] [TICKET=<TICKET-ID>] [SOURCE=<rel-path>] [SURFACE=WORKTASK.md|BACKLOG.md|WORKROAD.md|WORKVALI.md|roadmaps|rules|corporate] [PRIORITY=P0|P1|P2]
    ```

@@ -118,7 +118,14 @@ run_sync() {
       git -C "$RUNTIME_DIR" checkout -- antigravity/.gemini/config/AGENTS.md 2>/dev/null || true
     fi
     if [ "${DOTFILES_SKIP_PULL:-0}" != "1" ]; then
-      GIT_TERMINAL_PROMPT=0 timeout 4s git -C "$RUNTIME_DIR" pull --ff-only -q 2>/dev/null || true
+      if ! GIT_TERMINAL_PROMPT=0 timeout 4s git -C "$RUNTIME_DIR" pull --ff-only -q 2>/dev/null; then
+        if [ "$DOTFILES_WORKSTATION_MODE" = "readonly" ]; then
+          local cur_branch
+          cur_branch="$(git -C "$RUNTIME_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")"
+          GIT_TERMINAL_PROMPT=0 timeout 4s git -C "$RUNTIME_DIR" fetch origin --tags --force -q 2>/dev/null && \
+            git -C "$RUNTIME_DIR" reset --hard "origin/$cur_branch" -q 2>/dev/null || true
+        fi
+      fi
     fi
   fi
 

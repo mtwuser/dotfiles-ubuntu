@@ -184,7 +184,7 @@ def complete_task_workflow(
     )
     if res_parent is not None and res_parent.is_dir():
         auth_ok = verify_layer_operation_authority(
-            res_parent, operation="release", actor_email=actor_email
+            res_parent, operation="release", actor_email=actor_email, record_blocked=False
         )["allowed"]
         if auth_ok and not create_pr:
             parent_updated, p_wt = True, res_parent / "WORKTASK.md"

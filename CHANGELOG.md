@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Changed
+- **Strict Intra-Workspace Subtree Containment (`layers/<child>/`), Dual Parent+Child Delegation Authority (`--create-pr`), 3-Way `reconciled_upstream_sha256` Template Baseline & Resilient Read-Only Appliance Sync (`scripts/dotfiles_mcp/manifest_helpers.py`, `scripts/dotfiles_mcp/authority_engine.py`, `scripts/dotfiles_mcp/git_governance_engine.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `scripts/dotfiles_mcp/workflow_engine.py`, `scripts/layer-config.sh`, `scripts/workstation-sync.sh`, `antigravity/.gemini/config/skills/governance/SKILL.md`, `tests/unit/dotfiles_mcp/`)**:
+  - Bounded [`_inspect_mounted_children_drifts`](scripts/dotfiles_mcp/manifest_helpers.py), [`_sync_mounted_children_into_parent`](scripts/dotfiles_mcp/manifest_helpers.py), and [`delegate_directive_to_child`](scripts/dotfiles_mcp/authority_engine.py) (`--create-pr`, dual parent+child `verify_layer_operation_authority` with `record_blocked=False`, `delivery_mode: "direct_subtree" | "proposal_pr"`, and `subtree_push_command`) strictly to intra-workspace `layers/<child>/` subtrees (zero cross-filesystem writes to external sibling repositories), persisted 3-way `reconciled_upstream_sha256` rule baselines in `template.json` across [`reconcile_template_pack_sync`](scripts/dotfiles_mcp/git_governance_engine.py) and [`_is_dest_template_newer`](scripts/dotfiles_mcp/manifest_helpers.py) so `keep-local`/`merge` decisions persist across subsequent `reconcile` runs even after upstream `mtime` refreshes, and added resilient read-only appliance reset (`git fetch origin --tags --force && git reset --hard "origin/$cur_branch"`) in [`scripts/workstation-sync.sh`](scripts/workstation-sync.sh).
+
+---
+
 ## [2.8.0] - 2026-11-02
 
 ### Added

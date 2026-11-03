@@ -38,6 +38,7 @@ from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _inspect_mounted_children_drifts,
+    _is_dest_template_newer,
     _iter_layer_template_dirs,
     _parse_skill_frontmatter,
     _resolve_default_parent_dir,
@@ -177,15 +178,11 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 layer_sources.setdefault(f"rules/{rf.name}", []).append((tag, rf))
             for sf in sorted((tdir / "skills").glob("*/SKILL.md")):
                 layer_sources.setdefault(f"skills/{sf.parent.name}/SKILL.md", []).append((tag, sf))
-            for af in sorted((tdir / "assets").rglob("*")):
-                if af.is_file():
-                    rel_a = str(af.relative_to(tdir / "assets")).replace("\\", "/")
-                    layer_sources.setdefault(f"assets/{tname}/{rel_a}", []).append((tag, af))
-        for sf in (
-            sorted((ldir / "antigravity/.gemini/config/skills").glob("*/SKILL.md"))
-            if lname != "engine"
-            else ()
-        ):
+            for af in (p for p in sorted((tdir / "assets").rglob("*")) if p.is_file()):
+                rel_a = str(af.relative_to(tdir / "assets")).replace("\\", "/")
+                layer_sources.setdefault(f"assets/{tname}/{rel_a}", []).append((tag, af))
+        ag_sk = ldir / "antigravity/.gemini/config/skills"
+        for sf in sorted(ag_sk.glob("*/SKILL.md")) if lname != "engine" else ():
             k, v = f"skills/{sf.parent.name}/SKILL.md", (f"layer:{lname}", sf)
             cur = layer_sources.get(k, [])
             layer_sources[k] = [v, *cur] if proj_resolved == repo_dir.resolve() else [*cur, v]
@@ -233,9 +230,6 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
         "novel_in_project": novel_in_project}  # fmt: skip
 
 
-PROMOTABLE_TRACKERS = VALID_TRACKER_FILES
-
-
 def promote_project_asset_to_layer(
     repo_dir: Path, project_dir: Path, *, source_rel_path: str, target_layer: str = "root",
     target_template: str | None = None, upstream_dir: Path | None = None,
@@ -272,7 +266,7 @@ def promote_project_asset_to_layer(
     is_ag_asset = (
         len(rel_parts) >= ag_pfx_len + 2 and rel_parts[:ag_pfx_len] == AGENTS_ASSETS_PREFIX
     )
-    is_tracker = len(rel_parts) == 1 and rel_parts[0] in PROMOTABLE_TRACKERS
+    is_tracker = len(rel_parts) == 1 and rel_parts[0] in VALID_TRACKER_FILES
     is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in VALID_DELEGATION_DIRS
     inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
     eff_template, parent_lid = target_template or inferred_tpl, str(target_m.get("layer_id", ""))
@@ -326,7 +320,7 @@ def promote_project_asset_to_layer(
 
     eff_layer = "root" if layer_base == repo_resolved and upstream_dir is None else target_layer
     auth_v = verify_layer_operation_authority(
-        layer_base, operation="release", actor_email=actor_email
+        layer_base, operation="release", actor_email=actor_email, record_blocked=False
     )
     auth_ok, staged_path = bool(auth_v["allowed"]), None
     if (
@@ -344,10 +338,8 @@ def promote_project_asset_to_layer(
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         if is_tracker:
             om = _load_manifest_dict(project_dir)
-            oid, orole = (
-                str(om.get("layer_id", project_dir.name)),
-                str(om.get("layer_role", "project")),
-            )
+            oid = str(om.get("layer_id", project_dir.name))
+            orole = str(om.get("layer_role", "project"))
             oprec = int(om.get("precedence", ROLE_DEFAULT_PRECEDENCE["service-node"]))
             hdr = f"## Proposed from `{oid}` (`{orole}`, `precedence: {oprec}`)"
             def_hdr = f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
@@ -395,8 +387,12 @@ def inspect_layer_horizon(
     ws_ver = ws_vf.read_text(encoding="utf-8").strip() if ws_vf.is_file() else None
     is_oss = _is_oss_root_manifest(up_m)
     contrib_dir = _resolve_oss_contrib_repo_dir(up) if is_oss else up
-    auth_v = verify_layer_operation_authority(ws, operation="release", actor_email=actor_email)
-    up_auth_v = verify_layer_operation_authority(up, operation="release", actor_email=actor_email)
+    a_kw: dict[str, Any] = {"operation": "release", "actor_email": actor_email,
+        "record_blocked": False}  # fmt: skip
+    auth_v, up_auth_v = (
+        verify_layer_operation_authority(ws, **a_kw),
+        verify_layer_operation_authority(up, **a_kw),
+    )
     ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
     cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
     tpl_pairs = [
@@ -406,11 +402,16 @@ def inspect_layer_horizon(
     ]
     drifts: list[dict[str, Any]] = []
     for tpl, up_tdir, ws_tdir in tpl_pairs:
+        ws_newer = _is_dest_template_newer(up_tdir, ws_tdir)
         for ws_rf in sorted((ws_tdir / "rules").glob("*.md")):
             up_rf = up_tdir / "rules" / ws_rf.name
             if not up_rf.is_file() or _sha256_file(ws_rf) != _sha256_file(up_rf):
                 rel_src = str(ws_rf.relative_to(ws)).replace("\\", "/")
-                up_newer = up_rf.is_file() and up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
+                up_newer = (
+                    up_rf.is_file()
+                    and not ws_newer
+                    and up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
+                )
                 oss_ok = True
                 try:
                     verify_oss_promotion_agnosticism(ws, ws_rf.read_text(encoding="utf-8"), rel_src)

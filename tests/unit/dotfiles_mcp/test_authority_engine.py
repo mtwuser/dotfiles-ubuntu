@@ -367,9 +367,13 @@ class TestAuthorityEngine:
         )
         (corp_dir / "WORKROAD.md").write_text("# Corp Roadmap\n- Phase 1", encoding="utf-8")
         mnt_child = corp_dir / "layers" / "dept-legal"
-        mnt_child.mkdir(parents=True)
+        (mnt_child / "system").mkdir(parents=True)
+        (mnt_child / "system/mcp-layer.json").write_text(
+            '{"layer_id":"dept-legal","layer_role":"department","precedence":30}',
+            encoding="utf-8",
+        )
         (sib_child / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
-        (sib_child / "WORKTASK.md").write_text("# Tasks", encoding="utf-8")
+        (sib_child / "WORKTASK.md").write_text("# Untouched Sibling", encoding="utf-8")
 
         # Act
         def _dlg(**kw: object) -> dict[str, object]:
@@ -386,6 +390,7 @@ class TestAuthorityEngine:
             directive="Audit Q3 compliance ledgers", source_rel_path="WORKROAD.md", priority="P0"
         )
         dup_res = _dlg(directive="Audit Q3 compliance ledgers", priority="P0")
+        pr_res = _dlg(directive="Cross-owner directive", create_pr=True)
         road_dry = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
         road_live = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
         road_staged = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
@@ -394,22 +399,32 @@ class TestAuthorityEngine:
         rule_live = _dlg(directive="Enforce GDPR", tracker="rules")
         rule_staged = _dlg(directive="Enforce GDPR v2", tracker="rules")
         rule_forced = _dlg(directive="Enforce GDPR v2", tracker="rules", force_overwrite=True)
+        (mnt_child / "system/mcp-layer.json").write_text(
+            '{"layer_id":"dept-legal","layer_role":"department","precedence":30,'
+            '"layer_authority":{"owner_role":"CLO","authorized_emails":["clo@acme.com"]}}',
+            encoding="utf-8",
+        )
+        cross_owner = _dlg(directive="Separate owner directive")
 
         # Assert
         assert dry_res["dry_run"] is True and dry_existed is False
         assert road_dry["dry_run"] is True and rule_dry["dry_run"] is True
-        assert len(live_res["updated_paths"]) == 2  # type: ignore[arg-type]
+        assert len(live_res["updated_paths"]) == 1  # type: ignore[arg-type]
+        assert live_res["delivery_mode"] == "direct_subtree"
         assert "Audit Q3 compliance ledgers" in (mnt_child / "WORKTASK.md").read_text("utf-8")
-        assert (sib_child / "WORKTASK.md").read_text("utf-8").count("Audit Q3") == 1
+        assert (sib_child / "WORKTASK.md").read_text("utf-8") == "# Untouched Sibling"
         assert dup_res["delegated_entry"] == live_res["delegated_entry"]
-        assert (sib_child / "roadmaps/WORKROAD.md").is_file() and road_live["tracker"] == "roadmaps"
-        assert len(road_staged["staged_proposals"]) == 2  # type: ignore[arg-type]
-        assert len(road_forced["updated_paths"]) == 2  # type: ignore[arg-type]
-        assert (sib_child / ".agents/rules/delegated-item.md").is_file() and rule_live[
+        assert pr_res["delivery_mode"] == "proposal_pr" and len(pr_res["staged_proposals"]) == 1  # type: ignore[arg-type]
+        assert cross_owner["actor_is_child_owner"] is False
+        assert cross_owner["delivery_mode"] == "proposal_pr"
+        assert (mnt_child / "roadmaps/WORKROAD.md").is_file() and road_live["tracker"] == "roadmaps"
+        assert len(road_staged["staged_proposals"]) == 1  # type: ignore[arg-type]
+        assert len(road_forced["updated_paths"]) == 1  # type: ignore[arg-type]
+        assert (mnt_child / ".agents/rules/delegated-item.md").is_file() and rule_live[
             "tracker"
         ] == "rules"
-        assert len(rule_staged["staged_proposals"]) == 2  # type: ignore[arg-type]
-        assert len(rule_forced["updated_paths"]) == 4  # type: ignore[arg-type]
+        assert len(rule_staged["staged_proposals"]) == 1  # type: ignore[arg-type]
+        assert len(rule_forced["updated_paths"]) == 2  # type: ignore[arg-type]
         assert "Delivered to `dept-legal`" in (corp_dir / "WORKROAD.md").read_text("utf-8")
         assert "## Outbound Delegations" in (corp_dir / "WORKTASK.md").read_text("utf-8")
         assert live_res["ticket_id"] == "CORP-ROOT-DEPT-LEGAL-01"

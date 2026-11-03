@@ -359,6 +359,7 @@ class TestWorkspaceBootstrapper:
         own_tj.write_text('{"schema_version": "1.0", "description": "Own — ±"}', encoding="utf-8")
         local_bb = bare_layer / "templates/business-base/rules/business-base.md"
         local_bb.write_text("# Local Override\n\n## Custom Section\nKeep.\n", encoding="utf-8")
+        (bdir / "business-base.md").write_text("# Business Base v3\n", encoding="utf-8")
         sync_conflict = sync_layer_workspace(
             repo_dir, bare_layer, strategy="reconcile", dry_run=False
         )

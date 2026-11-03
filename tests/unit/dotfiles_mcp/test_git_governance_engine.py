@@ -338,13 +338,16 @@ class TestGitGovernanceEngine:
             strategy="keep-local",
             is_local_newer=True,
         )
-        reconcile_template_pack_sync(
+        _, rec_after_keep = reconcile_template_pack_sync(
             ws,
             "business-base",
             src_tpl,
             dest_tpl,
             strategy="reconcile",
             is_local_newer=True,
+        )
+        (src_tpl / "rules/business-base.md").write_text(
+            "# Business Base\n\n## Core Rule\nUpstream v2.\n", encoding="utf-8"
         )
         merge_copied, merge_conflicts = reconcile_template_pack_sync(
             ws,
@@ -377,8 +380,9 @@ class TestGitGovernanceEngine:
         # Assert
         assert st_outdated["makefile_outdated"] is True
         assert st_outdated["manifest_contracts_outdated"] is True
-        assert rec_copied is False and len(rec_conflicts) == 2
+        assert rec_copied is False and len(rec_conflicts) == 1
         assert keep_dry is False and keep_live is False
+        assert rec_after_keep == []
         assert not (ws / ".agents/proposals/from-upstream").exists()
         assert "Staged Governance Proposal" not in (ws / "WORKTASK.md").read_text(encoding="utf-8")
         assert "UPSTREAM_TEMPLATE_CONFLICT" not in (ws / ".agents/SESSION.md").read_text(

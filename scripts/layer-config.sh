@@ -395,15 +395,16 @@ if subcmd in ("delegate-to-child", "deliver-to-child"):
     target_dir, opts = _pos_opts(
         rest,
         {"--to-child": "child", "--task": "task", "--source": "src", "--ticket": "tkt", "--priority": "prio", "--tracker": "trk", "--surface": "trk", "--email": "email"},
-        {"--force": "force"},
+        {"--force": "force", "--create-pr": "create_pr"},
     )
     if not opts.get("child") or (not opts.get("task") and not opts.get("src")):
-        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>] [--ticket <id>] [--surface <surface>] [--priority P0|P1|P2]")
+        _die("Usage: ./scripts/layer-config.sh delegate-to-child [<target-dir>] --to-child <layer> [--task <text>] [--source <rel-path>] [--ticket <id>] [--surface <surface>] [--priority P0|P1|P2] [--create-pr]")
     res = delegate_directive_to_child(
         target_dir, child_layer=str(opts["child"]), directive=str(opts.get("task", "")),
         source_rel_path=_opt_str(opts, "src"), ticket_id=_opt_str(opts, "tkt"),
         priority=str(opts.get("prio", "P1")), tracker=str(opts.get("trk", "WORKTASK.md")),
-        actor_email=_opt_str(opts, "email"), force_overwrite=bool(opts.get("force", False)), dry_run=dry_run,
+        actor_email=_opt_str(opts, "email"), force_overwrite=bool(opts.get("force", False)),
+        create_pr=bool(opts.get("create_pr", False)), dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
     sys.exit(0)
