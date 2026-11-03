@@ -58,8 +58,8 @@ When starting work on the next phase in `WORKROAD.md`:
      - Phase 3: Existing source code, staleness (`> 90d`), & consistency analysis (`src/` / `scripts/` — verify new code does not diverge from adjacent existing code; propose atomic refactoring or log in `BACKLOG.md` if touched modules use older idioms or over-compression)
      - Phase 4: Structural evolution (`Inline -> Function -> Class -> Protocol/Catalog -> Module`), file-prefix/suffix naming (`tools_*`, `*_engine`, `NN_*`, `test_*`), & outbound non-restriction alignment
      - Phase 5: Documentation & `1:1:1` traceability persistence plan
-   - **In `business` mode (`business-base` / `business-stack/*` / `Root 0` / `Department`)**:
-     - Phase 1: Normative policies, *Lex Superior* hierarchy (`0..100`), and cross-departmental precedence (`5..35`) in `corporate/`, `docs/`, and `.agents/rules/*.md`
+   - **In `business` mode (`business-base` / `business-stack/*` / `science-stack/*` / `Root 0` / `Department`)**:
+     - Phase 1: Normative policies, *Lex Superior* hierarchy (`0..100`), and full deontic precedence (`1..95`: Territorial/Public-Admin `1..4`, Corporate/Dept/Squad `5..80`, Contextual `Human-Stack` `85..95`) in `corporate/`, `docs/`, and `.agents/rules/*.md`
      - Phase 2: Single Source of Truth ledgers (`corporate/`), quantitative/unit precision, and Traceable Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`)
      - Phase 3: Three-Part Functional Verification Structure (`# Scope & Surface Target`, `# Normative Invariants`, `# Verification & Sign-Off Gates`) and IP/confidentiality firewall gates
      - Phase 4: Cross-Surface Cascade (`surfaces/web/`, `surfaces/forms/`, `surfaces/print/`) and 1-hop child delegation needs (`make delegate`)

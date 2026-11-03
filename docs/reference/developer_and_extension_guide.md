@@ -44,7 +44,7 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
      --kind domain-policy-pack \
      --register-binding
    ```
-   This generates `templates/<name>/template.json` (`kind`: `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
+   This generates `templates/<name>/template.json` (`kind`: `core-base` | `business-stack` | `science-stack` | `tech-stack` | `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
 3. **Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)**:
    ```bash
    ./scripts/layer-config.sh list-templates
