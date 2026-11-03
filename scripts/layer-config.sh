@@ -67,8 +67,8 @@ Commands:
   spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>]
                   [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]
       Materialize a zero-copy, TTL-bounded ephemeral Department Bot fork.
-  inspect-ephemeral [--id <fork-id>]
-      List active ephemeral forks (after automatic TTL reaping) or inspect one fork.
+  inspect-ephemeral [--id <fork-id>] [--catalog] [--family <family>]
+      List active ephemeral forks, inspect one fork, or query OOP capability rings & bot catalog.
   reap-ephemeral --id <fork-id|all>
       Destroy a specific ephemeral fork or all active ephemeral forks ('--id all').
   set-global-profile <human-core|technical|business|full> [--stow]
@@ -119,6 +119,7 @@ subcmd, rest = sys.argv[4], [a for a in sys.argv[5:] if a not in ("--dry-run", "
 
 sys.path.insert(0, str(script_dir))
 from dotfiles_mcp.governance.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
+from dotfiles_mcp.mcp_node.capability_registry import resolve_mcp_capability_profile  # noqa: E402
 from dotfiles_mcp.mcp_node.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
 from dotfiles_mcp.governance.fork_configurator import apply_fork_to_project, configure_fork_manifest, scaffold_template_pack  # noqa: E402
 from dotfiles_mcp.governance.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, manage_layer_roster, record_governance_decision  # noqa: E402
@@ -265,8 +266,9 @@ if subcmd == "spawn-ephemeral":
     sys.exit(0)
 
 if subcmd == "inspect-ephemeral":
-    opts = _parse_opts(rest, {"--id": "id"})
-    print(json.dumps(inspect_ephemeral_forks(repo_dir, fork_id=_opt_str(opts, "id")), indent=2))
+    opts = _parse_opts(rest, {"--id": "id", "--family": "fam"}, {"--catalog": "cat"})
+    res = resolve_mcp_capability_profile(MCPNodeBase(repo_dir=repo_dir)._load_layer_manifest(), active_ephemeral_forks=inspect_ephemeral_forks(repo_dir)["forks"], family_filter=_opt_str(opts, "fam")) if opts.get("cat") else inspect_ephemeral_forks(repo_dir, fork_id=_opt_str(opts, "id"))
+    print(json.dumps(res, indent=2))
     sys.exit(0)
 
 if subcmd == "reap-ephemeral":

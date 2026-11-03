@@ -63,7 +63,7 @@ flowchart TD
 
     subgraph Tier2["Tier 2: Squad / Domain Forks"]
         BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/tech-stack/fastapi-hexagonal/\n• API & Database Migration Standards"]
-        DataMCP["📡 mcp: dotfiles-squad-data\n(layer_role: squad)\n• templates/gcp-data-platform/\n• Pipeline & FinOps Guardrails"]
+        DataMCP["📡 mcp: dotfiles-squad-ops\n(layer_role: squad)\n• templates/business-stack/corporate-ops-ledger/\n• templates/science-stack/scientific-knowledge-branch/"]
     end
 
     subgraph Tier3["Tier 3: Multi-Container / Multi-Server Application Nodes"]
@@ -202,7 +202,7 @@ When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` 
 
 ```dockerfile
 # Inside checkout-api/Dockerfile:
-FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.6.0 AS governance-layer
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:2.9.0 AS governance-layer
 
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
@@ -422,6 +422,14 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
 - **Structured Runtime Audit & Alert Logs (`logs/mcp_events.jsonl` & `logs/mcp_alerts.jsonl`)**:
   - Every MCP tool call, resource read, token-budget warning (`TOKEN_BUDGET_NEAR_LIMIT`, `TOKEN_BUDGET_EXCEEDED`), truncation warning (`RESPONSE_TRUNCATED`), or fan-out alert (`MCP_FANOUT_WARNING`) is automatically logged to `logs/mcp_events.jsonl` and `logs/mcp_alerts.jsonl` (with 512 KB rotation and `--log-dir` / `--no-log` flags).
 
+### 5.3. OOP Capability Rings, 4-Family Bot Catalog, Symbiosis & `rcap1` Return Membrane (`orchestrate_ephemeral_fork`)
+
+- **OOP Capability Inheritance (`MCP_PERMISSION_RINGS`) & 4-Family Bot Catalog (`action="catalog"`)**:
+  - Every MCP node composes capabilities across 5 CRUD permission rings (`R0_DISCOVERY`, `R1_COMPACTION`, `R2_CRYPTO_UNFOLD`, `W_EPHEMERAL_SANDBOX`, `W_GOVERNANCE_PROPOSAL` — restricted to `R0..R2` in `strictly-read-only` / `pro` environments) and exposes 4 functional bot families (`audit-and-compliance`, `architecture-and-code`, `data-and-operations`, `scientific-and-normative` at `precedence: 15`) via `orchestrate_ephemeral_fork(action="catalog", family="<fam>")` or `./scripts/layer-config.sh inspect-ephemeral --catalog`.
+- **Permanent $\leftrightarrow$ Ephemeral Symbiosis (`symbiotic_state`) & `rcap1` Return Digest Membrane (`seal-return` / `verify-return`)**:
+  - While an ephemeral fork (`eph-*`) is active, the Permanent Layer MCP transitions to `symbiotic_state: "ephemeral-augmented"` in `get_layer_overview` and `dotfiles://mcp/topology`.
+  - Ephemeral bots seal their 4-Channel Executive Digest via `orchestrate_ephemeral_fork(action="seal-return", fork_id="...", digest={...})` and hand the `rcap1` token back to the Permanent MCP (`action="verify-return"`), which enforces `surface_globs` containment (`SURFACE_BOUNDARY_VIOLATION`) and automatic post-reap *Crypto-Shredding* (`EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED`).
+
 ---
 
 ## 6. Summary of Precautions & Design Boundaries
@@ -434,4 +442,4 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
 | **Strictly read-only by default** | Zero tools for arbitrary shell commands, file editing, or package installation. Only deterministic read/audit operations (`verify-repo.sh`, `audit.sh`, doc/rule readers) are exposed. |
 | **Zero secret exposure** | Path containment locks all file reads strictly inside the repository root (`REPO_DIR`). Machine-local files (`~/.bashrc.local`, `~/.gitconfig.local`, `.env`, `~/.gemini/*.json`) cannot be read via MCP. |
 
-📖 **Normative Protocol, Schema & Engine References**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)** and **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**.
+📖 **Normative Protocol, Schema & Engine References**: See **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/05_ephemeral_forks_and_department_bots.md`](../architecture/05_ephemeral_forks_and_department_bots.md)**.

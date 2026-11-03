@@ -24,6 +24,8 @@ from dotfiles_mcp.core.manifest_helpers import (
     _read_version,
     discover_templates_catalog,
 )
+from dotfiles_mcp.mcp_node.capability_registry import resolve_mcp_capability_profile
+from dotfiles_mcp.mcp_node.ephemeral_fork_engine import inspect_ephemeral_forks
 from dotfiles_mcp.mcp_node.node_base import MCPNodeBase
 
 
@@ -133,6 +135,10 @@ class ResourcesMixin(MCPNodeBase):
         if uri == "dotfiles://mcp/topology":
             manifest = self._load_layer_manifest()
             manifest["discovered_mounted_layers"] = self._discover_mounted_layers()
+            manifest["capability_profile"] = resolve_mcp_capability_profile(
+                manifest,
+                active_ephemeral_forks=inspect_ephemeral_forks(self.repo_dir)["forks"],
+            )
             return {
                 "uri": uri,
                 "mimeType": "application/json",

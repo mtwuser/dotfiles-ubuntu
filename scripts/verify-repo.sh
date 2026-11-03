@@ -226,18 +226,18 @@ if post_invocation_lint._AGENTS_MD_MAX_BYTES != mcp_constants.AGENTS_MD_MAX_BYTE
 if any(btok not in arch_02 or btok not in arch_mcp for btok in ("18,000", "80,000", "TOKEN_BUDGET_EXCEEDED", "WORKSPACE_RULES_BUDGET_EXCEEDED")):
     sys.exit("Budget token missing from Architecture docs")
 
-for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
+for mod_py in sorted((repo / "scripts/dotfiles_mcp").rglob("*.py")):
     if mod_py.name != "__init__.py" and (mod_py.name not in arch_mcp or mod_py.name not in readme_md):
         sys.exit(f"Module-to-doc drift: '{mod_py.name}'")
 
 spec_re = re.compile(r"^Specification:\s*(docs/architecture/[a-zA-Z0-9_]+\.md)\s*$", re.MULTILINE)
-for src_py in sorted([*list((config_dir / "scripts").glob("*.py")), repo / "scripts/dotfiles_mcp_server.py", *[p for p in (repo / "scripts/dotfiles_mcp").glob("*.py") if p.name != "__init__.py"]]):
+for src_py in sorted([*list((config_dir / "scripts").glob("*.py")), repo / "scripts/dotfiles_mcp_server.py", *[p for p in (repo / "scripts/dotfiles_mcp").rglob("*.py") if p.name != "__init__.py"]]):
     m = spec_re.search(src_py.read_text(encoding="utf-8"))
     if not m or not (repo / m.group(1)).is_file() or src_py.name not in (repo / m.group(1)).read_text(encoding="utf-8"):
         sys.exit(f"1:1:1 Traceability drift: {src_py}")
 
 warn_re = re.compile(r'_emit_warning\(\s*"(?:WARN|ERROR|CRITICAL)"\s*,\s*"([A-Z0-9_]+)"')
-for mod_py in sorted((repo / "scripts/dotfiles_mcp").glob("*.py")):
+for mod_py in sorted((repo / "scripts/dotfiles_mcp").rglob("*.py")):
     for code in warn_re.findall(mod_py.read_text(encoding="utf-8")):
         if code not in arch_mcp:
             sys.exit(f"Warning-to-doc drift: '{code}'")

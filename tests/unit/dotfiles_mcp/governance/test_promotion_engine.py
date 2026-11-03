@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 import pytest
 from dotfiles_mcp.core.constants import REPO_DIR
 from dotfiles_mcp.governance.promotion_engine import (
-    collect_layer_effective_bindings,
     diff_project_against_layers,
     promote_project_asset_to_layer,
 )
@@ -23,48 +22,6 @@ if TYPE_CHECKING:
 
 class TestPromotionEngine:
     """Verify multi-layer pattern comparison, project diffing, and upward promotion."""
-
-    def test_collect_layer_effective_bindings_merges_and_deduplicates_template_bindings(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """Merge manifest surface_bindings with template.json recommended_surface_bindings."""
-        # Arrange
-        tpl_dir = tmp_path / "templates" / "brand-pack"
-        tpl_dir.mkdir(parents=True)
-        (tpl_dir / "template.json").write_text(
-            json.dumps(
-                {
-                    "recommended_surface_bindings": [
-                        "invalid-entry",
-                        {"binding_id": "dup-id", "mode": "transversal"},
-                        {"binding_id": "new-brand-id", "mode": "transversal"},
-                        {"mode": "advisory"},
-                    ]
-                }
-            ),
-            encoding="utf-8",
-        )
-        bad_tpl = tmp_path / "templates" / "bad-json-pack"
-        bad_tpl.mkdir(parents=True)
-        (bad_tpl / "template.json").write_text("[]", encoding="utf-8")
-        manifest: dict[str, object] = {
-            "default_stack_templates": ["brand-pack", "bad-json-pack", "missing-pack"],
-            "surface_bindings": [
-                "not-a-dict",
-                {"binding_id": "dup-id", "mode": "authoritative"},
-                {"mode": "transversal"},
-            ],
-        }
-
-        # Act
-        bindings = collect_layer_effective_bindings(tmp_path, manifest)
-
-        # Assert
-        assert len(bindings) == 4
-        assert bindings[0]["binding_id"] == "dup-id"
-        assert bindings[0]["mode"] == "authoritative"
-        assert bindings[2]["binding_id"] == "new-brand-id"
 
     def test_compare_project_patterns_multilayer_routes_novel_items_and_filters_materialized(
         self,

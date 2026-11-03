@@ -159,7 +159,7 @@ Every operator uses two orthogonal surfaces: **`$HOME` (`~/dotfiles-ubuntu` $\ri
 
 ## Natural Code Evolution, Command Consciousness & Reproducible Metrics
 
-### 1. Structural Evolution Ladder, Command Tiers (`C1/C2/C3`) & Bifurcated Age Loop
+### 1. 6-Stage Structural Evolution Ladder, Command Tiers (`C1/C2/C3`) & Bifurcated Age Loop
 
 ```mermaid
 flowchart LR
@@ -170,17 +170,18 @@ flowchart LR
         C1 --> C2 --> C3
     end
 
-    subgraph EVO["5-Stage Structural Evolution (< 465 Lines & O(1) Prefixes)"]
+    subgraph EVO["6-Stage Structural Evolution (< 465 Lines, Probe E & 1:1:1 Subpackages)"]
         S1["1. Inline Expression"] --> S2["2. Pure Function"]
         S2 --> S3["3. Cohesive Class / @dataclass"]
         S3 --> S4["4. Catalog (dict) / Protocol"]
         S4 --> S5["5. 1:1:1 Module\n(tools_* · *_engine · NN_* · test_*)"]
+        S5 --> S6["6. 1:1:1 Domain Subpackage\n(< 15 modules/dir · core/capsules/mcp_node/governance)"]
     end
 
     subgraph AGE["Bifurcated Age Radar (14d / 90d / 180d)"]
         TRIG["Prolonged Use Without Edits\n(> 90d Code/Specs · > 180d Policies)"]
         ALN["Trajectory A: Aligned (0 Drift)\nConsolidate -> Automate (C1) -> /enrich"]
-        DRF["Trajectory B: Drifted / Compressed\nRefactor (5-Stage) -> Align 1:1:1 Spec"]
+        DRF["Trajectory B: Drifted / Compressed\nRefactor (6-Stage) -> Align 1:1:1 Spec"]
         TRIG --> ALN
         TRIG --> DRF
     end
@@ -197,12 +198,12 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 | Dimension / Lifecycle Point | Reproducible Target Metric / Invariant | Human & Architectural Value Added | Agent Deviation / Drift Signal (Validation Gate) |
 | :--- | :--- | :--- | :--- |
 | **1. Session Startup & Orientation (`/sopen` / `make status`)** | **`1` CLI call (`< 0.2s`)** returning `operating_state`, `workspace_mode`, `command_tiers`, `horizon`, and `agent_diff` | Eliminates 6–8 slow shell/git/file probes at session start and prevents blind `brain/` scans | Multi-step manual `git`/`ls` probing on startup or attempting edits in `oss-readonly-appliance` |
-| **2. Context-Window & Compaction (`AGENTS.md` & `rcap1`)** | **`<= 18,000` bytes** global `AGENTS.md` (`human-core` `~10.2 KB`); **`~85%` token savings** at `L1` Exon Skeleton (`40–65` tokens/section) | Zero rule eviction under Antigravity's `20,000`-token inline budget; workspaces load only rules matching their `workspace_mode` | `TOKEN_BUDGET_EXCEEDED` (`> 18 KB`), `WORKSPACE_RULES_BUDGET_EXCEEDED` (`> 80 KB`), or loading code rules in `business` mode |
-| **3. Natural Code Maintainability & Structural Evolution** | **`< 465` lines** hard cap (`<= 400` target), **5-Stage Evolution Ladder**, and **`O(1)` file-prefix taxonomy** (`tools_*`, `*_engine`, `NN_*`, `test_*`) | Prevents God Components and defensive syntactic compression; every file's role and `1:1:1` pair is discoverable in $O(1)$ by filename | File `>= 465` lines (`[max-file-lines]`), cryptic short variable names to save lines, or missing `Specification:` docstring pointer |
-| **4. Bidirectional `1:1:1` Test Symbiosis (`Unit -> Imp -> E2E`)** | **`100.00%` isolated unit statement + branch coverage**, **`< 1s` per unit test**, `# Arrange / # Act / # Assert`, `0-byte` `__init__.py` | Self-documenting executable specs (`Top-Down E2E -> Imp -> Unit` reading; `Bottom-Up Unit -> Imp -> E2E` execution without coverage masking) | Coverage `< 100%`, missing AAA markers (`[missing-aaa]`), non-empty `__init__.py` (`[init-purity]`), or legacy aliases / `@deprecated` |
+| **2. Context-Window & Compaction (`AGENTS.md` & `rcap1`)** | **`<= 18,000` bytes** global `AGENTS.md` (`human-core` `~10.6 KB`); **`~85%` token savings** at `L1` Exon Skeleton (`40–65` tokens/section) | Zero rule eviction under Antigravity's `20,000`-token inline budget; workspaces load only rules matching their `workspace_mode` | `TOKEN_BUDGET_EXCEEDED` (`> 18 KB`), `WORKSPACE_RULES_BUDGET_EXCEEDED` (`> 80 KB`), or loading code rules in `business` mode |
+| **3. Natural Code Maintainability & 6-Stage Evolution** | **`< 465` lines** hard cap (`<= 400` target), **`Probe E` ($M_{\text{cluster}} < 1,200$)**, **`< 15` modules/dir (`1:1:1` Subpackages)**, and **`O(1)` file-prefix taxonomy** (`tools_*`, `*_engine`, `NN_*`, `test_*`) | Prevents God Components, coupled cluster drift, and flat-directory overload; every subpackage and module's `1:1:1` triad (`Spec <-> Test <-> Code`) is discoverable in $O(1)$ | File `>= 465` lines (`[max-file-lines]`), directory `>= 15` modules, cross-engine `_private` imports, or missing `Specification:` pointer |
+| **4. Bidirectional `1:1:1` Test Symbiosis (`Unit -> Imp -> E2E`)** | **`100.00%` single-file isolated unit statement + branch coverage (`0` Cross-Unit Masking)**, **`< 1s` per unit test**, `# Arrange / # Act / # Assert`, `0-byte` `__init__.py` | Self-documenting executable specs (`Top-Down E2E -> Imp -> Unit` reading; `Bottom-Up Unit -> Imp -> E2E` execution where each `test_<mod>.py` reaches `100%` alone) | Coverage `< 100%` in single-file isolation, missing AAA markers (`[missing-aaa]`), non-empty `__init__.py` (`[init-purity]`), or legacy aliases |
 | **5. Inter-Layer Governance & Stage Gates (`dev -> tst -> pre -> pro`)** | **Strict 1-hop horizon**, `4`-role authority (`owner`, `maintainer`, `validator`, `member`), and non-destructive `.agents/proposals/` staging | Unifies Business (`Root 0` / `Department` SSoT ledgers & *Lex Superior* `0..100`) and Technical (`Squad` / `Project`) delivery on `feature/<TICKET-ID>-<slug>` | `CROSS_TIER_PROMOTION_BYPASS`, `INHERITED_UPSTREAM_ASSET_IMMUTABLE`, open `P0` in `tst`, or unchecked `WORKVALI.md` items in `pre` |
 | **6. Bifurcated Age & Consolidation Radar (`14d / 90d / 180d`)** | Proposals **`<= 14d`**; Code/Specs reviewed at **`90d`**; Policies/Templates reviewed at **`180d`** | Untouched artifacts **aligned in active use** graduate to `C1` automation or `/enrich`; **drifted** artifacts are refactored before debt compounds | Unresolved `stale_proposals` (`> 14d`), `Source` modified without updating its `1:1:1` `Spec`, or split idioms inside a touched module |
-| **7. Bounded MCP Mode, Ephemeral Scope (`inter`/`intra`) & `rcap1` Firewall** | Explicit **`mcp_operating_mode`** per `operating_state` (`oss-dev` bounded to `"self-test-and-dev-only"`); **`inter-layer`** (`strictly-read-only`) vs. **`intra-layer`** (`actor_role`-gated) ephemeral forks; **`rcap1` (`kr: true`)** | Combines **`~85%` `L1` token compaction** with a **Business Confidentiality & SSoT Integrity Firewall** (`flash` / unauthenticated nodes blocked from `L2`/`L3` secrets; tampering triggers `CAPSULE_CHAIN_BROKEN`) | Running a live multi-tenant MCP hub on `oss-dev`, requesting write access on an `inter-layer` fork or `validator` role, or unfolding `L2`/`L3` without `resonance_key` |
+| **7. OOP Capability Rings, Permanent $\leftrightarrow$ Ephemeral Symbiosis & `rcap1` Membrane** | **`5` CRUD rings (`R0..W`)**, **`4`-family Bot Catalog**, hot-plug **`ephemeral-augmented` leases** (*Zero Standing Privileges*), and **`rcap1` Return Digest Membrane (`seal-return` / `verify-return`)** | Combines **`~85%` `L1` token compaction**, live Permanent $\leftrightarrow$ Ephemeral capability augmentation, and *Crypto-Shredding* (`EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED` & `SURFACE_BOUNDARY_VIOLATION`) | Running a live multi-tenant MCP hub on `oss-dev`, requesting write access on an `inter-layer` fork or `validator` role, or returning unsealed digests outside leased `surface_globs` |
 
 ---
 
@@ -231,7 +232,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 19 skills (10 global + 4 tech + 5 stack)
 │   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (mcp-layer-v1)
 │   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction, 0..N surface weaver, authority, horizon & promotion
-│   │   └── 05_ephemeral_forks_and_department_bots.md       ← Ephemeral Department Bot forks, project bridges & TTL GC
+│   │   └── 05_ephemeral_forks_and_department_bots.md       ← OOP capability rings, symbiotic Department Bots, rcap1 return membrane & TTL GC
 │   └── reference/                     ←   Tier 3B: Enterprise use cases & maintainer extension guides
 │       ├── enterprise_pair_programming_governance.md         ← Enterprise Human-AI governance & Copilot mapping
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
@@ -323,7 +324,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 # Ephemeral Department Bot forks (TTL-bounded zero-copy sandboxes & 1-shot consultations):
 ./scripts/layer-config.sh consult-layer <your-project> --layer dept-legal --query "GDPR retention"
 ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
-./scripts/layer-config.sh inspect-ephemeral
+./scripts/layer-config.sh inspect-ephemeral --catalog
 ./scripts/layer-config.sh reap-ephemeral --id all
 ```
 

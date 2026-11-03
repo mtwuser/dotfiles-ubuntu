@@ -30,6 +30,8 @@ from dotfiles_mcp.core.manifest_helpers import (
     discover_layer_template_names,
 )
 from dotfiles_mcp.governance.promotion_engine import compare_project_patterns_multilayer
+from dotfiles_mcp.mcp_node.capability_registry import resolve_mcp_capability_profile
+from dotfiles_mcp.mcp_node.ephemeral_fork_engine import inspect_ephemeral_forks
 from dotfiles_mcp.mcp_node.node_base import MCPNodeBase
 
 
@@ -72,6 +74,10 @@ class FederationToolsMixin(MCPNodeBase):
             )
         )
         mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
+        cap_profile = resolve_mcp_capability_profile(
+            manifest,
+            active_ephemeral_forks=inspect_ephemeral_forks(target_dir)["forks"],
+        )
         digest = {
             "channel_1_node_and_system_state": {
                 "version": _read_version(target_dir),
@@ -121,6 +127,8 @@ class FederationToolsMixin(MCPNodeBase):
                 "mounted_layers": self._discover_mounted_layers(),
                 "supported_environments": list(manifest.get("environments", {}).keys()),
                 "federated_mcps": manifest.get("federated_mcps", []),
+                "oop_capability_inheritance": cap_profile["oop_capability_inheritance"],
+                "permanent_ephemeral_symbiosis": cap_profile["permanent_ephemeral_symbiosis"],
             },
         }
         return {

@@ -5,12 +5,12 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 
 from __future__ import annotations
 
-import json
 import re
 import shutil
 from pathlib import Path
 from typing import Any
 
+from dotfiles_mcp.capsules.surface_weaver import collect_layer_effective_bindings
 from dotfiles_mcp.core.constants import (
     AGENTS_ASSETS_PREFIX,
     AGENTS_MD_MAX_BYTES,
@@ -43,29 +43,6 @@ from dotfiles_mcp.governance.authority_engine import (
     verify_single_hop_upstream,
 )
 from dotfiles_mcp.governance.git_governance_engine import stage_non_destructive_proposal
-
-
-def collect_layer_effective_bindings(
-    layer_dir: Path, manifest: dict[str, Any]
-) -> list[dict[str, Any]]:
-    """Merge manifest surface_bindings with active template.json recommended_surface_bindings."""
-    effective, seen_ids = [], set[str]()
-    candidates = list(manifest.get("surface_bindings") or [])
-    for tpl_name in manifest.get("default_stack_templates", []):
-        tpl_dir = _resolve_template_dir(layer_dir, str(tpl_name))
-        meta_file = tpl_dir / "template.json" if tpl_dir is not None else None
-        if meta_file is not None and meta_file.is_file():
-            loaded = json.loads(meta_file.read_text(encoding="utf-8"))
-            if isinstance(loaded, dict):
-                candidates.extend(loaded.get("recommended_surface_bindings", []))
-    for raw_b in candidates:
-        if isinstance(raw_b, dict):
-            bid = str(raw_b.get("binding_id", ""))
-            if not bid or bid not in seen_ids:
-                if bid:
-                    seen_ids.add(bid)
-                effective.append(raw_b)
-    return effective
 
 
 def _route_novel_item(

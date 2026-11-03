@@ -42,7 +42,7 @@ flowchart TD
 
     subgraph Squads["Tier 2B — Squad & Stack Forks (layer_role: squad, precedence: 50..80)"]
         SQUAD_BE["acme-squad-backend\n• templates/tech-stack/fastapi-hexagonal/ (FastAPI + Hexagonal DDD)\n• Mounts layers/dept-security & layers/dept-data via git subtree"]
-        SQUAD_FE["acme-squad-frontend\n• templates/web-islands/ (Core Web Vitals & a11y)\n• Mounts layers/dept-security via git subtree"]
+        SQUAD_FE["acme-squad-ops\n• templates/business-stack/corporate-ops-ledger/ & templates/science-stack/\n• Mounts layers/dept-security via git subtree"]
     end
 
     subgraph Apps["Tier 3 — Daily Application Repositories (Consumer Projects)"]
@@ -434,7 +434,7 @@ To bridge this boundary without adding external dependencies, `dotfiles-ubuntu` 
   2. Diagnose environment and package drift across multiple microservice containers simultaneously.
   3. Discover downstream domain MCPs (databases, queues, observability) filtered by target environment (`dev`, `tst`, `pre`, `pro`) **together with the mandatory safety guardrails** that govern them before executing any tool call.
 
-📖 **Full Use Case & Step-by-Step Configuration Guide**: **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](contextual_mcp_and_multi_service_orchestration.md)** (and normative protocol specification at **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**).
+📖 **Full Use Case & Step-by-Step Configuration Guide**: **[`docs/reference/contextual_mcp_and_multi_service_orchestration.md`](contextual_mcp_and_multi_service_orchestration.md)** (and normative protocol specifications at **[`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/05_ephemeral_forks_and_department_bots.md`](../architecture/05_ephemeral_forks_and_department_bots.md)**).
 
 ---
 

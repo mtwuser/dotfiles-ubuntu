@@ -118,7 +118,7 @@ sequenceDiagram
 3. **CLI Parity (`scripts/layer-config.sh`)**:
    - `consult-layer [<target-dir>] --layer <layer-or-template> --query <text> [--path <rel-path>] [--tier <flash|inherit|pro>]` (`make consult LAYER=<id> QUERY="..."` — one-shot `strictly-read-only` inter-layer consultation returning a 4-Channel Digest + `rcap1` capsules and auto-reaping immediately)
    - `spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>] [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]`
-   - `inspect-ephemeral [--id <fork-id>]`
+   - `inspect-ephemeral [--id <fork-id>] [--catalog] [--family <fam>]`
    - `reap-ephemeral --id <fork-id|all>`
 
 ---
@@ -126,6 +126,28 @@ sequenceDiagram
 ## 5. OOP Capability Inheritance (`MCP_PERMISSION_RINGS`), Bot Taxonomy, Permanent $\leftrightarrow$ Ephemeral Symbiosis & `rcap1` Return Membrane
 
 [`capability_registry.py`](../../scripts/dotfiles_mcp/mcp_node/capability_registry.py) models MCP servers using object-oriented capability inheritance on top of [`MCPNodeBase`](../../scripts/dotfiles_mcp/mcp_node/node_base.py):
+
+```mermaid
+flowchart LR
+    subgraph OOP["1. OOP Capability Inheritance (MCPNodeBase -> Rings)"]
+        R0["R0_DISCOVERY (read)\nResourcesMixin + FederationToolsMixin"]
+        R1["R1_COMPACTION (read, filter)\nCompactionToolsMixin + SurfaceToolsMixin"]
+        R2["R2_CRYPTO_UNFOLD (read, decrypt)\nUnfoldToolsMixin"]
+        WE["W_EPHEMERAL_SANDBOX (CRUD)\nEphemeralToolsMixin"]
+        WG["W_GOVERNANCE_PROPOSAL (CRU)\nFederationToolsMixin"]
+        R0 --> R1 --> R2 --> WE --> WG
+    end
+
+    subgraph Symbiosis["2. Permanent <-> Ephemeral Symbiosis & rcap1 Membrane"]
+        PERM["Permanent Layer MCP\n• get_layer_overview / topology\n• symbiotic_state: basal vs augmented"]
+        EPH["Ephemeral Bot Fork (eph-*)\n• 4 Families (precedence: 15)\n• TTL Lease + session_resonance_key"]
+        PERM -->|"Injects 0..80 lineage + L2/L3 rcap1"| EPH
+        EPH -->|"Hot-plugs lease + seal-return (rcap1)"| PERM
+        PERM -->|"verify-return + Crypto-Shredding on reap"| PERM
+    end
+
+    OOP --> Symbiosis
+```
 
 ### 5.1 Standard CRUD Capability Rings (`MCP_PERMISSION_RINGS`)
 

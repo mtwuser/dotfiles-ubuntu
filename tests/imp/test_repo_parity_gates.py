@@ -19,19 +19,16 @@ class TestRepoParityGates:
     def test_all_test_init_files_are_strictly_zero_bytes(self) -> None:
         """Verify all package and test __init__.py markers remain strictly 0 bytes."""
         # Arrange
-        init_files = sorted(
-            [
-                *list((REPO_DIR / "scripts" / "dotfiles_mcp").rglob("__init__.py")),
-                *list((REPO_DIR / "tests").rglob("__init__.py")),
-            ]
-        )
+        init_files = sorted([
+            *list((REPO_DIR / "scripts/dotfiles_mcp").rglob("__init__.py")),
+            *list((REPO_DIR / "tests").rglob("__init__.py")),
+        ])  # fmt: skip
 
         # Act
         non_empty = [str(p.relative_to(REPO_DIR)) for p in init_files if p.stat().st_size != 0]
 
         # Assert
-        assert len(init_files) == 14
-        assert non_empty == []
+        assert (len(init_files), non_empty) == (14, [])
 
     def test_one_to_one_unit_test_mapping_and_file_size_discipline(self) -> None:
         """Verify 1:1:1 source-to-test-to-spec mapping and < 465-line file size discipline."""
@@ -55,32 +52,22 @@ class TestRepoParityGates:
         spec_re = re.compile(
             r"^Specification:\s*(docs/architecture/[a-zA-Z0-9_]+\.md)\s*$", re.MULTILINE
         )
-        traceable_sources = sorted(
-            [
-                *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
-                REPO_DIR / "scripts/dotfiles_mcp_server.py",
-                *[p for p in mcp_root.rglob("*.py") if p.name != "__init__.py"],
-            ]
-        )
+        traceable_sources = sorted([
+            *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
+            REPO_DIR / "scripts/dotfiles_mcp_server.py",
+            *[p for p in mcp_root.rglob("*.py") if p.name != "__init__.py"],
+        ])  # fmt: skip
 
         # Act
+        unit_root = REPO_DIR / "tests/unit/dotfiles_mcp"
         missing_unit_tests = [
-            str(rel_mod)
-            for rel_mod in pkg_modules
-            if not (
-                REPO_DIR
-                / "tests"
-                / "unit"
-                / "dotfiles_mcp"
-                / rel_mod.parent
-                / f"test_{rel_mod.stem}.py"
-            ).is_file()
-        ]
+            str(rel) for rel in pkg_modules
+            if not (unit_root / rel.parent / f"test_{rel.stem}.py").is_file()
+        ]  # fmt: skip
         oversized_files = [
             f"{p.relative_to(REPO_DIR)} ({len(p.read_text(encoding='utf-8').splitlines())} lines)"
-            for p in all_sized_files
-            if len(p.read_text(encoding="utf-8").splitlines()) >= 465
-        ]
+            for p in all_sized_files if len(p.read_text(encoding="utf-8").splitlines()) >= 465
+        ]  # fmt: skip
         untraced_sources = []
         for src in traceable_sources:
             m = spec_re.search(src.read_text(encoding="utf-8"))
@@ -88,28 +75,22 @@ class TestRepoParityGates:
                 untraced_sources.append(str(src.relative_to(REPO_DIR)))
         template_rules = sorted((REPO_DIR / "templates").rglob("rules/*.md"))
         missing_rule_frontmatter = [
-            str(rf.relative_to(REPO_DIR))
-            for rf in template_rules
+            str(rf.relative_to(REPO_DIR)) for rf in template_rules
             if not rf.read_text(encoding="utf-8").startswith("---\n")
             or "trigger:" not in rf.read_text(encoding="utf-8").split("---", 2)[1]
-        ]
+        ]  # fmt: skip
 
         # Assert
-        assert len(pkg_modules) == 21
-        assert len(template_rules) == 9
+        assert (len(pkg_modules), len(template_rules)) == (21, 9)
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
-        assert missing_unit_tests == []
-        assert oversized_files == []
-        assert untraced_sources == []
-        assert missing_rule_frontmatter == []
-        assert all(
-            "1:1:1" in p.read_text(encoding="utf-8")
-            for p in (REPO_DIR / "docs/architecture").glob("0*.md")
-        )
         assert (
-            not (REPO_DIR / "antigravity/.gemini/config/AGENTS.md").read_text().startswith("---\n")
-        )
+            missing_unit_tests, oversized_files, untraced_sources, missing_rule_frontmatter
+        ) == ([], [], [], [])  # fmt: skip
+        arch_docs = (REPO_DIR / "docs/architecture").glob("0*.md")
+        assert all("1:1:1" in p.read_text("utf-8") for p in arch_docs)
+        agents_p = REPO_DIR / "antigravity/.gemini/config/AGENTS.md"
+        assert not agents_p.read_text().startswith("---\n")
 
     def test_hooks_json_and_hook_scripts_maintain_doc_contract_parity(self) -> None:
         """Verify hooks.json matchers, guard regexes, and MCP/CLI contracts match docs."""
@@ -199,7 +180,10 @@ class TestRepoParityGates:
             "promotion_routing", "SURFACE_PRECEDENCE_COLLISION", "SURFACE_ASSET_MISSING",
             "TEMPLATE_PACK_MISSING", "EPHEMERAL_FORK_LIMIT_REACHED", "EPHEMERAL_FORK_EXPIRED",
             "rcap1", "CAPSULE_CAPABILITY_INSUFFICIENT", "CAPSULE_RESONANCE_DENIED",
-            "CAPSULE_CHAIN_BROKEN",
+            "CAPSULE_CHAIN_BROKEN", "MCP_PERMISSION_RINGS", "BOT_ARCHETYPE_CATALOG",
+            "resolve_mcp_capability_profile", "seal_ephemeral_digest_capsule",
+            "unseal_ephemeral_digest_capsule", "EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED",
+            "SURFACE_BOUNDARY_VIOLATION",
         ):  # fmt: skip
             assert mcp_token in arch_mcp
         for sub in (
@@ -214,12 +198,11 @@ class TestRepoParityGates:
         assert "All 26 Subcommands" in readme_md
         assert "all 26 subcommands" in (REPO_DIR / "scripts/layer-config.sh").read_text("utf-8")
         recipes = mcp_constants.LAYER_MAKEFILE_RECIPES
-        for flag in ("--ticket", "--priority", "--surface", "--source"):
-            assert flag in recipes["delegate"]
-        for flag in ("--upstream-dir $(TARGET_REPO)", "--to-layer", "--to-template"):
-            assert flag in recipes["promote"]
-        for flag in ("--deliverable", "--summary", "--create-pr"):
-            assert flag in recipes["complete"]
+        del_flags = ("--ticket", "--priority", "--surface", "--source")
+        prom_flags = ("--upstream-dir $(TARGET_REPO)", "--to-layer", "--to-template")
+        assert all(f in recipes["delegate"] for f in del_flags)
+        assert all(f in recipes["promote"] for f in prom_flags)
+        assert all(f in recipes["complete"] for f in ("--deliverable", "--summary", "--create-pr"))
         assert "--apply-safe" in recipes["upstream-diff"] and "--remove" in recipes["roster"]
         assert "--strategy" in recipes["sync"] and "--tier" in recipes["consult"]
 
@@ -399,7 +382,17 @@ class TestRepoParityGates:
                 and bool(n.module and n.module.endswith("_engine"))
                 and any(a.name.startswith("_") for a in n.names)
             )
-        ]
+            or (
+                p.parent.name in ("core", "capsules")
+                and isinstance(n, ast.ImportFrom) and n.module is not None
+                and n.module.startswith("dotfiles_mcp.")
+                and (
+                    (p.parent.name == "core" and not n.module.startswith("dotfiles_mcp.core"))
+                    or (p.parent.name == "capsules" and "governance" in n.module)
+                    or (p.name.endswith(("_engine.py", "_weaver.py")) and "mcp_node" in n.module)
+                )
+            )
+        ]  # fmt: skip
         unmatched_raises, blind_subprocess_mocks, structure_violations = [], [], []
         for tp in test_py:
             rel_tp = str(tp.relative_to(REPO_DIR))

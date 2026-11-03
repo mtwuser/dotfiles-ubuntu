@@ -167,10 +167,50 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         not eph_unfold["result"]["isError"],  # type: ignore[index]
         "parent unfold of ephemeral capsule failed",
     )
+    eph_cat = _call_tool_rpc(server, 951, "orchestrate_ephemeral_fork", action="catalog")
+    _require(not eph_cat["result"]["isError"], "ephemeral catalog failed")  # type: ignore[index]
+    cat_payload = json.loads(eph_cat["result"]["content"][0]["text"])  # type: ignore[index]
+    _require(
+        cat_payload["permanent_ephemeral_symbiosis"]["symbiotic_state"] == "ephemeral-augmented",
+        "expected ephemeral-augmented symbiotic state while lease is active",
+    )
+    eph_seal = _call_tool_rpc(
+        server,
+        952,
+        "orchestrate_ephemeral_fork",
+        action="seal-return",
+        fork_id=eph_fid,
+        digest={
+            "channel_1_domain_state": "healthy",
+            "channel_2_affected_surface": ["src/checkout/service.py"],
+            "channel_3_invariants_and_constraints": ["1:1:1"],
+            "channel_4_actionable_delta": "verified",
+        },
+    )
+    _require(not eph_seal["result"]["isError"], "ephemeral seal-return failed")  # type: ignore[index]
+    ret_cap = json.loads(eph_seal["result"]["content"][0]["text"])["capsule_token"]  # type: ignore[index]
+    eph_ver = _call_tool_rpc(
+        server,
+        953,
+        "orchestrate_ephemeral_fork",
+        action="verify-return",
+        fork_id=eph_fid,
+        capsule_token=ret_cap,
+    )
+    _require(not eph_ver["result"]["isError"], "ephemeral verify-return failed")  # type: ignore[index]
     eph_reap = _call_tool_rpc(
         server, 96, "orchestrate_ephemeral_fork", action="reap", fork_id=eph_fid
     )
     _require(not eph_reap["result"]["isError"], "ephemeral reap failed")  # type: ignore[index]
+    eph_shred = _call_tool_rpc(
+        server,
+        961,
+        "orchestrate_ephemeral_fork",
+        action="verify-return",
+        fork_id=eph_fid,
+        capsule_token=ret_cap,
+    )
+    _require("error" in eph_shred, "Reaped ephemeral return capsule must be crypto-shredded")
     eph_revoked = _call_tool_rpc(
         server,
         97,

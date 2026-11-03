@@ -20,6 +20,7 @@ from dotfiles_mcp.capsules.surface_weaver import (
     _compute_binding_specificity,
     _infer_plane_from_path,
     _infer_scope_from_path,
+    collect_layer_effective_bindings,
 )
 from dotfiles_mcp.capsules.tools_unfold import UnfoldToolsMixin
 from dotfiles_mcp.core.constants import (
@@ -34,7 +35,6 @@ from dotfiles_mcp.core.constants import (
     VALID_RESOLUTIONS,
 )
 from dotfiles_mcp.core.manifest_helpers import _merge_unique_strings
-from dotfiles_mcp.governance.promotion_engine import collect_layer_effective_bindings
 from dotfiles_mcp.mcp_node.ephemeral_fork_engine import extract_ephemeral_advisories
 
 

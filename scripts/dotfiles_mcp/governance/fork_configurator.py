@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from dotfiles_mcp.capsules.surface_weaver import collect_layer_effective_bindings
 from dotfiles_mcp.core.constants import (
     KEBAB_ID_RE,
     LAYER_MANIFEST_CONTRACT_REV,
@@ -29,7 +30,6 @@ from dotfiles_mcp.core.manifest_helpers import (
     _resolve_template_dir,
     discover_layer_template_names,
 )
-from dotfiles_mcp.governance.promotion_engine import collect_layer_effective_bindings
 
 
 def configure_fork_manifest(

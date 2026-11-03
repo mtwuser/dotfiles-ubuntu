@@ -6,6 +6,8 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 from __future__ import annotations
 
 import fnmatch
+import json
+from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.core.constants import (
@@ -16,6 +18,30 @@ from dotfiles_mcp.core.constants import (
     SPECIFICITY_WEIGHT_TRAIT,
     STRUCTURAL_PATH_SEGMENTS,
 )
+from dotfiles_mcp.core.manifest_helpers import _resolve_template_dir
+
+
+def collect_layer_effective_bindings(
+    layer_dir: Path, manifest: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Merge manifest surface_bindings with active template.json recommended_surface_bindings."""
+    effective, seen_ids = [], set[str]()
+    candidates = list(manifest.get("surface_bindings") or [])
+    for tpl_name in manifest.get("default_stack_templates", []):
+        tpl_dir = _resolve_template_dir(Path(layer_dir), str(tpl_name))
+        meta_file = tpl_dir / "template.json" if tpl_dir is not None else None
+        if meta_file is not None and meta_file.is_file():
+            loaded = json.loads(meta_file.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                candidates.extend(loaded.get("recommended_surface_bindings", []))
+    for raw_b in candidates:
+        if isinstance(raw_b, dict):
+            bid = str(raw_b.get("binding_id", ""))
+            if not bid or bid not in seen_ids:
+                if bid:
+                    seen_ids.add(bid)
+                effective.append(raw_b)
+    return effective
 
 
 def _infer_plane_from_path(rel_path: str) -> str:
