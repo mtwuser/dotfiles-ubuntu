@@ -10,6 +10,7 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
+from dotfiles_mcp import manifest_helpers
 from dotfiles_mcp.constants import REPO_DIR
 from dotfiles_mcp.promotion_engine import (
     collect_layer_effective_bindings,
@@ -413,23 +414,21 @@ class TestPromotionEngine:
             rf.write_text(txt, encoding="utf-8")
             ts = (oss_dir / "templates/business-base/rules" / name).stat().st_mtime_ns
             os.utime(rf, ns=(ts, ts))
+        up_p_sha = manifest_helpers._sha256_file(oss_dir / "templates/business-base/rules/p.md")
+        (proj_dir / "templates/business-base/template.json").write_text(
+            f'{{"reconciled_upstream_sha256": {{"p.md": "{up_p_sha}"}}}}', encoding="utf-8"
+        )
         (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", encoding="utf-8")
 
         # Act
         oss_tpl_res = promote_project_asset_to_layer(
-            oss_dir,
-            proj_dir,
-            source_rel_path="templates/business-base/rules/business-base.md",
-            upstream_dir=oss_dir,
-            dry_run=True,
-        )
+            oss_dir, proj_dir, source_rel_path="templates/business-base/rules/business-base.md",
+            upstream_dir=oss_dir, dry_run=True,
+        )  # fmt: skip
         oss_asset_res = promote_project_asset_to_layer(
-            oss_dir,
-            proj_dir,
-            source_rel_path="templates/business-base/assets/a.md",
-            upstream_dir=oss_dir,
-            dry_run=True,
-        )
+            oss_dir, proj_dir, source_rel_path="templates/business-base/assets/a.md",
+            upstream_dir=oss_dir, dry_run=True,
+        )  # fmt: skip
         hz_oss = inspect_layer_horizon(oss_dir, proj_dir)
         hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
         new_sk = oss_dir / "templates/business-base/skills/new-sk/SKILL.md"

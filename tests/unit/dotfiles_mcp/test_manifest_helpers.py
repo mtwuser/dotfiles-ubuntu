@@ -185,10 +185,12 @@ class TestManifestHelpers:
         assert valid_lines == ["curl", "git"]
         assert merged == ["a", "b", "c"]
 
-    def test_is_dest_template_newer_and_mounted_child_drift_sync(self, tmp_path: Path) -> None:
+    def test_is_dest_template_newer_and_mounted_child_drift_sync(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Detect newer destination templates and synchronize mounted child layers from siblings."""
         # Arrange
-        src_tpl = tmp_path / "src_tpl"
+        src_tpl = tmp_path / "src_repo/templates/src_tpl"
         dest_tpl = tmp_path / "dest_tpl"
         newer_missing = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
         (src_tpl / "rules").mkdir(parents=True)
@@ -203,6 +205,19 @@ class TestManifestHelpers:
         newer_true = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
         os.utime(dest_rf, ns=(1_000_000_000, 1_000_000_000))
         newer_equal = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+        (tmp_path / "src_repo/.git").mkdir(parents=True)
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            lambda cmd, **kw: subprocess.CompletedProcess(cmd, returncode=0),
+        )
+        newer_git_historical = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
+        monkeypatch.setattr(
+            subprocess,
+            "run",
+            lambda cmd, **kw: subprocess.CompletedProcess(cmd, returncode=1),
+        )
+        newer_git_local_blob = manifest_helpers._is_dest_template_newer(src_tpl, dest_tpl)
         src_sha = manifest_helpers._sha256_file(src_rf)
         (dest_tpl / "template.json").write_text(
             f'{{"reconciled_upstream_sha256": {{"base.md": "{src_sha}"}}}}',
@@ -226,6 +241,10 @@ class TestManifestHelpers:
         (mounted_child / "system").mkdir(parents=True)
         (mounted_child / "system/mcp-layer.json").write_text(
             '{"schema_version": "1.0", "layer_id": "dept-alpha"}', encoding="utf-8"
+        )
+        (mounted_child / "Makefile").write_text(
+            "# Role-Specialized Layer Makefile — dept-alpha (department)\nstatus:\n\t@true\n",
+            encoding="utf-8",
         )
         (mounted_child / "templates/business-base/rules").mkdir(parents=True)
         (mounted_child / "templates/business-base/template.json").write_text(
@@ -281,11 +300,19 @@ class TestManifestHelpers:
             parent_ws, mounted_entries, dry_run=False
         )
         drifts_after = manifest_helpers._inspect_mounted_children_drifts(parent_ws, mounted_entries)
+        (mounted_child / "templates/business-base/rules/business-base.md").write_text(
+            "# Old v1\n", encoding="utf-8"
+        )
+        manifest_helpers._sync_mounted_children_into_parent(
+            parent_ws, mounted_entries, dry_run=False
+        )
 
         # Assert
         assert newer_missing is False
         assert newer_true is True
         assert newer_equal is False
+        assert newer_git_historical is False
+        assert newer_git_local_blob is True
         assert newer_reconciled is True
         assert missing_resolved is None
         assert direct_resolved == direct_sib.resolve()
@@ -296,6 +323,7 @@ class TestManifestHelpers:
         assert self_parent is None
         assert len(drifts_before) == 1
         assert "system/mcp-layer.json" in drifts_before[0]["drift_files"]
+        assert "Makefile" in drifts_before[0]["drift_files"]
         assert "templates/business-base/template.json" in drifts_before[0]["drift_files"]
         assert "templates/business-base/rules/business-base.md" in drifts_before[0]["drift_files"]
         assert (
@@ -305,6 +333,7 @@ class TestManifestHelpers:
         assert dry_synced == ["dept-alpha"]
         assert rule_after_dry == "# Old v1\n"
         assert live_synced == ["dept-alpha"]
+        assert "--strategy $(STRATEGY)" in (mounted_child / "Makefile").read_text(encoding="utf-8")
         assert (mounted_child / "templates/business-base/rules/business-base.md").read_text(
             encoding="utf-8"
         ) == "# Parent v2\n"

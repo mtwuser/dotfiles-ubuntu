@@ -17,57 +17,55 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.constants import (
+    DEFAULT_SQUAD_ONBOARDING_SPEC,
+    HUMAN_STACK_BLUEPRINT_HINT,
+    LAYER_MAKEFILE_RECIPES,
     LAYER_MANIFEST_CONTRACT_REV,
+    LAYER_ROLE_MAKEFILE_TARGETS,
+    MAKEFILE_ROLE_HEADER_PREFIX,
     MISSING_VERSION_SENTINEL,
     REPO_DIR,
+    ROLE_ONBOARDING_SPECS,
     TEMPLATE_MANIFEST_CONTRACT_REV,
     TEMPLATE_STACK_GROUP_DIRS,
 )
 
 
 def _read_version(repo_dir: Path | None = None) -> str:
-    base_dir = repo_dir or REPO_DIR
-    version_file = base_dir / "VERSION"
-    if version_file.is_file():
-        return version_file.read_text(encoding="utf-8").strip()
-    return MISSING_VERSION_SENTINEL
+    vf = (repo_dir or REPO_DIR) / "VERSION"
+    return vf.read_text(encoding="utf-8").strip() if vf.is_file() else MISSING_VERSION_SENTINEL
 
 
 def _read_os_pretty_name(os_release: Path | None = None) -> str:
-    release_file = os_release or Path("/etc/os-release")
-    if release_file.is_file():
-        for line in release_file.read_text(encoding="utf-8", errors="ignore").splitlines():
+    rf = os_release or Path("/etc/os-release")
+    if rf.is_file():
+        for line in rf.read_text(encoding="utf-8", errors="ignore").splitlines():
             if line.startswith("PRETTY_NAME="):
                 return line.split("=", 1)[1].strip().strip('"')
     return f"{platform.system()} {platform.release()}"
 
 
 def _is_running_in_container(marker_path: Path | None = None) -> bool:
-    marker = marker_path or Path("/.dockerenv")
-    return marker.is_file()
+    return (marker_path or Path("/.dockerenv")).is_file()
 
 
 def _read_git_commit(repo_dir: Path | None = None) -> str:
-    base_dir = repo_dir or REPO_DIR
-    env_fallback = os.environ.get("DOTFILES_GIT_COMMIT", "").strip()
+    base_dir, env_fb = repo_dir or REPO_DIR, os.environ.get("DOTFILES_GIT_COMMIT", "").strip()
     git_bin = shutil.which("git")
     if not git_bin:
-        return env_fallback or "unknown"
-    try:
+        return env_fb or "unknown"
+    with contextlib.suppress(OSError):
         proc = subprocess.run(  # noqa: S603
             [git_bin, "rev-parse", "--short", "HEAD"], cwd=base_dir,
             capture_output=True, text=True, timeout=5, check=False,
         )  # fmt: skip
         if proc.returncode == 0:
             return proc.stdout.strip()
-    except OSError:
-        pass
-    return env_fallback or "unknown"
+    return env_fb or "unknown"
 
 
 def _parse_skill_frontmatter(skill_md: Path, repo_dir: Path | None = None) -> dict[str, Any]:
-    base_dir = repo_dir or REPO_DIR
-    lines = skill_md.read_text(encoding="utf-8").splitlines()
+    base_dir, lines = repo_dir or REPO_DIR, skill_md.read_text(encoding="utf-8").splitlines()
     name, description = skill_md.parent.name, ""
     if lines and lines[0].strip() == "---":
         for idx in range(1, min(len(lines), 30)):
@@ -86,19 +84,17 @@ def _read_non_empty_lines(path: Path) -> list[str]:
     if not path.is_file():
         return []
     return [
-        line.strip()
-        for line in path.read_text(encoding="utf-8", errors="ignore").splitlines()
-        if line.strip() and not line.strip().startswith("#")
+        ln.strip()
+        for ln in path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if ln.strip() and not ln.strip().startswith("#")
     ]
 
 
 def _merge_unique_strings(*groups: list[str]) -> list[str]:
-    seen: set[str] = set()
-    merged: list[str] = []
+    seen, merged = set[str](), list[str]()
     for group in groups:
         for item in group:
-            clean = str(item).strip()
-            if clean and clean not in seen:
+            if (clean := str(item).strip()) and clean not in seen:
                 seen.add(clean)
                 merged.append(clean)
     return merged
@@ -113,8 +109,7 @@ def _count_result_warnings(result: dict[str, Any]) -> int:
         return 0
     with contextlib.suppress(json.JSONDecodeError):
         parsed: dict[str, Any] = json.loads(first_text)
-        top_w = parsed.get("warnings")
-        if isinstance(top_w, list):
+        if isinstance(top_w := parsed.get("warnings"), list):
             return len(top_w)
         ch3 = parsed.get("channel_3_active_invariants_and_hooks")
         if isinstance(ch3, dict) and isinstance(ch3.get("warnings"), list):
@@ -133,19 +128,13 @@ def _extract_compaction_event_fields(target: str, result: dict[str, Any]) -> dic
         parsed: dict[str, Any] = json.loads(first_text)
         if target in ("query_governance_rules", "resolve_surface_governance"):
             metrics = parsed.get("token_compaction_metrics", {})
-            return {
-                "resolution": str(
-                    parsed.get("resolution") or metrics.get("resolution", "adaptive")
-                ),
-                "tokens_saved": int(metrics.get("tokens_saved", 0)),
-                "savings_pct": float(metrics.get("savings_pct", 0.0)),
-            }
+            res = str(parsed.get("resolution") or metrics.get("resolution", "adaptive"))
+            return {"resolution": res, "tokens_saved": int(metrics.get("tokens_saved", 0)),
+                "savings_pct": float(metrics.get("savings_pct", 0.0))}  # fmt: skip
         if target == "unfold_context_capsule":
-            return {
-                "unfolded_level": parsed.get("unfolded_level"),
+            return {"unfolded_level": parsed.get("unfolded_level"),
                 "agent_tier": str(parsed.get("agent_tier", "inherit")),
-                "decrypted_hops": int(parsed.get("decrypted_hops", 0)),
-            }
+                "decrypted_hops": int(parsed.get("decrypted_hops", 0))}  # fmt: skip
     return {}
 
 
@@ -172,38 +161,37 @@ def _resolve_template_dir(layer_dir: Path, tpl_ref: str) -> Path | None:
     clean = tpl_ref.strip().strip("/")
     if not clean or clean in TEMPLATE_STACK_GROUP_DIRS:
         return None
-    templates_root = layer_dir / "templates"
-    leaf = clean.split("/")[-1]
-    for cand in (
-        templates_root / clean,
-        templates_root / leaf,
-        *(templates_root / grp / leaf for grp in TEMPLATE_STACK_GROUP_DIRS),
-    ):
-        if cand.is_dir() and cand.name not in TEMPLATE_STACK_GROUP_DIRS:
-            return cand
-    return None
+    t_root, leaf = layer_dir / "templates", clean.split("/")[-1]
+    cands = (t_root / clean, t_root / leaf, *(t_root / g / leaf for g in TEMPLATE_STACK_GROUP_DIRS))
+    return next((c for c in cands if c.is_dir() and c.name not in TEMPLATE_STACK_GROUP_DIRS), None)
 
 
 def _resolve_template_dest_dir(
-    layer_dir: Path,
-    tpl_name: str,
-    *,
-    kind: str | None = None,
-    src_tpl: Path | None = None,
+    layer_dir: Path, tpl_name: str, *, kind: str | None = None, src_tpl: Path | None = None
 ) -> Path:
     """Resolve the destination directory for creating, syncing, or promoting a template pack."""
     if src_tpl is not None and src_tpl.parent.name in TEMPLATE_STACK_GROUP_DIRS:
         return layer_dir / "templates" / src_tpl.parent.name / tpl_name
-    existing = _resolve_template_dir(layer_dir, tpl_name)
-    if existing is not None:
+    if (existing := _resolve_template_dir(layer_dir, tpl_name)) is not None:
         return existing
     if kind in TEMPLATE_STACK_GROUP_DIRS:
         return layer_dir / "templates" / str(kind) / tpl_name
     return layer_dir / "templates" / tpl_name
 
 
+def _is_git_historical_blob(src_tpl: Path, dest_rf: Path) -> bool:
+    """Return True if dest_rf matches any historical git blob in src_tpl's repository."""
+    src_repo = next((p for p in src_tpl.parents if (p / ".git").exists()), None)
+    if src_repo is None:
+        return True
+    raw = dest_rf.read_bytes()
+    oid = hashlib.sha1(f"blob {len(raw)}\0".encode() + raw, usedforsecurity=False).hexdigest()
+    cmd = [shutil.which("git") or "/usr/bin/git", "-C", str(src_repo), "cat-file", "-e", oid]
+    return subprocess.run(cmd, check=False, capture_output=True).returncode == 0  # noqa: S603
+
+
 def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
-    """Return True if dest_tpl has a modified rule file with newer mtime or reconciled sha."""
+    """Return True if dest_tpl has a modified rule file with newer mtime, sha, or local blob."""
     if not (dest_tpl / "rules").is_dir() or not (src_tpl / "rules").is_dir():
         return False
     tj = dest_tpl / "template.json"
@@ -218,7 +206,10 @@ def _is_dest_template_newer(src_tpl: Path, dest_tpl: Path) -> bool:
             if dest_sha != src_sha and (
                 dest_sha != rec_sha
                 if isinstance(rec_sha, str)
-                else dest_rf.stat().st_mtime_ns > src_rf.stat().st_mtime_ns
+                else (
+                    dest_rf.stat().st_mtime_ns > src_rf.stat().st_mtime_ns
+                    or not _is_git_historical_blob(src_tpl, dest_rf)
+                )
             ):
                 return True
     return False
@@ -282,21 +273,62 @@ def _stamp_schema_rev(json_file: Path, expected_rev: str) -> None:
         json_file.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", "utf-8")
 
 
+def _is_makefile_outdated(ws_dir: Path, role: str) -> bool:
+    """Return True if ws_dir/Makefile is a generated layer Makefile missing current targets."""
+    req_t = LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"])
+    mk_txt = (ws_dir / "Makefile").read_text("utf-8") if (ws_dir / "Makefile").is_file() else ""
+    return mk_txt.startswith(MAKEFILE_ROLE_HEADER_PREFIX) and (
+        any(f"\n{t}:\n" not in mk_txt for t in req_t) or "--strategy $(STRATEGY)" not in mk_txt
+    )
+
+
+def _render_layer_makefile(
+    layer_id: str, layer_role: str, effective_parent: Path, repo_dir: Path
+) -> str:
+    """Render a role-specialized Makefile for day-to-day layer horizon, sync, and promotion."""
+    p_val = (
+        str(effective_parent.resolve()) if effective_parent.resolve() != repo_dir.resolve() else ""
+    )
+    dev_repo = "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))"
+    contrib_cfg = (
+        f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
+        f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
+        if layer_role == "corporate"
+        else "TARGET_REPO ?= $(PARENT_DIR)\n"
+    )
+    active = LAYER_ROLE_MAKEFILE_TARGETS.get(layer_role, LAYER_ROLE_MAKEFILE_TARGETS["department"])
+    sel = [t for t in active if t in LAYER_MAKEFILE_RECIPES]
+    phony, help_lines = " ".join(["help", *sel]), "\n".join(f'\t@echo "  make {t}"' for t in sel)
+    recipes = "\n".join(f"{t}:\n{LAYER_MAKEFILE_RECIPES[t]}" for t in sel)
+    return (
+        f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
+        f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {p_val}\n{contrib_cfg}"
+        "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
+        f".PHONY: {phony}\n"
+        f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n{help_lines}\n\n{recipes}\n'
+    )
+
+
 def _inspect_mounted_children_drifts(
     workspace_dir: Path, mounted_layers: list[Any]
 ) -> list[dict[str, Any]]:
-    """Detect contract or shared-template drift inside mounted layers/<child>/ subtrees."""
+    """Detect contract, Makefile, or shared-template drift inside mounted layers/<child>/."""
     ws, drifts = workspace_dir.resolve(), []
     for entry in (e for e in (mounted_layers or []) if isinstance(e, dict)):
         cname = str(entry.get("name") or entry.get("layer_id") or "").strip()
         mdir = ws / "layers" / cname
         if not cname or not mdir.is_dir():
             continue
+        cm_f = mdir / "system/mcp-layer.json"
+        cm = json.loads(cm_f.read_text("utf-8")) if cm_f.is_file() else {}
+        crole = str(cm.get("layer_role") or entry.get("layer_role") or "department")
         c_files = (
             ["system/mcp-layer.json"]
-            if _has_stale_schema(mdir / "system/mcp-layer.json", LAYER_MANIFEST_CONTRACT_REV)
+            if _has_stale_schema(cm_f, LAYER_MANIFEST_CONTRACT_REV)
             else []
         )
+        if _is_makefile_outdated(mdir, crole):
+            c_files.append("Makefile")
         for tname, ctdir in _iter_layer_template_dirs(mdir):
             if _has_stale_schema(tj := ctdir / "template.json", TEMPLATE_MANIFEST_CONTRACT_REV):
                 c_files.append(str(tj.relative_to(mdir)).replace("\\", "/"))
@@ -318,12 +350,18 @@ def _inspect_mounted_children_drifts(
 def _sync_mounted_children_into_parent(
     target_dir: Path, mounted_layers: list[Any], *, dry_run: bool = False
 ) -> list[str]:
-    """Synchronize parent contracts and shared templates into mounted layers/<child>/ subtrees."""
+    """Synchronize parent contracts, Makefile, and shared templates into layers/<child>/."""
     ws = target_dir.resolve()
     synced = [str(d["layer_id"]) for d in _inspect_mounted_children_drifts(ws, mounted_layers)]
     for cname in () if dry_run else synced:
-        mdir = ws / "layers" / cname
-        _stamp_schema_rev(mdir / "system/mcp-layer.json", LAYER_MANIFEST_CONTRACT_REV)
+        mdir, cm_f = ws / "layers" / cname, ws / "layers" / cname / "system/mcp-layer.json"
+        _stamp_schema_rev(cm_f, LAYER_MANIFEST_CONTRACT_REV)
+        cm = json.loads(cm_f.read_text("utf-8")) if cm_f.is_file() else {}
+        cid, crole = str(cm.get("layer_id") or cname), str(cm.get("layer_role") or "department")
+        if _is_makefile_outdated(mdir, crole):
+            (mdir / "Makefile").write_text(
+                _render_layer_makefile(cid, crole, ws, REPO_DIR), "utf-8"
+            )
         for tname, ctdir in _iter_layer_template_dirs(mdir):
             _stamp_schema_rev(ctdir / "template.json", TEMPLATE_MANIFEST_CONTRACT_REV)
             ptdir = _resolve_template_dir(ws, tname)
@@ -363,52 +401,13 @@ def _resolve_oss_contrib_repo_dir(up: Path) -> Path:
     return up
 
 
-_DEFAULT_SQUAD_SPEC: tuple[str, str, str, str] = (
-    "Level 3 — Squad Execution & Tech Stack Governance",
-    "[Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]",
-    "[Fill: Target application repositories for apply-project, e.g. /path/to/app-service]",
-    "apply-project commands for our target application repositories",
-)
-_ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
-    "corporate": (
-        "Level 1 — Root 0 (Business & Corporate Governance)",
-        "[Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]",
-        "[Fill: Planned child Departments (--role department / --role domain-policy)]",
-        "bootstrap-workspace commands to initialize our planned child Departments",
-    ),
-    "department": (
-        "Level 2 — Department & Cross-Cutting Domain Governance",
-        "[Fill: Department mission, domain invariants, and target file surface globs]",
-        "[Fill: Planned child Squads (--role squad, e.g. squad-core-api)]",
-        "bootstrap-workspace commands to initialize our child Squads",
-    ),
-    "domain-policy": (
-        "Level 2 — Department & Cross-Cutting Domain Policy Governance",
-        "[Fill: Cross-cutting policy domain (Legal/IP/Security), invariants, and surface globs]",
-        "[Fill: Consumer Departments or Squads mounting this policy layer]",
-        "register-subtree and bootstrap-workspace commands for consumer layers",
-    ),
-    "squad": _DEFAULT_SQUAD_SPEC,
-}
-
-
-_HUMAN_STACK_BLUEPRINT_HINT = (
-    "[Optional: leave blank for default, or compose Human-Specs: "
-    "domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]"
-)
-
-
 def _render_layer_onboarding_readme(
-    layer_id: str,
-    layer_role: str,
-    effective_prec: int,
-    own_tpl_id: str,
-    active_templates: list[str],
-    parent_id: str | None = None,
-) -> str:
+    layer_id: str, layer_role: str, effective_prec: int, own_tpl_id: str,
+    active_templates: list[str], parent_id: str | None = None,
+) -> str:  # fmt: skip
     """Render a role-specific Layer Setup Blueprint and Initial Chat Kickoff Prompt."""
-    tier_title, scope_hint, children_hint, next_cmd_goal = _ROLE_ONBOARDING_SPECS.get(
-        layer_role, _DEFAULT_SQUAD_SPEC
+    tier_title, scope_hint, children_hint, next_cmd_goal = ROLE_ONBOARDING_SPECS.get(
+        layer_role, DEFAULT_SQUAD_ONBOARDING_SPEC
     )
     tpl_csv = ", ".join(f"`{t}`" for t in active_templates) or "`none`"
     parent_label = f"`{parent_id}`" if parent_id else "`open-source-root`"
@@ -418,18 +417,16 @@ def _render_layer_onboarding_readme(
         f"- **Layer ID & Role**: `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`)\n"
         f"- **1-Hop Upstream Parent**: {parent_label}\n"
         f"- **Active Template Packs**: {tpl_csv}\n"
-        f"- **Human-Stack Profile (Optional)**: {_HUMAN_STACK_BLUEPRINT_HINT}\n"
+        f"- **Human-Stack Profile (Optional)**: {HUMAN_STACK_BLUEPRINT_HINT}\n"
         f"- **Mission, Scope & Core Invariants**: {scope_hint}\n"
         f"- **Downstream Topology (Next Tier)**: {children_hint}\n"
         f"- **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]\n\n"
-        f"## Initial Chat Kickoff Prompt\n\n"
-        f"```text\n"
+        f"## Initial Chat Kickoff Prompt\n\n```text\n"
         f"Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and "
         f".agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and "
         f"templates/{own_tpl_id}/rules/{own_tpl_id}.md with our mission and invariants without "
         f"duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and "
-        f"WORKTASK.md, and output the exact ./scripts/layer-config.sh {next_cmd_goal}.\n"
-        f"```\n"
+        f"WORKTASK.md, and output the exact ./scripts/layer-config.sh {next_cmd_goal}.\n```\n"
     )
 
 
@@ -446,7 +443,7 @@ def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
         "",
         "## Project Setup Blueprint (Level 4 — Application Workspace)",
         f"- **Applied Template Packs**: `{tpl_label}`",
-        f"- **Human-Stack Profile (Optional)**: {_HUMAN_STACK_BLUEPRINT_HINT}",
+        f"- **Human-Stack Profile (Optional)**: {HUMAN_STACK_BLUEPRINT_HINT}",
         "- **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]",
         "- **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]",
         "- **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]",

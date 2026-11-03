@@ -38,7 +38,6 @@ from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _inspect_mounted_children_drifts,
-    _is_dest_template_newer,
     _iter_layer_template_dirs,
     _parse_skill_frontmatter,
     _resolve_default_parent_dir,
@@ -81,10 +80,8 @@ def _route_novel_item(
     for rec in layer_records:
         lname = str(rec["name"])
         if lname != "root" and (lname in stem or bool(tokens & set(rec["keywords"]))):
-            tpls, sfx = (
-                list(rec["templates"]),
-                "AGENTS.md" if item_kind == "rules" else f"skills/{stem}/SKILL.md",
-            )
+            tpls = list(rec["templates"])
+            sfx = "AGENTS.md" if item_kind == "rules" else f"skills/{stem}/SKILL.md"
             dest = (
                 f"layers/{lname}/templates/{tpls[0]}/{item_kind}/{item_name}"
                 if tpls
@@ -96,8 +93,10 @@ def _route_novel_item(
                 "subtree_push_command": push_cmd}  # fmt: skip
     root_rec, root_tpls = layer_records[0], list(layer_records[0]["templates"])
     if item_kind == "rules" and root_tpls:
-        dest = f"templates/{root_tpls[0]}/rules/{item_name}"
-        scope = f"template-pack:root:{root_tpls[0]}"
+        dest, scope = (
+            f"templates/{root_tpls[0]}/rules/{item_name}",
+            f"template-pack:root:{root_tpls[0]}",
+        )
     elif item_kind == "skills":
         dest, scope = f"antigravity/.gemini/config/skills/{stem}/SKILL.md", "global-skills-root"
     else:
@@ -135,9 +134,7 @@ def compare_project_patterns_multilayer(
     materialized_rules = [r for r in project_rules if MATERIALIZED_RULE_RE.match(r)]
     filtered_rules = [r for r in project_rules if not MATERIALIZED_RULE_RE.match(r)]
     novel_rules = sorted(r for r in filtered_rules if r not in layer_b_rules)
-    novel_skills = sorted(
-        s for s in project_skills if s not in layer_a_skills and s not in layer_b_skills
-    )
+    novel_skills = sorted(s for s in project_skills if s not in (layer_a_skills | layer_b_skills))
     root_ag = repo_dir / "antigravity/.gemini/config/AGENTS.md"
     headroom = max(0, AGENTS_MD_MAX_BYTES - (root_ag.stat().st_size if root_ag.is_file() else 0))
     routing = [
@@ -165,13 +162,12 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     """Compare SHA-256 digests between <project_dir>/.agents/ and fork layers/templates."""
     layer_sources: dict[str, list[tuple[str, Path]]] = {}
     agents_dir, proj_resolved = project_dir / ".agents", project_dir.resolve()
-    sub_layers = [
-        (s.name, s)
-        for s in sorted((repo_dir / "layers").glob("*"))
+    subs = [
+        (s.name, s) for s in sorted((repo_dir / "layers").glob("*"))
         if s.is_dir() and not s.name.startswith(".")
-    ]
+    ]  # fmt: skip
     eng_dirs = [("engine", REPO_DIR)] if repo_dir.resolve() != REPO_DIR.resolve() else []
-    for lname, ldir in [("root", repo_dir), *sub_layers, *eng_dirs]:
+    for lname, ldir in [("root", repo_dir), *subs, *eng_dirs]:
         for tname, tdir in _iter_layer_template_dirs(ldir):
             tag = f"{lname}:{tname}"
             for rf in sorted((tdir / "rules").glob("*.md")):
@@ -195,9 +191,8 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
     ]
     a_files = [
         (str(af.relative_to(agents_dir)).replace("\\", "/"), af)
-        for af in sorted((agents_dir / "assets").rglob("*"))
-        if af.is_file()
-    ]
+        for af in sorted((agents_dir / "assets").rglob("*")) if af.is_file()
+    ]  # fmt: skip
     for rel_key, pfile in [*r_files, *s_files, *a_files]:
         if not pfile.resolve().is_relative_to(proj_resolved):
             raise ValueError(f"Outbound symlink escape denied in project_dir: {rel_key}")
@@ -220,9 +215,8 @@ def diff_project_against_layers(repo_dir: Path, project_dir: Path) -> dict[str, 
                 origin, src_path = candidates[0]
                 base_r = REPO_DIR if origin.startswith("engine:") else repo_dir
                 rel_t = str(src_path.relative_to(base_r))
-                modified_in_project.append(
-                    {"file": rel_key, "source": origin, "target_path": rel_t}
-                )
+                mod_item = {"file": rel_key, "source": origin, "target_path": rel_t}
+                modified_in_project.append(mod_item)
         else:
             novel_in_project.append(rel_key)
     return {"project_dir": str(project_dir), "in_sync": in_sync,
@@ -338,8 +332,10 @@ def promote_project_asset_to_layer(
         dest_file.parent.mkdir(parents=True, exist_ok=True)
         if is_tracker:
             om = _load_manifest_dict(project_dir)
-            oid = str(om.get("layer_id", project_dir.name))
-            orole = str(om.get("layer_role", "project"))
+            oid, orole = (
+                str(om.get("layer_id", project_dir.name)),
+                str(om.get("layer_role", "project")),
+            )
             oprec = int(om.get("precedence", ROLE_DEFAULT_PRECEDENCE["service-node"]))
             hdr = f"## Proposed from `{oid}` (`{orole}`, `precedence: {oprec}`)"
             def_hdr = f"# {rel_parts[0].removesuffix('.md')} — {layer_base.name}"
@@ -389,10 +385,8 @@ def inspect_layer_horizon(
     contrib_dir = _resolve_oss_contrib_repo_dir(up) if is_oss else up
     a_kw: dict[str, Any] = {"operation": "release", "actor_email": actor_email,
         "record_blocked": False}  # fmt: skip
-    auth_v, up_auth_v = (
-        verify_layer_operation_authority(ws, **a_kw),
-        verify_layer_operation_authority(up, **a_kw),
-    )
+    auth_v = verify_layer_operation_authority(ws, **a_kw)
+    up_auth_v = verify_layer_operation_authority(up, **a_kw)
     ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
     cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
     tpl_pairs = [
@@ -402,15 +396,20 @@ def inspect_layer_horizon(
     ]
     drifts: list[dict[str, Any]] = []
     for tpl, up_tdir, ws_tdir in tpl_pairs:
-        ws_newer = _is_dest_template_newer(up_tdir, ws_tdir)
+        tj = ws_tdir / "template.json"
+        raw_rec = (json.loads(tj.read_text("utf-8")) if tj.is_file() else {}).get(
+            "reconciled_upstream_sha256"
+        )
+        rec_map: dict[str, Any] = raw_rec if isinstance(raw_rec, dict) else {}
         for ws_rf in sorted((ws_tdir / "rules").glob("*.md")):
             up_rf = up_tdir / "rules" / ws_rf.name
             if not up_rf.is_file() or _sha256_file(ws_rf) != _sha256_file(up_rf):
                 rel_src = str(ws_rf.relative_to(ws)).replace("\\", "/")
-                up_newer = (
-                    up_rf.is_file()
-                    and not ws_newer
-                    and up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
+                rec_sha = rec_map.get(ws_rf.name)
+                up_newer = up_rf.is_file() and (
+                    _sha256_file(up_rf) != rec_sha
+                    if isinstance(rec_sha, str)
+                    else up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
                 )
                 oss_ok = True
                 try:

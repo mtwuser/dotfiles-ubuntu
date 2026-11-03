@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added & Changed
+- **Git Historical Blob Protection Against `mtime` Reset (`_is_git_historical_blob`), 3-Way `reconciled_upstream_sha256` Horizon Detection & Automatic Child Subtree `Makefile` Upgrade (`scripts/dotfiles_mcp/manifest_helpers.py`, `scripts/dotfiles_mcp/promotion_engine.py`, `scripts/dotfiles_mcp/git_governance_engine.py`, `scripts/dotfiles_mcp/workspace_bootstrapper.py`, `scripts/dotfiles_mcp/constants.py`, `docs/architecture/04_compaction_surface_and_promotion_engines.md`, `tests/unit/dotfiles_mcp/`)**:
+  - Added [`_is_git_historical_blob`](scripts/dotfiles_mcp/manifest_helpers.py) into [`_is_dest_template_newer`](scripts/dotfiles_mcp/manifest_helpers.py) so that when `reconciled_upstream_sha256` is not yet stamped in `template.json` and `workstation-sync.sh --sync` (`git reset --hard`) refreshes upstream rule `mtime`s, `reconcile_template_pack_sync` verifies whether the downstream rule's git blob (`hashlib.sha1`) ever existed in the upstream Git repository (`git cat-file -e <oid>`) — preserving locally customized downstream rules (`is_local_newer = True` $\rightarrow$ staged in `.agents/proposals/from-upstream/`) while safely fast-forwarding untouched historical upstream rules.
+  - Wired `reconciled_upstream_sha256` into [`inspect_layer_horizon`](scripts/dotfiles_mcp/promotion_engine.py) so 3-way divergence (both local and upstream changed since last reconciliation) is flagged as `upstream_newer` (`downward_sync_needed: true`), and extended [`_inspect_mounted_children_drifts`](scripts/dotfiles_mcp/manifest_helpers.py) and [`_sync_mounted_children_into_parent`](scripts/dotfiles_mcp/manifest_helpers.py) via [`_is_makefile_outdated`](scripts/dotfiles_mcp/manifest_helpers.py) and [`_render_layer_makefile`](scripts/dotfiles_mcp/manifest_helpers.py) to automatically detect and upgrade outdated `layers/<child>/Makefile` files when the parent (`Root 0`) runs `make sync`.
+
+---
+
 ## [2.9.0] - 2026-11-03
 
 ### Added & Changed
@@ -426,13 +435,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-10-28
 
 ### Added
-- **Navigable Documentation Hub, Normative Architecture Specs & Enterprise "pAIr programming" Guide (`docs/`)**:
-  - Added `docs/README.md` providing a navigable documentation index, document hierarchy map, Mermaid subsystem diagram, and quick-lookup table for both humans and AI agents.
-  - Added `docs/architecture/01_system_and_stow_engine.md` specifying the Ubuntu 26.04 LTS tripartite lifecycle (`backup.sh` $\leftrightarrow$ `audit.sh` $\leftrightarrow$ `bootstrap.sh`), 3-stage APT filtering pipeline, `system/external/{apt-repo,deb-url,script}/` plugin contracts, and GNU Stow tree-unfolding invariants.
-  - Added `docs/architecture/02_antigravity_governance_and_hooks.md` specifying the 3-surface `~/.gemini/config/` architecture, the 20,000-token `defaultRulesBudget` & 18 KB `AGENTS.md` cap, sequence diagram and `stdin`/`stdout` JSON contracts for all 4 Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), and the 11 global skills catalog.
-  - Added `docs/reference/enterprise_pair_programming_governance.md` detailing the **Enterprise Use Case — Distributed Human-AI Governance ("pAIr programming") at Scale** (3-tier `Corporate → Team → Project` hierarchy, bidirectional `/learn` $\rightarrow$ `/enrich` evolution, navigable `docs/` with **Google Jules**, **Gemini Code Assist Enterprise**, **Google Developer Knowledge MCP**, **Google NotebookLM**, and **`google-genai` SDK**, plus 1:1 portability matrix to **VS Code & GitHub Copilot**, **Cursor**, and **Claude Code**).
-  - Added `docs/reference/developer_and_extension_guide.md` as a maintainer playbook for evolving `dotfiles-ubuntu` (adding stow vs. non-stow root directories, creating Layer 2 stack templates, authoring external package recipes, and running CI/symlink verification).
-  - Updated `bootstrap.sh` and `audit.sh` to skip the non-stow `docs/` root directory, and updated `README.md` and `scripts/verify-repo.sh` to verify the complete `docs/` hierarchy.
+- **Navigable Documentation Hub, Normative Architecture Specs & Enterprise "pAIr programming" Guide (`docs/`)**: Added `docs/README.md` (index, hierarchy map, Mermaid subsystem diagram), `docs/architecture/01_system_and_stow_engine.md` (`backup.sh` $\leftrightarrow$ `audit.sh` $\leftrightarrow$ `bootstrap.sh`, APT filtering, `system/external/` plugins, GNU Stow invariants), `docs/architecture/02_antigravity_governance_and_hooks.md` (`~/.gemini/config/`, 20,000-token `defaultRulesBudget` & 18 KB `AGENTS.md` cap, 4 Python 3.14 lifecycle hooks, 11 global skills), `docs/reference/enterprise_pair_programming_governance.md` (`Corporate → Team → Project`, Google Jules / Gemini Code Assist / NotebookLM / `google-genai`, VS Code / Copilot / Cursor / Claude Code portability), and `docs/reference/developer_and_extension_guide.md`, and wired `docs/` verification into `bootstrap.sh`, `audit.sh`, `README.md`, and `scripts/verify-repo.sh`.
 
 ---
 

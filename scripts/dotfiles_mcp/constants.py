@@ -353,3 +353,34 @@ TECHNICAL_PHASE_SEMANTICS: dict[str, str] = {
     "pre": "Staging E2E & QA Validation (WORKVALI.md)",
     "pro": "Production Release",
 }
+DEFAULT_SQUAD_ONBOARDING_SPEC: tuple[str, str, str, str] = (
+    "Level 3 — Squad Execution & Tech Stack Governance",
+    "[Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]",
+    "[Fill: Target application repositories for apply-project, e.g. /path/to/app-service]",
+    "apply-project commands for our target application repositories",
+)
+ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
+    "corporate": (
+        "Level 1 — Root 0 (Business & Corporate Governance)",
+        "[Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]",
+        "[Fill: Planned child Departments (--role department / --role domain-policy)]",
+        "bootstrap-workspace commands to initialize our planned child Departments",
+    ),
+    "department": (
+        "Level 2 — Department & Cross-Cutting Domain Governance",
+        "[Fill: Department mission, domain invariants, and target file surface globs]",
+        "[Fill: Planned child Squads (--role squad, e.g. squad-core-api)]",
+        "bootstrap-workspace commands to initialize our child Squads",
+    ),
+    "domain-policy": (
+        "Level 2 — Department & Cross-Cutting Domain Policy Governance",
+        "[Fill: Cross-cutting policy domain (Legal/IP/Security), invariants, and surface globs]",
+        "[Fill: Consumer Departments or Squads mounting this policy layer]",
+        "register-subtree and bootstrap-workspace commands for consumer layers",
+    ),
+    "squad": DEFAULT_SQUAD_ONBOARDING_SPEC,
+}
+HUMAN_STACK_BLUEPRINT_HINT = (
+    "[Optional: leave blank for default, or compose Human-Specs: "
+    "domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]"
+)

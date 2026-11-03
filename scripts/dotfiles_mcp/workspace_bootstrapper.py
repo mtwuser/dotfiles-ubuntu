@@ -18,7 +18,6 @@ from dotfiles_mcp.constants import (
     BUSINESS_MODE_TEMPLATES,
     COMMAND_CONSCIOUSNESS_TIERS,
     KEBAB_ID_RE,
-    LAYER_MAKEFILE_RECIPES,
     LAYER_MANIFEST_CONTRACT_REV,
     LAYER_ROLE_MAKEFILE_TARGETS,
     MAKEFILE_CUSTOM_TARGETS_MARKER,
@@ -45,6 +44,7 @@ from dotfiles_mcp.manifest_helpers import (
     _is_dest_template_newer,
     _iter_layer_template_dirs,
     _merge_unique_strings,
+    _render_layer_makefile,
     _render_layer_onboarding_readme,
     _resolve_default_parent_dir,
     _resolve_template_dest_dir,
@@ -150,33 +150,6 @@ def register_mounted_subtree(
         r_json = json.dumps(root_manifest, indent=2, ensure_ascii=False) + "\n"
         root_manifest_path.write_text(r_json, encoding="utf-8")
     return {"registered_layer": entry, "total_mounted_layers": len(existing), "dry_run": dry_run}
-
-
-def _render_layer_makefile(
-    layer_id: str, layer_role: str, effective_parent: Path, repo_dir: Path
-) -> str:
-    """Render a role-specialized Makefile for day-to-day layer horizon, sync, and promotion."""
-    parent_val = (
-        str(effective_parent.resolve()) if effective_parent.resolve() != repo_dir.resolve() else ""
-    )
-    dev_repo = "$(HOME)/Projects/dev-$(notdir $(DOTFILES_DIR))"
-    contrib_cfg = (
-        f"CONTRIB_REPO ?= $(if $(wildcard {dev_repo}/system/mcp-layer.json),"
-        f"{dev_repo},$(DOTFILES_DIR))\nTARGET_REPO ?= $(CONTRIB_REPO)\n"
-        if layer_role == "corporate"
-        else "TARGET_REPO ?= $(PARENT_DIR)\n"
-    )
-    active = LAYER_ROLE_MAKEFILE_TARGETS.get(layer_role, LAYER_ROLE_MAKEFILE_TARGETS["department"])
-    sel = [t for t in active if t in LAYER_MAKEFILE_RECIPES]
-    phony, help_lines = " ".join(["help", *sel]), "\n".join(f'\t@echo "  make {t}"' for t in sel)
-    recipes = "\n".join(f"{t}:\n{LAYER_MAKEFILE_RECIPES[t]}" for t in sel)
-    return (
-        f"# Role-Specialized Layer Makefile — {layer_id} ({layer_role})\n"
-        f"DOTFILES_DIR ?= $(HOME)/dotfiles-ubuntu\nPARENT_DIR ?= {parent_val}\n{contrib_cfg}"
-        "PARENT_FLAG = $(if $(PARENT_DIR),--parent-dir $(PARENT_DIR),)\nPR_FLAGS ?= --create-pr\n\n"
-        f".PHONY: {phony}\n"
-        f'help:\n\t@echo "Layer Workspace: {layer_id} ({layer_role})"\n{help_lines}\n\n{recipes}\n'
-    )
 
 
 def _sync_templates_from_roots(

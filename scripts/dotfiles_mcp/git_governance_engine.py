@@ -20,8 +20,6 @@ from dotfiles_mcp.constants import (
     DEFAULT_PROCESS_BRANCH_PREFIXES,
     DEFAULT_PROTECTED_BRANCHES,
     LAYER_MANIFEST_CONTRACT_REV,
-    LAYER_ROLE_MAKEFILE_TARGETS,
-    MAKEFILE_ROLE_HEADER_PREFIX,
     MAX_RECENT_GOVERNANCE_ALERTS,
     SECONDS_PER_DAY,
     STALE_MODULE_REVIEW_DAYS,
@@ -32,7 +30,11 @@ from dotfiles_mcp.constants import (
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
 )
-from dotfiles_mcp.manifest_helpers import _resolve_template_dir, _sha256_file
+from dotfiles_mcp.manifest_helpers import (
+    _is_makefile_outdated,
+    _resolve_template_dir,
+    _sha256_file,
+)
 
 
 def _load_manifest(target_dir: Path) -> dict[str, Any]:
@@ -293,11 +295,7 @@ def inspect_git_governance_state(
         "modules_and_specs": STALE_MODULE_REVIEW_DAYS,
         "policies": STALE_POLICY_REVIEW_DAYS}  # fmt: skip
     role = str(manifest.get("layer_role", "project"))
-    req_t = LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"])
-    mk_txt = (ws / "Makefile").read_text("utf-8") if (ws / "Makefile").is_file() else ""
-    mk_outdated = mk_txt.startswith(MAKEFILE_ROLE_HEADER_PREFIX) and (
-        any(f"\n{t}:\n" not in mk_txt for t in req_t) or "--strategy $(STRATEGY)" not in mk_txt
-    )
+    mk_outdated = _is_makefile_outdated(ws, role)
     mc_outdated = bool(
         manifest
         and (
