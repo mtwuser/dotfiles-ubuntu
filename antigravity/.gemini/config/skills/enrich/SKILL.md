@@ -111,6 +111,7 @@ Detect patterns that have **matured** in a project and should move up:
 | A project skill has no equivalent in shared config | New reusable pattern — extract |
 | Multiple projects have similar rules | Convergence — unify in shared |
 | A project rule contradicts a shared rule | Drift — investigate and reconcile |
+| An inter-departmental `ESCALATE_TO_ROOT` deadlock (`BLOCKED`) was arbitrated by `Root 0` | **Consensus-to-Rule Learning Loop** — codify the resolved criterion into the parent template (`rule_learning_hint` / `make promote`) so future tasks pass automatically as `RECONCILED_FLOW` |
 
 ### §2.2 Downward Sync Gaps (Shared → Project)
 
@@ -187,7 +188,8 @@ After approval, distinguish strictly between **Internal Corporate Repositories**
 ### Regime 2 — Open-Source Root (`dotfiles-ubuntu` / `is_oss_community_horizon: true`)
 1. **From External Workspaces (`Root 0` $\rightarrow$ `dotfiles-ubuntu`)**:
    - **NEVER** mutate `~/dotfiles-ubuntu` directly from an external project; execute `make promote SOURCE=<path> TEMPLATE=<pack>` (which passes `--create-pr` automatically via the generated `Makefile`) to generate an anonymized Pull Request (`OSS_AGNOSTICISM_VIOLATION` gate enforced).
-2. **Inside `dotfiles-ubuntu` (Direct Maintenance)**:
+2. **Inside `dotfiles-ubuntu` (`DOTFILES_DEV_REPO_DIR` / `operating_state: "oss-dev"` Direct Self-Enrichment)**:
+   - Because `DOTFILES_DEV_REPO_DIR` (`~/Projects/dev-<repo>`) IS the top-level canonical source (`Layer A`) and `.agents/` is projected from `templates/`, self-enrichment inside `DOTFILES_DEV_REPO_DIR` works by authoring learned rules/skills directly in `antigravity/.gemini/config/skills/*/SKILL.md` and `templates/{human-core,technical-base,business-base}/`, and immediately running `./scripts/layer-config.sh apply-project . --include-defaults` so `.agents/` stays `100% in_sync` (`0` drift in `make diff`).
    - Run `make verify` to confirm all verification gates pass (and sync the `$HOME` appliance via `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync` after release).
    - Log changes under `## [Unreleased]` in `CHANGELOG.md` **without bumping `VERSION`**.
    - **NEVER include `git push` on working/enrichment commits in `dotfiles-ubuntu`**. Pushing to the public Open-Source remote requires an explicit, conscious version release via `/release` (`skills/release/SKILL.md`):

@@ -19,6 +19,7 @@ from dotfiles_mcp.core.constants import (
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
     TEMPLATE_MANIFEST_CONTRACT_REV,
+    VALID_ENTITY_KINDS,
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
 )
@@ -42,6 +43,8 @@ def configure_fork_manifest(
     upstream_url: str | None = None,
     upstream_id: str | None = None,
     upstream_branch: str | None = None,
+    entity_kind: str | None = None,
+    governing_root_id: str | None = None,
     prune_default_templates: bool = False,
     dry_run: bool = False,
 ) -> dict[str, Any]:
@@ -50,6 +53,10 @@ def configure_fork_manifest(
         raise ValueError(f"Invalid layer_id {layer_id!r}: must be kebab-case")
     if layer_role not in VALID_LAYER_ROLES:
         raise ValueError(f"Invalid layer_role {layer_role!r}: must be one of {VALID_LAYER_ROLES}")
+    if entity_kind is not None and entity_kind not in VALID_ENTITY_KINDS:
+        raise ValueError(
+            f"Invalid entity_kind {entity_kind!r}: must be one of {VALID_ENTITY_KINDS}"
+        )
     eff_precedence = precedence if precedence is not None else ROLE_DEFAULT_PRECEDENCE[layer_role]
     if eff_precedence < 0 or eff_precedence > 100:
         raise ValueError(f"Invalid precedence {eff_precedence}: must be between 0 and 100")
@@ -81,6 +88,10 @@ def configure_fork_manifest(
         or base_m.get("description")
         or f"Configured {layer_role} layer ({layer_id})",
     }
+    if entity_kind is not None:
+        manifest["entity_kind"] = entity_kind
+    if governing_root_id is not None:
+        manifest["governing_root_id"] = governing_root_id
     upstream = {**up_default, **dict(manifest.get("upstream_layer", {}))}
     if upstream_url is not None:
         upstream["repository"] = upstream_url

@@ -34,6 +34,7 @@ from dotfiles_mcp.core.constants import (
     VALID_ENVIRONMENTS,
     VALID_RESOLUTIONS,
 )
+from dotfiles_mcp.core.layer_topology_helpers import _resolve_layer_entity_identity
 from dotfiles_mcp.core.manifest_helpers import _merge_unique_strings
 from dotfiles_mcp.mcp_node.ephemeral_fork_engine import extract_ephemeral_advisories
 
@@ -178,6 +179,11 @@ class SurfaceToolsMixin(UnfoldToolsMixin):
                     "layer_id": layer_id,
                     "layer_role": layer_role,
                     "precedence": layer_prec,
+                    "entity_identity": _resolve_layer_entity_identity(ldir, manifest),
+                    "has_authoritative_binding": any(
+                        str(b.get("mode", "transversal")).strip().lower() == "authoritative"
+                        for b in matched_in_layer
+                    ),
                     "matched_bindings_count": len(matched_in_layer),
                 }
             )

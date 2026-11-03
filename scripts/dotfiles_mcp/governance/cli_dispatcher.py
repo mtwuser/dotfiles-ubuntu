@@ -248,8 +248,8 @@ def _dispatch_c2_subcommand(
         )
     if subcmd == "init-fork":
         vf = (
-            "--id", "--role", "--precedence", "--description",
-            "--upstream-url", "--upstream-id", "--upstream-branch",
+            "--id", "--role", "--precedence", "--description", "--upstream-url",
+            "--upstream-id", "--upstream-branch", "--entity-kind", "--governing-root",
         )
         opts = _parse_opts(subcmd, rest, vf, ("--prune-default-templates",))
         lid = _req_opt(opts, "id", "Missing required --id <layer-id> for init-fork.")
@@ -260,6 +260,8 @@ def _dispatch_c2_subcommand(
             description=_opt_str(opts, "description"), upstream_url=_opt_str(opts, "upstream_url"),
             upstream_id=_opt_str(opts, "upstream_id"),
             upstream_branch=_opt_str(opts, "upstream_branch"),
+            entity_kind=_opt_str(opts, "entity_kind"),
+            governing_root_id=_opt_str(opts, "governing_root"),
             prune_default_templates=bool(opts.get("prune_default_templates", False)),
             dry_run=dry_run,
         )

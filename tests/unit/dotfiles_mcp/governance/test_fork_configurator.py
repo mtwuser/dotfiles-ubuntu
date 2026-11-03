@@ -120,12 +120,19 @@ class TestForkConfigurator:
             tmp_path, layer_id="valid-id", precedence=0, dry_run=True
         )
         prec_hundred = configure_fork_manifest(
-            tmp_path, layer_id="valid-id", precedence=100, dry_run=True
+            tmp_path,
+            layer_id="valid-id",
+            precedence=100,
+            entity_kind="enterprise",
+            governing_root_id="acme-root",
+            dry_run=True,
         )
         with pytest.raises(ValueError, match="must be kebab-case"):
             configure_fork_manifest(tmp_path, layer_id=bad_id)
         with pytest.raises(ValueError, match="Invalid layer_role"):
             configure_fork_manifest(tmp_path, layer_id="valid-id", layer_role=bad_role)
+        with pytest.raises(ValueError, match="Invalid entity_kind"):
+            configure_fork_manifest(tmp_path, layer_id="valid-id", entity_kind="unknown")
         with pytest.raises(ValueError, match="Invalid precedence"):
             configure_fork_manifest(tmp_path, layer_id="valid-id", precedence=-1)
         with pytest.raises(ValueError, match="Invalid precedence"):
@@ -133,7 +140,11 @@ class TestForkConfigurator:
 
         # Assert
         assert prec_zero["precedence"] == 0
-        assert prec_hundred["precedence"] == 100
+        assert (
+            prec_hundred["precedence"],
+            prec_hundred["entity_kind"],
+            prec_hundred["governing_root_id"],
+        ) == (100, "enterprise", "acme-root")
 
     def test_scaffold_template_pack_creates_files_and_registers_surface_binding(
         self,

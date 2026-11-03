@@ -53,7 +53,8 @@ Commands (grouped by operational family — 26 total):
       Scaffold templates/<template-name>/ and optionally register its surface_binding.
   init-fork --id <layer-id> [--role <role>] [--precedence <0..100>] [--upstream-url <url>]
             [--upstream-id <id>] [--upstream-branch <branch>] [--description <text>]
-            [--prune-default-templates]
+            [--entity-kind <public-government|enterprise|individual|open-source>]
+            [--governing-root <root-id>] [--prune-default-templates]
       Configure system/mcp-layer.json (schema mcp-layer-v1) for this fork's organizational purpose.
   register-subtree <layer-name> <repo-url> [branch]
       Upsert a mounted subtree entry inside root system/mcp-layer.json -> mounted_layers.

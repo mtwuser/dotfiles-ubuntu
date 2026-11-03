@@ -19,6 +19,7 @@ from dotfiles_mcp.core.constants import (
     MCP_OPERATING_MODES,
     VALID_ENVIRONMENTS,
 )
+from dotfiles_mcp.core.layer_topology_helpers import _resolve_layer_entity_identity
 from dotfiles_mcp.core.manifest_helpers import (
     _is_running_in_container,
     _merge_unique_strings,
@@ -83,6 +84,7 @@ class FederationToolsMixin(MCPNodeBase):
                 "version": _read_version(target_dir),
                 "layer_id": manifest.get("layer_id"),
                 "layer_role": role,
+                "entity_identity": _resolve_layer_entity_identity(target_dir, manifest),
                 "operating_state": op_state,
                 "mcp_operating_mode": mcp_mode,
                 "hostname": socket.gethostname(),

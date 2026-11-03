@@ -117,25 +117,31 @@ Match execution autonomy to the operation's cadence, consolidation level, and bl
    # .agents/proposals/to-<parent>/completion-<ticket>.md + PR plan (feature/<TICKET-ID>-completed).
    ```
 
-### 3. Bottom-Up Operational Proposals (`make promote`), Stage Gates (`make env-gate`), Roster (`make roster`) & Decisions (`make decision`)
+### 3. Level Report (`make horizon`), Bottom-Up Proposals (`make promote`), $N$-Layer Env Gates (`make env-gate`), Roster (`make roster`) & Decisions (`make decision`)
 
-1. **Bottom-Up Roadmap, Ledger & Tracker Proposals (`make promote` / `promote-from-project --create-pr`)**:
+1. **Bilateral 3-Bucket Level Report (`make horizon` / `inspect-horizon`)**:
+   - Inspects what arrived from above (`layer_report.inbound_from_upstream`: delegated tasks, staged `from-*` proposals, parent rule updates with `oss_auto_sync_covered: true`), what arrived from below (`layer_report.inbound_from_downstream`: completed child delegations `[x]`, `completion-*.md` receipts, `to-*` proposals, child drifts), and local workspace changes (`layer_report.local_workspace_changes`, including `pending_consensus_items`), alongside `actor_role_profile` (`owner`, `maintainer`, `validator`, `member`, or read-only `consumer`, plus `entity_identity` and `upstream_relationship`).
+2. **Bottom-Up Roadmap, Ledger & Tracker Proposals (`make promote` / `promote-from-project --create-pr`)**:
    - Escalates operational/business artifacts (`roadmaps/*.md`, `corporate/**`, `docs/**`, `BACKLOG.md`, `WORKROAD.md`, `WORKVALI.md`) 1 hop upward via PR (staging non-destructively at `.agents/proposals/to-<parent>/` when protected):
      ```bash
      make promote SOURCE=<roadmaps/file.md|corporate/policy.md|WORKVALI.md|BACKLOG.md>
      ```
-2. **Isomorphic Business & Technical `dev -> tst -> pre -> pro` Promotion Gate (`make env-gate`)**:
-   - Verifies stage readiness (`0` open `P0` in `WORKTASK.md` for `tst`, `0` unchecked items in `WORKVALI.md` + `validator` / `owner` authority for `pre`, `CHANGELOG.md` + `owner` release authority for `pro`):
+3. **Isomorphic `dev -> tst -> pre -> pro` Promotion Gate & $N$-Departmental Surface Consensus (`make env-gate`)**:
+   - Verifies stage readiness (`0` open `P0` in `WORKTASK.md` + `member` role for `tst`, `0` unchecked items in `WORKVALI.md` + `validator`/`owner` authority for `pre`, `CHANGELOG.md` + `owner` or internal parent `owner` overarching authority `UPSTREAM_HIERARCHICAL_AUTHORITY` for `pro`) and evaluates `evaluate_multilayer_surface_consensus` across all `co_owning_layers` matching `FILES`:
+     - **`RECONCILED_FLOW`**: All $N$ co-owning layers satisfied $\rightarrow$ proceeds to `pre`/`pro`.
+     - **`ITERATION_REQUIRED`** (`REJECTED`/`DEFERRED`/`PENDING`): Iterate on the same task branch in `dev`/`tst` and re-validate in `pre`.
+     - **`ESCALATE_TO_ROOT`** (`BLOCKED` by an `"internal"` department): Halts `pro` and routes 1-hop upward to the shared `governing_root_id` (`Root 0`) for cross-CO arbitration and upstream rule codification (`rule_learning_hint` via `/enrich` / `make promote`).
+     - **`ESCALATE_INTER_ENTITY_ROOTS`** (`BLOCKED` by an `"external"` layer): Local `Root 0` cannot override `external:public-government` (`PUBLIC_REGULATORY_COMPLIANCE_REQUIRED`) or `external:enterprise` (`CROSS_ENTITY_ESCALATION_REQUIRED`).
      ```bash
-     make env-gate ENV=<tst|pre|pro>
+     make env-gate ENV=<tst|pre|pro> [FILES=<rel-path1,rel-path2>]
      ```
-3. **4-Role Roster & `.github/CODEOWNERS` Sync (`make roster` / `manage-roster`)**:
+4. **4-Role Roster & `.github/CODEOWNERS` Sync (`make roster` / `manage-roster`)**:
    - Maintains `owners`, `maintainers`, `validators`, and `members` in `system/mcp-layer.json` and syncs `.github/CODEOWNERS`:
      ```bash
      make roster [ADD=<email>] [REMOVE=<email>] [ROLE=owner|maintainer|validator|member]
      ```
-4. **Human Governance Decision Recording (`make decision` / `record-decision`)**:
-   - Resolves pending staged proposals or blocked governance items in `WORKTASK.md`, `.agents/SESSION.md`, and `logs/governance_audit.jsonl`:
+5. **Human Governance Decision Recording (`make decision` / `record-decision`)**:
+   - Resolves pending staged proposals or cross-departmental surface reviews (`approve`, `reject`, `defer`, `blocked`) in `WORKTASK.md`, `.agents/SESSION.md`, and `logs/governance_audit.jsonl`:
      ```bash
-     make decision ITEM=<proposal-or-ticket> DEC=<approve|reject|defer|blocked> REASON="<justification>"
+     make decision ITEM=<proposal-or-surface-path> DEC=<approve|reject|defer|blocked> REASON="<justification>"
      ```
