@@ -325,30 +325,32 @@ class TestRepoParityGates:
         assert "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base" in (
             REPO_DIR / "Makefile"
         ).read_text(encoding="utf-8")
-        for canonical in (
-            "promoter_codon",
-            "_parse_capsule_envelope",
-            "_resolve_ephemeral_issuer_meta",
-        ):
-            assert canonical in arch_04
-        assert "diff-project <dir> [--parent-dir <dir>]" in arch_06
-        for eph_canonical in (
-            "ephemeral_capsules",
-            "default_ephemeral_root",
-            "_copy_zero_copy",
-        ):
-            assert eph_canonical in arch_05
+        assert all(
+            c in arch_04
+            for c in ("promoter_codon", "_parse_capsule_envelope", "_resolve_ephemeral_issuer_meta")
+        )
+        assert all(
+            c in arch_06
+            for c in (
+                "diff-project <dir> [--parent-dir <dir>]",
+                "configure_fork_manifest",
+                "inspect_layer_horizon",
+                "verify_layer_operation_authority",
+            )
+        )
+        assert all(
+            c in arch_05
+            for c in ("ephemeral_capsules", "default_ephemeral_root", "_copy_zero_copy")
+        )
 
     def test_test_suite_ast_anti_deception_invariants(self) -> None:
         """Verify single Test* class, 100% test method docstrings, and AST anti-deception gates."""
         # Arrange
-        prod_py = sorted(
-            [
-                *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
-                *list((REPO_DIR / "scripts").glob("*.py")),
-                *list((REPO_DIR / "scripts/dotfiles_mcp").rglob("*.py")),
-            ]
-        )
+        prod_py = sorted([
+            *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts/dotfiles_mcp").rglob("*.py")),
+        ])  # fmt: skip
         test_py = sorted(p for p in (REPO_DIR / "tests").rglob("test_*.py"))
 
         # Act
@@ -387,13 +389,14 @@ class TestRepoParityGates:
                 and any(a.name.startswith("_") for a in n.names)
             )
             or (
-                p.parent.name in ("core", "capsules")
+                p.parent.name in ("core", "capsules", "mcp_node")
                 and isinstance(n, ast.ImportFrom) and n.module is not None
                 and n.module.startswith("dotfiles_mcp.")
                 and (
                     (p.parent.name == "core" and not n.module.startswith("dotfiles_mcp.core"))
                     or (p.parent.name == "capsules" and "governance" in n.module)
                     or (p.name.endswith(("_engine.py", "_weaver.py")) and "mcp_node" in n.module)
+                    or (p.parent.name == "mcp_node" and p.name != "tools_federation.py" and "governance" in n.module)  # noqa: E501
                 )
             )
         ]  # fmt: skip

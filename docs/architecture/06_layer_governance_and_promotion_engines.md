@@ -13,7 +13,7 @@
 
 ## 1. `1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability Matrix (`governance/`)
 
-Every module in `scripts/dotfiles_mcp/governance/` (`scripts/dotfiles_mcp/{capsules,governance}/`) maintains a strict `1:1:1` alignment with its subpackage-mirrored unit test suite in `tests/unit/dotfiles_mcp/` (`100.00%` (`100%`) single-file isolated branch coverage, `< 465` lines) and its bidirectional docstring pointer (`Specification: docs/architecture/06_layer_governance_and_promotion_engines.md`):
+Every module in `scripts/dotfiles_mcp/governance/` maintains a strict `1:1:1` alignment with its subpackage-mirrored unit test suite in `tests/unit/dotfiles_mcp/governance/` (`100.00%` single-file isolated branch coverage, `< 465` lines) and its bidirectional docstring pointer (`Specification: docs/architecture/06_layer_governance_and_promotion_engines.md`):
 
 | Subpackage & Engine Domain | Source Module (`scripts/dotfiles_mcp/governance/`) | `1:1` Unit Test (`tests/unit/dotfiles_mcp/governance/`) | Normative Section & Primary Symbols |
 |---|---|---|---|
@@ -90,7 +90,7 @@ flowchart LR
 
 ## 5. Complete `scripts/layer-config.sh` CLI Subcommand Matrix (`26` Subcommands via `./scripts/layer-config.sh`)
 
-To ensure every fork (`corporate`, `domain-policy`, `department`, `squad`, `service-node` — `schema_version: "mcp-layer-v1"` / `mcp-layer-v1`) is proactively configurable and supports bidirectional knowledge flow in both **MCP Mode** and **Static / Non-MCP Mode**, `fork_configurator.py` and `promotion_engine.py` (exposed via `./scripts/layer-config.sh`) implement:
+To ensure every fork (`corporate`, `domain-policy`, `department`, `squad`, `service-node` — `schema_version: "mcp-layer-v1"`) is proactively configurable and supports bidirectional knowledge flow in both **MCP Mode** and **Static / Non-MCP Mode**, `fork_configurator.py` and `promotion_engine.py` (exposed via `./scripts/layer-config.sh`) implement:
 
 | Capability | CLI Subcommand (`layer-config.sh`) | Python Function | Key Invariants & Guarantees |
 |---|---|---|---|
