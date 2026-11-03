@@ -119,10 +119,7 @@ BUSINESS_MODE_RULE_FILES = (
 )  # fmt: skip
 TECHNICAL_MODE_TEMPLATES = ("technical-base", "fastapi-hexagonal")
 TECHNICAL_MODE_RULE_FILES = ("technical-base.md", "coding.md")
-VALID_TEMPLATE_KINDS = (
-    "core-base", "business-stack", "science-stack", "tech-stack",
-    "stack-starter", "domain-policy-pack", "department-pack", "project-overlay",
-)  # fmt: skip
+VALID_TEMPLATE_KINDS = ("core-base", "business-stack", "science-stack", "tech-stack")
 ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
     "domain-policy": 5,
     "corporate": 10,
@@ -366,10 +363,10 @@ TECHNICAL_PHASE_SEMANTICS: dict[str, str] = {
     "pro": "Production Release",
 }
 DEFAULT_SQUAD_ONBOARDING_SPEC: tuple[str, str, str, str] = (
-    "Level 3 — Squad Execution & Tech Stack Governance",
-    "[Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]",
-    "[Fill: Target application repositories for apply-project, e.g. /path/to/app-service]",
-    "apply-project commands for our target application repositories",
+    "Level 3 — Squad, Case & Operational Unit Governance",
+    "[Fill: Operational unit/case/squad mission, bounded contexts, and verification gates]",
+    "[Fill: Target application or project repositories for apply-project, e.g. /path/to/repo]",
+    "apply-project commands for our target application or project repositories",
 )
 ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
     "corporate": (
@@ -381,13 +378,13 @@ ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
     "department": (
         "Level 2 — Department & Cross-Cutting Domain Governance",
         "[Fill: Department mission, domain invariants, and target file surface globs]",
-        "[Fill: Planned child Squads (--role squad, e.g. squad-core-api)]",
-        "bootstrap-workspace commands to initialize our child Squads",
+        "[Fill: Planned child Units, Cases, or Squads (--role squad, e.g. unit-ops-alpha)]",
+        "bootstrap-workspace commands to initialize our child Units, Cases, or Squads",
     ),
     "domain-policy": (
         "Level 2 — Department & Cross-Cutting Domain Policy Governance",
         "[Fill: Cross-cutting policy domain (Legal/IP/Security), invariants, and surface globs]",
-        "[Fill: Consumer Departments or Squads mounting this policy layer]",
+        "[Fill: Consumer Departments, Units, Cases, or Squads mounting this policy layer]",
         "register-subtree and bootstrap-workspace commands for consumer layers",
     ),
     "squad": DEFAULT_SQUAD_ONBOARDING_SPEC,

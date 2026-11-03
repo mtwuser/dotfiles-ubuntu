@@ -6,14 +6,13 @@
 
 ---
 
-## 1. Three-Surface Shared Configuration (`~/.gemini/config/`)
+## 1. Shared Global Configuration (`~/.gemini/config/`) Across `antigravity-agents` & `agy`
 
-Google Antigravity 2.0 operates across three local developer surfaces that share a single global configuration root at `~/.gemini/config/`:
+Google Antigravity 2.0 operates across two local developer surfaces (`antigravity-agents` desktop and `agy` CLI) that share a single global configuration root at `~/.gemini/config/`:
 
 | Surface | Binary / Install Location | Surface-Specific State | Shared Global Config (Stowed) |
 |---------|---------------------------|------------------------|-------------------------------|
-| **Antigravity 2.0 (Agents Desktop)** | `/opt/antigravity-agents/antigravity` | `~/.gemini/antigravity/` (`brain/`, MCP schemas) | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
-| **Antigravity IDE** | `/opt/antigravity-ide/antigravity-ide` | `~/.gemini/antigravity-ide/` | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
+| **Antigravity 2.0 (`antigravity-agents`)** | `/opt/antigravity-agents/antigravity` | `~/.gemini/antigravity/` (`brain/`, MCP schemas) | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
 | **Antigravity CLI (`agy`)** | `~/.local/bin/agy` | `~/.gemini/antigravity-cli/` | `~/.gemini/config/{AGENTS.md,hooks.json,scripts/,skills/}` |
 
 > **Cross-Container & Multi-Layer Extension**: While GNU Stow links `~/.gemini/config/` on the local host with zero latency, these same governance assets (`AGENTS.md`, `hooks.json`, `skills/`, `templates/`) can also be exposed across isolated Docker containers, remote SSH servers, and multi-squad forks via the optional Contextual MCP Server ([`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md)).
@@ -100,11 +99,11 @@ To prevent silent drift between what the lifecycle hooks enforce in Python and w
 
 ---
 
-## 4. Global (`antigravity/.gemini/config/skills/`) & Technical-Base (`templates/technical-base/skills/`) Skills Catalog
+## 4. Complete 19-Skill Matrix (`antigravity/.gemini/config/skills/` & `templates/**/skills/`)
 
-Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` (10 universal lifecycle, governance, and dual-mode audit skills) or `templates/technical-base/skills/<name>/SKILL.md` (4 software-engineering and substrate skills) and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/8]`).
+Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` (10 universal lifecycle, governance, and dual-mode audit skills), `templates/technical-base/skills/<name>/SKILL.md` (4 software-engineering and substrate skills), or `templates/{business-stack,tech-stack}/*/skills/<name>/SKILL.md` (5 domain specialization-stack skills) and must declare YAML frontmatter with a `kebab-case` `name:` and `description:` (verified by `scripts/verify-repo.sh` Check `[6/8]`).
 
-### 4.1. Interactive Slash-Command Skills (`/<name>`)
+### 4.1. Interactive Slash-Command Skills (`/<name>` — 8 Global Skills)
 
 | Skill / Command | Primary Responsibility | Key Artifacts Read / Updated |
 |-----------------|------------------------|------------------------------|
@@ -113,20 +112,30 @@ Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` (10 u
 | **[`sclose`](../../antigravity/.gemini/config/skills/sclose/SKILL.md)** (`/sclose`) | End-of-session closure: runs governance promotion (Zero-Clutter Invariant), closes `.agents/SESSION.md`, runs `make verify` if `dotfiles-ubuntu` changed, emits knowledge signals, and delivers local per-repo commits (`[Unreleased]`) | `.agents/SESSION.md`, `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `CHANGELOG.md` |
 | **[`release`](../../antigravity/.gemini/config/skills/release/SKILL.md)** (`/release`) | Explicit SemVer release cut: runs zero-leak/agnosticism scans and `make verify`, promotes `## [Unreleased]` $\rightarrow$ `## [X.Y.Z] - YYYY-MM-DD`, syncs `VERSION`/`pyproject.toml`/`README.md`, and delivers the release commit + tag + push block | `VERSION`, `pyproject.toml`, `README.md`, `CHANGELOG.md` |
 | **[`priority`](../../antigravity/.gemini/config/skills/priority/SKILL.md)** (`/priority`) | Enforces the deterministic priority chain (`WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/`) and Phase 0.5 deep-analysis | `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `roadmaps/*.md` |
-| **[`review`](../../antigravity/.gemini/config/skills/review/SKILL.md)** (`/review`) | Tactical `C1` read-only review across the active session delta (default) or a targeted path/dimension (`/review [path\|docs\|arch\|1:1:1\|layer]`): evaluates `1. docs` (3-tier & 5-link ripple), `2. arch` (code or SSoT ledgers), `3. 1:1:1` (tests or sign-off gates), and `4. layer` (manifests & horizon) | `src/**`, `tests/unit/**`, `tests/imp/**`, `docs/**`, `system/mcp-layer.json`, `corporate/**` |
-| **[`full-audit`](../../antigravity/.gemini/config/skills/full-audit/SKILL.md)** (`/full-audit`) | Convergent `C2` closed-world repository gate: executes all 4 deterministic probes (`Probe A..D`) and all 4 canonical passes across 100% of the repository toward `Regime 0 (0 findings)` with automatic `WORKTASK.md`/`WORKROAD.md` overflow crystallization | `docs/**`, `.agents/**`, `src/**`, `tests/**`, `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md` |
+| **[`review`](../../antigravity/.gemini/config/skills/review/SKILL.md)** (`/review`) | Tactical `C1` read-only review across the active session delta (default) or a targeted path/dimension (`/review [path\|docs\|arch\|1:1:1\|layer]`): evaluates `1. docs` (3-tier, 5-link ripple & Conceptual/Semantic Isomorphism), `2. arch` (code or SSoT ledgers), `3. 1:1:1` (tests or sign-off gates), and `4. layer` (manifests & horizon) | `src/**`, `tests/unit/**`, `tests/imp/**`, `docs/**`, `system/mcp-layer.json`, `corporate/**` |
+| **[`full-audit`](../../antigravity/.gemini/config/skills/full-audit/SKILL.md)** (`/full-audit`) | Convergent `C2` closed-world repository gate: executes all 4 deterministic probes (`Probe A..D`) and all 4 canonical passes (including Conceptual & Semantic Documentation Isomorphism) across 100% of the repository toward `Regime 0 (0 findings)` | `docs/**`, `.agents/**`, `src/**`, `tests/**`, `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md` |
 | **[`enrich`](../../antigravity/.gemini/config/skills/enrich/SKILL.md)** (`/enrich`) | Scans active workspace `.agents/` against `~/dotfiles-ubuntu` (`Layer A`), `templates/*` (`Layer B`), and mounted `layers/*` subtrees, proposes 1-hop upward promotions (`promote-from-project` / `layer-subtree.sh push`) and downward syncs (`sync-layer`), and runs `stow -t ~ -R antigravity` | `.agents/rules/*.md`, `.agents/skills/**`, `~/dotfiles-ubuntu/antigravity/`, `~/dotfiles-ubuntu/layers/*` |
 
-### 4.2. Procedural Engineering Skills (Auto-Activated by Task Context)
+### 4.2. Core Procedural Skills (2 Global + 4 `technical-base` Skills)
 
-| Skill Name | Activation Trigger | Core Methodology |
-|------------|--------------------|------------------|
-| **[`architecture-review`](../../antigravity/.gemini/config/skills/architecture-review/SKILL.md)** | Designing framework architecture, unifying classifications, or auditing documentation coherence | **5-Step Intersection Audit** + **5-Dimension Pre-Development Gate** (*Normative Specs $\rightarrow$ Reference Docs $\rightarrow$ Diagrams $\rightarrow$ Root Guides $\rightarrow$ Roadmaps*) + **4 Deterministic Verification Gates** |
-| **[`governance`](../../antigravity/.gemini/config/skills/governance/SKILL.md)** | Promoting work across tiers or extracting knowledge from raw AI conversations | **One-Way Work Lifecycle** (`roadmaps/ → WORKROAD → WORKTASK → CHANGELOG`) + **3-Stage Conversation Extraction Pipeline** (*Reference Corpus $\rightarrow$ Normative Specs $\rightarrow$ Raw Source Decommissioning*) |
-| **[`refactoring`](../../templates/technical-base/skills/refactoring/SKILL.md)** | Breaking down God Components (`< 465` lines cap, `<= 400` target), moving modules, or decommissioning features | **Zero-Residue Cutover** (no shims/aliases) + **`1:1:1` Test/Spec Alignment** + **3-Step Obsolete Test Pruning Audit** (`orphan-test-file`, dead symbol sweep, default-parameter sensitivity verification) |
-| **[`testing`](../../templates/technical-base/skills/testing/SKILL.md)** | Writing unit/implementation (`tests/imp/`) tests, fixing coverage gaps, or consolidating test suites | **Bidirectional 3-Tier Flow (`E2E <-> Imp <-> Unit`)**, **Explicit 3-Comment AAA**, **Service Constructor Mock Injection**, **Anti-Characterization Trap**, and **5-Phase Test Consolidation** |
-| **[`validation`](../../templates/technical-base/skills/validation/SKILL.md)** | Executing collaborative human-agent manual QA sessions | **5-Layer Validation Protocol** (Render, Interaction, Persistence, Observation, Edge Cases) tracked in `WORKVALI.md` |
-| **[`oss-contribute`](../../templates/technical-base/skills/oss-contribute/SKILL.md)** | Conscious `C3` C-substrate optimization or external `OSS-to-OSS` upstream contributions | **Empirical Hot-Path Profiling** (`timeit`/`cProfile`) $\rightarrow$ **3-Tier Substrate Escalation** (`Stdlib C-Primitive` $\rightarrow$ `Optional PEP 7 C-Accelerator` $\rightarrow$ `Isolated ~/Projects/oss-contrib-<repo> Upstream PR`) |
+| Skill Name | Source Pack (`kind`) | Activation Trigger & Core Methodology |
+|------------|----------------------|---------------------------------------|
+| **[`architecture-review`](../../antigravity/.gemini/config/skills/architecture-review/SKILL.md)** | Global (`human-core`) | **5-Step Intersection Audit** + **5-Dimension Pre-Development Gate** (*Normative Specs $\rightarrow$ Reference Docs $\rightarrow$ Diagrams $\rightarrow$ Root Guides $\rightarrow$ Roadmaps*) + **4 Deterministic Verification Gates** |
+| **[`governance`](../../antigravity/.gemini/config/skills/governance/SKILL.md)** | Global (`human-core`) | **One-Way Work Lifecycle** (`roadmaps/ → WORKROAD → WORKTASK → CHANGELOG`), 1-hop downward directive delegation (`make delegate`), and **3-Stage Conversation Extraction Pipeline** |
+| **[`refactoring`](../../templates/technical-base/skills/refactoring/SKILL.md)** | `technical-base` (`core-base`) | **Zero-Residue Cutover** (no shims/aliases) + **`1:1:1` Test/Spec Alignment** + **3-Step Obsolete Test Pruning Audit** (`orphan-test-file`, dead symbol sweep, default-parameter sensitivity verification) |
+| **[`testing`](../../templates/technical-base/skills/testing/SKILL.md)** | `technical-base` (`core-base`) | **Bidirectional 3-Tier Flow (`E2E <-> Imp <-> Unit`)**, **Explicit 3-Comment AAA**, **Service Constructor Mock Injection**, **Anti-Characterization Trap**, and **5-Phase Test Consolidation** |
+| **[`validation`](../../templates/technical-base/skills/validation/SKILL.md)** | `technical-base` (`core-base`) | **5-Layer Validation Protocol** (Render, Interaction, Persistence, Observation, Edge Cases) tracked in `WORKVALI.md` |
+| **[`oss-contribute`](../../templates/technical-base/skills/oss-contribute/SKILL.md)** | `technical-base` (`core-base`) | **Empirical Hot-Path Profiling** (`timeit`/`cProfile`) $\rightarrow$ **3-Tier Substrate Escalation** (`Stdlib C-Primitive` $\rightarrow$ `Optional PEP 7 C-Accelerator` $\rightarrow$ `Isolated ~/Projects/oss-contrib-<repo> Upstream PR`) |
+
+### 4.3. Specialization-Stack Skills (5 Skills: `business-stack` & `tech-stack`)
+
+| Skill Name | Specialization Pack (`kind`) | Target Domain & Core Methodology |
+|------------|------------------------------|----------------------------------|
+| **[`ledger-surface-audit`](../../templates/business-stack/corporate-ops-ledger/skills/ledger-surface-audit/SKILL.md)** | `corporate-ops-ledger` (`business-stack`) | Audits 3-ring Hexagonal Business traceability (`corporate/ledgers/` $\rightarrow$ `corporate/{policies,sops}/` $\rightarrow$ `surfaces/{web,forms,print}/`) and `[DEPT]-[TYPE]-[YYYY]-[NNN]` citation parity |
+| **[`start`](../../templates/tech-stack/fastapi-hexagonal/skills/start/SKILL.md)** | `fastapi-hexagonal` (`tech-stack`) | Bootstraps or resumes a Python FastAPI + Hexagonal DDD service workspace (`./venv`, `uvicorn`, environment readiness) |
+| **[`fastapi-testing`](../../templates/tech-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md)** | `fastapi-hexagonal` (`tech-stack`) | Enforces 4-layer hexagonal test isolation (`domain`, `application`, `adapters`, `entrypoints`) with `httpx.AsyncClient` and async DB fixtures alongside `technical-base`'s `testing` |
+| **[`database-migrations`](../../templates/tech-stack/fastapi-hexagonal/skills/database/SKILL.md)** | `fastapi-hexagonal` (`tech-stack`) | Governs user-gated Alembic async schema migrations, zero-touch `alembic/versions/*.py` invariants, and downgrade safety |
+| **[`frontend-patterns`](../../templates/tech-stack/fastapi-hexagonal/skills/frontend/SKILL.md)** | `fastapi-hexagonal` (`tech-stack`) | Guides FastAPI web frontend integration, typed API client boundaries, and accessible UI state patterns |
 
 ---
 
@@ -134,7 +143,7 @@ Every skill resides in `antigravity/.gemini/config/skills/<name>/SKILL.md` (10 u
 
 `templates/` provides 3 composable foundational governance pillars (`kind: "core-base"`) and 3 orthogonal specialization stack families (`templates/business-stack/*`, `templates/science-stack/*`, and `templates/tech-stack/*`):
 1. **3-Tier Base Governance Pillars (`human-core`, `technical-base`, `business-base`)**:
-   - **`templates/human-core/`**: Universal cognitive rigor (`§1–10`), `5-Surface Change Propagation`, forensic `[WIRE] / [CONSOLIDATE] / [PRUNE]` intent verification, `dotfiles-ubuntu` native self-guidance (`§11`), universal task-branch & inter-layer lifecycle (`make status`, `make sync`, `make task` $\rightarrow$ `feature/<TICKET-ID>-<slug>`, `make complete`, `make consult`, `make delegate` strictly inside `layers/<child>/`, `make promote`), `$HOME` vs. `Workspace` separation, `antigravity-ide` vs. `antigravity-agents` isolation, model delegation (`§12`), single-language purity (`§13`), and `[Unreleased]` commit discipline. Default machine-global `AGENTS.md` baseline (with the 10 universal global skills in `antigravity/.gemini/config/skills/`).
+   - **`templates/human-core/`**: Universal cognitive rigor (`§1–10`), `5-Surface Change Propagation`, forensic `[WIRE] / [CONSOLIDATE] / [PRUNE]` intent verification, `dotfiles-ubuntu` native self-guidance (`§11`), universal task-branch & inter-layer lifecycle (`make status`, `make sync`, `make task` $\rightarrow$ `feature/<TICKET-ID>-<slug>`, `make complete`, `make consult`, `make delegate` strictly inside `layers/<child>/`, `make promote`), `$HOME` vs. `Workspace` separation, scoped `antigravity-agents` workspace containment, model delegation (`§12`), single-language purity (`§13`), and `[Unreleased]` commit discipline. Default machine-global `AGENTS.md` baseline (with the 10 universal global skills in `antigravity/.gemini/config/skills/`).
    - **`templates/technical-base/`**: Software engineering rigor (`ruff`/`mypy --strict`, C-backed floor-version stdlib primitives, Rule 6 constants & data symmetry), `1:1:1` Source-Test-Spec traceability (`Specification:`), `0-byte` `__init__.py` purity, Refactoring & Decommissioning (5-Stage Evolution Ladder, `O(1)` file prefixes, Bifurcated Age Review, 3-Step Test Pruning Audit), Testing Universal (AAA, `100%` branch coverage, `N vs N ± 1` boundary cut-points), and the 4 software engineering skills (`skills/testing/`, `skills/refactoring/`, `skills/validation/`, `skills/oss-contribute/`).
    - **`templates/business-base/`**: Enterprise & normative governance, Single Source of Truth Ledger (`corporate/`), Cross-Departmental Precedence Matrix (`1..80` from Territorial/Public Administration to Corporate/Department/Squad), *Lex Superior* IP/confidentiality firewall & Crisis Escalation SLAs (`P0/P1/P2`), Traceable Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`), Three-Part Functional Verification Structure, and AI Agent Capability Matrix by Organizational Role.
 2. **3 Orthogonal Specialization Stack Families (`templates/business-stack/`, `templates/science-stack/`, & `templates/tech-stack/`)**:

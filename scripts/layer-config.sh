@@ -118,13 +118,14 @@ dry_run = sys.argv[3].lower() == "true" or "--dry-run" in sys.argv[5:] or "-n" i
 subcmd, rest = sys.argv[4], [a for a in sys.argv[5:] if a not in ("--dry-run", "-n")]
 
 sys.path.insert(0, str(script_dir))
-from dotfiles_mcp.authority_engine import configure_layer_authority, delegate_directive_to_child, verify_layer_operation_authority  # noqa: E402
+from dotfiles_mcp.authority_engine import configure_layer_authority, verify_layer_operation_authority  # noqa: E402
 from dotfiles_mcp.ephemeral_fork_engine import inspect_ephemeral_forks, reap_ephemeral_fork, spawn_ephemeral_fork  # noqa: E402
 from dotfiles_mcp.fork_configurator import apply_fork_to_project, configure_fork_manifest, discover_templates_catalog, scaffold_template_pack  # noqa: E402
 from dotfiles_mcp.git_governance_engine import configure_git_governance_policy, evaluate_environment_promotion, manage_layer_roster, record_governance_decision  # noqa: E402
+from dotfiles_mcp.horizon_engine import compare_upstream_templates, inspect_layer_horizon  # noqa: E402
 from dotfiles_mcp.node_base import MCPNodeBase  # noqa: E402
-from dotfiles_mcp.promotion_engine import diff_project_against_layers, inspect_layer_horizon, promote_project_asset_to_layer  # noqa: E402
-from dotfiles_mcp.workflow_engine import compare_upstream_templates, complete_task_workflow, consult_layer_ephemeral, start_task_workflow  # noqa: E402
+from dotfiles_mcp.promotion_engine import diff_project_against_layers, promote_project_asset_to_layer  # noqa: E402
+from dotfiles_mcp.workflow_engine import complete_task_workflow, consult_layer_ephemeral, delegate_directive_to_child, start_task_workflow  # noqa: E402
 from dotfiles_mcp.workspace_bootstrapper import bootstrap_layer_workspace, inspect_workspace_status, register_mounted_subtree, set_global_agents_profile, sync_layer_workspace  # noqa: E402
 
 
@@ -202,7 +203,7 @@ if subcmd == "scaffold-template":
     opts = _parse_opts(rest[1:], {"--kind": "kind", "--description": "desc", "--rule-file": "rule"}, {"--register-binding": "bind"})
     _enforce_authority_or_exit(repo_dir, "scaffold-template")
     res = scaffold_template_pack(
-        repo_dir, template_name=rest[0], kind=str(opts.get("kind", "stack-starter")),
+        repo_dir, template_name=rest[0], kind=str(opts.get("kind", "tech-stack")),
         description=_opt_str(opts, "desc"), register_binding=bool(opts.get("bind", False)),
         rule_filename=_opt_str(opts, "rule"), dry_run=dry_run,
     )

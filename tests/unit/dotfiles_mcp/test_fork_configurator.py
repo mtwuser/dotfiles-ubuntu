@@ -43,7 +43,7 @@ class TestForkConfigurator:
                 {
                     "schema_version": "template-pack-v1",
                     "template_id": "web-stack",
-                    "kind": "stack-starter",
+                    "kind": "tech-stack",
                     "target_role": "squad",
                     "description": "Web starter pack",
                 }
@@ -205,7 +205,7 @@ class TestForkConfigurator:
         self,
         tmp_path: Path,
     ) -> None:
-        """Scaffold stack-starter and domain-policy-pack templates and register surface bindings."""
+        """Scaffold tech-stack and business-stack templates and register surface bindings."""
         # Arrange
         (tmp_path / "system").mkdir(parents=True)
         (tmp_path / "system/mcp-layer.json").write_text(
@@ -224,14 +224,14 @@ class TestForkConfigurator:
         dry_res = scaffold_template_pack(
             tmp_path,
             template_name="gdpr-policy",
-            kind="domain-policy-pack",
+            kind="business-stack",
             register_binding=True,
             dry_run=True,
         )
         real_res = scaffold_template_pack(
             tmp_path,
             template_name="gdpr-policy",
-            kind="domain-policy-pack",
+            kind="business-stack",
             description="EU GDPR compliance pack",
             register_binding=True,
             scopes=["checkout"],
@@ -243,7 +243,7 @@ class TestForkConfigurator:
         starter_res = scaffold_template_pack(
             tmp_path,
             template_name="rust-axum",
-            kind="stack-starter",
+            kind="tech-stack",
             rule_filename="rust-axum.md",
             register_binding=False,
             dry_run=False,
@@ -263,7 +263,7 @@ class TestForkConfigurator:
         assert (tmp_path / "templates/rust-axum/governance/WORKTASK.md").is_file()
         assert (tmp_path / "templates/rust-axum/governance/Makefile").is_file()
         assert (tmp_path / "templates/rust-axum/rules/rust-axum.md").is_file()
-        assert starter_res["kind"] == "stack-starter"
+        assert starter_res["kind"] == "tech-stack"
         updated_manifest = json.loads(
             (tmp_path / "system/mcp-layer.json").read_text(encoding="utf-8")
         )
@@ -315,9 +315,9 @@ class TestForkConfigurator:
             kind="tech-stack",
             dry_run=False,
         )
-        (fork_dir / "templates/tech-stack/web-starter/rules/subdir").mkdir(parents=True)
-        (fork_dir / "templates/tech-stack/web-starter/assets/subdir").mkdir(parents=True)
-        (fork_dir / "templates/tech-stack/web-starter/governance/SESSION.md").write_text(
+        (fork_dir / "templates/web-starter/rules/subdir").mkdir(parents=True)
+        (fork_dir / "templates/web-starter/assets/subdir").mkdir(parents=True)
+        (fork_dir / "templates/web-starter/governance/SESSION.md").write_text(
             "# Session Log\n", encoding="utf-8"
         )
         (fork_dir / "antigravity/.gemini/config").mkdir(parents=True)
@@ -346,7 +346,7 @@ class TestForkConfigurator:
         scaffold_template_pack(
             legal_sub,
             template_name="gdpr-pack",
-            kind="domain-policy-pack",
+            kind="business-stack",
             dry_run=False,
         )
         no_manifest_sub = fork_dir / "layers" / "dept-nometa"

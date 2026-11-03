@@ -37,11 +37,8 @@ from dotfiles_mcp.constants import (
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
-    _inspect_mounted_children_drifts,
     _iter_layer_template_dirs,
     _parse_skill_frontmatter,
-    _resolve_default_parent_dir,
-    _resolve_oss_contrib_repo_dir,
     _resolve_template_dest_dir,
     _resolve_template_dir,
     _sha256_file,
@@ -367,97 +364,3 @@ def promote_project_asset_to_layer(
             project_dir, layer_base, **pr_kw
         )
     return result
-
-
-def inspect_layer_horizon(
-    repo_dir: Path, workspace_dir: Path, *, parent_dir: Path | None = None,
-    actor_email: str | None = None,
-) -> dict[str, Any]:  # fmt: skip
-    """Inspect 1-hop downward propagation & quiet upward promotion candidates for a workspace."""
-    ws, eff_p = workspace_dir.resolve(), _resolve_default_parent_dir(workspace_dir, parent_dir)
-    up, oss = (eff_p or repo_dir).resolve(), repo_dir.resolve()
-    ws_m, up_m = _load_manifest_dict(ws), _load_manifest_dict(up)
-    oss_vf, up_vf, ws_vf = oss / "VERSION", up / "VERSION", ws / "VERSION"
-    oss_ver = oss_vf.read_text(encoding="utf-8").strip() if oss_vf.is_file() else None
-    up_ver = up_vf.read_text(encoding="utf-8").strip() if up_vf.is_file() else None
-    ws_ver = ws_vf.read_text(encoding="utf-8").strip() if ws_vf.is_file() else None
-    is_oss = _is_oss_root_manifest(up_m)
-    contrib_dir = _resolve_oss_contrib_repo_dir(up) if is_oss else up
-    a_kw: dict[str, Any] = {"operation": "release", "actor_email": actor_email,
-        "record_blocked": False}  # fmt: skip
-    auth_v = verify_layer_operation_authority(ws, **a_kw)
-    up_auth_v = verify_layer_operation_authority(up, **a_kw)
-    ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
-    cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
-    tpl_pairs = [
-        (tpl, u_d, w_d)
-        for tpl in dict.fromkeys(cand_tpls)
-        if (u_d := _resolve_template_dir(up, tpl)) and (w_d := _resolve_template_dir(ws, tpl))
-    ]
-    drifts: list[dict[str, Any]] = []
-    for tpl, up_tdir, ws_tdir in tpl_pairs:
-        tj = ws_tdir / "template.json"
-        raw_rec = (json.loads(tj.read_text("utf-8")) if tj.is_file() else {}).get(
-            "reconciled_upstream_sha256"
-        )
-        rec_map: dict[str, Any] = raw_rec if isinstance(raw_rec, dict) else {}
-        for ws_rf in sorted((ws_tdir / "rules").glob("*.md")):
-            up_rf = up_tdir / "rules" / ws_rf.name
-            if not up_rf.is_file() or _sha256_file(ws_rf) != _sha256_file(up_rf):
-                rel_src = str(ws_rf.relative_to(ws)).replace("\\", "/")
-                rec_sha = rec_map.get(ws_rf.name)
-                up_newer = up_rf.is_file() and (
-                    _sha256_file(up_rf) != rec_sha
-                    if isinstance(rec_sha, str)
-                    else up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
-                )
-                oss_ok = True
-                try:
-                    verify_oss_promotion_agnosticism(ws, ws_rf.read_text(encoding="utf-8"), rel_src)
-                except ValueError:
-                    oss_ok = False
-                cmd = (
-                    f"./scripts/layer-config.sh promote-from-project {ws} --source {rel_src} "
-                    f"--to-template {tpl} --upstream-dir {contrib_dir} --create-pr"
-                )
-                d_dir = "upstream_newer" if up_newer else "workspace_newer"
-                drifts.append({"template": tpl, "rule_file": rel_src, "oss_agnostic": oss_ok,
-                    "promote_command": cmd, "drift_direction": d_dir})  # fmt: skip
-    local_diff = diff_project_against_layers(ws, ws)
-    child_drifts = _inspect_mounted_children_drifts(ws, ws_m.get("mounted_layers", []))
-    sync_sfx = f" --parent-dir {up}" if eff_p is not None else ""
-    up_drifts = [d for d in drifts if d["drift_direction"] == "workspace_newer"]
-    miss_sk = any(
-        not (w_d / sf.relative_to(u_d)).is_file()
-        for _t, u_d, w_d in tpl_pairs
-        for sf in (u_d / "skills").rglob("SKILL.md")
-    )
-    need_sync = (
-        any(d["drift_direction"] == "upstream_newer" for d in drifts)
-        or miss_sk
-        or bool(child_drifts)
-    )
-    novel_cmds = [
-        f"./scripts/layer-config.sh promote-from-project {ws} "
-        f"--source .agents/{rel} --upstream-dir {contrib_dir} --create-pr"
-        for rel in local_diff["novel_in_project"]
-    ]
-    ws_lid, up_lid = str(ws_m.get("layer_id", ws.name)), str(up_m.get("layer_id", up.name))
-    up_sugg = (
-        [d for d in up_drifts if d["oss_agnostic"]]
-        if is_oss
-        else [*(d["promote_command"] for d in up_drifts), *novel_cmds]
-    )
-    return {"workspace_dir": str(ws), "layer_id": ws_lid,
-        "layer_role": str(ws_m.get("layer_role", "project")),
-        "is_oss_community_horizon": is_oss, "actor_is_layer_owner": bool(auth_v["allowed"]),
-        "immediate_upstream_dir": str(up), "actor_is_upstream_owner": bool(up_auth_v["allowed"]),
-        "immediate_upstream_id": up_lid,
-        "immediate_upstream_role": str(up_m.get("layer_role", "unknown")),
-        "oss_contrib_dir": str(contrib_dir) if is_oss else None, "oss_root_version": oss_ver,
-        "upstream_version": up_ver, "workspace_version": ws_ver,
-        "downward_sync_needed": need_sync, "child_sync_needed": bool(child_drifts),
-        "shared_template_drifts": drifts,
-        "downward_sync_command": f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}",
-        "downstream_layer_drifts": child_drifts,
-        "upward_promotion_suggestions": up_sugg}  # fmt: skip

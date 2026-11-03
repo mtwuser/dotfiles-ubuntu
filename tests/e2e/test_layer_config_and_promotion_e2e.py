@@ -115,7 +115,7 @@ class TestLayerConfigAndPromotionE2E:
             "scaffold-template",
             "pci-compliance",
             "--kind",
-            "domain-policy-pack",
+            "business-stack",
             "--register-binding",
         )
         apply_args = (
@@ -275,7 +275,7 @@ class TestLayerConfigAndPromotionE2E:
         # Arrange
         fork_dir = tmp_path / "ro_tpl_fork"
         _create_node_fixture(fork_dir, "acme-sec-fork", "department", {"precedence": 20})
-        _run_layer_config(fork_dir, "scaffold-template", "pci-pack", "--kind", "domain-policy-pack")
+        _run_layer_config(fork_dir, "scaffold-template", "pci-pack", "--kind", "business-stack")
         tpl_dir = fork_dir / "templates" / "pci-pack"
         (tpl_dir / "governance").mkdir(parents=True, exist_ok=True)
         (tpl_dir / "governance" / "SECURITY_POLICY.md").write_text(

@@ -22,12 +22,12 @@ from dotfiles_mcp.constants import (
     VALID_LAYER_ROLES,
     VALID_TEMPLATE_KINDS,
 )
+from dotfiles_mcp.layer_topology_helpers import _render_lineage_markdown
 from dotfiles_mcp.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _iter_layer_template_dirs,
     _merge_unique_strings,
     _parse_skill_frontmatter,
-    _render_lineage_markdown,
     _resolve_template_dest_dir,
     _resolve_template_dir,
 )
@@ -59,10 +59,11 @@ def _inspect_single_template_dir(
         else []
     )
     parent_grp = tpl_dir.parent.name if tpl_dir.parent.name in TEMPLATE_STACK_GROUP_DIRS else "core"
+    raw_k = str(meta.get("kind", "tech-stack"))
     return {
         "template_name": tpl_dir.name,
         "source_layer": source_layer,
-        "kind": str(meta.get("kind", "stack-starter")),
+        "kind": raw_k if raw_k in VALID_TEMPLATE_KINDS else "tech-stack",
         "stack_group": str(meta.get("stack_group", parent_grp)),
         "target_role": str(meta.get("target_role", "squad")),
         "description": str(meta.get("description", f"Template pack {tpl_dir.name}")),
@@ -174,19 +175,12 @@ def configure_fork_manifest(
 
 
 def scaffold_template_pack(
-    repo_dir: Path,
-    *,
-    template_name: str,
-    kind: str = "stack-starter",
-    description: str | None = None,
-    register_binding: bool = False,
-    rule_filename: str | None = None,
-    scopes: list[str] | None = None,
-    planes: list[str] | None = None,
-    traits: list[str] | None = None,
-    globs: list[str] | None = None,
-    dry_run: bool = False,
-) -> dict[str, Any]:
+    repo_dir: Path, *, template_name: str, kind: str = "tech-stack",
+    description: str | None = None, register_binding: bool = False,
+    rule_filename: str | None = None, scopes: list[str] | None = None,
+    planes: list[str] | None = None, traits: list[str] | None = None,
+    globs: list[str] | None = None, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
     """Scaffold a polymorphic template pack under templates/<template_name>/."""
     if not KEBAB_ID_RE.match(template_name):
         raise ValueError(f"Invalid template_name {template_name!r}: must be kebab-case")
@@ -198,12 +192,12 @@ def scaffold_template_pack(
 
     if _resolve_template_dir(repo_dir, template_name) is not None:
         raise ValueError(f"Template directory already exists: templates/{template_name}")
-    tpl_dir = _resolve_template_dest_dir(repo_dir, template_name, kind=kind)
+    tpl_dir = _resolve_template_dest_dir(repo_dir, template_name)
     rel_tpl = str(tpl_dir.relative_to(repo_dir)).replace("\\", "/")
-    is_tech = kind in ("stack-starter", "tech-stack")
+    is_tech = kind == "tech-stack"
 
     desc = description or f"{template_name} ({kind}) governance and template pack"
-    mode = "authoritative" if kind == "domain-policy-pack" else "transversal"
+    mode = "transversal" if is_tech else "authoritative"
     default_res = "L2" if mode == "authoritative" else "L1"
     binding_entry: dict[str, Any] = {
         "binding_id": f"{template_name}-surface-binding",
@@ -222,7 +216,7 @@ def scaffold_template_pack(
         "schema_version": TEMPLATE_MANIFEST_CONTRACT_REV,
         "template_id": template_name,
         "kind": kind,
-        "target_role": "domain-policy" if kind == "domain-policy-pack" else "squad",
+        "target_role": "domain-policy" if kind in ("business-stack", "science-stack") else "squad",
         "description": desc,
         "recommended_surface_bindings": [binding_entry],
     }
@@ -248,17 +242,16 @@ def scaffold_template_pack(
             f"and promote via `promote-from-project --create-pr`.\n"
         ),
     }
-    if is_tech or kind == "project-overlay":
+    if is_tech:
         files_to_write[f"{rel_tpl}/governance/WORKTASK.md"] = (
             f"# Active Work Tasks — {template_name}\n\n- [ ] Initial setup\n"
         )
-    if is_tech:
         files_to_write[f"{rel_tpl}/governance/Makefile"] = (
             ".PHONY: install format lint test test-cov verify\n"
             "install:\n\t@echo 'Configure stack dependencies'\n"
             "verify:\n\t@echo 'Run stack verification gates'\n"
         )
-    if not is_tech:
+    else:
         files_to_write[f"{rel_tpl}/assets/canonical_snippet.md"] = (
             f"<!-- Canonical asset for {template_name} ({kind}) -->\n"
         )

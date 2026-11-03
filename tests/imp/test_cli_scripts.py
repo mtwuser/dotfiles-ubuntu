@@ -123,7 +123,7 @@ class TestCLIScripts:
             "scaffold-template",
             "brand-tokens",
             "--kind",
-            "department-pack",
+            "business-stack",
             "--register-binding",
         ]
         apply_cmd = [

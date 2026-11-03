@@ -1,39 +1,34 @@
-"""Task-branch workflow onboarding, upstream template diffing, and ephemeral consultation.
+"""Task-branch workflow onboarding and ephemeral consultation engine.
 
 Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 """
 
-import difflib
 import json
 import re
-import shutil
 from pathlib import Path
 from typing import Any
 
-from dotfiles_mcp.authority_engine import verify_layer_operation_authority
+from dotfiles_mcp.authority_engine import _load_manifest_dict, verify_layer_operation_authority
 from dotfiles_mcp.constants import (
     KEBAB_ID_RE,
     MAX_BRANCH_SLUG_CHARS,
     MAX_BRANCH_SLUG_TOKENS,
     MAX_CONSULT_MATCHES,
-    MAX_DIFF_PREVIEW_LINES,
     ROLE_DEFAULT_PRECEDENCE,
     VALID_AGENT_TIERS,
+    VALID_DELEGATION_DIRS,
+    VALID_DELEGATION_SURFACES,
     VALID_TRACKER_FILES,
 )
 from dotfiles_mcp.ephemeral_fork_engine import reap_ephemeral_fork, spawn_ephemeral_fork
 from dotfiles_mcp.git_governance_engine import stage_non_destructive_proposal
-from dotfiles_mcp.manifest_helpers import (
-    _iter_layer_template_dirs,
-    _resolve_mounted_child_dir,
-    _resolve_template_dir,
-)
+from dotfiles_mcp.layer_topology_helpers import _resolve_mounted_child_dir
+from dotfiles_mcp.manifest_helpers import _ensure_rule_file_frontmatter, _resolve_template_dir
 from dotfiles_mcp.tools_surface import SurfaceToolsMixin
 
 VALID_TASK_TRACKERS: tuple[str, ...] = VALID_TRACKER_FILES
 _TASK_LINE_RE = re.compile(r"^(\s*-\s*\[)([ /xX])(\]\s+)(.+)$")
 _ACTIVE_TASK_SECTION_RE = re.compile(r"\n*## Active Task\n[\s\S]*$", re.MULTILINE)
-_HEADING_RE = re.compile(r"^#{1,3}\s+.+$")
 _TICKET_ID_RE = re.compile(r"\b([A-Z]{2,12}-[A-Z0-9-]{1,20})\b")
 
 
@@ -229,139 +224,6 @@ def complete_task_workflow(
     return {**c_id, **c_tk, **c_dl, **c_rec}
 
 
-def _parse_markdown_sections_map(markdown_text: str) -> list[tuple[str, str]]:
-    """Parse Markdown text (excluding YAML frontmatter) into ordered (heading, body) pairs."""
-    text = markdown_text.strip()
-    end_idx = text.find("\n---\n", 4) if text.startswith("---\n") else -1
-    content = text[end_idx + 5 :].strip() if end_idx != -1 else text
-    sections: list[tuple[str, str]] = []
-    cur_heading = "# Preamble"
-    cur_lines: list[str] = []
-    for line in content.splitlines():
-        if _HEADING_RE.match(line.strip()):
-            body_str = "\n".join(cur_lines).strip()
-            if cur_heading != "# Preamble" or body_str:
-                sections.append((cur_heading, body_str))
-            cur_heading = line.strip()
-            cur_lines = []
-        else:
-            cur_lines.append(line)
-    tail_str = "\n".join(cur_lines).strip()
-    if cur_heading != "# Preamble" or tail_str:
-        sections.append((cur_heading, tail_str))
-    return sections
-
-
-def compare_upstream_templates(
-    repo_dir: Path,
-    target_dir: Path,
-    *,
-    parent_dir: Path | None = None,
-    template_filter: str | None = None,
-    apply_upstream_only: bool = False,
-    dry_run: bool = False,
-) -> dict[str, Any]:
-    """Compare rule sections between upstream (parent/OSS) and local workspace templates."""
-    ws, up = target_dir.resolve(), (parent_dir or repo_dir).resolve()
-    ws_mp, up_mp = ws / "system/mcp-layer.json", up / "system/mcp-layer.json"
-    ws_raw = json.loads(ws_mp.read_text(encoding="utf-8")) if ws_mp.is_file() else {}
-    up_raw = json.loads(up_mp.read_text(encoding="utf-8")) if up_mp.is_file() else {}
-    ws_m = ws_raw if isinstance(ws_raw, dict) else {}
-    up_m = up_raw if isinstance(up_raw, dict) else {}
-    ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
-    def_tpls = [str(x) for x in ws_m.get("default_stack_templates", [])]
-    cand_tpls = list(dict.fromkeys([*def_tpls, *ws_tpls]))
-    if template_filter:
-        cand_tpls = [t for t in cand_tpls if t == template_filter.strip()]
-
-    file_comparisons: list[dict[str, Any]] = []
-    safe_applied: list[str] = []
-    for tpl in cand_tpls:
-        up_tdir, ws_tdir = _resolve_template_dir(up, tpl), _resolve_template_dir(ws, tpl)
-        if up_tdir is None or ws_tdir is None:
-            continue
-        up_rules = {p.name: p for p in sorted((up_tdir / "rules").glob("*.md"))}
-        ws_rules = {p.name: p for p in sorted((ws_tdir / "rules").glob("*.md"))}
-        for rname in sorted(set(up_rules) | set(ws_rules)):
-            up_rf, ws_rf = up_rules.get(rname), ws_rules.get(rname)
-            rel_f = (ws_rf or (ws_tdir / "rules" / rname)).relative_to(ws)
-            rel_file = str(rel_f).replace("\\", "/")
-            if up_rf is not None and ws_rf is None:
-                up_secs = [h for h, _b in _parse_markdown_sections_map(up_rf.read_text("utf-8"))]
-                dest_rf = ws_tdir / "rules" / rname
-                if apply_upstream_only:
-                    safe_applied.append(rel_file)
-                    if not dry_run:
-                        dest_rf.parent.mkdir(parents=True, exist_ok=True)
-                        shutil.copy2(up_rf, dest_rf)
-                c_head = {"template": tpl, "rule_file": rel_file, "status": "upstream_only_file"}
-                c_secs = {"in_sync_sections": [], "upstream_only_sections": up_secs}
-                c_tail: dict[str, Any] = {"local_only_sections": [], "diverged_sections": []}
-                c_act = {"recommended_action": "adopt_upstream_file"}
-                file_comparisons.append({**c_head, **c_secs, **c_tail, **c_act})
-            elif ws_rf is not None and up_rf is None:
-                ws_secs = [h for h, _b in _parse_markdown_sections_map(ws_rf.read_text("utf-8"))]
-                c_head = {"template": tpl, "rule_file": rel_file, "status": "local_only_file"}
-                c_secs = {"in_sync_sections": [], "upstream_only_sections": []}
-                c_tail = {"local_only_sections": ws_secs, "diverged_sections": []}
-                c_act = {"recommended_action": "keep_local_or_promote"}
-                file_comparisons.append({**c_head, **c_secs, **c_tail, **c_act})
-            else:
-                up_rf, ws_rf = up_rules[rname], ws_rules[rname]
-                up_map = dict(_parse_markdown_sections_map(up_rf.read_text("utf-8")))
-                ws_map = dict(_parse_markdown_sections_map(ws_rf.read_text("utf-8")))
-                in_sync = [h for h in up_map if h in ws_map and up_map[h] == ws_map[h]]
-                up_only = [h for h in up_map if h not in ws_map]
-                loc_only = [h for h in ws_map if h not in up_map]
-                up_newer = up_rf.stat().st_mtime_ns > ws_rf.stat().st_mtime_ns
-                diverged: list[dict[str, Any]] = []
-                for h in [k for k in up_map if k in ws_map and up_map[k] != ws_map[k]]:
-                    u_diff = difflib.unified_diff(
-                        ws_map[h].splitlines(),
-                        up_map[h].splitlines(),
-                        fromfile="local",
-                        tofile="upstream",
-                        lineterm="",
-                    )
-                    d_dir = "upstream_newer" if up_newer else "local_newer"
-                    d_prev = "\n".join(list(u_diff)[:MAX_DIFF_PREVIEW_LINES])
-                    d_head = {"heading": h, "drift_direction": d_dir, "diff_preview": d_prev}
-                    diverged.append({**d_head, "recommended_action": "review_and_merge_section"})
-                if apply_upstream_only and up_only:
-                    safe_applied.append(rel_file)
-                    if not dry_run:
-                        cur_txt = ws_rf.read_text(encoding="utf-8").rstrip()
-                        extra = "".join(f"\n\n{h}\n\n{up_map[h]}" for h in up_only)
-                        ws_rf.write_text(f"{cur_txt}{extra}\n", encoding="utf-8")
-                has_diff = bool(up_only or loc_only or diverged)
-                status = (
-                    "in_sync" if not has_diff else ("diverged" if diverged else "section_additions")
-                )
-                act_alt = "adopt_upstream_sections" if up_only else "keep_local_or_promote"
-                rec = (
-                    "none"
-                    if status == "in_sync"
-                    else ("review_diverged_sections" if diverged else act_alt)
-                )
-                c_head = {"template": tpl, "rule_file": rel_file, "status": status}
-                c_secs = {"in_sync_sections": in_sync, "upstream_only_sections": up_only}
-                c_tail = {"local_only_sections": loc_only, "diverged_sections": diverged}
-                file_comparisons.append({**c_head, **c_secs, **c_tail, "recommended_action": rec})
-
-    n_up = sum(1 for f in file_comparisons if f["upstream_only_sections"])
-    n_loc = sum(1 for f in file_comparisons if f["local_only_sections"])
-    n_sync = sum(1 for f in file_comparisons if f["status"] == "in_sync")
-    n_div = sum(1 for f in file_comparisons if f["diverged_sections"])
-    s_head = {"files_compared": len(file_comparisons), "in_sync_files": n_sync}
-    s_adds = {"files_with_upstream_additions": n_up, "files_with_local_customizations": n_loc}
-    summary = {**s_head, **s_adds, "files_with_diverged_sections": n_div}
-    u_dirs = {"workspace_dir": str(ws), "upstream_dir": str(up), "dry_run": dry_run}
-    u_ids = {"layer_id": str(ws_m.get("layer_id", ws.name)), "template_filter": template_filter}
-    u_up = {"upstream_layer_id": str(up_m.get("layer_id", up.name)), "summary": summary}
-    u_ap = {"apply_upstream_only": apply_upstream_only, "safe_applied_files": safe_applied}
-    return {**u_dirs, **u_ids, **u_up, **u_ap, "file_comparisons": file_comparisons}
-
-
 def consult_layer_ephemeral(
     repo_dir: Path,
     workspace_dir: Path,
@@ -458,3 +320,124 @@ def consult_layer_ephemeral(
     out_flags = {"target_path": clean_path, "auto_reaped": True, "dry_run": dry_run}
     out_res = {"capsule_matches": q_matches, "four_channel_digest": digest}
     return {**out_head, **out_fork, **out_mode, **out_flags, **out_res}
+
+
+def delegate_directive_to_child(
+    workspace_dir: Path, *, child_layer: str, directive: str = "",
+    source_rel_path: str | None = None, ticket_id: str | None = None, priority: str = "P1",
+    tracker: str = "WORKTASK.md", actor_email: str | None = None, force_overwrite: bool = False,
+    create_pr: bool = False, dry_run: bool = False,
+) -> dict[str, Any]:  # fmt: skip
+    """Delegate a 1-hop downward directive or governance artifact into layers/<child>/<tracker>."""
+    clean_child, clean_dir = child_layer.strip(), directive.strip()
+    if not KEBAB_ID_RE.match(clean_child):
+        raise ValueError(f"Invalid child_layer {child_layer!r}: must be kebab-case")
+    if priority not in ("P0", "P1", "P2"):
+        raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
+    if tracker not in VALID_DELEGATION_SURFACES:
+        raise ValueError(
+            f"Invalid tracker/surface {tracker!r}: must be in {VALID_DELEGATION_SURFACES}"
+        )
+    ws, src_file, src_body = workspace_dir.resolve(), None, ""
+    if source_rel_path:
+        src_file = (ws / source_rel_path.strip().lstrip("/")).resolve()
+        if not src_file.is_relative_to(ws) or not src_file.is_file():
+            raise ValueError(f"Invalid or missing source_rel_path: {source_rel_path!r}")
+        src_body = src_file.read_text(encoding="utf-8").strip()
+    if not clean_dir and not src_body:
+        raise ValueError("directive must be a non-empty string or source_rel_path must be provided")
+    verdict = verify_layer_operation_authority(
+        ws, operation="delegate-to-child", actor_email=actor_email
+    )
+    if not verdict["allowed"]:
+        raise ValueError(f"DELEGATION_AUTHORITY_DENIED: {verdict['remediation']}")
+    mnt_dir = ws / "layers" / clean_child
+    cand_dir = mnt_dir if mnt_dir.is_dir() else _resolve_mounted_child_dir(ws, clean_child)
+    tdir = cand_dir if cand_dir is not None and cand_dir.is_relative_to(ws) else None
+    if tdir is None:
+        raise ValueError(f"Target 1-hop child layer not found: {clean_child!r}")
+    m = _load_manifest_dict(ws)
+    pid, prole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "corporate"))
+    pprec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE["corporate"]))
+    eff_text = clean_dir or f"Delivered `{src_file.name if src_file else tracker}`"
+    t_match = re.search(r"\b([A-Z]{2,12}-[A-Z0-9-]{2,20})\b", eff_text)
+    eff_ticket = (ticket_id or "").strip().upper() or (
+        t_match.group(1) if t_match else f"{pid.upper()}-{clean_child.upper()}-01"
+    )
+    entry = (
+        f"- [ ] **[{priority} · {eff_ticket} · Delegated from `{pid}` (`{prole}`, "
+        f"`precedence: {pprec}`)]**: {eff_text}"
+    )
+    def_fn = f"{eff_ticket.lower()}.md" if tracker in VALID_TRACKER_FILES else "delegated-item.md"
+    fname, updated, staged = src_file.name if src_file is not None else def_fn, [], []
+    stg_kw: dict[str, Any] = {"scope_tag": f"from-{pid}", "file_name": fname, "dry_run": dry_run,
+        "operation": "delegate-to-child", "actor_email": actor_email or ""}  # fmt: skip
+    c_auth = verify_layer_operation_authority(
+        tdir, operation="delegate-to-child", actor_email=actor_email, record_blocked=False
+    )
+    is_child_owner = bool(c_auth["allowed"]) and not create_pr
+    if not is_child_owner:
+        p_body = src_body or (f"# {eff_text}\n" if tracker == "rules" else entry)
+        p_stg = stage_non_destructive_proposal(
+            tdir, content=p_body, reason_code="CROSS_OWNER_CHILD_DELEGATION", **stg_kw
+        )
+        staged.append(str(p_stg))
+    elif tracker == "rules":
+        ctpl = str(_load_manifest_dict(tdir).get("layer_id") or clean_child)
+        r_dest, r_body = tdir / "templates" / ctpl / "rules" / fname, src_body or f"# {eff_text}\n"
+        if r_dest.is_file() and not force_overwrite:
+            staged.append(str(stage_non_destructive_proposal(tdir, content=r_body, **stg_kw)))
+        else:
+            for rp in (r_dest, tdir / ".agents/rules" / fname):
+                updated.append(str(rp))
+                if not dry_run:
+                    rp.parent.mkdir(parents=True, exist_ok=True)
+                    rp.write_text(f"{r_body.rstrip()}\n", encoding="utf-8")
+                    _ensure_rule_file_frontmatter(rp, sync_in_place=True)
+    elif tracker in VALID_DELEGATION_DIRS:
+        tfile = tdir / tracker / fname
+        hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)"
+        hdr_body = f"{hdr}\n\n{src_body or eff_text}"
+        if tfile.is_file() and not force_overwrite:
+            staged.append(str(stage_non_destructive_proposal(tdir, content=hdr_body, **stg_kw)))
+        else:
+            updated.append(str(tfile))
+            if not dry_run:
+                tfile.parent.mkdir(parents=True, exist_ok=True)
+                tfile.write_text(f"{hdr_body}\n", encoding="utf-8")
+    else:
+        tfile = tdir / tracker
+        updated.append(str(tfile))
+        if not dry_run:
+            def_h = f"# Active Work Tasks — {clean_child}\n\n"
+            cur = tfile.read_text("utf-8") if tfile.is_file() else def_h
+            blk = f"{entry}\n\n{src_body}" if (src_body and clean_dir) else entry
+            if entry not in cur:
+                tfile.write_text(f"{cur}{'' if cur.endswith('\n') else '\n'}{blk}\n", "utf-8")
+    p_wt, p_hdr = ws / "WORKTASK.md", "## Outbound Delegations"
+    p_entry = (
+        f"- [/] **[{eff_ticket} -> `{clean_child}` (`{tracker}`, stage: `delegated`)]**: {eff_text}"
+    )
+    if not dry_run:
+        p_cur = p_wt.read_text("utf-8") if p_wt.is_file() else f"# Active Work Tasks — {pid}\n"
+        p_base = p_cur.rstrip() if p_hdr in p_cur else f"{p_cur.rstrip()}\n\n{p_hdr}"
+        if p_entry not in p_base:
+            p_wt.write_text(f"{p_base}\n{p_entry}\n", encoding="utf-8")
+    if src_file is not None and src_file.name in VALID_TRACKER_FILES:
+        note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
+        if not dry_run and note not in src_body:
+            src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
+    c_br = next(
+        (str(e.get("branch") or "master") for e in (m.get("mounted_layers") or [])
+            if isinstance(e, dict) and e.get("name") in (clean_child, tdir.name)),
+        "master",
+    )  # fmt: skip
+    deliv_mode = "direct_subtree" if (is_child_owner and not staged) else "proposal_pr"
+    push_br = c_br if deliv_mode == "direct_subtree" else f"delegate/{eff_ticket.lower()}"
+    return {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run,
+        "child_layer": clean_child, "ticket_id": eff_ticket, "priority": priority,
+        "tracker": tracker, "delivery_mode": deliv_mode,
+        "actor_is_child_owner": bool(c_auth["allowed"]),
+        "subtree_push_command": f"./scripts/layer-subtree.sh push {tdir.name} {push_br}",
+        "delegated_entry": entry, "parent_ledger_entry": p_entry,
+        "updated_paths": updated, "staged_proposals": staged}  # fmt: skip

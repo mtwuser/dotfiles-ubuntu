@@ -12,7 +12,7 @@ Configuration follows a 3-layer hierarchy where each layer extends the one above
 
 ```
 Layer 1: Shared (Global)         ← ~/dotfiles-ubuntu/antigravity/  (symlinked to ~/.gemini/config/)
-Layer 2: Templates (Reusable)    ← ~/dotfiles-ubuntu/templates/    (human-core, technical-base, business-base, stack packs)
+Layer 2: Templates (Reusable)    ← ~/dotfiles-ubuntu/templates/    (3 core bases: human-core, technical-base, business-base + 3 specialization stacks: business-stack, science-stack, tech-stack)
 Layer 3: Custom (Project-local)  ← <workspace>/.agents/            (projected rules, skills, SESSION.md & governance ledgers)
 ```
 
@@ -29,38 +29,49 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
   - `post_invocation_lint.py` (`PostInvocation`) — Enforces `< 465` lines on modified `.py`, `README.md`, and `docs/**/*.md` files, AAA test comments, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18 KB` `AGENTS.md` / `80 KB` workspace cap).
   - `stop_verify_tests.py` (`Stop`) — Runs affected unit tests before concluding a task.
 
-### 1.2 Global Slash Commands (`~/.gemini/config/skills/`) vs. Technical-Pack Skills (`templates/technical-base/skills/`)
+### 1.2 Complete 19-Skill Matrix Across the 3 Core Bases (`human-core`: 10, `technical-base`: 4) & 3 Specialization Stacks (`business-stack`: 1, `science-stack`: Epistemic Consultation, `tech-stack`: 4)
 
-The 10 universal lifecycle, governance, and audit skills live in `$HOME/.gemini/config/skills/` and adapt automatically to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`), while the 4 software-engineering-specific skills (`testing`, `refactoring`, `validation`, `oss-contribute`) live in `templates/technical-base/skills/` and are projected into `.agents/skills/` only on technical workspaces:
+The **19 skills** are partitioned across the **3 Core Bases** and **3 Specialization Stacks** so each organizational level (`Root 0`, `Department`, `Case/Unit/Squad`, `Project`) loads only the procedural capabilities required by its active domain:
+- **10 Universal Global Skills (`~/.gemini/config/skills/` — `human-core`)**: Available in all workspaces and automatically adapting to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`).
+- **4 Core Software-Engineering Skills (`templates/technical-base/skills/`)**: Projected into `.agents/skills/` on technical workspaces or when running `make setup-dev` inside a business layer.
+- **5 Domain Specialization-Stack Skills (`templates/business-stack/` & `templates/tech-stack/`)**: Projected only into workspaces that apply `corporate-ops-ledger` (`1` skill) or `fastapi-hexagonal` (`4` skills), while `science-stack/scientific-knowledge-branch` couples its epistemic methodology rule with `make consult` (`rcap1`) and `/review`.
 
-| Skill / Command | Scope | When to Use & Key Actions |
-|-----------------|------|---------------------------|
-| `/sopen` | Global (`human-core`) | Start of every session: runs `make status` (`./scripts/layer-config.sh status`) in a single `< 0.2s` call (`session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`) and skips `brain/` scanning when `last_conversation_id` is `null`. |
-| `/continue` | Global (`human-core`) | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
-| `/sclose` | Global (`human-core`) | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
-| `/release` | Global (`human-core`) | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
-| `/priority` | Global (Dual Mode) | Audits `WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` using `1:1:1` specs/tests in `technical` mode or *Lex Superior* / SSoT ledgers (`corporate/`) in `business` mode. |
-| `/review` | Global (Dual Mode) | Tactical `C1` incremental/target review (`/review [path\|docs\|arch\|1:1:1\|layer]`): audits the active session delta (default when called with no args) or a specific path/dimension across the 4 canonical dimensions (`docs`, `arch`, `1:1:1`, `layer`). |
-| `/full-audit` | Global (Dual Mode) | Convergent `C2` closed-world repository gate (`/full-audit`): runs the 4 deterministic probes (`Probe A..D`) and 4 canonical passes across 100% of the repository toward `Regime 0 (0 findings)` before `/release`. |
-| `/enrich` | Global (`human-core`) | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`). |
-| `architecture-review` | Global (Dual Mode) | Multi-dimensional specification reviews (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & policy packs in `business` mode). |
-| `governance` | Global (Dual Mode) | One-way work lifecycle transitions, 1-hop downward directive delegation (`make delegate` / `delegate-to-child`), and clean-room knowledge extraction. |
-| `refactoring` | `technical-base` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target) with `1:1:1` parity. |
-| `testing` | `technical-base` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% branch coverage audits. |
-| `validation` | `technical-base` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
-| `oss-contribute` | `technical-base` | Conscious `C3` workflow for empirical hot-path profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and isolated `~/Projects/oss-contrib-<repo>` upstream PRs. |
+| Skill / Command | Source Pack (`kind`) | Target Organizational Levels | When to Use & Key Actions |
+|-----------------|----------------------|------------------------------|---------------------------|
+| `/sopen` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Start of every session: runs `make status` (`./scripts/layer-config.sh status`) in a single `< 0.2s` call (`session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`) and skips `brain/` scanning when `last_conversation_id` is `null`. |
+| `/continue` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
+| `/sclose` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
+| `/release` | Global (`human-core`) | Layer Owners (`Root 0` $\rightarrow$ `Project`) | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
+| `/priority` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Audits `WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` using `1:1:1` specs/tests in `technical` mode or *Lex Superior* / SSoT ledgers (`corporate/`) in `business` mode. |
+| `/review` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Tactical `C1` incremental/target review (`/review [path\|docs\|arch\|1:1:1\|layer]`): audits the active session delta (default when called with no args) or a specific path/dimension across the 4 canonical dimensions (`docs` including Conceptual & Semantic Isomorphism, `arch`, `1:1:1`, `layer`). |
+| `/full-audit` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Convergent `C2` closed-world repository gate (`/full-audit`): runs the 4 deterministic probes (`Probe A..D`) and 4 canonical passes across 100% of the repository toward `Regime 0 (0 findings)` before `/release`. |
+| `/enrich` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`). |
+| `architecture-review` | Global (`human-core`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | Multi-dimensional specification & taxonomy reviews (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & policy packs in `business` mode). |
+| `governance` | Global (`human-core`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | One-way work lifecycle transitions, 1-hop downward directive delegation (`make delegate` / `delegate-to-child`), and clean-room knowledge extraction. |
+| `refactoring` | `technical-base` (`core-base`) | Technical `Squad`/`Project` & `make setup-dev` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target) with `1:1:1` parity. |
+| `testing` | `technical-base` (`core-base`) | Technical `Squad`/`Project` & `make setup-dev` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% branch coverage audits. |
+| `validation` | `technical-base` (`core-base`) | Technical `Squad`/`Project` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
+| `oss-contribute` | `technical-base` (`core-base`) | `OSS Dev` & Technical `Squad`/`Project` | Conscious `C3` workflow for empirical hot-path profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and isolated `~/Projects/oss-contrib-<repo>` upstream PRs. |
+| `ledger-surface-audit` | `corporate-ops-ledger` (`business-stack`) | `Root 0`, `Department`, Business `Case/Unit` | Audits 3-ring Hexagonal Business traceability across `corporate/ledgers/` $\rightarrow$ `corporate/{policies,sops}/` $\rightarrow$ `surfaces/{web,forms,print}/` (`[DEPT]-[TYPE]-[YYYY]-[NNN]`). |
+| `start` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Initializes or resumes a Python FastAPI + Hexagonal DDD service workspace (`./venv`, `uvicorn`, health checks). |
+| `fastapi-testing` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | 4-layer hexagonal test patterns (`domain`, `application`, `adapters`, `entrypoints`) with `httpx.AsyncClient` and SQLAlchemy async fixtures (coexisting alongside `technical-base`'s `testing`). |
+| `database-migrations` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | User-gated Alembic async migration workflow, zero-touch `alembic/versions/*.py` rules, and reversible schema evolution. |
+| `frontend-patterns` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Clean API-contract integration, component state isolation, and accessible UI verification for FastAPI web frontends. |
 
 > **`/learn` (built-in Antigravity command) vs. `/enrich` (`dotfiles-ubuntu`)**:
-> `/learn` captures a lesson from the current chat into the active workspace's `.agents/`. `/enrich` evaluates matured rules across workspaces and promotes them upward (`Squad/App -> Department -> Corporate Root 0 -> Open Source`) via `layer-config.sh promote-from-project`.
+> `/learn` captures a lesson from the current chat into the active workspace's `.agents/`. `/enrich` evaluates matured rules across workspaces and promotes them upward (`Case/Unit/Squad/App -> Department -> Corporate Root 0 -> Open Source`) via `layer-config.sh promote-from-project`.
 
 ---
 
-## 2. `antigravity-ide` (360° Viewer) vs. `antigravity-agents` (Scoped Workspaces)
+## 2. Scoped Workspace Execution in Antigravity Agents (`antigravity-agents`) & Multi-Tier Containment
 
-| Surface | Role in Multi-Tier Governance | File-Access & Context Boundary |
-|---------|-------------------------------|--------------------------------|
-| **`antigravity-ide`** (`/opt/antigravity-ide`) | **360° Visual & Terminal Explorer**: Open the Corporate Root (`Root 0`) or a multi-repo parent folder to inspect code, diffs, and terminals across all departments and squads simultaneously without leaking unrelated agent rules into a single conversation. | Visual/terminal inspection across all folders. |
-| **`antigravity-agents`** (`/opt/antigravity-agents`) | **Scoped Agent Execution Surface**: Open a specific Workspace Root (`Corporate Root 0`, a `Department` repo, or a `Squad/App` repo). Automatically loads global `~/.gemini/config/AGENTS.md` (`human-core`) + `<workspace>/.agents/rules/layer-<NN>-<name>.md` ordered by `precedence` (`0..100`). | `Non-Workspace File Access`: set to **`allow`** on Corporate Root (`Root 0` holistic orchestration) and **`deny`/`ask`** on Department or Squad workspaces to enforce strict vertical/horizontal isolation. |
+All daily engineering, legal, scientific, and corporate governance work runs directly inside **Google Antigravity 2.0 (`antigravity-agents`)** (and its headless counterpart, **Antigravity CLI (`agy`)**), which scopes agent context and file-access permissions strictly to the **Workspace Root** opened in each window:
+
+| Workspace Root Opened in `antigravity-agents` | Active Rules Loaded into Context (`<= 20,000` tokens) | `Non-Workspace File Access` & Containment Boundary |
+|-----------------------------------------------|-------------------------------------------------------|----------------------------------------------------|
+| **`Corporate Root 0`** (`--role corporate`, `precedence: 10`) | Global `~/.gemini/config/AGENTS.md` (`human-core`) + `layer-10-<root>.md` (`business-base` + executive governance). Mounted child subtrees in `layers/<dept>/` are **never** auto-injected into `Root 0`'s always-on context; they are queried on demand via `make consult` (`rcap1`) or delegated via `make delegate`. | **`allow`** — Enables holistic 360° executive orchestration, cross-subtree inspection (`make status`, `make horizon`), and `1-hop` downward delegation across `layers/*`. |
+| **`Department` / `Domain-Policy`** (`precedence: 5..49`) | Global `AGENTS.md` + inherited `layer-10-<root>.md` + `layer-<NN>-<dept>.md` (+ `technical-base` when `make setup-dev` is active). | **`deny` / `ask`** — Enforces vertical and horizontal departmental isolation; cross-department queries use `make consult LAYER=<peer>` (`strictly-read-only`). |
+| **`Level 3 Unit` (`Case` / `Study` / `Squad`) & `Level 4 Project`** (`precedence: 50..80` + `85..95` `Human-Stack`) | Global `AGENTS.md` + inherited chain (`0..80`) + specialization stack (`business-stack`, `science-stack`, or `tech-stack`) + personal `Human-Stack` (`L1..L4`) in `.agents/SESSION.md`. | **`deny` / `ask`** — Confines execution strictly to the unit, case, or application repository; upward rule changes are proposed via `make promote` (`promote-from-project --create-pr`). |
 
 ---
 
@@ -128,7 +139,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/dept-legal-ip/rules/dept-legal-ip.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh bootstrap-workspace commands to initialize our child Squads.
    ```
 
-### 3.3 Level 3 — `Squad` (`--role squad`, `precedence: 50`)
+### 3.3 Level 3 — `Squad`, `Case`, or `Operational Unit` (`--role squad`, `precedence: 50`)
 
 1. **CLI Setup**:
    ```bash
@@ -138,15 +149,15 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    ./scripts/layer-config.sh set-authority /path/to/squad-patents \
      --owner-role "Squad Lead" --emails "lead@squad.acme.com"
    ```
-2. **Fill-in-the-Blanks Blueprint (`README.md` in `Squad`)**:
+2. **Fill-in-the-Blanks Blueprint (`README.md` in `Squad` / `Operational Unit`)**:
    ```markdown
-   ## Layer Setup Blueprint (Level 3 — Squad Execution & Tech Stack Governance)
+   ## Layer Setup Blueprint (Level 3 — Squad, Case & Operational Unit Governance)
    - **Layer ID & Role**: `squad-patent-ops` (`squad`, `precedence: 50`)
    - **1-Hop Upstream Parent**: `dept-legal-ip`
    - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`, `technical-base`, `fastapi-hexagonal`, `squad-patent-ops`
    - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Specs: domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]
-   - **Mission, Scope & Core Invariants**: [Fill: Squad mission, bounded contexts, tech stack conventions, and testing gates]
-   - **Downstream Topology (Next Tier)**: [Fill: Target application repositories for apply-project, e.g. /path/to/patent-api]
+   - **Mission, Scope & Core Invariants**: [Fill: Operational unit, case, or squad mission, bounded contexts, specialization conventions, and verification gates]
+   - **Downstream Topology (Next Tier)**: [Fill: Target application or case repositories for apply-project, e.g. /path/to/patent-api]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
    ```
 3. **Initial Chat Kickoff Prompt (`Squad`)**:

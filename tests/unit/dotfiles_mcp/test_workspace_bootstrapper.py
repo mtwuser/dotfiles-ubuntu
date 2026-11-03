@@ -169,7 +169,7 @@ class TestWorkspaceBootstrapper:
         bdir.mkdir(parents=True)
         (repo_dir / "templates" / "business-base" / "template.json").write_text(
             '{"schema_version": "template-pack-v1", "template_id": "business-base", '
-            '"kind": "domain-policy-pack"}',
+            '"kind": "core-base"}',
             encoding="utf-8",
         )
         (bdir / "business-base.md").write_text("# Business Base\n", encoding="utf-8")
@@ -177,7 +177,7 @@ class TestWorkspaceBootstrapper:
         hdir.mkdir(parents=True)
         (repo_dir / "templates" / "human-core" / "template.json").write_text(
             '{"schema_version": "template-pack-v1", "template_id": "human-core", '
-            '"kind": "domain-policy-pack"}',
+            '"kind": "core-base"}',
             encoding="utf-8",
         )
         (hdir / "human-core.md").write_text("# Human Core\n", encoding="utf-8")

@@ -392,7 +392,7 @@ class TestChainedMCPFederationE2E:
         scaffold_template_pack(
             fork_dir,
             template_name="gdpr-eu",
-            kind="domain-policy-pack",
+            kind="business-stack",
             register_binding=False,
             scopes=["checkout"],
         )

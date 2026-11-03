@@ -53,8 +53,9 @@ grep -rn "\\\\u[0-9a-fA-F]\\{4\\}" system/ templates/ layers/ 2>/dev/null || tru
 
 Evaluate only the dimensions relevant to the selected target radius and `workspace_mode`:
 
-### Dimension 1 — `docs`: 3-Tier Documentation & 5-Link Change-Ripple
+### Dimension 1 — `docs`: 3-Tier Documentation, Conceptual Isomorphism & 5-Link Change-Ripple
 - [ ] **3-Tier Progressive Disclosure & `< 465`-Line Gate**: Touched `README.md` ($\le 400$ target), `docs/guides/*.md`, `docs/architecture/*.md`, and `docs/reference/*.md` stay strictly `< 465` lines and match actual disk trees (`find` / `ls`).
+- [ ] **Conceptual & Semantic Prose Isomorphism**: Read touched documentation tables and prose word-for-word against `constants.py` and `templates/**/template.json` to ensure zero retired taxonomy terms (`core-base`, `business-stack`, `science-stack`, `tech-stack` only), complete skill/template inventories, domain-neutral Level 3 (**Squad, Case, or Operational Unit**) framing, and single-surface `antigravity-agents` guidance.
 - [ ] **5-Link Change-Ripple & Flag-Signature Parity**: Any modified capability is synchronized across all 5 links (`1. Engine/Service Function <-> 2. CLI/Router Parser <-> 3. Makefile Recipe / Hook <-> 4. Spec Table (docs/architecture/) <-> 5. Root/Guide Docs & Parity Tests`), verifying that Link 3 (`Makefile` recipes) forwards all optional CLI flags exposed by Link 2.
 - [ ] **Links, Mermaid & Language Purity**: 100% of relative Markdown links resolve on disk, Mermaid node labels containing `()` or `[]` are double-quoted, and repository artifacts remain in 100% pure technical English.
 

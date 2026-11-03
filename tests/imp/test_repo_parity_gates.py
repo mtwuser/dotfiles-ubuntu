@@ -42,19 +42,15 @@ class TestRepoParityGates:
             for p in (REPO_DIR / "scripts" / "dotfiles_mcp").glob("*.py")
             if p.name not in declarative_only
         )
-        all_sized_files = sorted(
-            [
-                REPO_DIR / "README.md",
-                *list(REPO_DIR.glob("*.sh")),
-                *list((REPO_DIR / "scripts").glob("*.sh")),
-                *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
-                *list((REPO_DIR / "scripts").glob("*.py")),
-                *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
-                *list((REPO_DIR / "tests").rglob("*.py")),
-                *list((REPO_DIR / "docs").rglob("*.md")),
-                *list((REPO_DIR / "templates").rglob("*.md")),
-            ]
-        )
+        all_sized_files = sorted([
+            REPO_DIR / "README.md", *list(REPO_DIR.glob("*.sh")),
+            *list((REPO_DIR / "scripts").glob("*.sh")),
+            *list((REPO_DIR / "antigravity/.gemini/config/scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts").glob("*.py")),
+            *list((REPO_DIR / "scripts/dotfiles_mcp").glob("*.py")),
+            *list((REPO_DIR / "tests").rglob("*.py")), *list((REPO_DIR / "docs").rglob("*.md")),
+            *list((REPO_DIR / "templates").rglob("*.md")),
+        ])  # fmt: skip
         spec_re = re.compile(
             r"^Specification:\s*(docs/architecture/[a-zA-Z0-9_]+\.md)\s*$", re.MULTILINE
         )
@@ -95,7 +91,7 @@ class TestRepoParityGates:
         ]
 
         # Assert
-        assert len(pkg_modules) == 18
+        assert len(pkg_modules) == 20
         assert len(template_rules) == 9
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
@@ -151,6 +147,10 @@ class TestRepoParityGates:
         # Assert
         assert "--upstream-repo" not in guide_02
         assert "Vertical Human Persona & Use-Case Journey Matrix" in full_audit_skill
+        assert "Conceptual & Semantic Documentation Reading Pass" in full_audit_skill
+        assert mcp_constants.VALID_TEMPLATE_KINDS == (
+            "core-base", "business-stack", "science-stack", "tech-stack"
+        )  # fmt: skip
         assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
         assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
         assert post_invocation_lint._AGENTS_MD_MAX_BYTES == mcp_constants.AGENTS_MD_MAX_BYTES
@@ -229,24 +229,16 @@ class TestRepoParityGates:
             r"\b(\x66ichero|\x66icheros|\x79a que estamos|\x73iempre enfoque limpio)\b",
             re.IGNORECASE,
         )
-        targets = sorted(
-            [
-                REPO_DIR / "README.md",
-                REPO_DIR / "CONTRIBUTING.md",
-                REPO_DIR / "SECURITY.md",
-                REPO_DIR / "ACCESSIBILITY.md",
-                REPO_DIR / "CODE_OF_CONDUCT.md",
-                REPO_DIR / "CHANGELOG.md",
-                *list((REPO_DIR / "antigravity").rglob("*.md")),
-                *list((REPO_DIR / "antigravity").rglob("*.py")),
-                *list((REPO_DIR / "docs").rglob("*.md")),
-                *list((REPO_DIR / "templates").rglob("*.md")),
-                *list((REPO_DIR / "scripts").rglob("*.py")),
-                *list((REPO_DIR / "scripts").glob("*.sh")),
-                *list((REPO_DIR / "system" / "external").rglob("*.sh")),
-                *list((REPO_DIR / "tests").rglob("*.py")),
-            ]
-        )
+        targets = sorted([
+            REPO_DIR / "README.md", REPO_DIR / "CONTRIBUTING.md", REPO_DIR / "SECURITY.md",
+            REPO_DIR / "ACCESSIBILITY.md", REPO_DIR / "CODE_OF_CONDUCT.md",
+            REPO_DIR / "CHANGELOG.md", *list((REPO_DIR / "antigravity").rglob("*.md")),
+            *list((REPO_DIR / "antigravity").rglob("*.py")),
+            *list((REPO_DIR / "docs").rglob("*.md")), *list((REPO_DIR / "templates").rglob("*.md")),
+            *list((REPO_DIR / "scripts").rglob("*.py")), *list((REPO_DIR / "scripts").glob("*.sh")),
+            *list((REPO_DIR / "system" / "external").rglob("*.sh")),
+            *list((REPO_DIR / "tests").rglob("*.py")),
+        ])  # fmt: skip
 
         # Act
         violations = [
@@ -446,7 +438,7 @@ class TestRepoParityGates:
                     blind_subprocess_mocks.append(f"{rel_tp}:{node.lineno}")
 
         # Assert
-        assert (len(prod_py), len(test_py)) == (26, 31)
+        assert (len(prod_py), len(test_py)) == (28, 33)
         assert pragma_violations == [] and prod_style_violations == []
         assert unmatched_raises == [] and blind_subprocess_mocks == []
         assert structure_violations == []

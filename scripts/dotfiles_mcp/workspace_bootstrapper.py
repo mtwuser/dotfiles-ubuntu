@@ -36,22 +36,23 @@ from dotfiles_mcp.fork_configurator import (
     configure_fork_manifest,
     scaffold_template_pack,
 )
-from dotfiles_mcp.git_governance_engine import (
-    inspect_git_governance_state,
-    reconcile_template_pack_sync,
-)
-from dotfiles_mcp.manifest_helpers import (
+from dotfiles_mcp.git_governance_engine import inspect_git_governance_state
+from dotfiles_mcp.horizon_engine import inspect_layer_horizon, reconcile_template_pack_sync
+from dotfiles_mcp.layer_topology_helpers import (
     _is_dest_template_newer,
-    _iter_layer_template_dirs,
-    _merge_unique_strings,
     _render_layer_makefile,
     _render_layer_onboarding_readme,
     _resolve_default_parent_dir,
-    _resolve_template_dest_dir,
-    _resolve_template_dir,
     _sync_mounted_children_into_parent,
 )
-from dotfiles_mcp.promotion_engine import diff_project_against_layers, inspect_layer_horizon
+from dotfiles_mcp.manifest_helpers import (
+    _iter_layer_template_dirs,
+    _merge_unique_strings,
+    _resolve_template_dest_dir,
+    _resolve_template_dir,
+    _stamp_schema_rev,
+)
+from dotfiles_mcp.promotion_engine import diff_project_against_layers
 
 VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
 _HC = ("human-core", "human-core.md")
@@ -233,12 +234,10 @@ def bootstrap_layer_workspace(
         m_data["default_stack_templates"] = list(all_tpls)
         m_path.write_text(json.dumps(m_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    is_pol = layer_role in ("domain-policy", "corporate")
-    own_kind = (
-        "domain-policy-pack"
-        if is_pol
-        else ("department-pack" if layer_role == "department" else "project-overlay")
+    is_tech_sq = layer_role == "squad" and any(
+        t in requested_templates for t in TECHNICAL_MODE_TEMPLATES
     )
+    own_kind = "tech-stack" if is_tech_sq else "business-stack"
     scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run,
         "description": description or f"{layer_id} ({layer_role}) governance pack",
         "register_binding": True, "rule_filename": f"{own_tpl_id}.md"}  # fmt: skip
@@ -337,11 +336,7 @@ def sync_layer_workspace(
         target_dir, eff_parent, repo_dir, candidate_tpls, **sync_kw
     )
     for _tname, tdir in _iter_layer_template_dirs(target_dir) if not dry_run else ():
-        if (tj := tdir / "template.json").is_file() and (
-            td := json.loads(tj.read_text(encoding="utf-8"))
-        ).get("schema_version") != TEMPLATE_MANIFEST_CONTRACT_REV:
-            td["schema_version"] = TEMPLATE_MANIFEST_CONTRACT_REV
-            tj.write_text(json.dumps(td, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        _stamp_schema_rev(tdir / "template.json", TEMPLATE_MANIFEST_CONTRACT_REV)
     synced_children = _sync_mounted_children_into_parent(
         target_dir, manifest.get("mounted_layers", []), dry_run=dry_run
     )

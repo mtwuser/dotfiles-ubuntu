@@ -41,10 +41,10 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
 2. **Scaffold a Polymorphic Template Pack (`scaffold-template`)**:
    ```bash
    ./scripts/layer-config.sh scaffold-template gdpr-eu \
-     --kind domain-policy-pack \
+     --kind business-stack \
      --register-binding
    ```
-   This generates `templates/<name>/template.json` (`kind`: `core-base` | `business-stack` | `science-stack` | `tech-stack` | `stack-starter` | `domain-policy-pack` | `department-pack` | `project-overlay`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
+   This generates `templates/business-stack/<name>/template.json` (`kind`: `core-base` | `business-stack` | `science-stack` | `tech-stack`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
 3. **Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)**:
    ```bash
    ./scripts/layer-config.sh list-templates

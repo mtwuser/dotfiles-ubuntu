@@ -30,11 +30,7 @@ from dotfiles_mcp.constants import (
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
 )
-from dotfiles_mcp.manifest_helpers import (
-    _is_makefile_outdated,
-    _resolve_template_dir,
-    _sha256_file,
-)
+from dotfiles_mcp.layer_topology_helpers import _is_makefile_outdated
 
 
 def _load_manifest(target_dir: Path) -> dict[str, Any]:
@@ -111,90 +107,6 @@ def stage_non_destructive_proposal(
         dry_run=dry_run,
     )  # fmt: skip
     return staged_file
-
-
-def _clear_upstream_proposal_residue(
-    target_dir: Path, prop_dir: Path, tpl_name: str, src_tpl: Path, local_tpl: Path
-) -> None:
-    """Remove resolved upstream proposal files, alerts, and stamp reconciled upstream hashes."""
-    for pf in prop_dir.glob(f"{tpl_name}-*.md"):
-        pf.unlink(missing_ok=True)
-    with contextlib.suppress(OSError):
-        prop_dir.rmdir()
-        prop_dir.parent.rmdir()
-    token = f".agents/proposals/from-upstream/{tpl_name}-"
-    for rel_f in ("WORKTASK.md", ".agents/SESSION.md"):
-        fp = target_dir / rel_f
-        if fp.is_file() and token in (raw := fp.read_text(encoding="utf-8")):
-            kept = [ln for ln in raw.splitlines() if token not in ln]
-            cleaned = "\n".join(kept).removesuffix("\n\n## Governance Alerts & Pending Decisions")
-            fp.write_text(f"{cleaned.rstrip()}\n", encoding="utf-8")
-    local_tpl.mkdir(parents=True, exist_ok=True)
-    tj = local_tpl / "template.json"
-    td: dict[str, Any] = json.loads(tj.read_text("utf-8")) if tj.is_file() else {}
-    rdir = src_tpl / "rules"
-    td["reconciled_upstream_sha256"] = {
-        rf.name: _sha256_file(rf) for rf in (sorted(rdir.glob("*.md")) if rdir.is_dir() else ())
-    }
-    tj.write_text(json.dumps(td, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-
-def reconcile_template_pack_sync(
-    target_dir: Path, tpl_name: str, src_tpl: Path, dest_tpl: Path, *,
-    strategy: str = "reconcile", is_local_newer: bool = False, dry_run: bool = False,
-) -> tuple[bool, list[dict[str, Any]]]:  # fmt: skip
-    """Reconcile an upstream template pack into dest_tpl using the requested sync strategy."""
-    prop_dir = target_dir / ".agents" / "proposals" / "from-upstream"
-    local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
-    if strategy == "keep-local" and local_tpl.is_dir():
-        if not dry_run:
-            _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name, src_tpl, local_tpl)
-        return False, []
-    if strategy == "reconcile" and is_local_newer:
-        tj = local_tpl / "template.json"
-        t_dict: dict[str, Any] = json.loads(tj.read_text("utf-8")) if tj.is_file() else {}
-        raw_rec = t_dict.get("reconciled_upstream_sha256")
-        rec_map: dict[str, Any] = raw_rec if isinstance(raw_rec, dict) else {}
-        conflicts: list[dict[str, Any]] = []
-        for src_rf in sorted((src_tpl / "rules").glob("*.md")):
-            src_sha, loc_rf = _sha256_file(src_rf), local_tpl / "rules" / src_rf.name
-            if (loc_rf.is_file() and _sha256_file(loc_rf) == src_sha) or rec_map.get(
-                src_rf.name
-            ) == src_sha:
-                continue
-            staged = stage_non_destructive_proposal(
-                target_dir, scope_tag="from-upstream", file_name=f"{tpl_name}-{src_rf.name}",
-                content=src_rf.read_text(encoding="utf-8"), operation="sync-layer",
-                reason_code="UPSTREAM_TEMPLATE_CONFLICT", dry_run=dry_run,
-            )  # fmt: skip
-            rel_stg = str(staged.relative_to(target_dir.resolve())).replace("\\", "/")
-            conflicts.append({"template": tpl_name, "staged_proposal": rel_stg,
-                "rule_file": f"templates/{tpl_name}/rules/{src_rf.name}",
-                "resolution_commands": ["make sync STRATEGY=accept-upstream",
-                    "make sync STRATEGY=merge", "make sync STRATEGY=keep-local"]})  # fmt: skip
-        return False, conflicts
-    preserved: dict[str, list[str]] = {}
-    if strategy == "merge" and (local_tpl / "rules").is_dir():
-        for dest_rf in sorted((local_tpl / "rules").glob("*.md")):
-            src_rf = src_tpl / "rules" / dest_rf.name
-            src_txt = src_rf.read_text(encoding="utf-8") if src_rf.is_file() else ""
-            blocks = [
-                b.strip()
-                for b in re.split(r"(?m)^(?=#+\s)", dest_rf.read_text(encoding="utf-8"))
-                if b.strip().startswith("#") and b.strip().splitlines()[0].strip() not in src_txt
-            ]
-            if blocks:
-                preserved[dest_rf.name] = blocks
-    if not dry_run:
-        shutil.rmtree(local_tpl, ignore_errors=True)
-        shutil.rmtree(dest_tpl, ignore_errors=True)
-        dest_tpl.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(src_tpl, dest_tpl)
-        for rname, blocks in preserved.items():
-            rf, joined = dest_tpl / "rules" / rname, "\n\n".join(blocks)
-            rf.write_text(f"{rf.read_text('utf-8').rstrip()}\n\n{joined}\n", encoding="utf-8")
-        _clear_upstream_proposal_residue(target_dir, prop_dir, tpl_name, src_tpl, dest_tpl)
-    return True, []
 
 
 def _fmt_codeowner_group(emails: tuple[str, ...], fallback: str) -> str:

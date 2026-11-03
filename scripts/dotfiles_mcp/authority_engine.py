@@ -1,4 +1,4 @@
-"""Role & identity authority enforcement, 1-hop delegation, and upward PR promotion planner.
+"""Role & identity authority enforcement, OSS agnosticism, and upward PR promotion planner.
 
 Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 """
@@ -26,16 +26,9 @@ from dotfiles_mcp.constants import (
     MIN_PRIVATE_TOKEN_LEN,
     OWNER_RESTRICTED_OPS,
     ROLE_DEFAULT_PRECEDENCE,
-    VALID_DELEGATION_DIRS,
-    VALID_DELEGATION_SURFACES,
-    VALID_TRACKER_FILES,
     VALIDATOR_ALLOWED_OPS,
 )
-from dotfiles_mcp.git_governance_engine import (
-    record_governance_event,
-    stage_non_destructive_proposal,
-)
-from dotfiles_mcp.manifest_helpers import _ensure_rule_file_frontmatter, _resolve_mounted_child_dir
+from dotfiles_mcp.git_governance_engine import record_governance_event
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -340,124 +333,3 @@ def build_upward_promotion_pr_plan(
         "oss_anonymized": oss_anonymized, "branch_name": branch_name,
         "commit_message": commit_msg, "pr_title": pr_title, "pr_body": pr_body,
         "git_pr_commands": cmds}  # fmt: skip
-
-
-def delegate_directive_to_child(
-    workspace_dir: Path, *, child_layer: str, directive: str = "",
-    source_rel_path: str | None = None, ticket_id: str | None = None, priority: str = "P1",
-    tracker: str = "WORKTASK.md", actor_email: str | None = None, force_overwrite: bool = False,
-    create_pr: bool = False, dry_run: bool = False,
-) -> dict[str, Any]:  # fmt: skip
-    """Delegate a 1-hop downward directive or governance artifact into layers/<child>/<tracker>."""
-    clean_child, clean_dir = child_layer.strip(), directive.strip()
-    if not KEBAB_ID_RE.match(clean_child):
-        raise ValueError(f"Invalid child_layer {child_layer!r}: must be kebab-case")
-    if priority not in ("P0", "P1", "P2"):
-        raise ValueError(f"Invalid priority {priority!r}: must be P0, P1, or P2")
-    if tracker not in VALID_DELEGATION_SURFACES:
-        raise ValueError(
-            f"Invalid tracker/surface {tracker!r}: must be in {VALID_DELEGATION_SURFACES}"
-        )
-    ws, src_file, src_body = workspace_dir.resolve(), None, ""
-    if source_rel_path:
-        src_file = (ws / source_rel_path.strip().lstrip("/")).resolve()
-        if not src_file.is_relative_to(ws) or not src_file.is_file():
-            raise ValueError(f"Invalid or missing source_rel_path: {source_rel_path!r}")
-        src_body = src_file.read_text(encoding="utf-8").strip()
-    if not clean_dir and not src_body:
-        raise ValueError("directive must be a non-empty string or source_rel_path must be provided")
-    verdict = verify_layer_operation_authority(
-        ws, operation="delegate-to-child", actor_email=actor_email
-    )
-    if not verdict["allowed"]:
-        raise ValueError(f"DELEGATION_AUTHORITY_DENIED: {verdict['remediation']}")
-    mnt_dir = ws / "layers" / clean_child
-    cand_dir = mnt_dir if mnt_dir.is_dir() else _resolve_mounted_child_dir(ws, clean_child)
-    tdir = cand_dir if cand_dir is not None and cand_dir.is_relative_to(ws) else None
-    if tdir is None:
-        raise ValueError(f"Target 1-hop child layer not found: {clean_child!r}")
-    m = _load_manifest_dict(ws)
-    pid, prole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "corporate"))
-    pprec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE["corporate"]))
-    eff_text = clean_dir or f"Delivered `{src_file.name if src_file else tracker}`"
-    t_match = re.search(r"\b([A-Z]{2,12}-[A-Z0-9-]{2,20})\b", eff_text)
-    eff_ticket = (ticket_id or "").strip().upper() or (
-        t_match.group(1) if t_match else f"{pid.upper()}-{clean_child.upper()}-01"
-    )
-    entry = (
-        f"- [ ] **[{priority} · {eff_ticket} · Delegated from `{pid}` (`{prole}`, "
-        f"`precedence: {pprec}`)]**: {eff_text}"
-    )
-    def_fn = f"{eff_ticket.lower()}.md" if tracker in VALID_TRACKER_FILES else "delegated-item.md"
-    fname, updated, staged = src_file.name if src_file is not None else def_fn, [], []
-    stg_kw: dict[str, Any] = {"scope_tag": f"from-{pid}", "file_name": fname, "dry_run": dry_run,
-        "operation": "delegate-to-child", "actor_email": actor_email or ""}  # fmt: skip
-    c_auth = verify_layer_operation_authority(
-        tdir, operation="delegate-to-child", actor_email=actor_email, record_blocked=False
-    )
-    is_child_owner = bool(c_auth["allowed"]) and not create_pr
-    if not is_child_owner:
-        p_body = src_body or (f"# {eff_text}\n" if tracker == "rules" else entry)
-        p_stg = stage_non_destructive_proposal(
-            tdir, content=p_body, reason_code="CROSS_OWNER_CHILD_DELEGATION", **stg_kw
-        )
-        staged.append(str(p_stg))
-    elif tracker == "rules":
-        ctpl = str(_load_manifest_dict(tdir).get("layer_id") or clean_child)
-        r_dest, r_body = tdir / "templates" / ctpl / "rules" / fname, src_body or f"# {eff_text}\n"
-        if r_dest.is_file() and not force_overwrite:
-            staged.append(str(stage_non_destructive_proposal(tdir, content=r_body, **stg_kw)))
-        else:
-            for rp in (r_dest, tdir / ".agents/rules" / fname):
-                updated.append(str(rp))
-                if not dry_run:
-                    rp.parent.mkdir(parents=True, exist_ok=True)
-                    rp.write_text(f"{r_body.rstrip()}\n", encoding="utf-8")
-                    _ensure_rule_file_frontmatter(rp, sync_in_place=True)
-    elif tracker in VALID_DELEGATION_DIRS:
-        tfile = tdir / tracker / fname
-        hdr = f"> **Delivered from**: `{pid}` (`{prole}`, `precedence: {pprec}`)"
-        hdr_body = f"{hdr}\n\n{src_body or eff_text}"
-        if tfile.is_file() and not force_overwrite:
-            staged.append(str(stage_non_destructive_proposal(tdir, content=hdr_body, **stg_kw)))
-        else:
-            updated.append(str(tfile))
-            if not dry_run:
-                tfile.parent.mkdir(parents=True, exist_ok=True)
-                tfile.write_text(f"{hdr_body}\n", encoding="utf-8")
-    else:
-        tfile = tdir / tracker
-        updated.append(str(tfile))
-        if not dry_run:
-            def_h = f"# Active Work Tasks — {clean_child}\n\n"
-            cur = tfile.read_text("utf-8") if tfile.is_file() else def_h
-            blk = f"{entry}\n\n{src_body}" if (src_body and clean_dir) else entry
-            if entry not in cur:
-                tfile.write_text(f"{cur}{'' if cur.endswith('\n') else '\n'}{blk}\n", "utf-8")
-    p_wt, p_hdr = ws / "WORKTASK.md", "## Outbound Delegations"
-    p_entry = (
-        f"- [/] **[{eff_ticket} -> `{clean_child}` (`{tracker}`, stage: `delegated`)]**: {eff_text}"
-    )
-    if not dry_run:
-        p_cur = p_wt.read_text("utf-8") if p_wt.is_file() else f"# Active Work Tasks — {pid}\n"
-        p_base = p_cur.rstrip() if p_hdr in p_cur else f"{p_cur.rstrip()}\n\n{p_hdr}"
-        if p_entry not in p_base:
-            p_wt.write_text(f"{p_base}\n{p_entry}\n", encoding="utf-8")
-    if src_file is not None and src_file.name in VALID_TRACKER_FILES:
-        note = f"- *Delivered to `{clean_child}` (`{tracker}`)*"
-        if not dry_run and note not in src_body:
-            src_file.write_text(f"{src_body}\n{note}\n", encoding="utf-8")
-    c_br = next(
-        (str(e.get("branch") or "master") for e in (m.get("mounted_layers") or [])
-            if isinstance(e, dict) and e.get("name") in (clean_child, tdir.name)),
-        "master",
-    )  # fmt: skip
-    deliv_mode = "direct_subtree" if (is_child_owner and not staged) else "proposal_pr"
-    push_br = c_br if deliv_mode == "direct_subtree" else f"delegate/{eff_ticket.lower()}"
-    return {"parent_layer_id": pid, "parent_layer_role": prole, "dry_run": dry_run,
-        "child_layer": clean_child, "ticket_id": eff_ticket, "priority": priority,
-        "tracker": tracker, "delivery_mode": deliv_mode,
-        "actor_is_child_owner": bool(c_auth["allowed"]),
-        "subtree_push_command": f"./scripts/layer-subtree.sh push {tdir.name} {push_br}",
-        "delegated_entry": entry, "parent_ledger_entry": p_entry,
-        "updated_paths": updated, "staged_proposals": staged}  # fmt: skip

@@ -6,16 +6,13 @@ Specification: docs/architecture/04_compaction_surface_and_promotion_engines.md
 from __future__ import annotations
 
 import json
-import os
 from typing import TYPE_CHECKING
 
 import pytest
-from dotfiles_mcp import manifest_helpers
 from dotfiles_mcp.constants import REPO_DIR
 from dotfiles_mcp.promotion_engine import (
     collect_layer_effective_bindings,
     diff_project_against_layers,
-    inspect_layer_horizon,
     promote_project_asset_to_layer,
 )
 from dotfiles_mcp.server import DotfilesMCPServer
@@ -336,6 +333,20 @@ class TestPromotionEngine:
             upstream_dir=repo_dir / "layers" / "dept-legal",
             dry_run=True,
         )
+        (proj_dir / "templates/business-base/rules").mkdir(parents=True)
+        (proj_dir / "templates/business-base/assets").mkdir(parents=True)
+        (proj_dir / "templates/business-base/rules/business-base.md").write_text("# v2\n", "utf-8")
+        (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", "utf-8")
+        oss_tpl_res = _prom(
+            "templates/business-base/rules/business-base.md",
+            upstream_dir=repo_dir / "layers" / "dept-legal",
+            dry_run=True,
+        )
+        oss_asset_res = _prom(
+            "templates/business-base/assets/a.md",
+            upstream_dir=repo_dir / "layers" / "dept-legal",
+            dry_run=True,
+        )
 
         # Assert
         assert dry_res["dry_run"] is True and sub_rule_res["subtree_push_command"] is not None
@@ -368,6 +379,8 @@ class TestPromotionEngine:
         assert exact_18k_res["promotion_pr_plan"]["proposer_email"] == "member@squad.acme.com"  # type: ignore[index]
         assert upstream_res["destination"] == "templates/gdpr-pack/rules/legal.md"
         assert "promotion_pr_plan" in upstream_res
+        assert oss_tpl_res["target_template"] == "business-base"
+        assert oss_asset_res["destination"] == "templates/business-base/assets/a.md"
         for src, bad_kw, err_pat in (
             (
                 ".agents/rules/legal.md",
@@ -384,77 +397,3 @@ class TestPromotionEngine:
         ):
             with pytest.raises(ValueError, match=err_pat):
                 _prom(src, **bad_kw)
-
-    def test_inspect_layer_horizon_detects_upward_and_downward_drift(self, tmp_path: Path) -> None:
-        """Inspect 1-hop horizon across OSS and internal parent layers with mtime cut-points."""
-        # Arrange
-        repo_dir, proj_dir, oss_dir = tmp_path / "fork", tmp_path / "proj", tmp_path / "oss"
-        for sub in ("system", "templates/business-base/rules", "templates/business-base/assets"):
-            (oss_dir / sub).mkdir(parents=True)
-            (proj_dir / sub).mkdir(parents=True)
-            (repo_dir / sub).mkdir(parents=True)
-        (oss_dir / "VERSION").write_text("2.0.0\n", encoding="utf-8")
-        (oss_dir / "system/mcp-layer.json").write_text(
-            '{"layer_id":"root","layer_role":"root"}', encoding="utf-8"
-        )
-        for name, txt in (("business-base.md", "# v1\n"), ("same.md", "# s\n"), ("p.md", "# v1\n")):
-            (oss_dir / "templates/business-base/rules" / name).write_text(txt, encoding="utf-8")
-        (proj_dir / "VERSION").write_text("0.2.0\n", encoding="utf-8")
-        (proj_dir / "system/mcp-layer.json").write_text(
-            '{"layer_id":"corp-zyxwvut-root","layer_role":"corporate",'
-            '"default_stack_templates":["business-base"],"upstream_layer":{"layer_id":"root"}}',
-            encoding="utf-8",
-        )
-        for name, txt in (
-            ("business-base.md", "# v2 universal\n"),
-            ("same.md", "# s\n"),
-            ("p.md", "# Mentions zyxwvut\n"),
-        ):
-            rf = proj_dir / "templates/business-base/rules" / name
-            rf.write_text(txt, encoding="utf-8")
-            ts = (oss_dir / "templates/business-base/rules" / name).stat().st_mtime_ns
-            os.utime(rf, ns=(ts, ts))
-        up_p_sha = manifest_helpers._sha256_file(oss_dir / "templates/business-base/rules/p.md")
-        (proj_dir / "templates/business-base/template.json").write_text(
-            f'{{"reconciled_upstream_sha256": {{"p.md": "{up_p_sha}"}}}}', encoding="utf-8"
-        )
-        (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", encoding="utf-8")
-
-        # Act
-        oss_tpl_res = promote_project_asset_to_layer(
-            oss_dir, proj_dir, source_rel_path="templates/business-base/rules/business-base.md",
-            upstream_dir=oss_dir, dry_run=True,
-        )  # fmt: skip
-        oss_asset_res = promote_project_asset_to_layer(
-            oss_dir, proj_dir, source_rel_path="templates/business-base/assets/a.md",
-            upstream_dir=oss_dir, dry_run=True,
-        )  # fmt: skip
-        hz_oss = inspect_layer_horizon(oss_dir, proj_dir)
-        hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
-        new_sk = oss_dir / "templates/business-base/skills/new-sk/SKILL.md"
-        new_sk.parent.mkdir(parents=True)
-        new_sk.write_text('---\nname: new-sk\ndescription: "ok"\n---\n', encoding="utf-8")
-        hz_miss_sk = inspect_layer_horizon(oss_dir, proj_dir)
-        up_b = oss_dir / "templates/business-base/rules/business-base.md"
-        up_b.write_text("# v3 upstream\n", encoding="utf-8")
-        os.utime(up_b, ns=(ts + 1_000_000, ts + 1_000_000))
-        hz_after_up = inspect_layer_horizon(oss_dir, proj_dir)
-
-        # Assert
-        assert (
-            oss_tpl_res["target_template"] == "business-base"
-            and oss_asset_res["destination"] == "templates/business-base/assets/a.md"
-        )
-        assert (
-            hz_oss["is_oss_community_horizon"],
-            hz_oss["downward_sync_needed"],
-            len(hz_oss["upward_promotion_suggestions"]),
-        ) == (True, False, 1)
-        assert hz_oss["oss_contrib_dir"] is not None and hz_int["is_oss_community_horizon"] is False
-        assert (
-            hz_int["oss_contrib_dir"] is None and len(hz_int["upward_promotion_suggestions"]) >= 1
-        )
-        assert (
-            hz_miss_sk["downward_sync_needed"] is True
-            and hz_after_up["downward_sync_needed"] is True
-        )

@@ -14,7 +14,6 @@ import pytest
 from dotfiles_mcp.authority_engine import (
     build_upward_promotion_pr_plan,
     configure_layer_authority,
-    delegate_directive_to_child,
     resolve_git_user_email,
     verify_layer_operation_authority,
     verify_oss_promotion_agnosticism,
@@ -353,95 +352,3 @@ class TestAuthorityEngine:
         assert credited_plan["contributing_org"] == "Acme Industrial Group"
         assert credited_plan["contributors"] == "CLO, CTO, Principal Architect"
         assert "Acme Industrial Group" in credited_plan["pr_body"]
-
-    def test_delegate_directive_to_child_appends_and_validates(self, tmp_path: Path) -> None:
-        """Delegate a 1-hop downward directive or file across all child governance surfaces."""
-        # Arrange
-        corp_dir, sib_child = tmp_path / "corp-root", tmp_path / "dept-legal"
-        for d in (corp_dir, sib_child):
-            (d / "system").mkdir(parents=True)
-        (corp_dir / "system/mcp-layer.json").write_text(
-            '{"layer_id":"corp-root","layer_role":"corporate","precedence":10,'
-            '"layer_authority":{"owner_role":"CEO","authorized_emails":["ceo@acme.com"]}}',
-            encoding="utf-8",
-        )
-        (corp_dir / "WORKROAD.md").write_text("# Corp Roadmap\n- Phase 1", encoding="utf-8")
-        mnt_child = corp_dir / "layers" / "dept-legal"
-        (mnt_child / "system").mkdir(parents=True)
-        (mnt_child / "system/mcp-layer.json").write_text(
-            '{"layer_id":"dept-legal","layer_role":"department","precedence":30}',
-            encoding="utf-8",
-        )
-        (sib_child / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
-        (sib_child / "WORKTASK.md").write_text("# Untouched Sibling", encoding="utf-8")
-
-        # Act
-        def _dlg(**kw: object) -> dict[str, object]:
-            return delegate_directive_to_child(
-                corp_dir,
-                child_layer="dept-legal",
-                actor_email="ceo@acme.com",
-                **kw,  # type: ignore[arg-type]
-            )
-
-        dry_res = _dlg(directive="Audit Q3 compliance ledgers", priority="P0", dry_run=True)
-        dry_existed = (mnt_child / "WORKTASK.md").exists()
-        live_res = _dlg(
-            directive="Audit Q3 compliance ledgers", source_rel_path="WORKROAD.md", priority="P0"
-        )
-        dup_res = _dlg(directive="Audit Q3 compliance ledgers", priority="P0")
-        pr_res = _dlg(directive="Cross-owner directive", create_pr=True)
-        road_dry = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", dry_run=True)
-        road_live = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
-        road_staged = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps")
-        road_forced = _dlg(source_rel_path="WORKROAD.md", tracker="roadmaps", force_overwrite=True)
-        rule_dry = _dlg(directive="Enforce GDPR", tracker="rules", dry_run=True)
-        rule_live = _dlg(directive="Enforce GDPR", tracker="rules")
-        rule_staged = _dlg(directive="Enforce GDPR v2", tracker="rules")
-        rule_forced = _dlg(directive="Enforce GDPR v2", tracker="rules", force_overwrite=True)
-        (mnt_child / "system/mcp-layer.json").write_text(
-            '{"layer_id":"dept-legal","layer_role":"department","precedence":30,'
-            '"layer_authority":{"owner_role":"CLO","authorized_emails":["clo@acme.com"]}}',
-            encoding="utf-8",
-        )
-        cross_owner = _dlg(directive="Separate owner directive")
-
-        # Assert
-        assert dry_res["dry_run"] is True and dry_existed is False
-        assert road_dry["dry_run"] is True and rule_dry["dry_run"] is True
-        assert len(live_res["updated_paths"]) == 1  # type: ignore[arg-type]
-        assert live_res["delivery_mode"] == "direct_subtree"
-        assert "Audit Q3 compliance ledgers" in (mnt_child / "WORKTASK.md").read_text("utf-8")
-        assert (sib_child / "WORKTASK.md").read_text("utf-8") == "# Untouched Sibling"
-        assert dup_res["delegated_entry"] == live_res["delegated_entry"]
-        assert pr_res["delivery_mode"] == "proposal_pr" and len(pr_res["staged_proposals"]) == 1  # type: ignore[arg-type]
-        assert cross_owner["actor_is_child_owner"] is False
-        assert cross_owner["delivery_mode"] == "proposal_pr"
-        assert (mnt_child / "roadmaps/WORKROAD.md").is_file() and road_live["tracker"] == "roadmaps"
-        assert len(road_staged["staged_proposals"]) == 1  # type: ignore[arg-type]
-        assert len(road_forced["updated_paths"]) == 1  # type: ignore[arg-type]
-        assert (mnt_child / ".agents/rules/delegated-item.md").is_file() and rule_live[
-            "tracker"
-        ] == "rules"
-        assert len(rule_staged["staged_proposals"]) == 1  # type: ignore[arg-type]
-        assert len(rule_forced["updated_paths"]) == 2  # type: ignore[arg-type]
-        assert "Delivered to `dept-legal`" in (corp_dir / "WORKROAD.md").read_text("utf-8")
-        assert "## Outbound Delegations" in (corp_dir / "WORKTASK.md").read_text("utf-8")
-        assert live_res["ticket_id"] == "CORP-ROOT-DEPT-LEGAL-01"
-        for bad_kw, err_pat in (
-            ({"child_layer": "Bad Name", "directive": "x"}, "must be kebab-case"),
-            ({"child_layer": "dept-legal", "directive": "  "}, "directive must be a non-empty"),
-            ({"child_layer": "dept-legal", "source_rel_path": "../x.md"}, "source_rel_path"),
-            ({"child_layer": "dept-legal", "directive": "x", "priority": "P9"}, "Invalid priority"),
-            ({"child_layer": "dept-legal", "directive": "x", "tracker": "X.md"}, "Invalid tracker"),
-            (
-                {"child_layer": "dept-legal", "directive": "x", "actor_email": "no@acme.com"},
-                "DELEGATION_AUTHORITY_DENIED",
-            ),
-            (
-                {"child_layer": "dept-missing", "directive": "x", "actor_email": "ceo@acme.com"},
-                "Target 1-hop child layer not found",
-            ),
-        ):
-            with pytest.raises(ValueError, match=err_pat):
-                delegate_directive_to_child(corp_dir, **bad_kw)  # type: ignore[arg-type]
