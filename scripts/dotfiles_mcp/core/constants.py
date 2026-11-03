@@ -264,6 +264,13 @@ OWNER_RESTRICTED_OPS: tuple[str, ...] = (
     "init-fork", "scaffold-template", "register-subtree", "set-authority", "manage-roster",
     "configure-git-policy", "delegate-to-child", "release", "commit-layer", "push-layer",
 )  # fmt: skip
+ROLE_ENVIRONMENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
+    "owner": ("dev", "tst", "pre", "pro"),
+    "maintainer": ("dev", "tst", "pre"),
+    "validator": ("dev", "tst", "pre"),
+    "member": ("dev", "tst"),
+    "consumer": (),
+}
 _WORKSTATION_DEV_TARGETS: tuple[str, ...] = (
     "status", "setup-dev", "verify", "audit", "test", "test-unit",
     "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
@@ -319,12 +326,18 @@ LAYER_MAKEFILE_RECIPES: dict[str, str] = {
         "$(if $(TEMPLATE),--template $(TEMPLATE),) $(if $(APPLY_SAFE),--apply-safe,)"
     ),
     "diff": f"{_CLI_RUN} diff-project {_PF}",
-    "authority": f"{_CLI_RUN} check-authority $(CURDIR) --op release",
+    "authority": (
+        f"{_CLI_RUN} check-authority {_PF} --op $(if $(OP),$(OP),release) "
+        "$(if $(EMAIL),--email $(EMAIL),)"
+    ),
     "roster": (
         f"{_CLI_RUN} manage-roster $(CURDIR) $(if $(ADD),--add $(ADD),) "
         "$(if $(REMOVE),--remove $(REMOVE),) $(if $(ROLE),--role $(ROLE),)"
     ),
-    "env-gate": f"{_CLI_RUN} check-env-promotion $(CURDIR) --to-env $(if $(ENV),$(ENV),tst)",
+    "env-gate": (
+        f"{_CLI_RUN} check-env-promotion {_PF} --to-env $(if $(ENV),$(ENV),tst) "
+        "$(if $(FILES),--files $(FILES),) $(if $(EMAIL),--email $(EMAIL),)"
+    ),
     "decision": (
         f'{_CLI_RUN} record-decision $(CURDIR) --item "$(ITEM)" '
         '--decision $(DEC) --reason "$(REASON)"'

@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dotfiles_mcp.capsules.surface_weaver import match_authoritative_surface_bindings
 from dotfiles_mcp.core.constants import (
     AUDIT_LOG_TAIL_LINES,
     BUSINESS_MODE_TEMPLATES,
@@ -30,7 +31,12 @@ from dotfiles_mcp.core.constants import (
     VALID_GOVERNANCE_DECISIONS,
     VALID_ROSTER_ROLES,
 )
-from dotfiles_mcp.core.layer_topology_helpers import _is_makefile_outdated
+from dotfiles_mcp.core.layer_topology_helpers import (
+    _is_makefile_outdated,
+    _match_manifest_actor_role,
+    _resolve_default_parent_dir,
+    _resolve_hierarchical_actor_profile,
+)
 from dotfiles_mcp.core.manifest_helpers import _load_manifest_dict
 
 
@@ -221,7 +227,8 @@ def inspect_git_governance_state(
 
 def evaluate_environment_promotion(
     workspace_dir: Path, *, target_env: str, actor_email: str | None = None,
-    current_branch: str | None = None, dry_run: bool = False,
+    current_branch: str | None = None, parent_dir: Path | None = None,
+    changed_files: list[str] | None = None, dry_run: bool = False,
 ) -> dict[str, Any]:  # fmt: skip
     """Verify intrinsic promotion gates for transitioning to dev, tst, pre, or pro."""
     clean_env = target_env.strip().lower()
@@ -233,6 +240,10 @@ def evaluate_environment_promotion(
     auth_emails = [str(e).lower() for e in auth.get("authorized_emails", []) if str(e).strip()]
     val_emails = [str(e).lower() for e in auth.get("validator_emails", []) if str(e).strip()]
     eff_actor = (actor_email or "").strip().lower()
+    role_prof = _resolve_hierarchical_actor_profile(
+        ws, actor_email=eff_actor, parent_dir=parent_dir
+    )
+    eff_role = str(role_prof["effective_role"])
     def_tpls = set(manifest.get("default_stack_templates", []))
     is_biz = str(manifest.get("layer_role", "")) in (
         "corporate", "department", "domain-policy",
@@ -246,7 +257,21 @@ def evaluate_environment_promotion(
         failed_gates.append("OPEN_P0_WORKTASKS: Resolve all unchecked P0 items in WORKTASK.md.")
     if clean_env in ("pre", "pro") and re.search(r"^\s*-\s*\[ \]", wv_txt, re.M):
         failed_gates.append("UNVERIFIED_WORKVALI_ITEMS: Complete open checks in WORKVALI.md.")
-    if clean_env == "pre" and val_emails and eff_actor not in (*auth_emails, *val_emails):
+    if (
+        clean_env == "tst"
+        and eff_actor
+        and role_prof["has_configured_roster"]
+        and eff_role == "consumer"
+    ):
+        failed_gates.append(
+            f"UNAUTHORIZED_TST_VALIDATION: Read-only consumer '{actor_email}' cannot promote to "
+            "'tst' (requires member, validator, maintainer, or owner)."
+        )
+    if (
+        clean_env == "pre"
+        and (val_emails or role_prof["local_role"] == "member")
+        and eff_role not in ("owner", "maintainer", "validator")
+    ):
         failed_gates.append(
             f"UNAUTHORIZED_PRE_VALIDATION: Actor '{actor_email or '<unset>'}' is not in "
             f"validators/owners ({', '.join((*auth_emails, *val_emails))})."
@@ -254,10 +279,45 @@ def evaluate_environment_promotion(
     if clean_env == "pro":
         if not (ws / "CHANGELOG.md").is_file():
             failed_gates.append("MISSING_CHANGELOG: CHANGELOG.md is required for 'pro' release.")
-        if auth_emails and eff_actor not in auth_emails:
+        if auth_emails and eff_role != "owner":
             failed_gates.append(
                 f"UNAUTHORIZED_PRO_RELEASE: Actor '{actor_email or '<unset>'}' is not in "
                 f"layer_authority.authorized_emails ({', '.join(auth_emails)})."
+            )
+    eff_p = _resolve_default_parent_dir(ws, parent_dir)
+    cand_roots = [ws, *(sorted((ws / "layers").iterdir()) if (ws / "layers").is_dir() else ())]
+    if eff_p is not None and eff_p.is_dir():
+        cand_roots.extend(
+            [eff_p, *(sorted((eff_p / "layers").iterdir()) if (eff_p / "layers").is_dir() else ())]
+        )
+    layer_nodes = [
+        (str((m := _load_manifest_dict(d)).get("layer_id", d.name)), d, m)
+        for d in dict.fromkeys(
+            r.resolve() for r in cand_roots if (r / "system/mcp-layer.json").is_file()
+        )
+    ]
+    surf_hits = match_authoritative_surface_bindings(layer_nodes, changed_files or [])
+    for hit in surf_hits:
+        own_id, own_dir = str(hit["owning_layer_id"]), Path(str(hit["owning_layer_dir"]))
+        t_path, own_prec = str(hit["target_path"]), int(hit["precedence"])
+        own_role, _ = _match_manifest_actor_role(_load_manifest_dict(own_dir), eff_actor)
+        approved_in_ledger = "APPROVED" in wt_txt and (t_path in wt_txt or own_id in wt_txt)
+        root_overarching = eff_role == "owner" and int(role_prof["precedence"]) <= own_prec
+        req_roles = ("owner",) if clean_env == "pro" else ("owner", "maintainer", "validator")
+        hit["status"] = (
+            "simulated_in_dev_tst"
+            if clean_env in ("dev", "tst")
+            else (
+                "authorized"
+                if (own_role in req_roles or root_overarching or approved_in_ledger)
+                else "blocked_surface_authority"
+            )
+        )
+        if hit["status"] == "blocked_surface_authority":
+            failed_gates.append(
+                f"SURFACE_AUTHORITY_REQUIRED: '{t_path}' is governed authoritatively by "
+                f"'{own_id}' (precedence {own_prec}); requires '{own_id}' {', '.join(req_roles)} "
+                f"or approved governance decision before '{clean_env}'."
             )
     allowed, req_branch = len(failed_gates) == 0, DEFAULT_ENV_BRANCH_MAP[clean_env]
     git_state = inspect_git_governance_state(ws, current_branch=current_branch)
@@ -271,6 +331,7 @@ def evaluate_environment_promotion(
     return {"workspace_dir": str(ws), "current_environment": git_state["active_environment"],
         "target_environment": clean_env, "phase_semantics": sem_map[clean_env],
         "required_branch": req_branch, "allowed": allowed, "failed_gates": failed_gates,
+        "actor_role_profile": role_prof, "surface_ownership": surf_hits,
         "git_promotion_command": promo_cmd}  # fmt: skip
 
 

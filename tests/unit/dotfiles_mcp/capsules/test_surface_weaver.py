@@ -136,3 +136,69 @@ class TestSurfaceWeaver:
         assert spec_match is True
         assert gen_score == 0
         assert spec_score == 14
+
+    def test_match_authoritative_surface_bindings_resolves_highest_precedence_owner(
+        self, tmp_path: Path
+    ) -> None:
+        """Resolve authoritative layer bindings ordered by precedence and specificity."""
+        # Arrange
+        it_dir, legal_dir = tmp_path / "dept-it", tmp_path / "dept-legal"
+        it_dir.mkdir()
+        legal_dir.mkdir()
+        nodes = [
+            (
+                "dept-it",
+                it_dir,
+                {
+                    "precedence": 30,
+                    "surface_bindings": [
+                        {
+                            "binding_id": "catch-all",
+                            "mode": "authoritative",
+                            "target_globs": ["**"],
+                        },
+                        {
+                            "binding_id": "it-infra",
+                            "mode": "authoritative",
+                            "target_globs": ["infra/**", "static/**"],
+                        },
+                    ],
+                },
+            ),
+            (
+                "dept-legal",
+                legal_dir,
+                {
+                    "precedence": 5,
+                    "surface_bindings": [
+                        {
+                            "binding_id": "legal-pages",
+                            "mode": "authoritative",
+                            "target_globs": ["static/legal/**"],
+                        },
+                        {
+                            "binding_id": "legal-adv",
+                            "mode": "transversal",
+                            "target_globs": ["infra/**"],
+                        },
+                    ],
+                },
+            ),
+        ]
+
+        # Act
+        hits = surface_weaver.match_authoritative_surface_bindings(
+            nodes, ["", "infra/deploy.sh", "static/legal/terms.html", "README.md"]
+        )
+
+        # Assert
+        assert len(hits) == 2
+        assert (hits[0]["target_path"], hits[0]["owning_layer_id"]) == (
+            "infra/deploy.sh",
+            "dept-it",
+        )
+        assert (hits[1]["target_path"], hits[1]["owning_layer_id"], hits[1]["precedence"]) == (
+            "static/legal/terms.html",
+            "dept-legal",
+            5,
+        )

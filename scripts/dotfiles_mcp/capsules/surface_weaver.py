@@ -107,3 +107,42 @@ def _compute_binding_specificity(binding: dict[str, Any]) -> int:
     scope_pts = SPECIFICITY_WEIGHT_SCOPE if (scopes and "*" not in scopes) else 0
     trait_pts = SPECIFICITY_WEIGHT_TRAIT * len(traits)
     return glob_pts + plane_pts + scope_pts + trait_pts
+
+
+def match_authoritative_surface_bindings(
+    layer_nodes: list[tuple[str, Path, dict[str, Any]]], target_paths: list[str]
+) -> list[dict[str, Any]]:
+    """Resolve authoritative layer bindings governing each path in target_paths."""
+    matches: list[dict[str, Any]] = []
+    for raw_path in target_paths:
+        norm_path = raw_path.strip().replace("\\", "/").lstrip("/")
+        if not norm_path:
+            continue
+        plane, scope = _infer_plane_from_path(norm_path), _infer_scope_from_path(norm_path)
+        path_hits: list[tuple[int, int, str, dict[str, Any]]] = []
+        for lid, ldir, manifest in layer_nodes:
+            prec = int(manifest.get("precedence", 50))
+            for b in collect_layer_effective_bindings(ldir, manifest):
+                mode = str(b.get("mode", "authoritative")).strip().lower()
+                globs = [str(g).strip() for g in b.get("target_globs", []) if str(g).strip()]
+                has_specific_glob = bool(globs and "**" not in globs and "*" not in globs)
+                if (
+                    mode == "authoritative"
+                    and has_specific_glob
+                    and _binding_matches_surface(b, norm_path, plane, scope, set())
+                ):
+                    spec = _compute_binding_specificity(b)
+                    bid = str(b.get("binding_id", f"{lid}-binding"))
+                    item = {
+                        "target_path": norm_path,
+                        "owning_layer_id": lid,
+                        "owning_layer_dir": str(ldir),
+                        "precedence": prec,
+                        "binding_id": bid,
+                        "specificity_score": spec,
+                    }
+                    path_hits.append((prec, -spec, lid, item))
+        if path_hits:
+            path_hits.sort(key=lambda x: (x[0], x[1], x[2]))
+            matches.append(path_hits[0][3])
+    return matches

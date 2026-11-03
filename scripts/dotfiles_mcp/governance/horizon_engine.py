@@ -17,6 +17,7 @@ from dotfiles_mcp.core.constants import MAX_DIFF_PREVIEW_LINES
 from dotfiles_mcp.core.layer_topology_helpers import (
     _inspect_mounted_children_drifts,
     _resolve_default_parent_dir,
+    _resolve_hierarchical_actor_profile,
 )
 from dotfiles_mcp.core.manifest_helpers import (
     _is_oss_root_manifest,
@@ -27,6 +28,7 @@ from dotfiles_mcp.core.manifest_helpers import (
     _sha256_file,
 )
 from dotfiles_mcp.governance.authority_engine import (
+    resolve_git_user_email,
     verify_layer_operation_authority,
     verify_oss_promotion_agnosticism,
 )
@@ -253,6 +255,74 @@ def compare_upstream_templates(
     return {**u_dirs, **u_ids, **u_up, **u_ap, "file_comparisons": file_comparisons}
 
 
+def _build_bilateral_layer_report(
+    ws: Path, ws_role: str, is_oss: bool, drifts: list[dict[str, Any]],
+    child_drifts: list[dict[str, Any]], local_diff: dict[str, Any],
+) -> dict[str, Any]:  # fmt: skip
+    """Build 3-bucket level report (inbound_from_upstream, inbound_from_downstream, local)."""
+    wt_txt = (ws / "WORKTASK.md").read_text("utf-8") if (ws / "WORKTASK.md").is_file() else ""
+    main_wt, _sep, out_wt = wt_txt.partition("## Outbound Delegations")
+    main_lines = [ln.strip() for ln in main_wt.splitlines() if ln.strip().startswith("- [")]
+    out_lines = [ln.strip() for ln in out_wt.splitlines() if ln.strip().startswith("- [")]
+    in_tasks = [ln for ln in main_lines if "Delegated from" in ln and not ln.startswith("- [x]")]
+    loc_prog = [ln for ln in main_lines if ln.startswith("- [/]") and "Delegated from" not in ln]
+    loc_pend = [ln for ln in main_lines if ln.startswith("- [ ]") and "Delegated from" not in ln]
+    p_dir = ws / ".agents" / "proposals"
+    from_up = [
+        str(p.relative_to(ws)).replace("\\", "/")
+        for p in (sorted(p_dir.glob("from-*/*.md")) if p_dir.is_dir() else ())
+    ]
+    oss_auto = bool(is_oss and ws_role != "workstation")
+    up_rules = (
+        []
+        if oss_auto
+        else [d["rule_file"] for d in drifts if d["drift_direction"] == "upstream_newer"]
+    )
+    in_up = {
+        "oss_auto_sync_covered": oss_auto,
+        "delegated_tasks": in_tasks,
+        "staged_proposals": from_up,
+        "upstream_rule_updates": up_rules,
+        "action_needed": bool(in_tasks or from_up or up_rules),
+    }
+    to_here = [
+        str(p.relative_to(ws)).replace("\\", "/")
+        for p in (sorted(p_dir.glob("to-*/*.md")) if p_dir.is_dir() else ())
+    ]
+    comp_child = [ln for ln in out_lines if ln.startswith("- [x]")] + [
+        p for p in to_here if "/completion-" in p
+    ]
+    for c_wt in sorted((ws / "layers").glob("*/WORKTASK.md")) if (ws / "layers").is_dir() else ():
+        comp_child.extend(
+            f"{c_wt.parent.name}: {ln.strip()}"
+            for ln in c_wt.read_text("utf-8").splitlines()
+            if ln.strip().startswith("- [x]") and "Delegated from" in ln
+        )
+    child_props = [p for p in to_here if "/completion-" not in p]
+    c_drift_ids = [str(d["layer_id"]) for d in child_drifts]
+    in_down = {
+        "completed_child_delegations": comp_child,
+        "staged_child_proposals": child_props,
+        "child_layer_drifts": c_drift_ids,
+        "action_needed": bool(comp_child or child_props or c_drift_ids),
+    }
+    up_r = [d["rule_file"] for d in drifts if d["drift_direction"] == "workspace_newer"]
+    mod_proj = [str(m["file"]) for m in local_diff["modified_in_project"]]
+    mod_assets = list(dict.fromkeys([*up_r, *mod_proj, *local_diff["novel_in_project"]]))
+    loc_chg = {
+        "tasks_in_progress": loc_prog,
+        "tasks_pending": loc_pend,
+        "outbound_delegations": out_lines,
+        "modified_or_novel_assets": mod_assets,
+        "has_local_changes": bool(loc_prog or out_lines or mod_assets),
+    }
+    return {
+        "inbound_from_upstream": in_up,
+        "inbound_from_downstream": in_down,
+        "local_workspace_changes": loc_chg,
+    }
+
+
 def inspect_layer_horizon(
     repo_dir: Path, workspace_dir: Path, *, parent_dir: Path | None = None,
     actor_email: str | None = None,
@@ -267,10 +337,14 @@ def inspect_layer_horizon(
     ws_ver = ws_vf.read_text(encoding="utf-8").strip() if ws_vf.is_file() else None
     is_oss = _is_oss_root_manifest(up_m)
     contrib_dir = _resolve_oss_contrib_repo_dir(up) if is_oss else up
+    eff_em = resolve_git_user_email(ws) if actor_email is None else actor_email.strip()
+    role_prof = _resolve_hierarchical_actor_profile(ws, actor_email=eff_em, parent_dir=eff_p)
     a_kw: dict[str, Any] = {"operation": "release", "actor_email": actor_email,
-        "record_blocked": False}  # fmt: skip
+        "parent_dir": eff_p, "record_blocked": False}  # fmt: skip
     auth_v = verify_layer_operation_authority(ws, **a_kw)
-    up_auth_v = verify_layer_operation_authority(up, **a_kw)
+    up_auth_v = verify_layer_operation_authority(
+        up, operation="release", actor_email=actor_email, record_blocked=False
+    )
     ws_tpls = [name for name, _p in _iter_layer_template_dirs(ws)]
     cand_tpls = [*(str(x) for x in ws_m.get("default_stack_templates", [])), *ws_tpls]
     tpl_pairs = [
@@ -327,21 +401,22 @@ def inspect_layer_horizon(
         for rel in local_diff["novel_in_project"]
     ]
     ws_lid, up_lid = str(ws_m.get("layer_id", ws.name)), str(up_m.get("layer_id", up.name))
+    ws_role = str(ws_m.get("layer_role", "project"))
     up_sugg = (
         [d for d in up_drifts if d["oss_agnostic"]]
         if is_oss
         else [*(d["promote_command"] for d in up_drifts), *novel_cmds]
     )
-    return {"workspace_dir": str(ws), "layer_id": ws_lid,
-        "layer_role": str(ws_m.get("layer_role", "project")),
+    l_rep = _build_bilateral_layer_report(ws, ws_role, is_oss, drifts, child_drifts, local_diff)
+    return {"workspace_dir": str(ws), "layer_id": ws_lid, "layer_role": ws_role,
         "is_oss_community_horizon": is_oss, "actor_is_layer_owner": bool(auth_v["allowed"]),
-        "immediate_upstream_dir": str(up), "actor_is_upstream_owner": bool(up_auth_v["allowed"]),
-        "immediate_upstream_id": up_lid,
+        "actor_role_profile": role_prof, "immediate_upstream_dir": str(up),
+        "actor_is_upstream_owner": bool(up_auth_v["allowed"]), "immediate_upstream_id": up_lid,
         "immediate_upstream_role": str(up_m.get("layer_role", "unknown")),
         "oss_contrib_dir": str(contrib_dir) if is_oss else None, "oss_root_version": oss_ver,
         "upstream_version": up_ver, "workspace_version": ws_ver,
         "downward_sync_needed": need_sync, "child_sync_needed": bool(child_drifts),
         "shared_template_drifts": drifts,
         "downward_sync_command": f"./scripts/layer-config.sh sync-layer {ws}{sync_sfx}",
-        "downstream_layer_drifts": child_drifts,
-        "upward_promotion_suggestions": up_sugg}  # fmt: skip
+        "downstream_layer_drifts": child_drifts, "upward_promotion_suggestions": up_sugg,
+        "layer_report": l_rep}  # fmt: skip

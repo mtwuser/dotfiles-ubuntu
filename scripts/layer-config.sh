@@ -301,10 +301,10 @@ if subcmd == "set-authority":
     sys.exit(0)
 
 if subcmd == "check-authority":
-    target_dir, opts = _pos_opts(rest, {"--op": "op", "--email": "email", "--file": "file"})
+    target_dir, opts = _pos_opts(rest, {"--op": "op", "--email": "email", "--file": "file", "--parent-dir": "parent"})
     if not opts.get("op"):
         _die("Missing required --op <operation> for check-authority.")
-    verdict = verify_layer_operation_authority(target_dir, operation=str(opts["op"]), actor_email=_opt_str(opts, "email"), target_rel_path=_opt_str(opts, "file"))
+    verdict = verify_layer_operation_authority(target_dir, operation=str(opts["op"]), actor_email=_opt_str(opts, "email"), target_rel_path=_opt_str(opts, "file"), parent_dir=_opt_path(opts, "parent"))
     print(json.dumps(verdict, indent=2))
     if not verdict["allowed"]:
         _die(str(verdict["remediation"]), code=2)
@@ -434,12 +434,13 @@ if subcmd == "configure-git-policy":
     sys.exit(0)
 
 if subcmd == "check-env-promotion":
-    target_dir, opts = _pos_opts(rest, {"--to-env": "to_env", "--branch": "branch", "--email": "email"})
+    target_dir, opts = _pos_opts(rest, {"--to-env": "to_env", "--branch": "branch", "--email": "email", "--parent-dir": "parent", "--files": "files"})
     if not opts.get("to_env"):
-        _die("Usage: ./scripts/layer-config.sh check-env-promotion [<target-dir>] --to-env <dev|tst|pre|pro> [--branch <branch>]")
+        _die("Usage: ./scripts/layer-config.sh check-env-promotion [<target-dir>] --to-env <dev|tst|pre|pro> [--branch <branch>] [--parent-dir <dir>] [--files <csv>]")
     res = evaluate_environment_promotion(
         target_dir, target_env=str(opts["to_env"]), current_branch=_opt_str(opts, "branch"),
-        actor_email=_opt_str(opts, "email"), dry_run=dry_run,
+        actor_email=_opt_str(opts, "email"), parent_dir=_opt_path(opts, "parent"),
+        changed_files=_csv(opts.get("files")), dry_run=dry_run,
     )
     print(json.dumps(res, indent=2))
     if not res["allowed"]:

@@ -264,6 +264,18 @@ class TestHorizonEngine:
             f'{{"reconciled_upstream_sha256": {{"p.md": "{up_p_sha}"}}}}', encoding="utf-8"
         )
         (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", encoding="utf-8")
+        (proj_dir / "WORKTASK.md").write_text(
+            "- [ ] **[P1 · Delegated from `root`]**: Review policy\n"
+            "- [/] **[P1]**: Local active task\n\n"
+            "## Outbound Delegations\n"
+            "- [x] **[TKT-1 -> `dept-legal` (`WORKTASK.md`, stage: `completed (pro)`)]**: Done\n",
+            encoding="utf-8",
+        )
+        child_wt = proj_dir / "layers/dept-legal/WORKTASK.md"
+        child_wt.parent.mkdir(parents=True)
+        child_wt.write_text(
+            "- [x] **[P1 · Delegated from `corp-zyxwvut-root`]**: Child done\n", encoding="utf-8"
+        )
 
         # Act
         oss_tpl_res = promote_project_asset_to_layer(

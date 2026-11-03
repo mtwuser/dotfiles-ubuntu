@@ -11,6 +11,7 @@ import json
 import re
 import shutil
 import subprocess
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any
 
@@ -22,16 +23,94 @@ from dotfiles_mcp.core.constants import (
     LAYER_ROLE_MAKEFILE_TARGETS,
     MAKEFILE_ROLE_HEADER_PREFIX,
     REPO_DIR,
+    ROLE_DEFAULT_PRECEDENCE,
+    ROLE_ENVIRONMENT_PERMISSIONS,
     ROLE_ONBOARDING_SPECS,
     TEMPLATE_MANIFEST_CONTRACT_REV,
 )
 from dotfiles_mcp.core.manifest_helpers import (
     _has_stale_schema,
+    _is_oss_root_manifest,
     _iter_layer_template_dirs,
+    _load_manifest_dict,
     _resolve_template_dir,
     _sha256_file,
     _stamp_schema_rev,
 )
+
+
+def _match_manifest_actor_role(manifest: dict[str, Any], actor_email: str) -> tuple[str, bool]:
+    """Resolve actor_email role (owner, maintainer, validator, member, consumer) in manifest."""
+    raw_auth = manifest.get("layer_authority")
+    auth = raw_auth if isinstance(raw_auth, dict) else {}
+    raw_roster = auth.get("roster")
+    roster = raw_roster if isinstance(raw_roster, dict) else {}
+
+    def _Pool(top_key: str, roster_key: str) -> list[str]:
+        top = [str(e).strip() for e in auth.get(top_key, []) if str(e).strip()]
+        r_list = [
+            str(m.get("email", "")).strip()
+            for m in roster.get(roster_key, [])
+            if isinstance(m, dict) and str(m.get("email", "")).strip()
+        ]
+        return list(dict.fromkeys([*top, *r_list]))
+
+    owners = _Pool("authorized_emails", "owners")
+    maintainers = _Pool("maintainer_emails", "maintainers")
+    validators = _Pool("validator_emails", "validators")
+    members = _Pool("member_emails", "members")
+    has_roster = bool(owners or maintainers or validators or members)
+    clean_em = actor_email.strip().lower()
+    if not clean_em:
+        return "consumer", has_roster
+    for role_name, pool in (
+        ("owner", owners),
+        ("maintainer", maintainers),
+        ("validator", validators),
+        ("member", members),
+    ):
+        if any(fnmatchcase(clean_em, pat.lower()) for pat in pool):
+            return role_name, has_roster
+    return "consumer", has_roster
+
+
+def _resolve_hierarchical_actor_profile(
+    target_dir: Path, *, actor_email: str, parent_dir: Path | None = None
+) -> dict[str, Any]:
+    """Compute effective actor role, read-only upstream inheritance, and parent overarching auth."""
+    ws = target_dir.resolve()
+    ws_m = _load_manifest_dict(ws)
+    lid = str(ws_m.get("layer_id", ws.name))
+    lrole = str(ws_m.get("layer_role", "project"))
+    lprec = int(ws_m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(lrole, 80)))
+    local_role, has_roster = _match_manifest_actor_role(ws_m, actor_email)
+    eff_p = _resolve_default_parent_dir(ws, parent_dir)
+    up_role, up_id, up_prec, hier_ok = "consumer", None, None, False
+    if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
+        up_m = _load_manifest_dict(eff_p)
+        up_id = str(up_m.get("layer_id", eff_p.name))
+        up_r = str(up_m.get("layer_role", "corporate"))
+        up_prec = int(up_m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(up_r, 10)))
+        if not _is_oss_root_manifest(up_m):
+            up_role, _ = _match_manifest_actor_role(up_m, actor_email)
+            hier_ok = up_role in ("owner", "maintainer") and up_prec < lprec
+    rank = {"owner": 4, "maintainer": 3, "validator": 2, "member": 1, "consumer": 0}
+    eff_role = up_role if (hier_ok and rank[up_role] > rank[local_role]) else local_role
+    return {
+        "layer_id": lid,
+        "layer_role": lrole,
+        "precedence": lprec,
+        "actor_email": actor_email,
+        "local_role": local_role,
+        "has_configured_roster": has_roster,
+        "upstream_layer_id": up_id,
+        "upstream_precedence": up_prec,
+        "upstream_role": up_role,
+        "upstream_read_only": up_role not in ("owner", "maintainer"),
+        "hierarchical_authority_granted": hier_ok,
+        "effective_role": eff_role,
+        "allowed_environments": list(ROLE_ENVIRONMENT_PERMISSIONS[eff_role]),
+    }
 
 
 def _is_git_historical_blob(src_tpl: Path, dest_rf: Path) -> bool:

@@ -14,6 +14,7 @@ import pytest
 from dotfiles_mcp.governance.authority_engine import (
     build_upward_promotion_pr_plan,
     configure_layer_authority,
+    resolve_actor_layer_role,
     resolve_git_user_email,
     verify_layer_operation_authority,
     verify_oss_promotion_agnosticism,
@@ -189,8 +190,24 @@ class TestAuthorityEngine:
         ok_bad = verify_layer_operation_authority(
             bad_auth_dir, operation="release", actor_email="anyone@acme.com"
         )
+        parent_dept = tmp_path / "dept-tech"
+        (parent_dept / "system").mkdir(parents=True)
+        (parent_dept / "system/mcp-layer.json").write_text(
+            '{"layer_id":"dept-tech","layer_role":"department","precedence":25,'
+            '"layer_authority":{"authorized_emails":["cto@acme.com"]}}',
+            encoding="utf-8",
+        )
+        role_prof = resolve_actor_layer_role(
+            squad_dir, actor_email="cto@acme.com", parent_dir=parent_dept
+        )
+        ok_hier = verify_layer_operation_authority(
+            squad_dir, operation="release", actor_email="cto@acme.com", parent_dir=parent_dept
+        )
 
         # Assert
+        assert role_prof["effective_role"] == "owner"
+        assert ok_hier["allowed"] is True
+        assert ok_hier["reason_code"] == "UPSTREAM_HIERARCHICAL_AUTHORITY"
         assert (
             b_lr["allowed"] is False and b_lr["reason_code"] == "INHERITED_UPSTREAM_ASSET_IMMUTABLE"
         )

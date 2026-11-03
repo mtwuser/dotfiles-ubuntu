@@ -224,6 +224,65 @@ class TestGitGovernanceEngine:
         pro_fail = evaluate_environment_promotion(ws, target_env="pro", actor_email="dev@acme.com")
         (ws / "CHANGELOG.md").write_text("# Changelog\n", encoding="utf-8")
         pro_ok = evaluate_environment_promotion(ws, target_env="pro", actor_email="ceo@acme.com")
+        manage_layer_roster(ws, add_email="dev@acme.com", member_role="member")
+        tst_cons_fail = evaluate_environment_promotion(
+            ws, target_env="tst", actor_email="visitor@acme.com"
+        )
+        tst_mem_ok = evaluate_environment_promotion(
+            ws, target_env="tst", actor_email="dev@acme.com"
+        )
+        legal_layer = ws / "layers/dept-legal"
+        (legal_layer / "system").mkdir(parents=True)
+        (legal_layer / "system/mcp-layer.json").write_text(
+            json.dumps(
+                {
+                    "layer_id": "dept-legal",
+                    "layer_role": "domain-policy",
+                    "precedence": 5,
+                    "layer_authority": {"authorized_emails": ["clo@acme.com"]},
+                    "surface_bindings": [
+                        {
+                            "binding_id": "legal-static",
+                            "mode": "authoritative",
+                            "target_globs": ["static/legal/**"],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        tst_surf_ok = evaluate_environment_promotion(
+            ws,
+            target_env="tst",
+            actor_email="dev@acme.com",
+            changed_files=["static/legal/terms.html"],
+        )
+        pre_surf_fail = evaluate_environment_promotion(
+            ws,
+            target_env="pre",
+            actor_email="qa@acme.com",
+            changed_files=["static/legal/terms.html"],
+        )
+        pre_surf_clo_ok = evaluate_environment_promotion(
+            ws,
+            target_env="pre",
+            actor_email="clo@acme.com",
+            parent_dir=legal_layer,
+            changed_files=["static/legal/terms.html"],
+        )
+        record_governance_decision(
+            ws,
+            item_ref="static/legal/terms.html",
+            decision="approve",
+            reason="Legal text signed off by CLO",
+            actor_email="clo@acme.com",
+        )
+        pro_surf_approved = evaluate_environment_promotion(
+            ws,
+            target_env="pro",
+            actor_email="ceo@acme.com",
+            changed_files=["static/legal/terms.html"],
+        )
 
         dec_dry = record_governance_decision(
             ws,
@@ -262,6 +321,24 @@ class TestGitGovernanceEngine:
         assert pre_ok["allowed"] is True and "WORKVALI.md" in pre_ok["phase_semantics"]
         assert pro_fail["allowed"] is False and len(pro_fail["failed_gates"]) == 2
         assert pro_ok["allowed"] is True and pro_ok["required_branch"] == "main"
+        assert (
+            tst_cons_fail["allowed"] is False
+            and "UNAUTHORIZED_TST_VALIDATION" in tst_cons_fail["failed_gates"][0]
+        )
+        assert tst_mem_ok["allowed"] is True
+        assert (
+            tst_surf_ok["allowed"] is True
+            and tst_surf_ok["surface_ownership"][0]["status"] == "simulated_in_dev_tst"
+        )
+        assert (
+            pre_surf_fail["allowed"] is False
+            and "SURFACE_AUTHORITY_REQUIRED" in pre_surf_fail["failed_gates"][0]
+        )
+        assert pre_surf_clo_ok["allowed"] is True
+        assert (
+            pro_surf_approved["allowed"] is True
+            and pro_surf_approved["surface_ownership"][0]["status"] == "authorized"
+        )
         assert dec_dry["dry_run"] is True and dec_app["status"] == "approved"
         assert dec_dup["recorded_entry"] == dec_app["recorded_entry"]
         assert dec_rej["status"] == "rejected" and (ws / "NEW_TRACKER.md").is_file()

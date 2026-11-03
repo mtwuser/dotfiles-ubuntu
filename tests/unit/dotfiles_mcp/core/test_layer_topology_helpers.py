@@ -227,3 +227,61 @@ class TestLayerTopologyHelpers:
         assert "Project Setup Blueprint (Level 4" in lineage_md
         assert "Human-Stack Profile (Optional)" in lineage_md
         assert "Initial Chat Kickoff Prompt" in lineage_md
+
+    def test_match_manifest_actor_role_and_hierarchical_actor_profile(self, tmp_path: Path) -> None:
+        """Resolve local/upstream roles, read-only inheritance, and hierarchical authority."""
+        # Arrange
+        parent_ws, child_ws = tmp_path / "dept-it", tmp_path / "squad-web"
+        for d in (parent_ws, child_ws):
+            (d / "system").mkdir(parents=True)
+        (parent_ws / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dept-it", "layer_role": "department", "precedence": 30, '
+            '"layer_authority": {"authorized_emails": ["lead@it.acme.com"]}}',
+            encoding="utf-8",
+        )
+        (child_ws / "system/mcp-layer.json").write_text(
+            '{"layer_id": "squad-web", "layer_role": "squad", "precedence": 50, '
+            '"layer_authority": {"roster": {"members": [{"email": "dev@web.acme.com"}]}}}',
+            encoding="utf-8",
+        )
+
+        # Act
+        p_member = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            child_ws, actor_email="dev@web.acme.com", parent_dir=parent_ws
+        )
+        p_up_owner = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            child_ws, actor_email="lead@it.acme.com", parent_dir=parent_ws
+        )
+        p_consumer = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            child_ws, actor_email="", parent_dir=parent_ws
+        )
+        oss_parent = tmp_path / "oss-root"
+        (oss_parent / "system").mkdir(parents=True)
+        (oss_parent / "system/mcp-layer.json").write_text(
+            '{"layer_id": "root", "layer_role": "root"}', encoding="utf-8"
+        )
+        p_oss_parent = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            child_ws, actor_email="lead@it.acme.com", parent_dir=oss_parent
+        )
+
+        # Assert
+        assert p_oss_parent["hierarchical_authority_granted"] is False
+        assert (
+            p_member["local_role"],
+            p_member["upstream_role"],
+            p_member["upstream_read_only"],
+            p_member["hierarchical_authority_granted"],
+            p_member["effective_role"],
+            p_member["allowed_environments"],
+        ) == ("member", "consumer", True, False, "member", ["dev", "tst"])
+        assert (
+            p_up_owner["local_role"],
+            p_up_owner["upstream_role"],
+            p_up_owner["upstream_read_only"],
+            p_up_owner["hierarchical_authority_granted"],
+            p_up_owner["effective_role"],
+            p_up_owner["allowed_environments"],
+        ) == ("consumer", "owner", False, True, "owner", ["dev", "tst", "pre", "pro"])
+        assert (
+            p_consumer["effective_role"] == "consumer" and p_consumer["allowed_environments"] == []
+        )

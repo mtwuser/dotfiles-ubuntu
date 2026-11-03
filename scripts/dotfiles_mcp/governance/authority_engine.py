@@ -28,8 +28,19 @@ from dotfiles_mcp.core.constants import (
     ROLE_DEFAULT_PRECEDENCE,
     VALIDATOR_ALLOWED_OPS,
 )
+from dotfiles_mcp.core.layer_topology_helpers import _resolve_hierarchical_actor_profile
 from dotfiles_mcp.core.manifest_helpers import _is_oss_root_manifest, _load_manifest_dict
 from dotfiles_mcp.governance.git_governance_engine import record_governance_event
+
+
+def resolve_actor_layer_role(
+    target_dir: Path, *, actor_email: str | None = None, parent_dir: Path | None = None
+) -> dict[str, Any]:
+    """Resolve effective actor role, read-only upstream inheritance, and hierarchical authority."""
+    eff_email = resolve_git_user_email(target_dir) if actor_email is None else actor_email.strip()
+    return _resolve_hierarchical_actor_profile(
+        target_dir, actor_email=eff_email, parent_dir=parent_dir
+    )
 
 
 def resolve_git_user_email(target_dir: Path) -> str:
@@ -106,7 +117,8 @@ def _detect_inherited_upstream_asset(
 
 def verify_layer_operation_authority(
     target_dir: Path, *, operation: str, actor_email: str | None = None,
-    target_rel_path: str | None = None, record_blocked: bool = True,
+    target_rel_path: str | None = None, parent_dir: Path | None = None,
+    record_blocked: bool = True,
 ) -> dict[str, Any]:  # fmt: skip
     """Verify whether actor_email may execute <operation> on <target_dir> / <target_rel_path>."""
     manifest = _load_manifest_dict(target_dir)
@@ -128,6 +140,9 @@ def verify_layer_operation_authority(
     allowed_pool = list(dict.fromkeys(pool_raw if operation in ext_ops else auth_emails))
     escalation_contact = str(auth.get("escalation_contact", f"{owner_role} ({layer_id})"))
     eff_email = resolve_git_user_email(target_dir) if actor_email is None else actor_email.strip()
+    role_profile = _resolve_hierarchical_actor_profile(
+        target_dir, actor_email=eff_email, parent_dir=parent_dir
+    )
     if target_rel_path:
         is_inh, origin_ref = _detect_inherited_upstream_asset(target_dir, manifest, target_rel_path)
         if is_inh:
@@ -148,11 +163,27 @@ def verify_layer_operation_authority(
             )  # fmt: skip
             return {"allowed": False, "operation": operation, "layer_id": layer_id,
                 "reason_code": rc, "actor_email": eff_email, "target_rel_path": target_rel_path,
-                "origin_source": origin_ref, "remediation": rem}  # fmt: skip
+                "origin_source": origin_ref, "actor_role_profile": role_profile,
+                "remediation": rem}  # fmt: skip
     if operation in CONSUMER_ALLOWED_OPS:
         return {"allowed": True, "reason_code": "CONSUMER_OPERATION_ALLOWED", "remediation": None,
             "operation": operation, "layer_id": layer_id, "actor_email": eff_email,
-            "owner_role": owner_role}  # fmt: skip
+            "owner_role": owner_role, "actor_role_profile": role_profile}  # fmt: skip
+    hier_allowed = bool(
+        parent_dir is not None
+        and role_profile["hierarchical_authority_granted"]
+        and (
+            role_profile["upstream_role"] == "owner"
+            or (role_profile["upstream_role"] == "maintainer" and operation in ext_ops)
+        )
+    )
+    if hier_allowed and not (
+        eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in allowed_pool)
+    ):
+        return {"allowed": True, "reason_code": "UPSTREAM_HIERARCHICAL_AUTHORITY",
+            "operation": operation, "layer_id": layer_id, "actor_email": eff_email,
+            "owner_role": owner_role, "actor_role_profile": role_profile,
+            "remediation": None}  # fmt: skip
     if allowed_pool and not (
         eff_email and any(fnmatchcase(eff_email.lower(), pat.lower()) for pat in allowed_pool)
     ):
@@ -173,10 +204,10 @@ def verify_layer_operation_authority(
         return {"allowed": False, "reason_code": "UNAUTHORIZED_ACTOR_EMAIL", "operation": operation,
             "layer_id": layer_id, "actor_email": eff_email, "owner_role": owner_role,
             "authorized_emails": allowed_pool, "escalation_contact": escalation_contact,
-            "remediation": rem}  # fmt: skip
+            "actor_role_profile": role_profile, "remediation": rem}  # fmt: skip
     return {"allowed": True, "reason_code": "OWNER_AUTHORIZED", "operation": operation,
         "layer_id": layer_id, "actor_email": eff_email, "owner_role": owner_role,
-        "remediation": None}  # fmt: skip
+        "actor_role_profile": role_profile, "remediation": None}  # fmt: skip
 
 
 def verify_oss_promotion_agnosticism(project_dir: Path, content: str, source_rel: str) -> None:
