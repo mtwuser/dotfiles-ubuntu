@@ -73,7 +73,7 @@ When starting work on the next phase in `WORKROAD.md`:
 
 When a `WORKTASK.md` block is fully completed (all sub-items `[x]`):
 
-1. **Send Reciprocal Upward Completion Receipt (`make complete`, when delegated or ticketed)**: Run `./scripts/layer-config.sh complete-task . --task "<id-or-text>" [--deliverable <rel-path>]` (or `make complete TASK="<id-or-text>" [DELIVERABLE=<rel-path>]`) so the parent layer's `WORKTASK.md` (`## Outbound Delegations`) is reciprocally updated to `stage: completed (pro)` (or a non-destructive completion receipt `.agents/proposals/to-<parent>/completion-<ticket>.md` + PR plan is staged) before removing the local item.
+1. **Complete the Task Locally (`make complete`, when delegated or ticketed)**: Run `./scripts/layer-config.sh complete-task . --task "<id-or-text>" [--deliverable <rel-path>]` (or `make complete TASK="<id-or-text>" [DELIVERABLE=<rel-path>]`) without `PARENT_SYNC=1` so completion stays strictly inside the current workspace (only pass `PARENT_SYNC=1` when explicitly closing a mounted child subtree delegation from the parent workspace itself).
 2. **Write** the `CHANGELOG.md` entry under `[Unreleased]` (concise, user-facing language)
 3. **Update `docs/`** — ensure all new/modified capabilities are documented in permanent architecture/reference docs
 4. **Delete** the completed block from `WORKTASK.md` entirely
