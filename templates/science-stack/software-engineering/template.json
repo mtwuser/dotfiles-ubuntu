@@ -1,0 +1,58 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "software-engineering",
+  "kind": "science-stack",
+  "stack_group": "science-stack",
+  "extends": "science-base",
+  "target_role": "squad",
+  "description": "Computer Science & Software Engineering Branch: Strict Typing/Compilers, 0-byte __init__.py Purity, Relational Cluster Mass Refactoring, and 100% Isolated Unit -> Imp -> E2E AAA Testing",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "software-engineering-code-and-test-rigor",
+      "description": "Strict typing/linting, 0-byte __init__.py purity, 1:1:1 code-test-spec traceability, M_cluster refactoring & 100% isolated AAA branch coverage",
+      "mode": "transversal",
+      "target_globs": [
+        "src/**",
+        "scripts/**",
+        "tests/**",
+        "*.py",
+        "*.sh",
+        "*.ts",
+        "*.js",
+        "Makefile",
+        "pyproject.toml"
+      ],
+      "architectural_planes": [
+        "schema",
+        "domain",
+        "application",
+        "presentation",
+        "infrastructure",
+        "testing"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L2",
+      "invariants": [
+        "Enforce 1:1:1 Source <-> Unit Test <-> Specification traceability and < 465-line modularity",
+        "Keep consumer src/**/__init__.py and tests/**/__init__.py files strictly 0 bytes",
+        "Maintain 100% isolated statement and branch coverage with explicit # Arrange, # Act, # Assert comments and N vs N ± 1 boundary cut-points",
+        "Enforce OWASP ASVS boundary validation, zero hardcoded secrets/PII, and MCP path-containment (PATH_CONTAINMENT_VIOLATION) with strictly-read-only ephemeral sandboxes"
+      ],
+      "rule_files": [
+        "templates/science-stack/software-engineering/rules/software-engineering.md"
+      ],
+      "canonical_templates": [
+        "templates/science-stack/software-engineering/rules/software-engineering.md",
+        "templates/science-stack/software-engineering/skills/testing/SKILL.md",
+        "templates/science-stack/software-engineering/skills/refactoring/SKILL.md",
+        "templates/science-stack/software-engineering/skills/validation/SKILL.md",
+        "templates/science-stack/software-engineering/skills/oss-contribute/SKILL.md"
+      ]
+    }
+  ]
+}

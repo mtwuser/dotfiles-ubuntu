@@ -20,6 +20,7 @@ from dotfiles_mcp.capsules.capsule_engine import (
     _extract_l3_links,
     _iter_markdown_sections,
     _parse_capsule_envelope,
+    _seal_single_capsule,
     _xor_keystream,
 )
 from dotfiles_mcp.capsules.tools_compaction import CompactionToolsMixin
@@ -223,11 +224,7 @@ class UnfoldToolsMixin(CompactionToolsMixin):
             raise CapsuleError(msg)
 
         step_lvl = cur_lvl
-        step_header = header
-        step_cipher = cipher_bytes
         unfold_chain: list[str] = []
-        inner: dict[str, Any] = {}
-        digest_map: dict[str, str] = {}
         layer_name = hdr_layer
         is_eph_bridge = bool(
             eph_meta
@@ -235,77 +232,69 @@ class UnfoldToolsMixin(CompactionToolsMixin):
             and eph_meta.get("bridge_agents_md")
         )
         layer_dir = self.repo_dir if is_eph_bridge else self._resolve_layer_dir(layer_name)
-        rel_file = ""
-        target_file = self.repo_dir
-        start_line = 1
-        end_line = 1
         heading = str(header.get("sec", ""))
-        joined_section = ""
-        l1_skeleton = ""
-        l3_links: list[dict[str, Any]] = []
         line_drift_relocated = False
+        first_nxt = NEXT_LEVEL_MAP[step_lvl]
+        try:
+            decrypted_bytes = _xor_keystream(cipher_bytes, step_key)
+            inner = json.loads(zlib.decompress(decrypted_bytes).decode("utf-8"))
+        except Exception as exc:
+            msg = (
+                f"Failed to decompress chained capsule interior at {step_lvl}->{first_nxt}: {exc} "
+                "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
+            )
+            self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
+            raise CapsuleError(msg) from exc
+
+        if not isinstance(inner, dict) or inner.get("ph") != header.get("ph"):
+            msg = (
+                f"Capsule parent hash mismatch inside decrypted payload at {step_lvl}->{first_nxt} "
+                "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
+            )
+            self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
+            raise CapsuleError(msg)
+
+        rel_file = str(inner.get("f", ""))
+        if is_eph_bridge and eph_meta is not None:
+            target_file = self.repo_dir / "antigravity" / ".gemini" / "config" / "AGENTS.md"
+            all_lines = str(eph_meta["bridge_agents_md"]).splitlines()
+        else:
+            target_file = self._resolve_safe_path(rel_file, layer_dir)
+            all_lines = target_file.read_text(encoding="utf-8").splitlines()
+        start_line = max(1, int(inner.get("s", 1)))
+        end_line = min(len(all_lines), int(inner.get("e", len(all_lines))))
+        section_lines = all_lines[start_line - 1 : end_line]
+        l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
+        live_h0 = _compute_digest16(layer_name, rel_file, heading)
+        live_h1 = _compute_digest16(live_h0, l1_skeleton)
+        if live_h1 != inner.get("h1"):
+            _, start_line, end_line, section_lines = next(
+                (
+                    sec
+                    for sec in _iter_markdown_sections(all_lines, target_file.name)
+                    if sec[0] == heading
+                ),
+                (heading, start_line, end_line, section_lines),
+            )
+            l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
+            live_h1 = _compute_digest16(live_h0, l1_skeleton)
+            line_drift_relocated = live_h1 == inner.get("h1")
+        joined_section = "\n".join(section_lines)
+        l3_links = (
+            [] if is_eph_bridge else _extract_l3_links(target_file, joined_section, layer_dir)
+        )
+        live_h2 = _compute_digest16(live_h1, joined_section[:L2_SECTION_MAX_CHARS])
+        live_h3 = _compute_digest16(
+            live_h2,
+            *(f"{item['path']}:{item['sha256']}" for item in l3_links),
+        )
+        digest_map = {"L0": live_h0, "L1": live_h1, "L2": live_h2, "L3": live_h3}
+        raw_hd = inner.get("hd")
+        hd = raw_hd if isinstance(raw_hd, dict) else {}
 
         while step_lvl != target_level:
             nxt = NEXT_LEVEL_MAP[step_lvl]
-            try:
-                decrypted_bytes = _xor_keystream(step_cipher, step_key)
-                inner = json.loads(zlib.decompress(decrypted_bytes).decode("utf-8"))
-            except Exception as exc:
-                msg = (
-                    f"Failed to decompress chained capsule interior at {step_lvl}->{nxt}: {exc} "
-                    "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
-                )
-                self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
-                raise CapsuleError(msg) from exc
-
-            if not isinstance(inner, dict) or inner.get("ph") != step_header.get("ph"):
-                msg = (
-                    f"Capsule parent hash mismatch inside decrypted payload at {step_lvl}->{nxt} "
-                    "[Recovery: Re-run query_governance_rules to mint a fresh capsule.]"
-                )
-                self._emit_warning("WARN", "CAPSULE_CHAIN_BROKEN", msg, {"level": step_lvl})
-                raise CapsuleError(msg)
-
-            if not digest_map:
-                rel_file = str(inner.get("f", ""))
-                if is_eph_bridge and eph_meta is not None:
-                    target_file = self.repo_dir / "antigravity" / ".gemini" / "config" / "AGENTS.md"
-                    all_lines = str(eph_meta["bridge_agents_md"]).splitlines()
-                else:
-                    target_file = self._resolve_safe_path(rel_file, layer_dir)
-                    all_lines = target_file.read_text(encoding="utf-8").splitlines()
-                start_line = max(1, int(inner.get("s", 1)))
-                end_line = min(len(all_lines), int(inner.get("e", len(all_lines))))
-                section_lines = all_lines[start_line - 1 : end_line]
-                l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
-                live_h0 = _compute_digest16(layer_name, rel_file, heading)
-                live_h1 = _compute_digest16(live_h0, l1_skeleton)
-                if live_h1 != inner.get("h1"):
-                    _, start_line, end_line, section_lines = next(
-                        (
-                            sec
-                            for sec in _iter_markdown_sections(all_lines, target_file.name)
-                            if sec[0] == heading
-                        ),
-                        (heading, start_line, end_line, section_lines),
-                    )
-                    l1_skeleton = _extract_axiom_skeleton(heading, section_lines)
-                    live_h1 = _compute_digest16(live_h0, l1_skeleton)
-                    line_drift_relocated = live_h1 == inner.get("h1")
-                joined_section = "\n".join(section_lines)
-                l3_links = (
-                    []
-                    if is_eph_bridge
-                    else _extract_l3_links(target_file, joined_section, layer_dir)
-                )
-                live_h2 = _compute_digest16(live_h1, joined_section[:L2_SECTION_MAX_CHARS])
-                live_h3 = _compute_digest16(
-                    live_h2,
-                    *(f"{item['path']}:{item['sha256']}" for item in l3_links),
-                )
-                digest_map = {"L0": live_h0, "L1": live_h1, "L2": live_h2, "L3": live_h3}
-
-            if inner.get("h_cur") != digest_map[step_lvl] or inner.get("h_next") != digest_map[nxt]:
+            if hd.get(step_lvl) != digest_map[step_lvl] or hd.get(nxt) != digest_map[nxt]:
                 msg = (
                     f"Capsule chain digest mismatch at {step_lvl}->{nxt}: "
                     "underlying section drifted or payload tampered. "
@@ -321,13 +310,19 @@ class UnfoldToolsMixin(CompactionToolsMixin):
 
             unfold_chain.append(f"{step_lvl}->{nxt}")
             step_lvl = nxt
-            if step_lvl != target_level:
-                step_header, _, step_cipher, _ = _parse_capsule_envelope(str(inner["next_cap"]))
-                step_key = _derive_chain_key(
-                    secret, layer_name, step_lvl, digest_map[step_lvl], cap_env
-                )
 
-        next_capsule_token = str(inner["next_cap"]) if "next_cap" in inner else None
+        next_capsule_token: str | None = None
+        if target_level in ("L1", "L2"):
+            nxt_after = NEXT_LEVEL_MAP[target_level]
+            next_ph = digest_map[target_level]
+            min_tier = (
+                "pro" if (cap_env == "pro" and nxt_after == "L3") else LEVEL_MIN_TIER[nxt_after]
+            )
+            next_hdr = {
+                **header, "lvl": target_level, "next": nxt_after, "cap": min_tier, "ph": next_ph
+            }  # fmt: skip
+            next_ck = _derive_chain_key(secret, layer_name, target_level, next_ph, cap_env)
+            next_capsule_token = _seal_single_capsule(next_hdr, {**inner, "ph": next_ph}, next_ck)
         l3_paths = [str(item["path"]) for item in l3_links]
         unfold_truncated = (
             target_level in ("L2", "L3") and len(joined_section) > L2_SECTION_MAX_CHARS

@@ -1,7 +1,7 @@
 # dotfiles-ubuntu
 
 [![CI](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml/badge.svg)](https://github.com/mtwuser/dotfiles-ubuntu/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-3.0.3-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/version-4.0.0-blue.svg)](VERSION)
 [![Coverage](https://img.shields.io/badge/coverage-100%25%20(unit%20%2B%20branch)-brightgreen.svg)](scripts/verify-repo.sh)
 [![Python](https://img.shields.io/badge/python-3.14%20(zero--deps)-3776AB.svg)](pyproject.toml)
 [![Ubuntu](https://img.shields.io/badge/Ubuntu-26.04%20LTS-E95420.svg)](https://ubuntu.com/)
@@ -10,10 +10,10 @@
 
 Declarative system manager, dotfile engine, and **Distributed Human-AI Governance ("pAIr programming") Platform** for **Ubuntu 26.04 LTS ("Resolute Raccoon")** and **Google Antigravity 2.0 / Gemini** *(directly extrapolable to **VS Code & GitHub Copilot**, **Cursor**, and **Claude Code**)*.
 
-This repository is modular and grounded in **one unified fractal pattern** (*every governed directory combines a manifest, Markdown rules/skills, and task ledgers across `Root 0 -> Department (1..N) -> Project` using **3 Core Bases** $\times$ **3 Specialization Stacks**, executed deterministically via plain files, Git, and zero-dependency Python 3.14*):
+This repository is modular and grounded in **one unified fractal pattern** (*every governed directory combines a manifest, Markdown rules/skills, and task ledgers across `Root 0 -> Department (1..N) -> Project` using **3 Universal Bases (`base-stack`)** $\times$ **3 Specialization Stacks**, executed deterministically via plain files, Git, and zero-dependency Python 3.14*):
 1. **Ubuntu System Backup, Audit & Restore ([`backup.sh`](backup.sh), [`audit.sh`](audit.sh), [`bootstrap.sh`](bootstrap.sh))** — snapshot installed APT packages, Snaps, NPM globals, external recipes, and GNOME desktop settings into plain-text `system/*` manifests, audit system drift, or rebuild a machine from scratch.
 2. **Dotfile Symlink Management (`bash/`, `git/`)** — manage `~/.bashrc`, `~/.profile`, and `~/.gitconfig` via [GNU Stow](https://www.gnu.org/software/stow/) while keeping personal identity and secrets in untracked local overrides (`~/.bashrc.local`, `~/.gitconfig.local`).
-3. **Local Antigravity 2.0 Governance (`antigravity/`, `templates/`)** — composable `AGENTS.md` baselines (`human-core`, `technical-base`, `business-base`), 4 deterministic Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), 19 reusable skills (`10` global + `4` `technical-base` + `5` specialization-stack across `/sopen`, `/sclose`, `/continue`, `/release`, `/enrich`, `/priority`, `/review`, `/full-audit`, `oss-contribute`, `ledger-surface-audit`, `fastapi-testing`, etc.), and 3 ready-to-use specialization stacks ([`corporate-ops-ledger`](templates/business-stack/corporate-ops-ledger/README.md), [`scientific-knowledge-branch`](templates/science-stack/scientific-knowledge-branch/README.md), [`fastapi-hexagonal`](templates/tech-stack/fastapi-hexagonal/README.md)).
+3. **Local Antigravity 2.0 Governance (`antigravity/`, `templates/`)** — composable `AGENTS.md` baselines (`base-stack`: `human-base`, `science-base`, `business-base`), 4 deterministic Python 3.14 lifecycle hooks (`PreToolUse`, `PostToolUse`, `PostInvocation`, `Stop`), 23 reusable skills (`10` global + `4` `software-engineering` + `9` specialization-stack across `/sopen`, `/sclose`, `/continue`, `/release`, `/enrich`, `/priority`, `/review`, `/full-audit`, `oss-contribute`, `academic-tutor`, `ledger-surface-audit`, `fastapi-testing`, `angular-testing`, `django-testing`, `nist-csf-audit`, etc.), and specialization stack families: `science-stack` ([`software-engineering`](templates/science-stack/software-engineering/README.md), [`scientific-knowledge-branch`](templates/science-stack/scientific-knowledge-branch/README.md)), `business-stack` ([`corporate-ops-ledger`](templates/business-stack/corporate-ops-ledger/README.md)), and `framework-stack` ([`fastapi-hexagonal`](templates/framework-stack/fastapi-hexagonal/README.md), [`angular-web`](templates/framework-stack/angular-web/README.md), [`django-backend`](templates/framework-stack/django-backend/README.md), [`nist-csf-security`](templates/framework-stack/nist-csf-security/README.md)).
 4. **Multi-Layer Orchestrator & Contextual MCP Server ([`scripts/layer-config.sh`](scripts/layer-config.sh), [`scripts/layer-subtree.sh`](scripts/layer-subtree.sh), [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py))** — deterministic file/Git/SHA-256 orchestrator (`bootstrap-workspace`, `apply-project`, `make sync`, `make delegate`, `make task`, `make complete`, `make promote`) plus a zero-dependency `stdio` JSON-RPC MCP server indexing layer Markdown into signed `rcap1` (`zlib + HMAC-SHA256`) capsules (`make consult`).
 
 | Progressive Adoption Mode | Who It Is For | What Executes on Disk (`0` External Servers Required) |
@@ -23,23 +23,33 @@ This repository is modular and grounded in **one unified fractal pattern** (*eve
 | **Mode 3 — Multi-Layer Organization** | `Root 0 -> Department (1..N) -> Project` | `bootstrap-workspace` + `layers/<child>/` (`git subtree`) + `make delegate` / `make complete` / `make consult` (`rcap1` capsules). |
 | **Mode 4 — Engine Contributor (`oss-dev`)** | Maintaining or extending `dotfiles-ubuntu` | `make setup-dev` + `make verify` runs the 8-stage deterministic verification gate (`100%` isolated `1:1` branch coverage). |
 
----
-
-## Navigation & Progressive Disclosure (`docs/`)
-
-| Tier | Guide / Specification | What You Will Find |
-|------|-----------------------|--------------------|
-| **Tier 1 (Gateway)** | **[`README.md`](README.md)** *(this file)* · **[`docs/README.md`](docs/README.md)** | Quick-Start paths, repository tree, CLI cheat-sheet, and subsystem lookup map. |
-| **Tier 2 (Human Guides)** | **[`docs/guides/01_ubuntu_system_and_multi_machine_guide.md`](docs/guides/01_ubuntu_system_and_multi_machine_guide.md)** | GNU Stow tree unfolding, `system/*` manifests & external recipes, daily usage, all `bootstrap.sh` & `audit.sh` modes, multi-machine setup/migration, portability matrix, and uninstallation. |
-| **Tier 2 (Hierarchical Workflows)** | **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** | 3-Tier profiles (`human-core`, `technical-base`, `business-base`), 19-skill matrix across 3 Core Bases + 3 Specialization Stacks, scoped `antigravity-agents` workspaces, `Root 0 -> Department -> Case/Unit/Squad -> Project` setup blueprints & kickoff prompts, Git email authority gates, 1-hop horizon radar, and upward PR promotion. |
-| **Tier 3A (Normative Specs)** | **[`01: System & Stow`](docs/architecture/01_system_and_stow_engine.md)** · **[`02: Governance & Hooks`](docs/architecture/02_antigravity_governance_and_hooks.md)** · **[`03: Contextual MCP`](docs/architecture/03_contextual_mcp_and_federation.md)** · **[`04: Compaction & Weaver`](docs/architecture/04_compaction_surface_and_promotion_engines.md)** · **[`05: Ephemeral Bots`](docs/architecture/05_ephemeral_forks_and_department_bots.md)** · **[`06: Layer Governance`](docs/architecture/06_layer_governance_and_promotion_engines.md)** | `1:1:1` source-test-spec contracts (`Specification:`) for the Ubuntu engine, lifecycle hooks, MCP server, `rcap1` compaction, surface weaver, ephemeral Department Bots, and layer governance/promotion engines. |
-| **Tier 3B (Reference)** | **[`Enterprise Governance`](docs/reference/enterprise_pair_programming_governance.md)** · **[`Cross-Dept & Human-Stack`](docs/reference/cross_departmental_and_human_stack_matrix.md)** · **[`Contextual MCP Mesh`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** · **[`Maintainer Guide`](docs/reference/developer_and_extension_guide.md)** | Enterprise "pAIr programming" playbook, Cross-Departmental (`0..80`) & `Human-Stack` (`85..95`) Matrix, Docker/SSH MCP orchestration, and maintainer extension workflows. |
+> **Objective Engineering Virtues & Live Empirical Benchmarks (`100%` Python 3.14 Stdlib · `0` External Dependencies)**:
+> - **Deterministic $O(N)$ Structural Compaction (`rcap1` `L0/L1` + 2D Geometry)**: Enforcing `< 465` lines/file, `H1..H4` hierarchy, 1-line lead sentences, and `> *"...*"` mandate quotes turns Markdown specs into pre-indexed ASTs — achieving **`88.7%` (`L0`, `522` vs. `4,622` tok)** and **`67.0%` (`L1`, `1,523` vs. `4,622` tok)** compaction across `130k+` tokens in **`~16 ms`** (`0` LLM summarization calls, `0` vector DBs, and **`-76.3%` single-envelope `zlib`-first capsule size** at `518–577` chars/capsule). See **[`Architecture 04 §2.9`](docs/architecture/04_compaction_surface_and_promotion_engines.md#29-information-theoretic-foundations--live-empirical-benchmarks-130k-token-corpus)**.
+> - **Content-Addressable Merkle Provenance (`citation_receipt`)**: Every section is pinned by `<layer>::<file>#<slug>@<sha256_16>:<E3..E0>`, enabling $O(1)$ cryptographic drift detection (`CITATION_DRIFT_DETECTED`), `E3 > E2 > E1 > E0` monotonicity proofs (`verify_epistemic_context_claims`), and `Q1..Q4` lifecycle telemetry.
+> - **Zero-Checkout C-Backed Git Plumbing (`DMCP` & `GRCC`)**: Multi-branch context projection reads `git ls-tree` / `git cat-file` directly from `.git/objects` (`zero_checkout: true`, `0` working-tree mutations) and chains encrypted capsules under `refs/capsules/*` without polluting `refs/heads/*`.
+> - **Mathematically Verified `1:1:1` Architecture**: `34` production modules $\leftrightarrow$ `34` isolated unit test suites (**`100.00%` line and branch coverage**, `< 2s`) $\leftrightarrow$ `6` normative architecture specifications (`< 465` lines/file).
 
 ---
 
-## Quick Start: 3 Main Ways to Use This Repository
+## 1. Navigation & Progressive Disclosure (`docs/`)
 
-### Path 1: Google Antigravity 2.0 Setup & Usage (Standalone)
+The documentation hub is organized into 3 progressive-disclosure tiers so humans and AI agents locate exact specifications in $O(1)$:
+
+| Tier | What You Will Find | Guide / Specification |
+|------|--------------------|-----------------------|
+| **Tier 1 (Gateway)** | Quick-Start paths, repository tree, CLI cheat-sheet, and subsystem lookup map. | **[`README.md`](README.md)** *(this file)* · **[`docs/README.md`](docs/README.md)** |
+| **Tier 2 (Human Guides)** | GNU Stow tree unfolding, `system/*` manifests & external recipes, daily usage, all `bootstrap.sh` & `audit.sh` modes, multi-machine setup/migration, portability matrix, and uninstallation. | **[`docs/guides/01_ubuntu_system_and_multi_machine_guide.md`](docs/guides/01_ubuntu_system_and_multi_machine_guide.md)** |
+| **Tier 2 (Hierarchical Workflows)** | 3 Universal Bases (`base-stack`: `human-base`, `science-base`, `business-base`), 23-skill matrix across 3 Universal Bases + Specialization Stacks (`science-stack`, `business-stack`, `framework-stack`), scoped `antigravity-agents` workspaces, `Root 0 -> Department -> Case/Unit/Squad -> Project` setup blueprints & kickoff prompts, Git email authority gates, 1-hop horizon radar, and upward PR promotion. | **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** |
+| **Tier 3A (Normative Specs)** | `1:1:1` source-test-spec contracts (`Specification:`) for the Ubuntu engine, lifecycle hooks, MCP server, `rcap1` compaction, surface weaver, ephemeral Department Bots, and layer governance/promotion engines. | **[`01: System & Stow`](docs/architecture/01_system_and_stow_engine.md)** · **[`02: Governance & Hooks`](docs/architecture/02_antigravity_governance_and_hooks.md)** · **[`03: Contextual MCP`](docs/architecture/03_contextual_mcp_and_federation.md)** · **[`04: Compaction & Weaver`](docs/architecture/04_compaction_surface_and_promotion_engines.md)** · **[`05: Ephemeral Bots`](docs/architecture/05_ephemeral_forks_and_department_bots.md)** · **[`06: Layer Governance`](docs/architecture/06_layer_governance_and_promotion_engines.md)** |
+| **Tier 3B (Reference)** | Enterprise "pAIr programming" playbook, Cross-Departmental (`0..80`) & `Human-Stack` (`85..95`) Matrix, Docker/SSH MCP orchestration, and maintainer extension workflows. | **[`Enterprise Governance`](docs/reference/enterprise_pair_programming_governance.md)** · **[`Cross-Dept & Human-Stack`](docs/reference/cross_departmental_and_human_stack_matrix.md)** · **[`Contextual MCP Mesh`](docs/reference/contextual_mcp_and_multi_service_orchestration.md)** · **[`Maintainer Guide`](docs/reference/developer_and_extension_guide.md)** |
+
+---
+
+## 2. Quick Start: 3 Main Ways to Use This Repository
+
+Choose one of the three adoption paths below depending on whether you need standalone Antigravity governance, full Ubuntu workstation management, or multi-layer enterprise orchestration.
+
+### 2.1. Path 1: Google Antigravity 2.0 Setup & Usage (Standalone)
 
 Install global rules (`~/.gemini/config/AGENTS.md`), deterministic lifecycle hooks (`hooks.json` + `scripts/`), 10 universal global skills (`~/.gemini/config/skills/`), and desktop launchers without changing your shell, Git config, or Ubuntu packages:
 
@@ -56,7 +66,7 @@ cd ~/dotfiles-ubuntu
 dotfiles-sync                               # or ./scripts/workstation-sync.sh --status
 ```
 
-### Path 2: Fork & Manage YOUR Own Ubuntu 26.04 System
+### 2.2. Path 2: Fork & Manage YOUR Own Ubuntu 26.04 System
 
 Turn a fork of this repository into your personal Ubuntu 26.04 backup, audit, and recovery engine — `./backup.sh` overwrites `system/*` with **your** machine's packages and GNOME settings:
 
@@ -75,7 +85,7 @@ cd ~/dotfiles-ubuntu
 
 📖 Full details on GNU Stow tree unfolding, `.audit-ignore`, multi-machine migration, and uninstallation: **[`docs/guides/01_ubuntu_system_and_multi_machine_guide.md`](docs/guides/01_ubuntu_system_and_multi_machine_guide.md)**.
 
-### Path 3: Enterprise & Multi-Tier Human-AI Governance (With or Without MCP)
+### 2.3. Path 3: Enterprise & Multi-Tier Human-AI Governance (With or Without MCP)
 
 Orchestrate Human-AI governance across **Open Source (`oss-dev` / `oss-readonly-appliance`) $\leftrightarrow$ `Root 0` (`corporate-root`: Public Administration `1..2` \| Company `10`) $\leftrightarrow$ `Department` (`3..60`, recursive `1..N`: Statutory/Policy `3..9`, Functional `15..40`, Sub-Department / Unit / Squad `40..60`) $\leftrightarrow$ `Project / Case` (`project` `80`)** (**Mode A — Without MCP** via pure Git + Stow + `layer-config.sh` static projection, or **Mode B — With MCP** via [`scripts/dotfiles_mcp_server.py`](scripts/dotfiles_mcp_server.py) and `layers/*` `git subtree` mounts):
 
@@ -84,10 +94,10 @@ flowchart TD
     SUB["Intrinsic Runtime Substrate\n(C-Backed Python Stdlib · PEP 7 · Ubuntu 26.04 Core)"]
     OSS["Open Source Upstream & Contributor Clone\n(operating_state: oss-dev · DOTFILES_DEV_REPO_DIR)"]
     APP["Local Workstation Appliance\n(operating_state: oss-readonly-appliance · ~/dotfiles-ubuntu)"]
-    CORP["Tier 1: Root 0 (Public Admin 1..2 | Enterprise Company 10)\n(operating_state: corporate-root · role: corporate · business-base)"]
-    DEPT["Tier 2A: Statutory & Functional Departments\n(operating_state: domain-policy [3..9] | department [15..40] · business/science/tech-stack)"]
-    SQUAD["Tier 2B: Sub-Departments, Operational Units & Delivery Squads\n(role: department | squad · precedence: 40..60 · business/science/tech-stack)"]
-    PROJ["Tier 3: Application, Case & Service Projects\n(operating_state: project · precedence: 80 · Contextual Human-Stack 85..95)"]
+    CORP["Level 1: Root 0 (Public Admin 1..2 | Enterprise Company 10 | Individual 90)\n(operating_state: corporate-root | individual-root · role: corporate · business-base)"]
+    DEPT["Level 2: Statutory & Functional Departments\n(operating_state: domain-policy [3..9] | department [15..40] · science/business/framework-stack)"]
+    SQUAD["Level 3: Sub-Departments, Operational Units, Tutors & Delivery Squads\n(role: department | squad · precedence: 40..60 | 86..89 · science/business/framework-stack)"]
+    PROJ["Level 4: Application, Case & Service Projects\n(operating_state: project · precedence: 80 · Contextual Human-Stack 85..95)"]
 
     SUB <-->|"C-Backed Primitives &\nOSS-to-OSS Contributions"| OSS
     OSS -->|"workstation-sync.sh --sync\n(Read-Only $HOME Runtime)"| APP
@@ -97,9 +107,9 @@ flowchart TD
     SQUAD <-->|"Downward: apply-project & make task\nUpward: make complete & /enrich (1-Hop PR)"| PROJ
 ```
 
-📖 Step-by-step multi-tier commands, authority gates, 19-skill matrix, and scoped `antigravity-agents` workspace containment: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
+📖 Step-by-step multi-tier commands, authority gates, 23-skill matrix, and scoped `antigravity-agents` workspace containment: **[`docs/guides/02_hierarchical_layers_and_team_workflows.md`](docs/guides/02_hierarchical_layers_and_team_workflows.md)** and **[`docs/reference/enterprise_pair_programming_governance.md`](docs/reference/enterprise_pair_programming_governance.md)**.
 
-#### Real-World Business View: 1 Company, 3 Departments & Specialized Squad Members
+#### 2.3.1. Real-World Business View: 1 Company, 3 Departments & Specialized Squad Members
 
 Imagine a company with **Corporate Direction (`Root 0`)** and **3 core departments** (**Legal**, **Engineering/Tech**, and **Brand/Marketing**). Instead of working in isolated silos, each department defines its rules once (`precedence: 0..100`, where lower numbers carry higher authority), and **any squad member combines the exact specialties their task requires** inside Google Antigravity:
 
@@ -127,7 +137,7 @@ flowchart TD
     CASE3 -.->|"Consumed back as a governed capability by"| LEG & MKT
 ```
 
-##### Comparing Outcomes: Traditional Silos vs. Cross-Departmental Composition
+#### 2.3.2. Comparing Outcomes: Traditional Silos vs. Cross-Departmental Composition
 
 When a business need crosses specialties (for example, *Legal needs a software tool* or *Marketing needs a social media bot*), organizations can compare what happens across approaches:
 
@@ -138,39 +148,45 @@ When a business need crosses specialties (for example, *Legal needs a software t
 | **✅ `dotfiles-ubuntu` Way 1: Business-Led (`--parent-dir <dept>` or `make setup-dev`)** | A specialist inside **Legal** or **Marketing** builds the tool in their workspace while injecting **Tech (`25`)** rules. | **Domain-Driven & Engineered**: The business department keeps full ownership and speed, while Antigravity enforces `100%` tests, clean architecture, and security automatically. |
 | **✅ `dotfiles-ubuntu` Way 2: Tech-Led (`layer-subtree.sh add <dept>`)** | The **Engineering** squad builds the tool (or a transversal service like **`VoIP`**) while mounting **Legal (`5`)** and **Brand (`30`)** rules. | **Platform-Grade & Compliant**: Engineers build scalable infrastructure where Antigravity blocks any code change that violates Legal (`5`) or Brand (`30`) rules before commit. |
 
-##### Summary of the 6 Reusable Organizational Patterns
+#### 2.3.3. Summary of the 6 Reusable Organizational Patterns
+
+Every cross-departmental workflow resolves to one of six composable governance patterns along the `0..100` *Lex Superior* spectrum:
 
 | Business / Functional Need | Who Owns the Workspace | Combined Rule Order (`0..100` *Lex Superior*) | How It Activates (`1` Command) | Effective Antigravity Agent Profile |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Pure Departmental Governance** *(Contracts, Patents, Ledgers, SOPs)* | `Root 0` or `Department` (`Legal`, `Finance`) | `human-core` + `business-base` (`10`) + `<dept>` (`5..20`) | `bootstrap-workspace` / `make sync` | **Normative & SSoT Ledger Auditor** (`workspace_mode: business`) |
-| **2. In-Department Automation** *(Scripts/tools inside a business repo)* | `Department` (`Legal`, `Finance`, `Ops`) | `<dept>` (`5..20`) + `business-base` (`10`) + **`technical-base` (`25`)** | `make setup-dev` *(reversible via `make sync`)* | **In-Situ Domain Automation Engineer** (`workspace_mode: hybrid`) |
+| **1. Pure Departmental Governance** *(Contracts, Patents, Ledgers, SOPs)* | `Root 0` or `Department` (`Legal`, `Finance`) | `human-base` + `business-base` (`10`) + `<dept>` (`5..20`) | `bootstrap-workspace` / `make sync` | **Normative & SSoT Ledger Auditor** (`workspace_mode: business`) |
+| **2. In-Department Automation** *(Scripts/tools inside a business repo)* | `Department` (`Legal`, `Finance`, `Ops`) | `<dept>` (`5..20`) + `business-base` (`10`) + **`science-base` + `software-engineering` (`25`)** | `make setup-dev` *(reversible via `make sync`)* | **In-Situ Domain Automation Engineer** (`workspace_mode: hybrid`) |
 | **3. Department-Owned Tech Product** *(e.g., **LegalTech Patent/Contract MCP**)* | `Legal` (`5`) or Embedded Tech Squad | **`Legal` (`5`)** $\rightarrow$ `Corp` (`10`) $\rightarrow$ **`Tech` + `FastAPI` (`25..50`)** | `apply-project <app> --parent-dir <dept> --template <stack>` | **Software Architect Subordinated to Statutory/IP Law** (`hybrid`) |
 | **4. Multi-Departmental Solution** *(e.g., **Marketing + Social Media Hub**)* | `Marketing` / `Growth` Squad (`35`) | **`Legal/GDPR` (`5`)** $\rightarrow$ `Corp` (`10`) $\rightarrow$ **`Tech` (`25`)** $\rightarrow$ **`Brand` (`30`)** $\rightarrow$ **`Marketing` (`35`)** | `--parent-dir dept-marketing` + `layer-subtree.sh add` (`legal`, `brand`) | **Full-Stack Growth Engineer Governed by Legal, Brand & Security** |
 | **5. Transversal Enterprise Platform** *(e.g., **Company-Wide `VoIP` Service**)* | Platform `service-node` / `squad` (`25`) | **Inward**: `Legal` (`5`, call consent) $\rightarrow$ `Ops` (`20`, SLA) $\rightarrow$ `Tech/VoIP` (`25`)<br/>**Outward**: Exports `templates/voip-pack` + `federated_mcps` | Any department mounts `layers/voip-platform` or applies `voip-pack` | **Critical Infrastructure Provider (inward) / Governed Capability (outward)** |
 | **6. Punctual Cross-Departmental Audit** *(e.g., Design checks Patent Gate with Legal)* | Any consumer layer | Active workspace + **Ephemeral `rcap1` Capsule (`kr: true`)** | `make consult LAYER=dept-legal QUERY="..."` | **Zero-Residue Read-Only Inter-Departmental Advisor** (`inter-layer`) |
 
-##### Crystal-Clear Mental Model: `$HOME` (Organizational Membership) vs. `Workspace` (Active Case & Crossed Layers)
+#### 2.3.4. Crystal-Clear Mental Model: `$HOME` (Organizational Membership) vs. `Workspace` (Active Case & Crossed Layers)
 
-Every operator uses two orthogonal surfaces: **`$HOME` (`~/dotfiles-ubuntu` $\rightarrow$ `~/.gemini/config/AGENTS.md`)** defines *which organization or department you belong to*, while **the active `Workspace` (`<repo>/.agents/`)** defines *what project, case, or administrative expediente you are solving today*, which external layers it crosses (`layers/*`), which specialization stack (`business-stack`, `science-stack`, `tech-stack`) applies, and your contextual seniority (`Human-Stack` `L1..L4` at `precedence: 85..95`):
+Every operator uses two orthogonal surfaces: **`$HOME` (`~/dotfiles-ubuntu` or `~/<user-pc>` via canonical symlink `~/dotfiles-ubuntu -> $DOTFILES_RUNTIME_DIR` $\rightarrow$ `~/.gemini/config/AGENTS.md`)** defines *which organization or department you belong to*, while **the active `Workspace` (`<repo>/.agents/`)** defines *what project, case, or administrative expediente you are solving today*, which external knowledge libraries it mounts (`layers/{geo-*,gov-*,sci-*,org-*}`), which operational stack (`science-stack`, `business-stack`, `framework-stack`) governs how the layer operates and verifies, and your **Consumer Viewpoint (`Human-Stack` `M1..M4` at `precedence: 85..95`, adapting retrieval between `academic-tutor-m1-m2` in `docs/guides/` and `professional-scientific-m3-m4` in `docs/reference/`)**:
 
-| Real-World Persona | `$HOME` Global Baseline (`~/dotfiles-ubuntu`) | Active `Workspace` & Crossed `layers/*` (`0..80`) | Specialization Stack & Contextual `Human-Stack` (`85..95`) | Effective Agent Behavior |
+| Real-World Persona | `$HOME` Global Baseline (`~/dotfiles-ubuntu` / `~/<user-pc>`) | Active `Workspace` & Crossed `layers/*` (`0..80`) | Specialization Stack & Contextual `Human-Stack` (`85..95`) | Effective Agent Behavior |
 | :--- | :--- | :--- | :--- | :--- |
-| **1. Public Administration Chain** *(Public `Root 0` $\rightarrow$ Public Dept $\rightarrow$ Civil Servant)* | • **Public Admin**: `human-core`<br/>• **Dept Maintainer**: `public-gov-root` (`1`)<br/>• **Civil Servant**: `dept-justice` (`3`) | • **Public `Root 0`**: `public-gov-root` (`1..2`)<br/>• **Public Dept**: `dept-justice` (`3`) & `dept-territorial` (`4`, statutes in `docs/`)<br/>• **Civil Servant**: `expediente-2026/` (`80`) | `business-base` + `science-stack/scientific-knowledge-branch` (`domain-admin-law:L3`) | Enforces constitutional `Root 0` (`1..2`), justice (`3`), and territorial (`4`) statutes; queries modular `docs/` on demand (`make consult`). |
-| **2. Company / Law Firm Member Crossing Public Admin** | `empresa-dept-legal` (`15`, inheriting `empresa-root` at `10`) | Client case `recurso-fiscal-cliente-x/` mounting `layers/dept-justice` (`3`) + `layers/dept-tax` (`4`) | `science-stack/scientific-knowledge-branch` + `business-stack` (`domain-civil-law:L4 + domain-tax-law:L2`) | Subordinates corporate strategy (`10..15`) to state justice/tax statutes (`3..4`); peer-level in civil law (`L4`), step-by-step verify on tax changes (`L2`). |
-| **3. Enterprise Tech Lead (`L4`) vs. Junior Squad Member (`L1`)** | Both stow `empresa-dept-tech` (`25`, inheriting `empresa-root` at `10`) | Both open `checkout-api/` (`50..80`) | Both apply `tech-stack/fastapi-hexagonal`; Lead sets `domain-python:L4`, Junior sets `domain-python:L1 + soft-socratic-coach` in `.agents/SESSION.md` | Identical `100%` test & architecture gates (`0..80`); Lead gets terse 4-channel execution (`L4`), Junior gets Socratic mentorship (`L1`). |
-| **4. Specialist Shifting Contexts** *(Same Person, Different Workspace)* | `dept-bio-lab` (`20`) or `dept-legal` (`15`) | • **Morning**: Primary lab/legal workspace<br/>• **Afternoon**: Cross-cutting tax/env filing or Python tool (`make setup-dev`) | • **Morning**: `science-stack` (`domain-biotech:L4`)<br/>• **Afternoon**: `tech-stack` (`domain-python:L1 + bridge-tech-for-business`) | Seniority is **contextual to the workspace**: direct executive synthesis in their core science (`L4`), didactic guided scaffolding when crossing into code or tax (`L1`). |
-| **5. Individual Practitioner / Freelancer** | Default `human-core` (`workstation-sync.sh --setup`) | Any client or personal repo (`apply-project`) optionally mounting public `layers/geo-*` or `layers/dept-*` | `science-stack`, `business-stack`, or `tech-stack` + optional personal `Human-Stack` in `.agents/SESSION.md` | Full task-branch rigor (`make task`, `make status`, `/review`, `/sclose`) without needing a corporate `Root 0`. |
+| **1. Public Administration Chain** *(Public `Root 0` $\rightarrow$ Public Dept $\rightarrow$ Civil Servant)* | • **Public Admin**: `human-base`<br/>• **Dept Maintainer**: `public-gov-root` (`1`)<br/>• **Civil Servant**: `dept-justice` (`3`) | • **Public `Root 0`**: `public-gov-root` (`1..2`)<br/>• **Public Dept**: `dept-justice` (`3`) & `dept-territorial` (`4`, statutes in `docs/`)<br/>• **Civil Servant**: `expediente-2026/` (`80`) | `business-base` + `science-stack/scientific-knowledge-branch` (`domain-admin-law:M3`) | Enforces constitutional `Root 0` (`1..2`), justice (`3`), and territorial (`4`) statutes; queries modular `docs/` on demand (`make consult`). |
+| **2. Company / Law Firm Member Crossing Public Admin** | `empresa-dept-legal` (`15`, inheriting `empresa-root` at `10`) | Client case `recurso-fiscal-cliente-x/` mounting `layers/dept-justice` (`3`) + `layers/dept-tax` (`4`) | `science-stack/scientific-knowledge-branch` + `business-stack` (`domain-civil-law:M4 + domain-tax-law:M2`) | Subordinates corporate strategy (`10..15`) to state justice/tax statutes (`3..4`); peer-level in civil law (`M4`), step-by-step verify on tax changes (`M2`). |
+| **3. Enterprise Tech Lead (`M4`) vs. Junior Squad Member (`M1`)** | Both stow `empresa-dept-tech` (`25`, inheriting `empresa-root` at `10`) | Both open `checkout-api/` (`50..80`) | Both apply `framework-stack/fastapi-hexagonal`; Lead sets `domain-python:M4`, Junior sets `domain-python:M1 + soft-socratic-coach` in `.agents/SESSION.md` | Identical `100%` test & architecture gates (`0..80`); Lead gets terse 4-channel execution (`M4`), Junior gets Socratic mentorship (`M1`). |
+| **4. Specialist Shifting Contexts** *(Same Person, Different Workspace)* | `dept-bio-lab` (`20`) or `dept-legal` (`15`) | • **Morning**: Primary lab/legal workspace<br/>• **Afternoon**: Cross-cutting tax/env filing or Python tool (`make setup-dev`) | • **Morning**: `science-stack` (`domain-biotech:M4`)<br/>• **Afternoon**: `science-stack/software-engineering` (`domain-python:M1 + bridge-tech-for-business`) | Mastery is **contextual to the workspace**: direct executive synthesis in their core science (`M4`), didactic guided scaffolding when crossing into code or tax (`M1`). |
+| **5. Individual Practitioner / Freelancer** | Default `human-base` (`workstation-sync.sh --setup`) | Any client or personal repo (`apply-project`) optionally mounting public `layers/geo-*` or `layers/dept-*` | `science-stack`, `business-stack`, or `framework-stack` + optional personal `Human-Stack` in `.agents/SESSION.md` | Full task-branch rigor (`make task`, `make status`, `/review`, `/sclose`) without needing a corporate `Root 0`. |
 
 📖 Full business, public-administration & architectural walkthroughs (**Full `0..100` Deontic Spectrum**, **5 `$HOME` vs. `Workspace` Personas**, **LegalTech MCP**, **Marketing Social Media Engine**, and **Transversal `VoIP` Platform**): **[`docs/reference/cross_departmental_and_human_stack_matrix.md`](docs/reference/cross_departmental_and_human_stack_matrix.md)**.
 
 ---
 
-## Natural Code Evolution, Command Consciousness & Reproducible Metrics
+## 3. Natural Code Evolution, Command Consciousness & Reproducible Metrics
 
-### 1. 6-Stage Structural Evolution Ladder, Command Tiers (`C1/C2/C3`) & Bifurcated Age Loop
+Code structure, CLI commands, and repository health evolve deterministically across three coupled axes:
+
+### 3.1. 6-Stage Structural Evolution Ladder, Command Tiers (`C1/C2/C3`) & Bifurcated Age Loop
+
+The diagram below maps how `C1/C2/C3` command consciousness, the 6-stage code abstraction ladder, and the `14d/90d/180d` age radar reinforce one another:
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph CMD["Command Consciousness Tiers (make status)"]
         C1["C1: Auto-Reflexive\n(status · diff · horizon · consult · verify · lint)"]
         C2["C2: Guided Tactical\n(task · sync · /priority · /continue · /sclose)"]
@@ -199,14 +215,14 @@ flowchart LR
     DRF -.->|"Escalates Abstraction in"| EVO
 ```
 
-### 2. Value-Added Efficiency Metrics & Reproducible Human-Agent Validation Map
+### 3.2. Value-Added Efficiency Metrics & Reproducible Human-Agent Validation Map
 
 Both human operators and AI agents use this table as a **verifiable conceptual contract** to measure platform ROI and detect architectural drift across any governed repository:
 
 | Dimension / Lifecycle Point | Reproducible Target Metric / Invariant | Human & Architectural Value Added | Agent Deviation / Drift Signal (Validation Gate) |
 | :--- | :--- | :--- | :--- |
 | **1. Session Startup & Orientation (`/sopen` / `make status`)** | **`1` CLI call (`< 0.2s`)** returning `operating_state`, `workspace_mode`, `command_tiers`, `horizon`, and `agent_diff` | Eliminates 6–8 slow shell/git/file probes at session start and prevents blind `brain/` scans | Multi-step manual `git`/`ls` probing on startup or attempting edits in `oss-readonly-appliance` |
-| **2. Context-Window & Compaction (`AGENTS.md` & `rcap1`)** | **`<= 18,000` bytes** global `AGENTS.md` (`human-core` `~10.6 KB`); **`~85%` token savings** at `L1` Exon Skeleton (`40–65` tokens/section) | Zero rule eviction under Antigravity's `20,000`-token inline budget; workspaces load only rules matching their `workspace_mode` | `TOKEN_BUDGET_EXCEEDED` (`> 18 KB`), `WORKSPACE_RULES_BUDGET_EXCEEDED` (`> 80 KB`), or loading code rules in `business` mode |
+| **2. Context-Window & Compaction (`AGENTS.md` & `rcap1`)** | **`<= 18,000` bytes** global `AGENTS.md` (`human-base` `~10.6 KB`); **`~85%` token savings** at `L1` Exon Skeleton (`40–65` tokens/section) | Zero rule eviction under Antigravity's `20,000`-token inline budget; workspaces load only rules matching their `workspace_mode` | `TOKEN_BUDGET_EXCEEDED` (`> 18 KB`), `WORKSPACE_RULES_BUDGET_EXCEEDED` (`> 80 KB`), or loading code rules in `business` mode |
 | **3. Natural Code Maintainability & 6-Stage Evolution** | **`< 465` lines** hard cap (`<= 400` target), **`Probe E` ($M_{\text{cluster}} < 1,200$)**, **`< 15` modules/dir (`1:1:1` Subpackages)**, and **`O(1)` file-prefix taxonomy** (`tools_*`, `*_engine`, `NN_*`, `test_*`) | Prevents God Components, coupled cluster drift, and flat-directory overload; every subpackage and module's `1:1:1` triad (`Spec <-> Test <-> Code`) is discoverable in $O(1)$ | File `>= 465` lines (`[max-file-lines]`), directory `>= 15` modules, cross-engine `_private` imports, or missing `Specification:` pointer |
 | **4. Bidirectional `1:1:1` Test Symbiosis (`Unit -> Imp -> E2E`)** | **`100.00%` single-file isolated unit statement + branch coverage (`0` Cross-Unit Masking)**, **`< 1s` per unit test**, `# Arrange / # Act / # Assert`, `0-byte` `__init__.py` | Self-documenting executable specs (`Top-Down E2E -> Imp -> Unit` reading; `Bottom-Up Unit -> Imp -> E2E` execution where each `test_<mod>.py` reaches `100%` alone) | Coverage `< 100%` in single-file isolation, missing AAA markers (`[missing-aaa]`), non-empty `__init__.py` (`[init-purity]`), or legacy aliases |
 | **5. Inter-Layer Governance & Stage Gates (`dev -> tst -> pre -> pro`)** | **Strict 1-hop horizon**, `5`-role contextual & hierarchical authority (`owner`, `maintainer`, `validator`, `member`, `consumer`), `4`-state $N$-departmental consensus (`RECONCILED_FLOW` $\rightarrow$ `ESCALATE_TO_ROOT`), and non-destructive `.agents/proposals/` staging | Unifies Business (`Root 0` / `Department` SSoT ledgers, `internal` vs `external` entity lineage, & *Lex Superior* `0..100`) and Technical (`Squad` / `Project`) delivery on `feature/<TICKET-ID>-<slug>` | `CROSS_TIER_PROMOTION_BYPASS`, `INHERITED_UPSTREAM_ASSET_IMMUTABLE`, `CROSS_DEPT_ESCALATION_TO_ROOT_REQUIRED`, open `P0` in `tst`, or unchecked `WORKVALI.md` items in `pre` |
@@ -215,7 +231,9 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 
 ---
 
-## Repository Structure
+## 4. Repository Structure
+
+The directory tree separates GNU Stow dotfile modules (`bash/`, `git/`, `antigravity/`) from non-stow system manifests, templates, docs, and the 4-subpackage MCP engine:
 
 ```
 ~/dotfiles-ubuntu/
@@ -237,18 +255,18 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 │   │   └── 02_hierarchical_layers_and_team_workflows.md ← 3-tier profiles, multi-layer lifecycle, authority & PR promotion
 │   ├── architecture/                  ←   Tier 3A: Normative technical specifications (1:1:1 with code & unit tests)
 │   │   ├── 01_system_and_stow_engine.md                    ← Ubuntu 26.04 engine, 3-stage APT filter, Stow
-│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 19 skills (10 global + 4 tech + 5 stack)
+│   │   ├── 02_antigravity_governance_and_hooks.md          ← Token budget, 4 hook 1:1:1 contracts, 23 skills (10 global + 4 software-engineering + 9 stack)
 │   │   ├── 03_contextual_mcp_and_federation.md             ← Zero-dependency MCP server protocol & schema (mcp-layer-v1)
 │   │   ├── 04_compaction_surface_and_promotion_engines.md  ← rcap1 compaction & 0..N surface weaver (Subpackage 2: capsules/)
 │   │   ├── 05_ephemeral_forks_and_department_bots.md       ← OOP capability rings, symbiotic Department Bots, rcap1 return membrane & TTL GC
 │   │   └── 06_layer_governance_and_promotion_engines.md    ← Fork configurator, bootstrapper, authority, horizon, workflow & git-gov (Subpackage 4: governance/)
 │   └── reference/                     ←   Tier 3B: Enterprise use cases & maintainer extension guides
 │       ├── enterprise_pair_programming_governance.md         ← Enterprise Human-AI governance & Copilot mapping
-│       ├── cross_departmental_and_human_stack_matrix.md      ← Cross-Departmental Contextual Algebra (0..80) & Human-Spec / Human-Stack Matrix (85..95)
+│       ├── cross_departmental_and_human_stack_matrix.md      ← Cross-Departmental Contextual Algebra (0..80) & Human-Stack Matrix (85..95)
 │       ├── contextual_mcp_and_multi_service_orchestration.md ← Node/Container MCP & multi-service orchestration
 │       └── developer_and_extension_guide.md                  ← Maintainer playbook for evolving dotfiles-ubuntu
 │
-├── templates/                         ← NOT stow — polymorphic template taxonomy (human-core, technical-base, business-base, business-stack/corporate-ops-ledger, science-stack/scientific-knowledge-branch, tech-stack/fastapi-hexagonal)
+├── templates/                         ← NOT stow — 2-level polymorphic template taxonomy (base-stack/*, science-stack/*, business-stack/*, framework-stack/*)
 ├── scripts/                           ← NOT stow — CLI orchestrators, Contextual MCP Server & CI verification
 │   ├── antigravity-install.sh         ←   Install/update Antigravity Agents, agy CLI & optional IDE
 │   ├── audit-global-config.sh         ←   Verify ~/.gemini/config/ tree-unfolded symlinks & orphans
@@ -292,16 +310,20 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 
 ---
 
-## Lifecycle Hooks & CLI Orchestrator Cheat-Sheet
+## 5. Lifecycle Hooks & CLI Orchestrator Cheat-Sheet
 
-### 1. Deterministic Python 3.14 Lifecycle Hooks (`antigravity/.gemini/config/`)
+Daily governance and multi-layer operations are enforced by four Python 3.14 lifecycle hooks and the 26-subcommand `layer-config.sh` CLI:
+
+### 5.1. Deterministic Python 3.14 Lifecycle Hooks (`antigravity/.gemini/config/`)
 
 - **`pre_tool_guard.py` (`PreToolUse`)** — Blocks non-empty writes (`> 0 bytes`) to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and direct edits to inherited `.agents/rules/layer-*.md` across both file-write tools and `run_command` shell redirections (`heredoc`, `tee`, `sed -i`, `cp`/`mv`, `dd`, inline `python -c`), plus automatic execution of mutating `git` (`add`, `commit`, `push`, `reset`, `reset --hard`, `rebase`, `checkout`, `merge`, `clean`, `clean -f`, `subtree`) or `alembic` (`revision`, `upgrade`, `downgrade`, `stamp`, `merge`, `edit`) commands.
 - **`post_edit_format.py` (`PostToolUse`)** — Runs `ruff format` automatically on modified `.py` files.
 - **`post_invocation_lint.py` (`PostInvocation`)** — Enforces `< 465` lines on modified `.py`, root `README.md`, and `docs/**/*.md` files, AAA test markers, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18,000`-byte `AGENTS.md` cap & `80,000`-byte workspace cap) with `force_continue`.
 - **`stop_verify_tests.py` (`Stop`)** — Runs affected unit tests before concluding a task.
 
-### 2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 26 Subcommands)
+### 5.2. Multi-Layer CLI Orchestrator (`./scripts/layer-config.sh` — All 26 Subcommands)
+
+All 26 subcommands of `./scripts/layer-config.sh` are grouped below by template projection, workspace bootstrap, authority/promotion gates, and ephemeral forks:
 
 ```bash
 # Template discovery, fork parameterization & static project projection:
@@ -311,7 +333,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 ./scripts/layer-config.sh apply-project <your-project> --template fastapi-hexagonal --layers all
 
 # Global profile composition, subtree mounting & hierarchical workspace bootstrap/sync/status:
-./scripts/layer-config.sh set-global-profile human-core --stow
+./scripts/layer-config.sh set-global-profile human-base --stow
 ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
 ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal --id dept-legal-ip --role domain-policy --precedence 5 --templates business-base
 ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root --strategy reconcile
@@ -341,7 +363,7 @@ Both human operators and AI agents use this table as a **verifiable conceptual c
 
 ---
 
-## Development, Testing, Virtual Environment & CI
+## 6. Development, Testing, Virtual Environment & CI
 
 `dotfiles-ubuntu` separates **zero-dependency runtime execution** ([`requirements.txt`](requirements.txt) — `0` packages in upstream; 100% Python 3.14 Standard Library for hooks and `scripts/dotfiles_mcp_server.py`) from **development/testing tools** ([`requirements-dev.txt`](requirements-dev.txt) — chains `-r requirements.txt` + `pytest`, `pytest-cov`, `ruff`, `mypy`, `shellcheck-py`):
 
@@ -354,8 +376,8 @@ make verify                                   # Run the full 8-stage determinist
 make docker-build && make docker-self-test    # (Optional) Build & verify Ubuntu 26.04 MCP Docker image
 ```
 
-### Versioning, Security & Contributing
+### 6.1. Versioning, Security & Contributing
 
-- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`3.0.3`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
+- **Semantic Versioning**: Tracked in [`VERSION`](VERSION) (`4.0.0`) and [`CHANGELOG.md`](CHANGELOG.md) (ongoing changes accumulate under `## [Unreleased]` and are promoted via `/release`). All CLI scripts support `--version` / `-v`.
 - **Security & Secret Isolation**: Personal Git identity (`~/.gitconfig.local`) and shell secrets (`~/.bashrc.local`) are strictly isolated from tracked files; see [`SECURITY.md`](SECURITY.md).
 - **Contributing & Extending**: See [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`docs/reference/developer_and_extension_guide.md`](docs/reference/developer_and_extension_guide.md).

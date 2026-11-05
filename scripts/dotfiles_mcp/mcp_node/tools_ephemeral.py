@@ -17,7 +17,9 @@ from dotfiles_mcp.core.constants import (
     VALID_EPHEMERAL_ACTIONS,
 )
 from dotfiles_mcp.mcp_node.capability_registry import (
+    orchestrate_dmcp_branch_projection,
     orchestrate_ephemeral_return_capsule,
+    orchestrate_grcc_capsule_ref,
     resolve_bot_archetype,
     resolve_mcp_capability_profile,
 )
@@ -171,6 +173,30 @@ class EphemeralToolsMixin(SurfaceToolsMixin):
             )
             return {
                 "content": [{"type": "text", "text": json.dumps(ret_res, indent=2)}],
+                "isError": False,
+            }
+        if action == "project-branch":
+            dmcp_res = orchestrate_dmcp_branch_projection(
+                self.repo_dir,
+                parent_id,
+                arguments,
+                default_secret=self._resolve_resonance_secret().decode("utf-8"),
+            )
+            if dmcp_res.get("fallback_activated"):
+                self._emit_warning(
+                    "WARN",
+                    "DMCP_CONTEXT_FRAME_INVALID",
+                    str(dmcp_res.get("reason", "DMCP context frame invalid")),
+                    {"branch_ref": str(arguments.get("branch_ref", ""))},
+                )
+            return {
+                "content": [{"type": "text", "text": json.dumps(dmcp_res, indent=2)}],
+                "isError": False,
+            }
+        if action == "chain-capsule-ref":
+            grcc_res = orchestrate_grcc_capsule_ref(self.repo_dir, parent_id, arguments)
+            return {
+                "content": [{"type": "text", "text": json.dumps(grcc_res, indent=2)}],
                 "isError": False,
             }
         try:

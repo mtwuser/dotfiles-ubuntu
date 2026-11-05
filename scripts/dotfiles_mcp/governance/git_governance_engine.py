@@ -20,9 +20,13 @@ from dotfiles_mcp.core.constants import (
     AUDIT_LOG_TAIL_LINES,
     BUSINESS_MODE_TEMPLATES,
     BUSINESS_PHASE_SEMANTICS,
+    CAPSULE_REF_NAMESPACE,
     DEFAULT_ENV_BRANCH_MAP,
+    DEFAULT_GOVERNANCE_PR_PREFIXES,
+    DEFAULT_PERSONAL_BRANCH_PREFIXES,
     DEFAULT_PROCESS_BRANCH_PREFIXES,
     DEFAULT_PROTECTED_BRANCHES,
+    DEFAULT_SPECIALTY_BRANCH_PREFIX,
     LAYER_MANIFEST_CONTRACT_REV,
     MAX_RECENT_GOVERNANCE_ALERTS,
     SECONDS_PER_DAY,
@@ -128,8 +132,12 @@ def configure_git_governance_policy(
     layer_id = str(manifest.get("layer_id", ws.name))
     prot = [b.strip() for b in (protected_branches or DEFAULT_PROTECTED_BRANCHES) if b.strip()]
     git_gov: dict[str, Any] = {"protected_branches": prot,
-        "require_pr_on_protected": require_pr_on_protected,
+        "protected_specialty_prefix": DEFAULT_SPECIALTY_BRANCH_PREFIX,
+        "personal_branch_prefixes": dict(DEFAULT_PERSONAL_BRANCH_PREFIXES),
         "process_branch_prefixes": dict(DEFAULT_PROCESS_BRANCH_PREFIXES),
+        "governance_pr_prefixes": dict(DEFAULT_GOVERNANCE_PR_PREFIXES),
+        "capsule_ref_namespace": CAPSULE_REF_NAMESPACE,
+        "require_pr_on_protected": require_pr_on_protected,
         "environment_branches": dict(DEFAULT_ENV_BRANCH_MAP),
         "environment_promotion_order": list(VALID_ENVIRONMENTS)}  # fmt: skip
     manifest["git_governance"] = git_gov
@@ -180,7 +188,22 @@ def inspect_git_governance_state(
         )  # fmt: skip
         branch = proc.stdout.strip()
     eff_branch = branch or "main"
-    is_protected = eff_branch in prot
+    is_spec = eff_branch.startswith(DEFAULT_SPECIALTY_BRANCH_PREFIX)
+    is_protected = eff_branch in prot or is_spec
+    is_pers = any(eff_branch.startswith(p) for p in DEFAULT_PERSONAL_BRANCH_PREFIXES.values())
+    is_gov_pr = any(eff_branch.startswith(p) for p in DEFAULT_GOVERNANCE_PR_PREFIXES.values())
+    is_proc = any(eff_branch.startswith(str(p)) for p in prefixes.values())
+    branch_cat = (
+        "protected-trunk-or-env" if eff_branch in prot else (
+            "specialty-lens" if is_spec else (
+                "personal-workstation" if is_pers else (
+                    "governance-pr" if is_gov_pr else (
+                        "tactical-process" if is_proc else "custom"
+                    )
+                )
+            )
+        )
+    )  # fmt: skip
     stage = next(
         (str(st) for st, pfx in prefixes.items() if eff_branch.startswith(str(pfx))),
         "protected-main" if eff_branch in ("main", "master") else "environment-branch",
@@ -218,9 +241,11 @@ def inspect_git_governance_state(
             or manifest.get("layer_role") == "team"
         )
     )
-    return {"current_branch": eff_branch, "is_protected_branch": is_protected,
-        "active_process_stage": stage, "active_environment": active_env,
-        "protected_branches": prot, "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
+    return {"current_branch": eff_branch, "branch_category": branch_cat,
+        "is_protected_branch": is_protected, "active_process_stage": stage,
+        "active_environment": active_env, "protected_branches": prot,
+        "capsule_ref_namespace": CAPSULE_REF_NAMESPACE,
+        "codeowners_synced": (ws / ".github" / "CODEOWNERS").is_file(),
         "makefile_outdated": mk_outdated, "manifest_contracts_outdated": mc_outdated,
         "staged_proposals": staged_files, "stale_proposals": stale_props,
         "staleness_thresholds_days": thresholds,

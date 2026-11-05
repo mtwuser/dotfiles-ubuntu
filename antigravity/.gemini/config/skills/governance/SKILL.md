@@ -17,7 +17,7 @@ Work flows strictly from left to right:
 #### 1. Future Roadmap (`roadmaps/`) → Active Roadmap (`WORKROAD.md` / `ROADMAP.md`)
 - Select the next roadmap by priority number.
 - Execute **deep-analysis** before promotion according to the active `workspace_mode` (`make status` / `.agents/rules/*.md`):
-  - **Technical / Hybrid Mode (`technical-base` / `tech-stack/*`)**: `1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code` (audit specs, tests, and code).
+  - **Technical / Hybrid Mode (`software-engineering` / `framework-stack/*`)**: `1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Code` (audit specs, tests, and code).
   - **Business Mode (`business-base` / `business-stack/*` / `science-stack/*` / `Root 0` / `Department`)**: `1. Normative Policies & Lex Superior (0..100) -> 2. Corporate Ledgers (corporate/), Modular Corpus (docs/) & Traceable IDs ([DEPT]-[TYPE]-[YYYY]-[NNN]) -> 3. Cross-Surface Contracts & Sign-Off Gates` (audit corporate ledgers, statutory/scientific corpora, policies, and downstream department/squad impact).
 - Enrich the roadmap with your findings, then promote its phase checklist to `WORKROAD.md`.
 
@@ -145,3 +145,9 @@ Match execution autonomy to the operation's cadence, consolidation level, and bl
      ```bash
      make decision ITEM=<proposal-or-surface-path> DEC=<approve|reject|defer|blocked> REASON="<justification>"
      ```
+6. **Federated Knowledge Library Lifecycle & Normative Obsolescence Review (`Q1..Q4` `Age × Empirical Usage` Radar)**:
+   - For workspaces governing or mounting Federated Knowledge Libraries (`gov-<country>`, `sci-<discipline>`, `geo-<territory>`, `org-<entity>` resolved via `local-mcp-clone -> private-mirror-remote -> public-canonical-remote`), inspect `citation_lifecycle_radar` in `audit_node_drift` (`verify_epistemic_context_claims` / `.agents/telemetry/citation_stats.json`):
+     - **`Q1_HOT_CORE`** (`<= 180d`, `>= 3` citations): Promote to pre-indexed `L0/L1` hot cache and prioritize `1:1:1` regression protection.
+     - **`Q2_HIGH_FRICTION`** (`> 180d`, `>= 3` citations): High-demand aging statute, scientific review, or corporate SOP — schedule priority modernization in `WORKROAD.md`.
+     - **`Q3_EMERGING_NICHE`** (`<= 180d`, `< 3` citations): Recently authored or specialized rule — monitor organic adoption.
+     - **`Q4_NORMATIVE_OBSOLESCENCE`** (`> 180d`, `0` citations): Candidate for legislative repeal, archival, or `L1` consolidation. Popularity never overrides epistemic truth (`E3 > E2 > E1 > E0`, `epistemic_override_allowed: false`), and stale consumer citations (`CITATION_DRIFT_DETECTED` on `citation_receipt` digest mismatch) trigger targeted re-consultation.

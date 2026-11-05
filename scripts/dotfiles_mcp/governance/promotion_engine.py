@@ -26,6 +26,10 @@ from dotfiles_mcp.core.constants import (
     VALID_DELEGATION_DIRS,
     VALID_TRACKER_FILES,
 )
+from dotfiles_mcp.core.layer_topology_helpers import (
+    _classify_inter_layer_relationship,
+    _resolve_layer_entity_identity,
+)
 from dotfiles_mcp.core.manifest_helpers import (
     _ensure_rule_file_frontmatter,
     _is_oss_root_manifest,
@@ -220,7 +224,21 @@ def promote_project_asset_to_layer(
     if not layer_base.is_relative_to(repo_resolved) or not layer_base.is_dir():
         raise ValueError(f"Target layer directory not found: {target_layer!r}")
     content, target_m = src_file.read_text(encoding="utf-8"), _load_manifest_dict(layer_base)
-    if _is_oss_root_manifest(target_m):
+    proj_m = _load_manifest_dict(project_dir.resolve())
+    src_meta = _resolve_layer_entity_identity(project_dir.resolve(), proj_m)
+    tgt_meta = _resolve_layer_entity_identity(layer_base, target_m)
+    rel = _classify_inter_layer_relationship(src_meta, tgt_meta)
+    is_oss_target = _is_oss_root_manifest(target_m)
+    is_inter_root_peer = bool(
+        upstream_dir is not None
+        and not is_oss_target
+        and proj_m.get("layer_id")
+        and target_m.get("layer_id")
+        and src_meta["visibility_scope"].endswith((":root-0", ":dev"))
+        and tgt_meta["visibility_scope"].endswith((":root-0", ":dev"))
+        and rel["mcp_communication_mode"] == "external-peer-root0-pr-and-readonly-mcp"
+    )
+    if is_oss_target:
         verify_oss_promotion_agnosticism(project_dir.resolve(), content, source_rel_path)
 
     rel_parts = src_file.relative_to(project_dir.resolve()).parts
@@ -236,6 +254,16 @@ def promote_project_asset_to_layer(
     )
     is_tracker = len(rel_parts) == 1 and rel_parts[0] in VALID_TRACKER_FILES
     is_gov_dir = len(rel_parts) >= 2 and rel_parts[0] in VALID_DELEGATION_DIRS
+    if is_oss_target and (is_tracker or is_gov_dir):
+        raise ValueError(
+            f"OSS_PRIVATE_SURFACE_BLOCKED: Refusing to promote private tracker or governance "
+            f"surface '{source_rel_path}' to public Open Source."
+        )
+    if is_inter_root_peer and (is_tracker or (is_gov_dir and rel_parts[0] == "corporate")):
+        raise ValueError(
+            f"INTER_ROOT_PRIVATE_SURFACE_BLOCKED: Refusing to promote private tracker or "
+            f"corporate ledger '{source_rel_path}' across distinct Root 0 entities."
+        )
     inferred_tpl = rel_parts[2] if is_ag_asset else (rel_parts[tpl_idx] if is_tpl_src else None)
     eff_template, parent_lid = target_template or inferred_tpl, str(target_m.get("layer_id", ""))
     if (
@@ -291,7 +319,15 @@ def promote_project_asset_to_layer(
         layer_base, operation="release", actor_email=actor_email, record_blocked=False
     )
     auth_ok, staged_path = bool(auth_v["allowed"]), None
-    if (
+    if is_inter_root_peer and not force_overwrite:
+        peer_tag = f"from-peer-root-{src_meta['layer_id']}"
+        stg_peer_kw: dict[str, Any] = {"scope_tag": peer_tag, "file_name": dest_file.name,
+            "content": content, "operation": "promote-from-project",
+            "actor_email": actor_email or "", "reason_code": "INTER_ROOT_PEER_PROPOSAL",
+            "dry_run": dry_run}  # fmt: skip
+        staged_path = str(stage_non_destructive_proposal(layer_base, **stg_peer_kw))
+        prepare_pr = True
+    elif (
         not is_tracker
         and not force_overwrite
         and (not auth_ok or (prepare_pr and dest_file.is_file()))
@@ -327,10 +363,15 @@ def promote_project_asset_to_layer(
         if eff_layer != "root"
         else None
     )
+    collab_mode = (
+        "inter-root-peer-pr"
+        if is_inter_root_peer
+        else ("oss-sanitized-pr" if is_oss_target else "1hop-hierarchical")
+    )
     result: dict[str, Any] = {"source": src_rel_str, "target_layer": eff_layer,
         "target_template": eff_template, "destination": dest_rel_str, "sha256": sha256_str,
-        "subtree_push_command": push_cmd, "staged_proposal": staged_path,
-        "dry_run": dry_run}  # fmt: skip
+        "collaboration_mode": collab_mode, "subtree_push_command": push_cmd,
+        "staged_proposal": staged_path, "dry_run": dry_run}  # fmt: skip
     if prepare_pr or upstream_dir is not None:
         dest_rel_lb = str(dest_file.relative_to(layer_base))
         pr_kw: dict[str, Any] = {"source_rel": src_rel_str, "dest_rel": dest_rel_lb,

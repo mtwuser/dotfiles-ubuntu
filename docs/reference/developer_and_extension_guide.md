@@ -10,12 +10,12 @@
 
 Because `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over `*/` at the repository root to discover GNU Stow modules dynamically, every new root directory must be explicitly classified:
 
-### Case A — Adding a New GNU Stow Module (e.g., `tmux/` or `ssh/`)
+### 1.1. Case A — Adding a New GNU Stow Module (e.g., `tmux/` or `ssh/`)
 1. Mirror the target `$HOME` structure inside the module directory (e.g., `tmux/.tmux.conf` $\rightarrow$ `~/.tmux.conf`).
 2. If the target directory in `$HOME` contains untracked machine-local files (like `~/.ssh/`), pre-create the real directory in `bootstrap.sh` before stowing so GNU Stow performs **tree unfolding** and never symlinks the parent folder.
 3. Update the `Repository Structure` tree and `Stow modules vs regular directories` table in [`README.md`](../../README.md) and [`docs/architecture/01_system_and_stow_engine.md`](../architecture/01_system_and_stow_engine.md).
 
-### Case B — Adding a Non-Stow Root Directory (e.g., `docs/`, `templates/`, `scripts/`, `system/`)
+### 1.2. Case B — Adding a Non-Stow Root Directory (e.g., `docs/`, `templates/`, `scripts/`, `system/`)
 1. Add the directory exclusion to **both** [`bootstrap.sh`](../../bootstrap.sh) (Step 3) and [`audit.sh`](../../audit.sh) (Section 1):
    ```bash
    [ "$module" = "<new-dir>" ] && continue
@@ -28,72 +28,96 @@ Because `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over `*/` at 
 
 Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/Legal Domain Policy (`domain-policy`)**, a **Department (`department`)**, or a **Tech-Stack Squad (`squad`)**, use `./scripts/layer-config.sh` rather than editing manifests manually:
 
-1. **Parameterize Fork Identity (`init-fork`)**:
-   ```bash
-   ./scripts/layer-config.sh init-fork \
-     --id acme-dept-legal \
-     --role domain-policy \
-     --precedence 5 \
-     --entity-kind enterprise \
-     --governing-root acme-corp-root \
-     --upstream-url https://github.com/acme/dotfiles-corp.git \
-     --prune-default-templates
-   ```
-   - `--prune-default-templates` removes the upstream `fastapi-hexagonal` template reference and its `surface_bindings` when a fork does not target Python/FastAPI.
-2. **Scaffold a Polymorphic Template Pack (`scaffold-template`)**:
-   ```bash
-   ./scripts/layer-config.sh scaffold-template gdpr-eu \
-     --kind business-stack \
-     --register-binding
-   ```
-   This generates `templates/business-stack/<name>/template.json` (`kind`: `core-base` | `business-stack` | `science-stack` | `tech-stack`), `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`.
-3. **Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)**:
-   ```bash
-   ./scripts/layer-config.sh list-templates
-   ./scripts/layer-config.sh apply-project /path/to/project \
-     --template fastapi-hexagonal \
-     --layers all
-   ```
-   Copies the chosen template pack (`rules/`, `skills/`, `governance/`, `assets/`) plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and writes `.agents/LAYER_LINEAGE.md` (with merged effective `surface_bindings` counts).
-4. **Diff & Promote Matured Project Patterns Upstream (`diff-project` & `promote-from-project`)**:
-   ```bash
-   ./scripts/layer-config.sh diff-project /path/to/project
-   ./scripts/layer-config.sh promote-from-project /path/to/project \
-     --source .agents/rules/security-audit.md \
-     --to-layer dept-security
-   ```
-   Compares SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promotes rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates.
-5. **Materialize, Inspect, Reap & Consult Ephemeral Department Bot Forks (`consult-layer`, `spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`)**:
-   ```bash
-   ./scripts/layer-config.sh consult-layer /path/to/project --layer dept-legal --query "GDPR retention"
-   ./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
-   ./scripts/layer-config.sh inspect-ephemeral --catalog
-   ./scripts/layer-config.sh reap-ephemeral --id all
-   ```
-6. **Compose Global Workstation Profile, Register Subtrees, Bootstrap, Sync, Delegate & Enforce Layer Authority, Roster & Environment Promotion (`set-global-profile`, `register-subtree`, `bootstrap-workspace`, `sync-layer`, `status`, `set-authority`, `manage-roster`, `check-authority`, `configure-git-policy`, `check-env-promotion`, `record-decision`, `inspect-horizon`, `compare-upstream`, `delegate-to-child`, `start-task`, `complete-task`)**:
-   ```bash
-   ./scripts/layer-config.sh set-global-profile human-core --stow
-   ./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
-   ./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
-     --id dept-legal-ip --role domain-policy --precedence 5 \
-     --parent-dir /path/to/corporate-root --templates business-base
-   ./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
-   ./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
-   ./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
-   ./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
-   ./scripts/layer-config.sh check-env-promotion /path/to/dept-legal --to-env pre --files "surfaces/web/terms.html" --email "qa@acme.com"
-   ./scripts/layer-config.sh record-decision /path/to/dept-legal --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
-   ./scripts/layer-config.sh status /path/to/dept-legal
-   ./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
-   ./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
-   ./scripts/layer-config.sh delegate-to-child /path/to/corporate-root --to-child dept-legal --task "Publish GDPR policy" --ticket LEGAL-2026-004
-   ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
-     --id squad-patent-ops --role squad --parent-dir /path/to/dept-legal
-   ./scripts/layer-config.sh start-task /path/to/squad-patents --task "LEGAL-2026-004"
-   ./scripts/layer-config.sh complete-task /path/to/squad-patents --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
-   ./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root --strategy reconcile
-   ```
-7. **Verify `SKILL.md` Frontmatter & Token Budget**: Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
+### 2.1. Parameterize Fork Identity (`init-fork`)
+
+Configure `system/mcp-layer.json` (`layer_id`, `layer_role`, `precedence`, `entity_kind`, `governing_root_id`, and `upstream_layer`) in a single command:
+
+```bash
+./scripts/layer-config.sh init-fork \
+  --id acme-dept-legal \
+  --role domain-policy \
+  --precedence 5 \
+  --entity-kind enterprise \
+  --governing-root acme-corp-root \
+  --upstream-url https://github.com/acme/dotfiles-corp.git \
+  --prune-default-templates
+```
+
+- `--prune-default-templates` removes the upstream `fastapi-hexagonal` template reference and its `surface_bindings` when a fork does not target Python/FastAPI.
+
+### 2.2. Scaffold a Polymorphic Template Pack (`scaffold-template`)
+
+Generate a new `template-pack-v1` directory (`template.json`, `rules/`, `skills/<name>-guide/SKILL.md`, and `governance/` or `assets/`) under `templates/<kind>/`:
+
+```bash
+./scripts/layer-config.sh scaffold-template gdpr-eu \
+  --kind business-stack \
+  --register-binding
+```
+
+### 2.3. Inspect & Materialize a Fork into a Target Application Repository (`list-templates` & `apply-project` — Without MCP / Static Mode)
+
+Copy the chosen template pack (`rules/`, `skills/`, `governance/`, `assets/`) plus all participating mounted layers (`layers/*` ordered by numeric `precedence` `0..100` into `.agents/rules/layer-<precedence>-<name>.md`) and write `.agents/LAYER_LINEAGE.md`:
+
+```bash
+./scripts/layer-config.sh list-templates
+./scripts/layer-config.sh apply-project /path/to/project \
+  --template fastapi-hexagonal \
+  --layers all
+```
+
+### 2.4. Diff & Promote Matured Project Patterns Upstream (`diff-project` & `promote-from-project`)
+
+Compare SHA-256 digests across `.agents/{rules,skills,assets}/` (`in_sync`, `modified_in_project`, `novel_in_project`) and promote rules, skills, or canonical assets back into `Root`, `layers/<name>`, or `templates/<pack>` while enforcing `AGENTS.md` ($\le 18{,}000$ bytes) and `SKILL.md` frontmatter gates:
+
+```bash
+./scripts/layer-config.sh diff-project /path/to/project
+./scripts/layer-config.sh promote-from-project /path/to/project \
+  --source .agents/rules/security-audit.md \
+  --to-layer dept-security
+```
+
+### 2.5. Materialize, Inspect, Reap & Consult Ephemeral Department Bot Forks (`consult-layer`, `spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`)
+
+Execute one-shot `strictly-read-only` cross-layer consultations (`consult-layer`) or manage TTL-bounded specialist bot sandboxes (`spawn-ephemeral`, `inspect-ephemeral`, `reap-ephemeral`):
+
+```bash
+./scripts/layer-config.sh consult-layer /path/to/project --layer dept-legal --query "GDPR retention"
+./scripts/layer-config.sh spawn-ephemeral --role dept-qa-bot --templates fastapi-hexagonal --tier flash --ttl 300
+./scripts/layer-config.sh inspect-ephemeral --catalog
+./scripts/layer-config.sh reap-ephemeral --id all
+```
+
+### 2.6. Compose Global Workstation Profile, Register Subtrees, Bootstrap, Sync, Delegate & Enforce Layer Authority, Roster & Environment Promotion
+
+Orchestrate global workstation profiles (`set-global-profile`), subtree registration (`register-subtree`), atomic layer bootstrapping (`bootstrap-workspace`), RBAC rosters (`set-authority`, `manage-roster`, `check-authority`, `configure-git-policy`), environment gates (`check-env-promotion`, `record-decision`), bilateral horizon checks (`status`, `inspect-horizon`, `compare-upstream`), and task/delegation workflows (`delegate-to-child`, `start-task`, `complete-task`, `sync-layer`):
+
+```bash
+./scripts/layer-config.sh set-global-profile human-base --stow
+./scripts/layer-config.sh register-subtree dept-legal https://github.com/acme/dept-legal.git master
+./scripts/layer-config.sh bootstrap-workspace /path/to/dept-legal \
+  --id dept-legal-ip --role domain-policy --precedence 5 \
+  --parent-dir /path/to/corporate-root --templates business-base
+./scripts/layer-config.sh set-authority /path/to/dept-legal --owner-role "CLO" --emails "clo@acme.com"
+./scripts/layer-config.sh manage-roster /path/to/dept-legal --add "qa@acme.com" --role validator
+./scripts/layer-config.sh check-authority /path/to/dept-legal --op release --email "clo@acme.com"
+./scripts/layer-config.sh configure-git-policy /path/to/dept-legal --protected main,master,env/pre,env/pro
+./scripts/layer-config.sh check-env-promotion /path/to/dept-legal --to-env pre --files "surfaces/web/terms.html" --email "qa@acme.com"
+./scripts/layer-config.sh record-decision /path/to/dept-legal --item ".agents/proposals/from-root/policy.md" --decision approve --reason "Reviewed"
+./scripts/layer-config.sh status /path/to/dept-legal
+./scripts/layer-config.sh inspect-horizon /path/to/corporate-root
+./scripts/layer-config.sh compare-upstream /path/to/corporate-root --apply-safe
+./scripts/layer-config.sh delegate-to-child /path/to/corporate-root --to-child dept-legal --task "Publish GDPR policy" --ticket LEGAL-2026-004
+./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
+  --id squad-patent-ops --role squad --parent-dir /path/to/dept-legal
+./scripts/layer-config.sh start-task /path/to/squad-patents --task "LEGAL-2026-004"
+./scripts/layer-config.sh complete-task /path/to/squad-patents --task "LEGAL-2026-004" --deliverable "corporate/gdpr.md"
+./scripts/layer-config.sh sync-layer /path/to/dept-legal --parent-dir /path/to/corporate-root --strategy reconcile
+```
+
+### 2.7. Verify `SKILL.md` Frontmatter & Token Budget
+
+- Every `SKILL.md` file inside `templates/` is automatically scanned by `scripts/verify-repo.sh` (Check `[6/8]`). Ensure `name:` is strictly `kebab-case`, `description:` is non-empty, and the file is `< 500` lines.
 
 ---
 
@@ -133,27 +157,34 @@ Whether a fork represents a **Corporate Baseline (`corporate`)**, a **Statutory/
 
 When extending the optional Contextual Layer & System MCP Server ([`docs/architecture/03_contextual_mcp_and_federation.md`](../architecture/03_contextual_mcp_and_federation.md)):
 
-1. **Preserve the Zero-Dependency, Read-Only & 4-Subpackage Dependency DAG Invariants**:
-   - Use **only** the Python 3.14 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `zlib`, `hashlib`, `hmac`, `base64`, `shutil`, `time`, `secrets`, `stat`, `difflib`). Never import third-party packages that would require `pip install`.
-   - Place new modules inside the appropriate bounded-domain subpackage (`scripts/dotfiles_mcp/{core,capsules,mcp_node,governance}/`, keeping `< 15` modules per directory and `< 465` lines per file), mirror the `1:1` unit test in `tests/unit/dotfiles_mcp/<subpackage>/test_<module>.py`, add the `Specification: docs/architecture/<spec>.md` pointer (`03`, `04`, `05`, or `06`), and obey the **4-Subpackage Dependency DAG** (`core/` imports only from `core/`; `capsules/` never imports from `governance/`; `capsule_engine.py` and `surface_weaver.py` never import from `mcp_node/` or `governance/`; `mcp_node/` engines never import from `governance/` except `tools_federation.py` delegating `compare_layer_patterns`).
-   - Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate permanent repository files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
-2. **Customizing Layer Identity, Mounted Subtrees, OOP Capability Rings & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)**:
-   - Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "mcp-layer-v1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `ephemeral-bot`, `squad`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings` (including `ephemeral_fork_policy`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
-   - Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
-3. **Run the Deterministic MCP, Subtree & Container Self-Tests**:
-   ```bash
-   ./scripts/layer-subtree.sh list
-   ./scripts/layer-subtree.sh pull-all
-   ./scripts/dotfiles_mcp_server.py --self-test
-   make docker-build && make docker-self-test
-   ./scripts/verify-repo.sh
-   ```
+### 5.1. Preserve the Zero-Dependency, Read-Only & 4-Subpackage Dependency DAG Invariants
+
+- Use **only** the Python 3.14 standard library (`json`, `sys`, `os`, `pathlib`, `subprocess`, `re`, `platform`, `zlib`, `hashlib`, `hmac`, `base64`, `shutil`, `time`, `secrets`, `stat`, `difflib`). Never import third-party packages that would require `pip install`.
+- Place new modules inside the appropriate bounded-domain subpackage (`scripts/dotfiles_mcp/{core,capsules,mcp_node,governance}/`, keeping `< 15` modules per directory and `< 465` lines per file), mirror the `1:1` unit test in `tests/unit/dotfiles_mcp/<subpackage>/test_<module>.py`, add the `Specification: docs/architecture/<spec>.md` pointer (`03`, `04`, `05`, or `06`), and obey the **4-Subpackage Dependency DAG** (`core/` imports only from `core/`; `capsules/` never imports from `governance/`; `capsule_engine.py` and `surface_weaver.py` never import from `mcp_node/` or `governance/`; `mcp_node/` engines never import from `governance/` except `tools_federation.py` delegating `compare_layer_patterns`).
+- Every MCP resource and tool must remain **strictly read-only**. Never add tools that mutate permanent repository files, execute arbitrary shell commands, or read files outside `REPO_DIR`.
+
+### 5.2. Customizing Layer Identity, Mounted Subtrees, OOP Capability Rings & Federated MCPs (`system/mcp-layer.json` & `scripts/layer-subtree.sh`)
+
+- Fork maintainers can edit `system/mcp-layer.json` (`schema_version: "mcp-layer-v1"`) to set `layer_id`, `layer_role` (`corporate`, `department`, `domain-policy`, `ephemeral-bot`, `squad`, `service-node`, `environment-cluster`, or `workstation`), `precedence` (`0..100`), `surface_bindings` (including `ephemeral_fork_policy`), `upstream_layer`, `baseline_guardrails`, `environments` (`dev`, `tst`, `pre`, `pro`), and `federated_mcps` (along with their `required_guardrails`, `activation_policy`, `when_to_invoke`, and `avoid_when`).
+- Secondary forks (departmental rules, sibling service MCPs, or environment clusters) can be mounted into `layers/<name>/` via `./scripts/layer-subtree.sh add <name> <repo-url> [branch]`, updated individually (`./scripts/layer-subtree.sh pull <name>`) or globally (`./scripts/layer-subtree.sh pull-all`), and promoted upstream via `./scripts/layer-subtree.sh push <name> <target-branch>`.
+
+### 5.3. Run the Deterministic MCP, Subtree & Container Self-Tests
+
+Execute the full subtree, MCP `--self-test`, Docker, and repository verification suite before committing:
+
+```bash
+./scripts/layer-subtree.sh list
+./scripts/layer-subtree.sh pull-all
+./scripts/dotfiles_mcp_server.py --self-test
+make docker-build && make docker-self-test
+./scripts/verify-repo.sh
+```
 
 ---
 
 ## 6. Python Virtual Environment (`venv`), Automated Testing (`tests/{unit,imp,e2e}`) & 100% Coverage Gate
 
-`dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/tech-stack/fastapi-hexagonal/` prescribe:
+`dotfiles-ubuntu` practices what its own `AGENTS.md` and `templates/framework-stack/fastapi-hexagonal/` prescribe:
 
 ### 6.1. Layered Dependency Separation (`requirements.txt` $\leftarrow$ `requirements-dev.txt` & Environment Profiles)
 - **Base Runtime ([`requirements.txt`](../../requirements.txt) — Zero External Dependencies in Upstream)**: Every script executed during normal workstation, container, or remote server operation (`bootstrap.sh`, `backup.sh`, `audit.sh`, `antigravity/.gemini/config/scripts/*.py`, and `scripts/dotfiles_mcp_server.py`) uses **only the Python 3.14 standard library** and runs directly on Ubuntu 26.04 LTS's native `/usr/bin/python3` (`Python 3.14`). Consequently, `requirements.txt` contains zero packages in the upstream base repository, so users cloning `dotfiles-ubuntu` do **not** need a `venv` at runtime.
@@ -194,12 +225,12 @@ While `dotfiles-ubuntu` enforces **Zero Third-Party Runtime Dependencies (`depen
 | :--- | :--- | :--- |
 | **Tier 0** | **Native C & OS Core Substrate** | `CPython` C interpreter, compiled C accelerator modules (`Modules/_json.c`, `_hashlib.c`, `posixmodule.c`, `_io`), Linux/POSIX syscalls, and system binaries (`git`, `bash`, `gnu-stow`). |
 | **Tier 1** | **Language Standard Library (`Stdlib`)** | First-party modules shipped inside Python (`pathlib`, `stat`, `hashlib`, `json`, `subprocess`, `shutil`, `ast`, `re`, `tomllib`, `sqlite3`, `urllib`). |
-| **Tier 2** | **Declared Primary Stack (`tech-stack/*`)** | Framework dependencies declared explicitly by Level 4 consumer application repositories (e.g., `FastAPI`, `Pydantic`/`pydantic-core`). |
+| **Tier 2** | **Declared Primary Stack (`framework-stack/*`)** | Framework dependencies declared explicitly by Level 4 consumer application repositories (e.g., `FastAPI`, `Pydantic`/`pydantic-core`). |
 
-### Strict 3-Way Separation Between `/enrich`, `/full-audit`, and Conscious `oss-contribute`
+### 7.1. Strict 3-Way Separation Between `/enrich`, `/full-audit`, and Conscious `oss-contribute`
 
 1. **Governance Enrichment (`/enrich`) is Strictly for Layer Rules, Skills & Templates (`Pillar C -> B -> A` & `Project -> Squad -> Department -> Root 0 -> OSS`)**:
    - `/enrich` operates along the `Project -> Squad -> Department -> Root 0 -> dotfiles-ubuntu` governance hierarchy and never exposes internal runtime or C-substrate workflows to `Root 0`, `Department`, `Squad`, or `~/dotfiles-ubuntu` (`readonly` appliance) workspaces.
 2. **Closed-World Gap Detection (`/full-audit`) vs. Conscious `oss-contribute` (`C3` Substrate & Upstream PRs)**:
    - `/full-audit` is strictly a **convergent compliance gate (`Regime 0`)** verifying zero discrepancies against specs, rules, `1:1:1` test symbiosis, and floor-version stdlib compliance.
-   - Deep empirical hot-path profiling, C-backed stdlib vectorization (`hashlib.file_digest`, `int.from_bytes` XOR), optional `PEP 7` C-accelerators (with `1:1` pure-Python fallbacks), and external `OSS-to-OSS` upstream pull requests (`~/Projects/oss-contrib-<repo>`) live in the dedicated **`oss-contribute`** skill (`templates/technical-base/skills/oss-contribute/SKILL.md`), invoked consciously as a `C3` engineering task after `Regime 0` is reached.
+   - Deep empirical hot-path profiling, C-backed stdlib vectorization (`hashlib.file_digest`, `int.from_bytes` XOR), optional `PEP 7` C-accelerators (with `1:1` pure-Python fallbacks), and external `OSS-to-OSS` upstream pull requests (`~/Projects/oss-contrib-<repo>`) live in the dedicated **`oss-contribute`** skill (`templates/science-stack/software-engineering/skills/oss-contribute/SKILL.md`), invoked consciously as a `C3` engineering task after `Regime 0` is reached.

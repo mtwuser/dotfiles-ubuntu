@@ -53,7 +53,7 @@ When starting work on the next phase in `WORKROAD.md`:
 
 1. **Identify** the next pending phase/block within `WORKROAD.md` (or `ROADMAP.md` / `BACKLOG.md`)
 2. **Execute Promotion Analysis Checklist (Mode-Aware Reading Priority)** — mandatory research in strict top-down order based on `workspace_mode` (`make status` / `.agents/rules/*.md`):
-   - **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**:
+   - **In `technical` or `hybrid` mode (`software-engineering` / `framework-stack/*`)**:
      - Phase 1: Human guides & normative specifications (`docs/guides/`, `docs/architecture/<spec>.md` `1:1:1` tables, and source file in `roadmaps/`)
      - Phase 2: Self-documenting test hierarchy (`tests/e2e/` persona journeys $\rightarrow$ `tests/imp/` boundary implementation $\rightarrow$ `tests/unit/` 4-quadrant `Test<Module>` suites)
      - Phase 3: Existing source code, staleness (`> 90d`), & consistency analysis (`src/` / `scripts/` — verify new code does not diverge from adjacent existing code; propose atomic refactoring or log in `BACKLOG.md` if touched modules use older idioms or over-compression)

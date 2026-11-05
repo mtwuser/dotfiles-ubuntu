@@ -65,11 +65,11 @@ class TestLayerTopologyHelpers:
         (parent_ws / "system/mcp-layer.json").write_text(
             '{"layer_id": "corp-root"}', encoding="utf-8"
         )
-        (parent_ws / "templates/business-base/rules").mkdir(parents=True)
-        (parent_ws / "templates/business-base/rules/business-base.md").write_text(
+        (parent_ws / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (parent_ws / "templates/base-stack/business-base/rules/business-base.md").write_text(
             "# Parent v2\n", encoding="utf-8"
         )
-        (parent_ws / "templates/business-base/rules/extra-policy.md").write_text(
+        (parent_ws / "templates/base-stack/business-base/rules/extra-policy.md").write_text(
             "# Extra\n", encoding="utf-8"
         )
         mounted_child = parent_ws / "layers/dept-alpha"
@@ -81,11 +81,11 @@ class TestLayerTopologyHelpers:
             "# Role-Specialized Layer Makefile — dept-alpha (department)\nstatus:\n\t@true\n",
             encoding="utf-8",
         )
-        (mounted_child / "templates/business-base/rules").mkdir(parents=True)
-        (mounted_child / "templates/business-base/template.json").write_text(
+        (mounted_child / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (mounted_child / "templates/base-stack/business-base/template.json").write_text(
             '{"schema_version": "1.0"}', encoding="utf-8"
         )
-        (mounted_child / "templates/business-base/rules/business-base.md").write_text(
+        (mounted_child / "templates/base-stack/business-base/rules/business-base.md").write_text(
             "# Old v1\n", encoding="utf-8"
         )
         (mounted_child / "templates/dept-alpha/rules").mkdir(parents=True)
@@ -141,7 +141,7 @@ class TestLayerTopologyHelpers:
             parent_ws, mounted_entries, dry_run=True
         )
         rule_after_dry = (
-            mounted_child / "templates/business-base/rules/business-base.md"
+            mounted_child / "templates/base-stack/business-base/rules/business-base.md"
         ).read_text(encoding="utf-8")
         live_synced = layer_topology_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
@@ -149,7 +149,7 @@ class TestLayerTopologyHelpers:
         drifts_after = layer_topology_helpers._inspect_mounted_children_drifts(
             parent_ws, mounted_entries
         )
-        (mounted_child / "templates/business-base/rules/business-base.md").write_text(
+        (mounted_child / "templates/base-stack/business-base/rules/business-base.md").write_text(
             "# Old v1\n", encoding="utf-8"
         )
         (parent_ws / "WORKTASK.md").write_text(
@@ -161,6 +161,12 @@ class TestLayerTopologyHelpers:
         (mounted_child / "WORKTASK.md").write_text(
             "- [x] **[P0 · ALPHA-2026-001]**: Done in child\n", encoding="utf-8"
         )
+        child_prop = mounted_child / ".agents/proposals/to-parent/alpha-rule.md"
+        child_prop.parent.mkdir(parents=True, exist_ok=True)
+        child_prop.write_text("# Proposed Rule from Alpha\n", encoding="utf-8")
+        child_from_up = mounted_child / ".agents/proposals/from-parent/downward.md"
+        child_from_up.parent.mkdir(parents=True, exist_ok=True)
+        child_from_up.write_text("# Delegated Downward\n", encoding="utf-8")
         layer_topology_helpers._sync_mounted_children_into_parent(
             parent_ws, mounted_entries, dry_run=False
         )
@@ -192,8 +198,11 @@ class TestLayerTopologyHelpers:
         assert len(drifts_before) == 1
         assert "system/mcp-layer.json" in drifts_before[0]["drift_files"]
         assert "Makefile" in drifts_before[0]["drift_files"]
-        assert "templates/business-base/template.json" in drifts_before[0]["drift_files"]
-        assert "templates/business-base/rules/business-base.md" in drifts_before[0]["drift_files"]
+        assert "templates/base-stack/business-base/template.json" in drifts_before[0]["drift_files"]
+        assert (
+            "templates/base-stack/business-base/rules/business-base.md"
+            in drifts_before[0]["drift_files"]
+        )
         assert (
             drifts_before[0]["subtree_push_command"]
             == "./scripts/layer-subtree.sh push dept-alpha master"
@@ -202,9 +211,9 @@ class TestLayerTopologyHelpers:
         assert rule_after_dry == "# Old v1\n"
         assert live_synced == ["dept-alpha"]
         assert "--strategy $(STRATEGY)" in (mounted_child / "Makefile").read_text(encoding="utf-8")
-        assert (mounted_child / "templates/business-base/rules/business-base.md").read_text(
-            encoding="utf-8"
-        ) == "# Parent v2\n"
+        assert (
+            mounted_child / "templates/base-stack/business-base/rules/business-base.md"
+        ).read_text(encoding="utf-8") == "# Parent v2\n"
         assert (mounted_child / ".agents/rules/business-base.md").read_text(
             encoding="utf-8"
         ) == "# Parent v2\n"
@@ -212,6 +221,11 @@ class TestLayerTopologyHelpers:
             encoding="utf-8"
         ) == "# Untouched External Repo\n"
         assert "stage: `completed (pro)`" in (parent_ws / "WORKTASK.md").read_text(encoding="utf-8")
+        assert "GOVERNANCE DECISION: from-dept-alpha/alpha-rule.md" in (
+            parent_ws / "WORKTASK.md"
+        ).read_text(encoding="utf-8")
+        assert (parent_ws / ".agents/proposals/from-dept-alpha/alpha-rule.md").is_file()
+        assert not (parent_ws / ".agents/proposals/from-dept-alpha/downward.md").exists()
         assert drifts_after == []
 
     def test_render_layer_onboarding_readme_and_lineage_markdown_cover_all_tiers(
@@ -228,14 +242,14 @@ class TestLayerTopologyHelpers:
             [],
             "corp-root",
         )
-        squad_args = ("squad-api", "squad", 50, "squad-api", ["technical-base"], "dept-eng")
+        squad_args = ("squad-api", "squad", 50, "squad-api", ["software-engineering"], "dept-eng")
 
         # Act
         corp_md = layer_topology_helpers._render_layer_onboarding_readme(*corp_args)
         dept_md = layer_topology_helpers._render_layer_onboarding_readme(*dept_args)
         squad_md = layer_topology_helpers._render_layer_onboarding_readme(*squad_args)
         lineage_md = layer_topology_helpers._render_lineage_markdown(
-            "technical-base", ["| `50` | `root` | `squad-api` | `squad` | `1` |"]
+            "software-engineering", ["| `50` | `root` | `squad-api` | `squad` | `1` |"]
         )
         missing_child = layer_topology_helpers._resolve_mounted_child_dir(
             tmp_path / "nonexistent-sub/nonexistent-ws", "missing-child"
@@ -359,10 +373,21 @@ class TestLayerTopologyHelpers:
             '{"layer_id": "partner-dept-sec", "layer_role": "department", "precedence": 30}',
             encoding="utf-8",
         )
+        tutor_dir = tmp_path / "tutor-university"
+        (tutor_dir / "system").mkdir(parents=True)
+        (tutor_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "tutor-university", "layer_role": "department", '
+            '"entity_kind": "individual", "precedence": 86}',
+            encoding="utf-8",
+        )
 
         # Act
         gov_id = layer_topology_helpers._resolve_layer_entity_identity(gov_dir)
         ind_id = layer_topology_helpers._resolve_layer_entity_identity(ind_dir)
+        tutor_id = layer_topology_helpers._resolve_layer_entity_identity(
+            tutor_dir, parent_dir=ind_dir
+        )
+        rel_ind_child = layer_topology_helpers._classify_inter_layer_relationship(ind_id, tutor_id)
         exp_id = layer_topology_helpers._resolve_layer_entity_identity(exp_dir)
         up_id = layer_topology_helpers._resolve_layer_entity_identity(up_dir)
         sub_sq_id = layer_topology_helpers._resolve_layer_entity_identity(sub_sq)
@@ -378,32 +403,56 @@ class TestLayerTopologyHelpers:
         no_parent_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
             ext_dept, actor_email="ceo@acme.com", parent_dir=tmp_path / "no-manifest-dir"
         )
+        ind_prof = layer_topology_helpers._resolve_hierarchical_actor_profile(
+            ind_dir, actor_email="me@personal.dev"
+        )
 
         # Assert
         assert no_parent_prof["upstream_layer_id"] is None
+        assert (ind_prof["local_role"], ind_prof["effective_role"], ind_id["operating_state"]) == (
+            "owner", "owner", "individual-root",
+        )  # fmt: skip
         assert (
-            gov_id["entity_kind"],
-            gov_id["governing_root_id"],
-            gov_id["topological_class"],
-        ) == (
-            "public-government",
-            "gov-es-aepd",
-            "governance-layer",
-        )
+            gov_id["entity_kind"], gov_id["governing_root_id"], gov_id["topological_class"],
+        ) == ("public-government", "gov-es-aepd", "governance-layer")  # fmt: skip
         assert (
-            ind_id["entity_kind"],
-            ind_id["collective_scope"],
-            ind_id["governing_root_id"],
-            ind_id["topological_class"],
-        ) == ("individual", "individual", None, "runtime-node")
+            ind_id["entity_kind"], ind_id["collective_scope"],
+            ind_id["governing_root_id"], ind_id["topological_class"],
+        ) == ("individual", "individual", None, "runtime-node")  # fmt: skip
         assert (exp_id["entity_kind"], exp_id["governing_root_id"]) == ("enterprise", "acme-root")
+        assert exp_id["visibility_scope"] == "private:enterprise:project"
+        assert exp_id["can_expose_to_oss"] is False
+        assert gov_id["visibility_scope"] == "private:public-government:root-0"
+        assert gov_id["can_expose_to_oss"] is True
+        assert up_id["visibility_scope"] == "private:enterprise:department"
+        assert up_id["can_expose_to_oss"] is False
+        assert sub_sq_id["visibility_scope"] == "private:enterprise:unit"
         assert up_id["governing_root_id"] == "acme-root"
         assert sub_sq_id["governing_root_id"] == "acme-root"
         assert ext_id["governing_root_id"] == "partner-root"
         assert rel_int["relationship_scope"] == "internal"
+        assert rel_int["mcp_communication_mode"] == "internal-1hop-hierarchical"
+        assert rel_int["oss_gateway_authorized"] is False
         assert rel_sub["relationship_scope"] == "internal"
         assert (rel_gov["relationship_scope"], rel_gov["external_category"]) == (
-            "external",
-            "external:public-government",
-        )
+            "external", "external:public-government",
+        )  # fmt: skip
+        assert rel_gov["mcp_communication_mode"] == "blocked-must-route-via-governing-root0"
+        assert rel_gov["oss_gateway_authorized"] is False
+        assert rel_gov["inter_root_collaboration_authorized"] is False
+        rel_peer = layer_topology_helpers._classify_inter_layer_relationship(gov_id, ind_id)
+        assert rel_peer["inter_root_collaboration_authorized"] is True
+        assert rel_peer["mcp_communication_mode"] == "external-peer-root0-pr-and-readonly-mcp"
+        oss_id = {
+            "entity_kind": "open-source", "collective_scope": "collective",
+            "can_expose_to_oss": True,
+        }  # fmt: skip
+        rel_oss = layer_topology_helpers._classify_inter_layer_relationship(gov_id, oss_id)
+        assert rel_oss["mcp_communication_mode"] == "external-root0-to-oss-sanitized"
         assert ext_prof["hierarchical_authority_granted"] is False
+        assert (
+            tutor_id["governing_root_id"], tutor_id["visibility_scope"],
+            tutor_id["can_expose_to_oss"], rel_ind_child["relationship_scope"],
+            rel_ind_child["mcp_communication_mode"],
+        ) == ("dev-home", "private:individual:department", False,
+            "internal", "internal-1hop-hierarchical")  # fmt: skip

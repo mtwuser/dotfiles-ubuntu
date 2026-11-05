@@ -249,6 +249,7 @@ def consult_layer_ephemeral(
     eff_p = _resolve_default_parent_dir(ws, parent_dir)
     ws_id = str(_load_manifest_dict(ws).get("layer_id", ws.name))
     p_id = str(_load_manifest_dict(eff_p).get("layer_id", eff_p.name)) if eff_p else ""
+    r_id = str(_load_manifest_dict(root).get("layer_id", root.name))
     layer_cands = [
         ws if clean_layer in ("self", ws.name, ws_id) else None,
         eff_p
@@ -260,7 +261,7 @@ def consult_layer_ephemeral(
         _resolve_mounted_child_dir(ws, clean_layer),
         _resolve_mounted_child_dir(eff_p, clean_layer) if eff_p else None,
         _resolve_mounted_child_dir(root, clean_layer),
-        root if clean_layer == "root" else None,
+        root if clean_layer in ("root", "workstation", root.name, r_id) else None,
     ]
     eval_root = next(
         (c.resolve() for c in layer_cands if c and (c / "system/mcp-layer.json").is_file()), None

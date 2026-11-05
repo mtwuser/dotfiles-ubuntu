@@ -329,15 +329,24 @@ class TestAuthorityEngine:
             '"upstream_layer":{"layer_id":"dept-quantum"}}',
             encoding="utf-8",
         )
+        peer_gov_root = tmp_path / "gov-ministry-root"
+        (peer_gov_root / "system").mkdir(parents=True)
+        (peer_gov_root / "system/mcp-layer.json").write_text(
+            '{"layer_id":"gov-ministry-root","layer_role":"corporate",'
+            '"entity_kind":"public-government","precedence":2,'
+            '"upstream_layer":{"layer_id":"root"}}',
+            encoding="utf-8",
+        )
 
         # Act
         verify_oss_promotion_agnosticism(
             corp_dir, "# Universal Rule\nPure universal content.\n", "rules/base.md"
         )
         verify_single_hop_upstream(corp_dir, oss_root, actor_email="ceo@zyxwvut.io")
+        verify_single_hop_upstream(corp_dir, peer_gov_root, actor_email="ceo@zyxwvut.io")
         pr_kw = {
-            "source_rel": "templates/business-base/rules/business-base.md",
-            "dest_rel": "templates/business-base/rules/business-base.md",
+            "source_rel": "templates/base-stack/business-base/rules/business-base.md",
+            "dest_rel": "templates/base-stack/business-base/rules/business-base.md",
             "target_layer": "root",
             "target_template": "business-base",
             "sha256": "12345678",
@@ -360,8 +369,12 @@ class TestAuthorityEngine:
             )
         with pytest.raises(ValueError, match="CROSS_TIER_PROMOTION_BYPASS"):
             verify_single_hop_upstream(squad_dir, oss_root, actor_email="ceo@zyxwvut.io")
+        with pytest.raises(ValueError, match="CROSS_TIER_PROMOTION_BYPASS"):
+            verify_single_hop_upstream(squad_dir, peer_gov_root, actor_email="ceo@zyxwvut.io")
         with pytest.raises(ValueError, match="UNAUTHORIZED_OSS_PROMOTION"):
             verify_single_hop_upstream(corp_dir, oss_root, actor_email="intruder@other.org")
+        with pytest.raises(ValueError, match="UNAUTHORIZED_INTER_ROOT_PROMOTION"):
+            verify_single_hop_upstream(corp_dir, peer_gov_root, actor_email="intruder@other.org")
         assert (
             oss_plan["oss_anonymized"] is True
             and oss_plan["origin_layer_id"] == "enterprise-root-0"

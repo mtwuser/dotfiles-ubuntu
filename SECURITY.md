@@ -1,6 +1,6 @@
 # Security Policy
 
-## Secret & Identity Isolation Architecture
+## 1. Secret & Identity Isolation Architecture
 
 `dotfiles-ubuntu` is designed from the ground up to be safely published in a public Git repository without exposing personal identity, credentials, or machine-specific secrets:
 
@@ -18,15 +18,17 @@
 
 ---
 
-## Supported Versions
+## 2. Supported Versions
+
+Security updates and lifecycle hook protections apply to the following release branches:
 
 | Version | Target OS | Supported |
 |---------|-----------|:---------:|
-| `3.x` / `2.x` | Ubuntu 26.04 LTS ("Resolute Raccoon") & Google Antigravity 2.0 | ✅ |
+| `4.x` / `3.x` / `2.x` | Ubuntu 26.04 LTS ("Resolute Raccoon") & Google Antigravity 2.0 | ✅ |
 | `1.x` | Ubuntu 26.04 LTS ("Resolute Raccoon") & Google Antigravity 2.0 | ✅ |
 
 ---
 
-## Reporting a Vulnerability
+## 3. Reporting a Vulnerability
 
 If you discover a security issue (for example, a script pattern that could inadvertently capture sensitive dconf keys, environment variables, or local credentials during `./backup.sh`), please report it by opening a security advisory on GitHub or contacting the repository maintainer directly before disclosing it publicly.

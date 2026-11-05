@@ -81,7 +81,7 @@ class TestRepoParityGates:
         ]  # fmt: skip
 
         # Assert
-        assert (len(pkg_modules), len(template_rules)) == (22, 9)
+        assert (len(pkg_modules), len(template_rules)) == (22, 13)
         assert (REPO_DIR / "docs/guides/01_ubuntu_system_and_multi_machine_guide.md").is_file()
         assert (REPO_DIR / "docs/guides/02_hierarchical_layers_and_team_workflows.md").is_file()
         assert (
@@ -143,7 +143,7 @@ class TestRepoParityGates:
         assert "Vertical Human Persona & Use-Case Journey Matrix" in full_audit_skill
         assert "Conceptual & Semantic Documentation Reading Pass" in full_audit_skill
         assert mcp_constants.VALID_TEMPLATE_KINDS == (
-            "core-base", "business-stack", "science-stack", "tech-stack"
+            "base-stack", "business-stack", "science-stack", "framework-stack"
         )  # fmt: skip
         assert pre_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS) | {"run_command"}
         assert post_matcher == set(pre_tool_guard._FILE_WRITE_TOOLS)
@@ -238,14 +238,12 @@ class TestRepoParityGates:
     def test_framework_agnostic_and_compaction_terminology_purity(self) -> None:
         """Verify zero sibling-project leaks, canonical symbols, and 4-Scope Extrapolation."""
         # Arrange
-        local_project_tokens = sorted(
-            {
-                variant
-                for d in (Path.home() / "Projects").glob("*")
-                if d.is_dir() and len(d.name) >= 5
-                for variant in (d.name.lower(), d.name.lower().replace("_", "-"))
-            }
-        )
+        local_project_tokens = sorted({
+            variant for d in (Path.home() / "Projects").glob("*")
+            if d.is_dir() and len(d.name) >= 5
+            and not d.name.lower().startswith(("dev-", "gov-", "sci-", "geo-"))
+            for variant in (d.name.lower(), d.name.lower().replace("_", "-"))
+        })  # fmt: skip
         dynamic_tokens = [
             re.escape(tok)
             for tok in (
@@ -253,25 +251,29 @@ class TestRepoParityGates:
                 "\x5flocate_section_with_drift_tolerance", "\x4dCP_LAYER_SCHEMA_VERSION",
                 "\x54EMPLATE_SCHEMA_VERSION", "\x44EFAULT_INITIAL_LAYER_VERSION",
                 "\x46ALLBACK_UNKNOWN_VERSION", "\x4eEW_LAYER_INITIAL_SEMVER",
+                "\x68uman-core", "\x63ore-base",
             )
         ]  # fmt: skip
         retired_token_re = re.compile(
             r"\b(" + "|".join(dynamic_tokens) + r")\b|\[DOTFILES-" + r"\d+\]"
             r"|`?(?:19|20|21|23)`?\s+"
             + r"modules\b|\b\x35-Stage\b|scripts/dotfiles_mcp/"
-            + r"\*\.py",
+            + r"\*\.py|\b\x48uman-Specs?\b|domain-[a-z<>-]+:\x4c[1-4]"
+            + r"|\b\x4c1\.\.\x4c4\b|\b\x4cayer\s+[ABCD]\b",
             re.IGNORECASE,
         )
         extrapolable_technical_targets = [
-            REPO_DIR / "templates/technical-base/rules/technical-base.md",
-            REPO_DIR / "templates/business-base/rules/business-base.md",
-            REPO_DIR / "templates/technical-base/skills/testing/SKILL.md",
-            REPO_DIR / "templates/technical-base/skills/refactoring/SKILL.md",
+            REPO_DIR / "templates/base-stack/science-base/rules/science-base.md",
+            REPO_DIR / "templates/science-stack/software-engineering/rules/software-engineering.md",
+            REPO_DIR / "templates/base-stack/business-base/rules/business-base.md",
+            REPO_DIR / "templates/science-stack/software-engineering/skills/testing/SKILL.md",
+            REPO_DIR / "templates/science-stack/software-engineering/skills/refactoring/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/full-audit/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/priority/SKILL.md",
-            REPO_DIR / "templates/technical-base/skills/validation/SKILL.md",
-            REPO_DIR / "templates/technical-base/skills/oss-contribute/SKILL.md",
+            REPO_DIR / "templates/science-stack/software-engineering/skills/validation/SKILL.md",
+            REPO_DIR
+            / "templates/science-stack/software-engineering/skills/oss-contribute/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/architecture-review/SKILL.md",
             REPO_DIR / "antigravity/.gemini/config/skills/governance/SKILL.md",
         ]
@@ -285,7 +287,9 @@ class TestRepoParityGates:
         arch_04 = (arch_dir / "04_compaction_surface_and_promotion_engines.md").read_text("utf-8")
         arch_05 = (arch_dir / "05_ephemeral_forks_and_department_bots.md").read_text("utf-8")
         arch_06 = (arch_dir / "06_layer_governance_and_promotion_engines.md").read_text("utf-8")
-        bus_md = (REPO_DIR / "templates/business-base/rules/business-base.md").read_text("utf-8")
+        bus_md = (REPO_DIR / "templates/base-stack/business-base/rules/business-base.md").read_text(
+            "utf-8"
+        )
         targets = sorted([
             REPO_DIR / "README.md", REPO_DIR / "CONTRIBUTING.md", REPO_DIR / "CHANGELOG.md",
             *list((REPO_DIR / "antigravity").rglob("*.md")),
@@ -302,7 +306,7 @@ class TestRepoParityGates:
             f"{p.relative_to(REPO_DIR)}:{idx}"
             for p in targets if p.is_file()
             for idx, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
-            if retired_token_re.search(line) and (p.name != "CHANGELOG.md" or idx < 33)
+            if retired_token_re.search(line) and (p.name != "CHANGELOG.md" or idx < 36)
         ]  # fmt: skip
         scope_violations = [
             f"{p.relative_to(REPO_DIR)}:{idx}"
@@ -313,9 +317,10 @@ class TestRepoParityGates:
 
         # Assert
         assert violations == [] and scope_violations == []
-        assert "./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base" in (
-            REPO_DIR / "Makefile"
-        ).read_text(encoding="utf-8")
+        assert (
+            "./scripts/layer-config.sh apply-project $(CURDIR) --template software-engineering"
+            in (REPO_DIR / "Makefile").read_text(encoding="utf-8")
+        )
         assert all(
             c in arch_04
             for c in ("promoter_codon", "_parse_capsule_envelope", "_resolve_ephemeral_issuer_meta")

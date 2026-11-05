@@ -78,7 +78,7 @@ class TestResourcesMixin:
         diag = json.loads(server.read_resource("dotfiles://mcp/diagnostics")["text"])
 
         # Assert
-        assert identity["layer_id"] == "dotfiles-ubuntu-default"
+        assert identity["layer_id"] == topology["layer_id"]
         assert "git_commit" in identity and "os_pretty_name" in identity
         assert manifests["counts"]["apt_manual_packages"] > 0
         assert rules_md["mimeType"] == "text/markdown"
@@ -86,16 +86,22 @@ class TestResourcesMixin:
         assert "pre-tool-guard" in hooks
         assert skills["count"] == 10
         assert any(s["name"] == "sopen" for s in skills["skills"])
-        assert templates["count"] == 6
+        assert templates["count"] == 10
         assert [t["template_name"] for t in templates["templates"]] == [
+            "angular-web",
             "business-base",
             "corporate-ops-ledger",
+            "django-backend",
             "fastapi-hexagonal",
-            "human-core",
+            "human-base",
+            "nist-csf-security",
+            "science-base",
             "scientific-knowledge-branch",
-            "technical-base",
+            "software-engineering",
         ]
-        tech_tpl = next(t for t in templates["templates"] if t["template_name"] == "technical-base")
+        tech_tpl = next(
+            t for t in templates["templates"] if t["template_name"] == "software-engineering"
+        )
         assert sorted(s["name"] for s in tech_tpl["skills"]) == [
             "oss-contribute",
             "refactoring",

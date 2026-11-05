@@ -37,8 +37,9 @@ class TestForkConfigurator:
                     "layer_id": "old-id",
                     "layer_role": "workstation",
                     "default_stack_templates": [
-                        "human-core",
-                        "technical-base",
+                        "human-base",
+                        "science-base",
+                        "software-engineering",
                         "fastapi-hexagonal",
                         "custom-pack",
                     ],
@@ -150,7 +151,7 @@ class TestForkConfigurator:
         self,
         tmp_path: Path,
     ) -> None:
-        """Scaffold tech-stack and business-stack templates and register surface bindings."""
+        """Scaffold framework-stack and business-stack templates and register surface bindings."""
         # Arrange
         (tmp_path / "system").mkdir(parents=True)
         (tmp_path / "system/mcp-layer.json").write_text(
@@ -188,7 +189,7 @@ class TestForkConfigurator:
         starter_res = scaffold_template_pack(
             tmp_path,
             template_name="rust-axum",
-            kind="tech-stack",
+            kind="framework-stack",
             rule_filename="rust-axum.md",
             register_binding=False,
             dry_run=False,
@@ -208,13 +209,17 @@ class TestForkConfigurator:
         assert (tmp_path / "templates/rust-axum/governance/WORKTASK.md").is_file()
         assert (tmp_path / "templates/rust-axum/governance/Makefile").is_file()
         assert (tmp_path / "templates/rust-axum/rules/rust-axum.md").is_file()
-        assert starter_res["kind"] == "tech-stack"
+        assert starter_res["kind"] == "framework-stack"
         updated_manifest = json.loads(
             (tmp_path / "system/mcp-layer.json").read_text(encoding="utf-8")
         )
         assert updated_manifest["default_stack_templates"] == ["gdpr-policy", "rust-axum"]
         assert len(updated_manifest["surface_bindings"]) == 1
         assert updated_manifest["surface_bindings"][0]["mode"] == "authoritative"
+        assert (
+            updated_manifest["surface_bindings"][0]["ephemeral_fork_policy"]["bot_role"]
+            == "gdpr-policy-guardian"
+        )
 
         with pytest.raises(ValueError, match="must be kebab-case"):
             scaffold_template_pack(tmp_path, template_name="BAD_NAME")
@@ -240,24 +245,24 @@ class TestForkConfigurator:
                     "layer_id": "acme-squad-web",
                     "layer_role": "squad",
                     "precedence": 40,
-                    "default_stack_templates": ["human-core", "web-starter"],
+                    "default_stack_templates": ["human-base", "web-starter"],
                     "surface_bindings": [{"binding_id": "b1"}],
                 }
             ),
             encoding="utf-8",
         )
-        (fork_dir / "templates/human-core/rules").mkdir(parents=True)
-        (fork_dir / "templates/human-core/rules/human-core.md").write_text(
+        (fork_dir / "templates/base-stack/human-base/rules").mkdir(parents=True)
+        (fork_dir / "templates/base-stack/human-base/rules/human-base.md").write_text(
             "# Global Baseline\n", encoding="utf-8"
         )
-        (fork_dir / "templates/technical-base/rules").mkdir(parents=True)
-        (fork_dir / "templates/technical-base/rules/technical-base.md").write_text(
-            "# Technical Baseline\n", encoding="utf-8"
+        (fork_dir / "templates/base-stack/science-base/rules").mkdir(parents=True)
+        (fork_dir / "templates/base-stack/science-base/rules/science-base.md").write_text(
+            "# Scientific Baseline\n", encoding="utf-8"
         )
         scaffold_template_pack(
             fork_dir,
             template_name="web-starter",
-            kind="tech-stack",
+            kind="framework-stack",
             dry_run=False,
         )
         (fork_dir / "templates/web-starter/rules/subdir").mkdir(parents=True)
@@ -265,9 +270,13 @@ class TestForkConfigurator:
         (fork_dir / "templates/web-starter/governance/SESSION.md").write_text(
             "# Session Log\n", encoding="utf-8"
         )
-        (fork_dir / "antigravity/.gemini/config").mkdir(parents=True)
+        (fork_dir / "antigravity/.gemini/config/skills/root-op").mkdir(parents=True)
         (fork_dir / "antigravity/.gemini/config/AGENTS.md").write_text(
             "# Root Team Rules\n", encoding="utf-8"
+        )
+        (fork_dir / "antigravity/.gemini/config/skills/root-op/SKILL.md").write_text(
+            '---\nname: root-op\ndescription: "Root skill"\n---\n# Root Op\n',
+            encoding="utf-8",
         )
 
         legal_sub = fork_dir / "layers" / "dept-legal"

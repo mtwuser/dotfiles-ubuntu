@@ -8,7 +8,9 @@
 
 ## 1. How GNU Stow & Tree Unfolding Work
 
-### 1.1 Stow Modules (`bash/`, `git/`, `antigravity/`)
+GNU Stow projects tracked configuration modules from `~/dotfiles-ubuntu` into `$HOME` while preserving untracked machine-local files.
+
+### 1.1. Stow Modules (`bash/`, `git/`, `antigravity/`)
 
 Each stow module mirrors `$HOME`. When activated from `~/dotfiles-ubuntu`, GNU Stow creates symlinks into `~`:
 
@@ -31,10 +33,10 @@ stow -t ~ -R bash     # Re-stow after changes
 
 > **Important**: Because the repository lives at `~/dotfiles-ubuntu`, always pass `-t ~` to `stow`. The [`bootstrap.sh`](../../bootstrap.sh) script handles this automatically.
 
-### 1.2 Why `~/.gemini/config/` Uses Stow Tree Unfolding (Individual Symlinks)
+### 1.2. Why `~/.gemini/config/` Uses Stow Tree Unfolding (Individual Symlinks)
 
 Unlike `~/.bashrc` (a single file symlink), `~/.gemini/config/` and `~/.gemini/config/skills/` are **real directories** that mix tracked dotfiles with machine-local runtime files:
-- **Tracked via Stow (`~/dotfiles-ubuntu/antigravity/`)**: `AGENTS.md`, `hooks.json`, `scripts/`, and the 10 universal global skills inside `skills/<name>/` (while the 4 software-engineering skills `testing`, `refactoring`, `validation`, and `oss-contribute` live in `templates/technical-base/skills/` and are projected into `.agents/skills/` on technical workspaces).
+- **Tracked via Stow (`~/dotfiles-ubuntu/antigravity/`)**: `AGENTS.md`, `hooks.json`, `scripts/`, and the 10 universal global skills inside `skills/<name>/` (while the 4 software-engineering skills `testing`, `refactoring`, `validation`, and `oss-contribute` live in `templates/science-stack/software-engineering/skills/` and are projected into `.agents/skills/` on technical workspaces).
 - **Machine-local (untracked)**: `config.json`, `mcp_config.json`, `plugins/`, `projects/`, `sidecars/`, `.ruff_cache/`, and locally installed extension/cloud skills inside `skills/`.
 
 Because `~/.gemini/config/` and `~/.gemini/config/skills/` already exist as real directories, GNU Stow automatically performs **tree unfolding**: it creates individual symlinks for each tracked item (`AGENTS.md`, `hooks.json`, `scripts/`, and each shared skill folder `skills/<name>`) without touching local credentials, MCP servers, or third-party skills.
@@ -48,6 +50,8 @@ Verify `~/.gemini/config/` symlink health at any time with:
 ---
 
 ## 2. Directory & Path Conventions (Stow, Scripts & Workspaces)
+
+The table below defines which workstation paths are managed by GNU Stow and which remain independent workspace or binary directories:
 
 | Path | Managed by Stow? | Role & Scripts / Processes That Use It |
 |------|:----------------:|----------------------------------------|
@@ -66,23 +70,27 @@ Verify `~/.gemini/config/` symlink health at any time with:
 
 The `system/` directory contains plain-text manifests of installed software, consumed by [`bootstrap.sh`](../../bootstrap.sh), verified by [`audit.sh`](../../audit.sh), and updated by [`backup.sh`](../../backup.sh):
 
-| File / Directory | Purpose |
-|------------------|---------|
-| [`system/packages-manual.txt`](../../system/packages-manual.txt) | Manually installed Ubuntu 26.04 APT packages (automatically excludes external & machine-local driver packages). |
-| [`system/snaps.txt`](../../system/snaps.txt) | Installed Snap applications (automatically excludes `core*`, `bare`, `gnome-*`, and `mesa-*` runtime snaps). |
-| [`system/npm-globals.txt`](../../system/npm-globals.txt) | Global NPM packages under the active Node.js version. |
-| [`system/nvm-default.txt`](../../system/nvm-default.txt) | Default Node.js major version managed by NVM. |
-| [`system/external.txt`](../../system/external.txt) | List of external recipes from `system/external/` enabled on this machine (auto-detected by `./backup.sh`). |
-| `system/external/{apt-repo,deb-url,script}/` | **Recipe catalog** for third-party software (Docker, Chrome, GCloud CLI, Proton, Discord, AutoFirma, Antigravity). Only recipes listed in `system/external.txt` are required by `audit.sh` or installed by `bootstrap.sh --external`. To enable a recipe on a fresh machine, add its relative path (e.g. `apt-repo/docker.sh`) to `system/external.txt` and run `./bootstrap.sh --external`. |
-| [`system/gnome-extensions.txt`](../../system/gnome-extensions.txt) | Installed GNOME Shell extension UUIDs. |
-| [`system/gnome-settings.dconf`](../../system/gnome-settings.dconf) | Declarative GNOME desktop settings (keybindings, interface, touchpad, dock, tiling) — excludes private/ephemeral state. |
-| [`system/mcp-layer.json`](../../system/mcp-layer.json) | Declarative layer/node identity (`corporate`, `domain-policy`, `department`, `squad`, `service-node`, `workstation`), upstream lineage, authority policy, and federated MCP topology served by [`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py). |
+| Purpose & Tracked State | File / Directory |
+|-------------------------|------------------|
+| Manually installed Ubuntu 26.04 APT packages (automatically excludes external & machine-local driver packages). | [`system/packages-manual.txt`](../../system/packages-manual.txt) |
+| Installed Snap applications (automatically excludes `core*`, `bare`, `gnome-*`, and `mesa-*` runtime snaps). | [`system/snaps.txt`](../../system/snaps.txt) |
+| Global NPM packages under the active Node.js version. | [`system/npm-globals.txt`](../../system/npm-globals.txt) |
+| Default Node.js major version managed by NVM. | [`system/nvm-default.txt`](../../system/nvm-default.txt) |
+| List of external recipes from `system/external/` enabled on this machine (auto-detected by `./backup.sh`). | [`system/external.txt`](../../system/external.txt) |
+| **Recipe catalog** for third-party software (Docker, Chrome, GCloud CLI, Proton, Discord, AutoFirma, Antigravity). Only recipes listed in `system/external.txt` are required by `audit.sh` or installed by `bootstrap.sh --external`. To enable a recipe on a fresh machine, add its relative path (e.g. `apt-repo/docker.sh`) to `system/external.txt` and run `./bootstrap.sh --external`. | `system/external/{apt-repo,deb-url,script}/` |
+| Installed GNOME Shell extension UUIDs. | [`system/gnome-extensions.txt`](../../system/gnome-extensions.txt) |
+| Declarative GNOME desktop settings (keybindings, interface, touchpad, dock, tiling) — excludes private/ephemeral state. | [`system/gnome-settings.dconf`](../../system/gnome-settings.dconf) |
+| Declarative layer/node identity (`corporate`, `domain-policy`, `department`, `squad`, `service-node`, `workstation`), upstream lineage, authority policy, and federated MCP topology served by [`scripts/dotfiles_mcp_server.py`](../../scripts/dotfiles_mcp_server.py). | [`system/mcp-layer.json`](../../system/mcp-layer.json) |
 
 ---
 
 ## 4. Daily Operations & Bootstrap / Audit Modes
 
-### 4.1 Capturing System Changes & Tracking New Dotfiles
+Routine workstation operations cover capturing package/GNOME changes, upgrading Antigravity binaries, and executing targeted `bootstrap.sh` or `audit.sh` flags.
+
+### 4.1. Capturing System Changes & Tracking New Dotfiles
+
+Run `./backup.sh` after package or GNOME updates, or create a new directory to track an additional dotfile module via GNU Stow:
 
 ```bash
 # After installing or removing APT/Snap/NPM packages or changing GNOME settings:
@@ -98,7 +106,7 @@ cd ~/dotfiles-ubuntu && stow -t ~ ssh
 git add -A && git commit -m "feat: add ssh config module"
 ```
 
-### 4.2 Installing or Upgrading Antigravity Agents (Recommended), CLI (`agy`) & Optional IDE
+### 4.2. Installing or Upgrading Antigravity Agents (Recommended), CLI (`agy`) & Optional IDE
 
 > **Recommended Setup**: Only **Antigravity 2.0 (`antigravity-agents`)** and **Antigravity CLI (`agy`)** are required for daily engineering and governance workflows. **Antigravity IDE (`antigravity-ide`)** remains supported as an optional legacy editor.
 
@@ -122,7 +130,9 @@ The installer extracts the archives from `~/Downloads/`, backs up the previous i
 > **Note (`bootstrap.sh --all` vs `scripts/antigravity-install.sh --agents`)**:
 > `./bootstrap.sh --all` (or `--external`) checks whether `/opt/antigravity-agents/antigravity` already exists and **skips** it if installed (idempotent initial provisioning). To **upgrade** an existing installation and refresh `agy` CLI after downloading a new release, run `./scripts/antigravity-install.sh --agents`.
 
-### 4.3 Bootstrap Modes (`./bootstrap.sh`) & Audit Modes (`./audit.sh`)
+### 4.3. Bootstrap Modes (`./bootstrap.sh`) & Audit Modes (`./audit.sh`)
+
+Each flag below scopes `bootstrap.sh` or `audit.sh` to a specific workstation subsystem:
 
 | Script & Flag | Action |
 |---------------|--------|
@@ -149,7 +159,11 @@ nvidia-driver-595-open
 
 ## 5. Multi-Machine Provisioning, Migration & Portability Matrix
 
-### 5.1 Setting Up a New Computer
+Provision a fresh Ubuntu 26.04 machine, configure a private workstation appliance, or migrate existing dotfiles without losing local state.
+
+### 5.1. Setting Up a New Computer
+
+Clone the repository, run `bootstrap.sh`, and install the Antigravity binaries in three steps:
 
 ```bash
 # 1. Clone your fork (or the upstream repo) and run bootstrap
@@ -165,24 +179,30 @@ chmod +x bootstrap.sh backup.sh audit.sh scripts/*.sh
 git clone https://github.com/<your-user>/<your-project>.git ~/Projects/<your-project>
 ```
 
-### 5.1.1 Workstation Runtime Appliance Mode & Boot Auto-Sync (`workstation-sync.sh` / `dotfiles-sync`)
+#### 5.1.1. Workstation Runtime Appliance Mode, Private Forks & Boot Auto-Sync (`workstation-sync.sh` / `dotfiles-sync`)
 
-When using `~/dotfiles-ubuntu` as the machine's global runtime appliance (while developing changes either in a dedicated clone `~/Projects/dev-<repo>` or pulling releases from upstream), configure the workstation once with:
+Whether `~/dotfiles-ubuntu` (or your personal private workstation fork `~/<your-pc-repo>`) is used as the machine's global runtime appliance while developing engine changes in an independent private clone `~/Projects/dev-<repo>`, each repository points strictly to its own `origin` (with the public Open-Source `dotfiles-ubuntu` as `upstream`):
 
 ```bash
-cd ~/dotfiles-ubuntu
+# In your personal workstation clone (~/dotfiles-ubuntu or ~/<your-pc-repo>):
 ./bootstrap.sh --workstation
-# Or customize options explicitly:
-./scripts/workstation-sync.sh --setup --mode readonly --profile human-core --auto-sync boot
+# Or configure private workstation mode explicitly:
+./scripts/workstation-sync.sh --setup --mode private --profile human-base --auto-sync boot
 ```
 
-This creates `~/.config/dotfiles-ubuntu/workstation.conf` (untracked per-device state) and activates four protections:
-1. **Read-Only Runtime Guard (`mode=readonly`)**: Sets `remote.origin.pushurl = VALIDATION_BLOCKED_READONLY_RUNTIME` on `~/dotfiles-ubuntu` so accidental `git push` from the global runtime is blocked while `git pull --ff-only` works normally.
-2. **Profile-Preserving Fast-Forward Sync (`dotfiles-sync`)**: Running `dotfiles-sync` (or `./scripts/workstation-sync.sh --sync`) from any terminal resets local `AGENTS.md` profile composition drift, runs `git pull --ff-only`, re-applies your device's `DOTFILES_GLOBAL_PROFILE` (`human-core`, `technical`, `business`, or `full`), and runs `stow -t ~ -R bash git antigravity`.
+This creates `~/.config/dotfiles-ubuntu/workstation.conf` (untracked per-device state) and activates five capabilities:
+1. **Sovereign Private Workstation, Multi-Machine / Hat Branches, Personal Child Tutor Layers & Cross-Project Consultation (`mode=private` / `mode=readonly`)**: In `mode=private`, your `$HOME` repository (`~/<your-pc-repo>` or `~/dotfiles-ubuntu`, `visibility_scope: "private:individual:root-0"`, `precedence: 90`, `mcp_operating_mode: "personal-root-hub"`) keeps `origin` unlocked so you commit and push personal packages (`system/*.txt`) and personal trackers (`WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`) to your private remote while locking `upstream` (`remote.upstream.pushurl = VALIDATION_BLOCKED_READONLY_RUNTIME`). Unlike a company `Root 0` (`10`) that relates upward to public administration (`1..4`), an individual `Root 0` operates in **top-down personal enrichment mode**: it pulls Open-Source `templates/` downward from `upstream` (`dotfiles-ubuntu`), maintains parallel branches for distinct machines (`machine/<hostname>`) or contexts (`master` on `"global_profile": "human-base"` vs. `hat/<specialty>`), and can govern its own **personal child sub-layers** (`private:individual:department` / `private:individual:unit`, such as an **Academic University Tutor**, **Career Coach**, or **Research Lab** bootstrapped with `--parent-dir ~/<your-pc-repo>`) via `internal-1hop-hierarchical` (see [Cross-Departmental & Human-Stack Matrix (`§2.4` & `§3`)](../reference/cross_departmental_and_human_stack_matrix.md)). Any local workspace can also query your personal hub via `make consult LAYER=workstation QUERY="..."`. When cloned at `~/<your-pc-repo>`, `bootstrap.sh` and `workstation-sync.sh` automatically maintain a compatibility symlink `~/dotfiles-ubuntu -> ~/<your-pc-repo>` and resolve `DOTFILES_RUNTIME_DIR` dynamically in `bash/.bashrc` and `audit.sh`.
+2. **Unified Automatic Workstation Sync (`dotfiles-sync` or `make workstation-sync`)**:
+   - A single command (`dotfiles-sync` or `make workstation-sync`, also run automatically once per boot) executes the full synchronization cascade automatically without extra flags:
+     1. **Private `origin` Sync**: Pulls fast-forward updates from your workstation repository's own `origin` (`~/<your-pc-repo>.git`).
+     2. **Open-Source `upstream` Git Merge**: Fetches `upstream` (`dotfiles-ubuntu`) and merges any new official Open-Source releases while preserving your personal `system/mcp-layer.json` identity (`layer_id`, `precedence: 90`, `entity_kind: "individual"`).
+     3. **Clean Committed `dev` Detection**: If a related local development clone (`~/Projects/dev-<repo>`) exists on the machine and its working tree is clean (`git status` clean, meaning changes are committed and verified, never half-edited work in progress), it automatically syncs the tracker-free engine into `~/<your-pc-repo>` (omitting `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `WORKVALI.md`, `roadmaps/`, `.agents/`, `corporate/`, and `layers/` and preserving `system/mcp-layer.json`) and records the sync commit automatically.
+     4. **Profile & GNU Stow**: Re-applies `DOTFILES_GLOBAL_PROFILE` and runs `stow -t ~ -R bash git antigravity`.
 3. **Once-Per-Boot Terminal Auto-Sync**: On the first interactive terminal opened after booting Ubuntu, `bash/.bashrc` checks `${XDG_RUNTIME_DIR:-/tmp}/dotfiles-ubuntu-${UID}.synced` (stored in RAM `tmpfs`, cleared on reboot) and runs `workstation-sync.sh --auto` with a 4-second network timeout so offline boots never hang.
-4. **Contributor Clone Export (`DOTFILES_DEV_REPO_DIR`) & `make setup-dev` Priority-1 Overlay**: Automatically exports `DOTFILES_DEV_REPO_DIR` when `~/Projects/dev-<repo>` is present so Corporate `Root 0` upward promotions target the development clone automatically. Inside `~/Projects/dev-<repo>`, running `make setup-dev` projects `technical-base.md` into `.agents/rules/` and copies `antigravity/.gemini/config/skills/*` into `.agents/skills/`, ensuring Antigravity IDE's Priority-1 workspace discovery loads in-development skills and rules directly from the development clone before they are released to `~/dotfiles-ubuntu` (`$HOME`).
+4. **Self-Cleaning Contributor Clone (`make setup-dev` / `make reset-dev`)**: Inside `~/Projects/dev-<repo>` (`visibility_scope: "private:open-source:dev"`), `WORKTASK.md`, `WORKROAD.md`, and `BACKLOG.md` are tracked in your private `origin` (`dev-<repo>.git`). Running `make setup-dev` (or `make reset-dev`) purges any temporary `.agents/` or `WORKVALI.md` fork-test residue while preserving your private `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, and `roadmaps/`.
+5. **Tracker-Free Open-Source Release Publication (`make publish-oss`)**: Running `make publish-oss` (or `./scripts/workstation-sync.sh --publish-oss [--dry-run]`) verifies the repository and exports a clean, tracker-free snapshot (excluding `WORKTASK.md`, `WORKROAD.md`, `ROADMAP.md`, `BACKLOG.md`, `WORKVALI.md`, `roadmaps/`, `.agents/`, `corporate/`, and `layers/`) to `upstream` (`dotfiles-ubuntu`).
 
-### 5.2 Migrating an Existing Computer & Rescuing Unique Config
+### 5.2. Migrating an Existing Computer & Rescuing Unique Config
 
 If the target computer already has `.bashrc`, `.gitconfig`, or `~/.gemini/config/AGENTS.md`:
 
@@ -202,7 +222,9 @@ diff ~/.gemini/config/AGENTS.md.backup.* ~/dotfiles-ubuntu/antigravity/.gemini/c
 - `~/.gemini/config/config.json` (IDE preferences), `~/.gemini/config/mcp_config.json` (MCP server config), `~/.gemini/config/plugins/`, `~/.gemini/config/projects/`, `~/.gemini/config/sidecars/`.
 - `~/.gemini/antigravity/brain/` (per-machine conversation history) and `~/.gemini/*.json` (OAuth credentials).
 
-### 5.3 Cross-Machine Portability Matrix
+### 5.3. Cross-Machine Portability Matrix
+
+The portability matrix below summarizes which workstation artifacts travel via Git/Stow and which remain machine-local:
 
 | Data | Portable? | Mechanism | Recovery on New Machine |
 |------|:---------:|-----------|-------------------------|
@@ -220,7 +242,11 @@ diff ~/.gemini/config/AGENTS.md.backup.* ~/dotfiles-ubuntu/antigravity/.gemini/c
 
 ## 6. Uninstallation & Local Secret Isolation
 
-### 6.1 Uninstalling Stow Symlinks
+GNU Stow symlinks can be cleanly removed at any time, and personal credentials remain strictly isolated in untracked `.local` files.
+
+### 6.1. Uninstalling Stow Symlinks
+
+Deactivate the stowed symlink modules with `stow -t ~ -D` before optionally deleting the clone:
 
 ```bash
 # Remove stow symlinks (keeps ~/dotfiles-ubuntu intact):
@@ -230,7 +256,7 @@ cd ~/dotfiles-ubuntu && stow -t ~ -D bash git antigravity
 cd ~/dotfiles-ubuntu && stow -t ~ -D bash git antigravity && cd ~ && rm -rf ~/dotfiles-ubuntu
 ```
 
-### 6.2 Security & Machine-Local Overrides
+### 6.2. Security & Machine-Local Overrides
 
 **Never commit secrets or personal identity.**
 - **Git identity**: [`git/.gitconfig`](../../git/.gitconfig) includes `~/.gitconfig.local` (`[include] path = ~/.gitconfig.local`). Your `user.name` and `user.email` live in `~/.gitconfig.local` (automatically preserved by `bootstrap.sh`).

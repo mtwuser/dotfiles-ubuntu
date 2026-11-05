@@ -13,8 +13,10 @@ Because this repository is primarily a command-line system engine, dotfile suite
 2. **Non-Interactive & Keyboard-Only Execution**:
    - All scripts are 100% operable via standard keyboard input and support deterministic non-interactive flags (`./bootstrap.sh --all`, `./bootstrap.sh --antigravity`, `./bootstrap.sh --stow`, `./audit.sh`, `./scripts/verify-repo.sh`) suitable for assistive technologies and automated readers.
    - Every CLI entrypoint supports `--help` (`-h`) and `--version` (`-v`) with structured plain-text usage summaries.
-3. **Screen-Reader-Friendly Documentation**:
-   - All documentation (`README.md`, [`docs/README.md`](docs/README.md), `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `SKILL.md` files) uses strict hierarchical Markdown headings (`#` through `####`), descriptive link text, and plain-text tables compatible with screen readers.
+3. **Screen-Reader-Friendly Documentation & 2D Progressive Disclosure Information Geometry**:
+   - All documentation (`README.md`, [`docs/README.md`](docs/README.md), `CONTRIBUTING.md`, `SECURITY.md`, `AGENTS.md`, and `SKILL.md` files) uses strict hierarchical Markdown headings (`#` through `####` only — zero `#####` `H5+` headings), descriptive link text, and plain-text tables compatible with screen readers.
+   - **Horizontal Axis (`Left -> Right` Human-First Table Column Priority)**: Across `README.md` and `docs/**/*.md`, Markdown tables place conceptual, narrative, and functional responsibility columns in the **leftmost columns** (immediately readable in browser viewports and screen readers without horizontal scrolling) and place artifact, source-module, unit-test, and file-path pointer columns (`Source Module`, `1:1 Unit Test`, `Document / Spec`, `Where It Lives`) in the **rightmost columns**.
+   - **Vertical Axis (`Top -> Bottom` Progressive Complexity & `# -> ####` Heading Hierarchy)**: Documents are ordered vertically from **Top (`#` & `## 1.`: executive purpose, architectural overview, and `1:1:1` traceability map)** $\rightarrow$ **Middle (`##` & `###`: core operational contracts and workflows)** $\rightarrow$ **Bottom (`###` & `####`: granular edge-cases, advanced extensions, and deep substrates)**, mirrored in `dotfiles-mcp` via `heading_depth` (`1..4`) and `section_path` (`"H1 > H2 > H3 > H4"`) breadcrumbs.
 4. **GNOME Desktop Accessibility Preservation**:
    - `backup.sh` and `bootstrap.sh --gnome` preserve declarative `dconf` settings on Ubuntu 26.04 LTS, allowing users to version-control their personal GNOME accessibility preferences (`org.gnome.desktop.a11y`, high contrast, text scaling factor, screen reader toggles) in their own fork.
 
@@ -33,7 +35,7 @@ Because this repository is primarily a command-line system engine, dotfile suite
 ## 3. Known Limitations
 
 - **Third-Party External Packages (`system/external/`)**: Optional external desktop applications installed via `system/external/` recipes (such as third-party `.deb` packages or vendor binaries) maintain their own user interface accessibility independently of `dotfiles-ubuntu`.
-- **ASCII Trees & Mermaid Diagrams in `README.md` and `docs/`**: Directory trees (`├──`, `└──`) and Mermaid flowcharts/sequence diagrams (`flowchart TD`, `flowchart LR`, `sequenceDiagram`) in `README.md` and `docs/` are always paired with structured Markdown tables (`Navigation & Progressive Disclosure`, `Value-Added Efficiency Metrics`, `Bounded operating_state × mcp_operating_mode Matrix`) or bulleted explanations conveying identical structural information for screen-reader users.
+- **ASCII Trees & Mermaid Diagrams in `README.md` and `docs/`**: Directory trees (`├──`, `└──`) and vertical Mermaid flowcharts/sequence diagrams (`flowchart TD`, `graph TD`, `sequenceDiagram` — horizontal `flowchart LR` / `graph LR` diagrams are forbidden to prevent unreadable browser shrinking and horizontal scrolling) in `README.md` and `docs/` are always paired with structured Markdown tables (`Navigation & Progressive Disclosure`, `Value-Added Efficiency Metrics`, `Bounded operating_state × mcp_operating_mode Matrix`) or bulleted explanations conveying identical structural information for screen-reader users.
 
 ---
 

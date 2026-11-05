@@ -12,13 +12,15 @@
 
 ## 1. Why Turn `dotfiles-ubuntu` into a Contextual MCP Server?
 
+Turning `dotfiles-ubuntu` into a zero-dependency `stdio` MCP server extends local GNU Stow governance across containers, remote servers, and multi-layer organizational forks:
+
 ### 1.1. The Boundary Problem in Complex Architectures
 
 On a single developer laptop, **GNU Stow** (`./bootstrap.sh --stow`) is unbeatable: it links [`AGENTS.md`](../../antigravity/.gemini/config/AGENTS.md) and [`hooks.json`](../../antigravity/.gemini/config/hooks.json) directly into `~/.gemini/config/`, giving the AI agent zero-latency rules and deterministic `PreToolUse` safety guards.
 
 However, as soon as an engineering workflow involves **multiple containers, microservices, remote servers, or multiple squad forks**, filesystem symlinks hit a physical wall:
 - A symlink in `~/.gemini/config/` on your host laptop **cannot** inspect whether a worker container is missing an APT library declared in its [`system/packages-manual.txt`](../../system/packages-manual.txt).
-- A local symlink **cannot** read the `Layer B` templates of another squad's fork or the `docs/` of a remote service node.
+- A local symlink **cannot** read the `Pillar B` templates of another squad's fork or the `docs/` of a remote service node.
 - A flat `mcp_config.json` with 20 raw infrastructure MCP servers (databases, queues, cloud APIs) tells the AI agent *how to call* those tools, but gives **zero context** about *which architectural rules, migration restrictions, or safety guardrails govern each environment*.
 
 ### 1.2. The Solution: Every Node & Layer as a Self-Describing MCP Context Provider
@@ -40,14 +42,16 @@ When `dotfiles-ubuntu` (or a customized fork of it) is present in a layer, conta
 
 ## 2. Two Adoption Modes: Standalone vs. Multi-Layer Enterprise Federation
 
-### Mode A: Standalone System or Container Introspection (Independent Use Case)
+Organizations and individual developers can adopt `scripts/dotfiles_mcp_server.py` either as a standalone node/container inspector (`Mode A`) or as a multi-layer federated context mesh (`Mode B`):
+
+### 2.1. Mode A: Standalone System or Container Introspection (Independent Use Case)
 
 Even for a single developer or a single project using Docker Compose, attaching the `dotfiles-ubuntu` MCP server to your environment allows your AI assistant (Antigravity 2.0, VS Code Copilot, Cursor, or Claude Code) to:
 - **Audit Environment Drift On Demand**: Ask the agent *"Check if my workstation or container has drifted from `dotfiles-ubuntu`"* $\rightarrow$ the agent calls `audit_node_drift` (`verify-repo.sh` / `audit.sh`) and reports missing packages, broken symlinks, or uncommitted manifest changes.
 - **Query Rules & Templates Programmatically**: Ask the agent *"Which FastAPI testing rules apply to module decommissioning?"* $\rightarrow$ the agent calls `query_governance_rules(query="decommissioning")` and retrieves the exact rule section without scanning the filesystem manually.
 - **Navigate `docs/` via MCP Resources**: Any MCP-compatible client can browse `dotfiles://docs/index` and call `read_layer_document` to read architecture specs on demand.
 
-### Mode B: Multi-Layer & Multi-Service Orchestration (Enterprise Extension)
+### 2.2. Mode B: Multi-Layer & Multi-Service Orchestration (Enterprise Extension)
 
 In complex enterprise architectures where multiple services, containers, servers, and squads interact, organizations customize forks of `dotfiles-ubuntu` for each layer and service node.
 
@@ -56,14 +60,14 @@ Instead of managing an unstructured list of disconnected MCP servers, the custom
 ```mermaid
 flowchart TD
     Agent["🤖 Orchestrating AI Agent\n(Google Antigravity 2.0 / VS Code Copilot)"]
-    subgraph Tier1["Tier 1: Corporate Governance Fork"]
+    subgraph Tier1["Level 1 (root-0): Corporate Governance Fork"]
         CorpMCP["📡 mcp: dotfiles-corporate\n(layer_role: corporate)\n• Global Security & Compliance (AGENTS.md)\n• Approved Enterprise MCP Registry"]
     end
-    subgraph Tier2["Tier 2: Squad / Domain Forks"]
-        BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/tech-stack/fastapi-hexagonal/\n• API & Database Migration Standards"]
+    subgraph Tier2["Level 2/3 (department / unit): Department & Squad Forks"]
+        BackendMCP["📡 mcp: dotfiles-squad-backend\n(layer_role: squad)\n• templates/framework-stack/fastapi-hexagonal/\n• API & Database Migration Standards"]
         DataMCP["📡 mcp: dotfiles-squad-ops\n(layer_role: squad)\n• templates/business-stack/corporate-ops-ledger/\n• templates/science-stack/scientific-knowledge-branch/"]
     end
-    subgraph Tier3["Tier 3: Multi-Container / Multi-Server Application Nodes"]
+    subgraph Tier3["Axis 2 (runtime-node): Multi-Container / Multi-Server Application Nodes"]
         NodeAPI["📦 Container: checkout-api\n📡 mcp: dotfiles-node-api\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
         NodeWorker["📦 Container: payment-worker\n📡 mcp: dotfiles-node-worker\n• system/packages-manual.txt\n• audit_node_drift()\n• docs/architecture/"]
         NodeStaging["🖥️ Remote Server: staging-db-01\n📡 mcp: dotfiles-node-staging\n• SSH stdio transport\n•Federates: postgres-mcp, redis-mcp"]
@@ -79,7 +83,7 @@ flowchart TD
     Agent <-->|"4. Discover node MCPs + required safety rules"| NodeStaging
 ```
 
-#### How Contextual MCP Orchestration Works in Practice
+#### 2.2.1. How Contextual MCP Orchestration Works in Practice
 
 1. **Context Before Action (Guardrailed MCP Execution)**:
    - Suppose an agent needs to inspect or troubleshoot `staging-db-01`, which has a `postgres-mcp` server attached.
@@ -138,7 +142,7 @@ Add `dotfiles-ubuntu` under `"mcpServers"`:
 `dotfiles-ubuntu` ships with an official, hardened Ubuntu 26.04 [`Dockerfile`](../../Dockerfile) (`make docker-build`, `make docker-self-test`, `make docker-mcp`) and [`.dockerignore`](../../.dockerignore) that enable **three complementary Docker architectures** depending on whether you need a **portable Governance Hub** or **live inside-container drift inspection**:
 
 ```mermaid
-flowchart LR
+flowchart TD
     IDE["🤖 IDE / AI Agent\n(Antigravity · Copilot · Cursor)"]
     subgraph PatA["Pattern A: Standalone Hermetic MCP Hub (docker run -i --rm)"]
         HubImg["🐳 Image: dotfiles-ubuntu-mcp:latest\n• Pre-packages Corporate + layers/dept-* subtrees\n• Runs with --read-only --network=none --cap-drop=ALL\n• Zero local git clone or Python setup required"]
@@ -154,7 +158,7 @@ flowchart LR
     IDE <-->|"stdio: docker exec -i"| PatC
 ```
 
-#### Pattern A — Standalone Hermetic MCP Hub Container (`docker run -i --rm`)
+#### 3.3.1. Pattern A — Standalone Hermetic MCP Hub Container (`docker run -i --rm`)
 Build the repository (including any mounted `layers/*` subtrees) into a self-contained image:
 
 ```bash
@@ -176,17 +180,17 @@ Now any developer (even on macOS, Windows/WSL, or non-Ubuntu hosts) or CI agent 
 
 > **Optional Persistent Logs in Pattern A**: If you want the hermetic container to write `mcp_events.jsonl` and `mcp_alerts.jsonl` to your host, mount a host log directory (`"-v", "/home/<your-user>/dotfiles-ubuntu/logs:/opt/dotfiles-ubuntu/logs"`) and omit `"--no-log"`.
 
-#### Pattern B — Multi-Stage Sidecar Injection into Microservice Containers (`COPY --from` + `docker exec -i`)
+#### 3.3.2. Pattern B — Multi-Stage Sidecar Injection into Microservice Containers (`COPY --from` + `docker exec -i`)
 When you want `audit_node_drift` (`audit.sh`) and `dotfiles://system/manifests` to inspect the **actual runtime environment inside a microservice container** (`checkout-api`, `payment-worker`), you don't need to run `git clone` (or pass private Git SSH keys/tokens) inside the microservice's `Dockerfile`. Instead, copy `/opt/dotfiles-ubuntu` from your `dotfiles-ubuntu-mcp` image in a single line:
 
 ```dockerfile
-FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:3.0.3 AS governance-layer
+FROM ghcr.io/acme-corp/dotfiles-ubuntu-mcp:4.0.0 AS governance-layer
 FROM ubuntu:26.04
 # ... install checkout-api runtime packages ...
 COPY --from=governance-layer /opt/dotfiles-ubuntu /opt/dotfiles-ubuntu
 ```
 
-#### Pattern C — Local Docker Compose / Devcontainer Bind-Mount (`-v :ro` + `docker exec -i`)
+#### 3.3.3. Pattern C — Local Docker Compose / Devcontainer Bind-Mount (`-v :ro` + `docker exec -i`)
 During local `dev` with Docker Compose, you can mount your local `~/dotfiles-ubuntu` directly into any running service container without modifying its `Dockerfile`:
 
 ```yaml
@@ -271,7 +275,7 @@ When you fork `dotfiles-ubuntu` for a squad or attach it to a microservice conta
   "description": "Checkout Service Ubuntu 26.04 Container Node (FastAPI Hexagonal + PostgreSQL)",
   "upstream_layer": {"layer_id": "acme-corp/dotfiles-backend-hexagonal", "repository": "git@github.com:acme-corp/dotfiles-backend-hexagonal.git", "branch": "main"},
   "default_stack_templates": ["fastapi-hexagonal"],
-  "baseline_guardrails": ["AGENTS.md §4 (Atomic Deliverable & Verification Inclusion) & technical-base.md (100% branch coverage)"],
+  "baseline_guardrails": ["AGENTS.md §4 (Atomic Deliverable & Verification Inclusion) & software-engineering.md (100% branch coverage)"],
   "surface_bindings": [
     {
       "binding_id": "checkout-domain-invariants",
@@ -323,6 +327,8 @@ Instead of configuring 10 separate MCP server processes on every developer machi
 
 ### 5.1. End-to-End Workflow: Vertical Upstream Sync + Horizontal Subtree Mounting
 
+The following 6-command sequence synchronizes a fork vertically with its upstream parent and mounts horizontal departmental or sibling-service subtrees under `layers/*`:
+
 ```bash
 cd ~/dotfiles-ubuntu
 # 1. Vertical Sync: Pull latest baseline improvements from parent fork (Public or Corporate upstream)
@@ -368,9 +374,23 @@ Once subtrees are mounted under `layers/*/`, your **single local `dotfiles_mcp_s
   - While an ephemeral fork (`eph-*`) is active, the Permanent Layer MCP transitions to `symbiotic_state: "ephemeral-augmented"` in `get_layer_overview` and `dotfiles://mcp/topology`.
   - Ephemeral bots seal their 4-Channel Executive Digest via `orchestrate_ephemeral_fork(action="seal-return", fork_id="...", digest={...})` and hand the `rcap1` token back to the Permanent MCP (`action="verify-return"`), which enforces `surface_globs` containment (`SURFACE_BOUNDARY_VIOLATION`) and automatic post-reap *Crypto-Shredding* (`EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED`).
 
+### 5.4. Fixed vs. Ephemeral MCP Token Optimization & Inter-Layer Communication (`mcp_communication_mode`)
+
+- **Single Fixed `dotfiles-mcp` Server + Dynamic `workspace_dir`**: Registering a single fixed `"dotfiles-mcp"` server in `~/.gemini/config/mcp_config.json` (via `./scripts/layer-config.sh set-global-profile <profile> --stow`) covers all workspaces on the workstation. Passing `workspace_dir="<project-or-layer-path>"` dynamically inspects that workspace's 1-hop parent (`PARENT_DIR`) and mounted `layers/*` subtrees at `L0`/`L1` compaction (`~85–90%` token savings) without spawning extra persistent MCP processes.
+- **When to Use Fixed MCP vs. Ephemeral Consultation (`make consult`)**:
+  - Use the **Fixed `dotfiles-mcp`** for continuous vertical consumption of the active workspace's immediate parent layer and surface bindings (`resolve_surface_governance`, `query_governance_rules(resolution="L0")`).
+  - Use **Ephemeral `strictly-read-only` Forks (`make consult LAYER=<id> QUERY="..."`)** for cross-departmental checks, specialist bots (`precedence: 15`), and horizontal peer `Root 0` inspections so foreign rules are summarized into a 4-Channel Executive Digest and immediately reaped.
+- **4 Inter-Layer Communication Modes (`mcp_communication_mode`)**:
+  - `internal-1hop-hierarchical`: Vertical 1-hop flow within the same `governing_root_id`.
+  - `external-root0-to-oss-sanitized`: Tracker-free, anonymized gateway from `Root 0` / `dev` to `public-oss` (omitting `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `corporate/`, `layers/`, and personal layers `precedence >= 85`).
+  - `external-peer-root0-pr-and-readonly-mcp`: Horizontal file-based PR collaboration (`.agents/proposals/from-peer-root/<source-root-id>/`) and `strictly-read-only` MCP consultation between distinct `Root 0` gateways.
+  - `blocked-must-route-via-governing-root0`: Prevents internal `department`, `unit`, or `project` tiers from bypassing their governing `Root 0`.
+
 ---
 
 ## 6. Summary of Precautions & Design Boundaries
+
+Every deployment of `scripts/dotfiles_mcp_server.py` enforces five non-negotiable security and token-budget precautions:
 
 | Principle | How `dotfiles-ubuntu` Enforces It |
 |-----------|-----------------------------------|

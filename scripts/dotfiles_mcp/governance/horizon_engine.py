@@ -268,11 +268,13 @@ def _build_bilateral_layer_report(
     loc_prog = [ln for ln in main_lines if ln.startswith("- [/]") and "Delegated from" not in ln]
     loc_pend = [ln for ln in main_lines if ln.startswith("- [ ]") and "Delegated from" not in ln]
     p_dir = ws / ".agents" / "proposals"
+    all_from = sorted(p_dir.glob("from-*/*.md")) if p_dir.is_dir() else ()
     from_up = [
         str(p.relative_to(ws)).replace("\\", "/")
-        for p in (sorted(p_dir.glob("from-*/*.md")) if p_dir.is_dir() else ())
+        for p in all_from
+        if not (ws / "layers" / p.parent.name.removeprefix("from-")).is_dir()
     ]
-    oss_auto = bool(is_oss and ws_role != "workstation")
+    oss_auto = bool(is_oss and not _is_oss_root_manifest(_load_manifest_dict(ws)))
     up_rules = (
         []
         if oss_auto
@@ -298,7 +300,25 @@ def _build_bilateral_layer_report(
             for ln in c_wt.read_text("utf-8").splitlines()
             if ln.strip().startswith("- [x]") and "Delegated from" in ln
         )
-    child_props = [p for p in to_here if "/completion-" not in p]
+    from_child = [
+        str(p.relative_to(ws)).replace("\\", "/")
+        for p in all_from
+        if (ws / "layers" / p.parent.name.removeprefix("from-")).is_dir()
+    ]
+    in_layers_props = [
+        str(cp.relative_to(ws)).replace("\\", "/")
+        for cp in (
+            sorted((ws / "layers").glob("*/.agents/proposals/**/*.md"))
+            if (ws / "layers").is_dir()
+            else ()
+        )
+        if not cp.parent.name.startswith("from-")
+    ]
+    child_props = list(
+        dict.fromkeys(
+            [*(p for p in to_here if "/completion-" not in p), *from_child, *in_layers_props]
+        )
+    )
     c_drift_ids = [str(d["layer_id"]) for d in child_drifts]
     in_down = {
         "completed_child_delegations": comp_child,

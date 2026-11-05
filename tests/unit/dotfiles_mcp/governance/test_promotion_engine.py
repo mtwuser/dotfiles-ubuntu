@@ -168,8 +168,11 @@ class TestPromotionEngine:
             (".agents/rules/layer-99-unmounted.md", "# Unmounted\n"),
             (".agents/rules/brand-new.md", "# Brand new\n"),
             (
-                ".agents/rules/technical-base.md",
-                (REPO_DIR / "templates/technical-base/rules/technical-base.md").read_text("utf-8"),
+                ".agents/rules/software-engineering.md",
+                (
+                    REPO_DIR
+                    / "templates/science-stack/software-engineering/rules/software-engineering.md"
+                ).read_text("utf-8"),
             ),
             (".agents/rules/business-base.md", "# Locally modified engine rule\n"),
             (".agents/assets/base/sub/snippet.md", "asset-v2-mod\n"),
@@ -191,7 +194,7 @@ class TestPromotionEngine:
         in_sync_files = [x["file"] for x in diff["in_sync"]]
         mod_files = [x["file"] for x in diff["modified_in_project"]]
         assert "rules/coding.md" in in_sync_files
-        assert "rules/technical-base.md" in in_sync_files
+        assert "rules/software-engineering.md" in in_sync_files
         assert "rules/layer-10-root.md" in in_sync_files
         assert "rules/layer-10-dept-sync.md" in in_sync_files
         assert "skills/sopen/SKILL.md" in in_sync_files
@@ -297,8 +300,8 @@ class TestPromotionEngine:
         )
         oss_root_dir = tmp_path / "oss-root"
         (oss_root_dir / "system").mkdir(parents=True)
-        (oss_root_dir / "templates/business-base/rules").mkdir(parents=True)
-        (oss_root_dir / "templates/business-base/assets").mkdir(parents=True)
+        (oss_root_dir / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (oss_root_dir / "templates/base-stack/business-base/assets").mkdir(parents=True)
         (oss_root_dir / "system/mcp-layer.json").write_text(
             '{"layer_id":"root","layer_role":"root"}', encoding="utf-8"
         )
@@ -307,19 +310,34 @@ class TestPromotionEngine:
             '{"layer_id":"squad-a","layer_role":"corporate","upstream_layer":{"layer_id":"root"}}',
             encoding="utf-8",
         )
-        (proj_dir / "templates/business-base/rules").mkdir(parents=True)
-        (proj_dir / "templates/business-base/assets").mkdir(parents=True)
-        (proj_dir / "templates/business-base/rules/business-base.md").write_text("# v2\n", "utf-8")
-        (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", "utf-8")
+        (proj_dir / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (proj_dir / "templates/base-stack/business-base/assets").mkdir(parents=True)
+        (proj_dir / "templates/base-stack/business-base/rules/business-base.md").write_text(
+            "# v2\n", "utf-8"
+        )
+        (proj_dir / "templates/base-stack/business-base/assets/a.md").write_text("# A\n", "utf-8")
         oss_tpl_res = _prom(
-            "templates/business-base/rules/business-base.md",
+            "templates/base-stack/business-base/rules/business-base.md",
             upstream_dir=oss_root_dir,
             dry_run=True,
         )
         oss_asset_res = _prom(
-            "templates/business-base/assets/a.md",
+            "templates/base-stack/business-base/assets/a.md",
             upstream_dir=oss_root_dir,
             dry_run=True,
+        )
+        peer_root_dir = tmp_path / "partner-holding-root"
+        (peer_root_dir / "system").mkdir(parents=True)
+        (peer_root_dir / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (peer_root_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id":"partner-holding-root","layer_role":"corporate",'
+            '"governing_root_id":"partner-holding-root","upstream_layer":{"layer_id":"root"}}',
+            encoding="utf-8",
+        )
+        inter_root_res = _prom(
+            "templates/base-stack/business-base/rules/business-base.md",
+            upstream_dir=peer_root_dir,
+            actor_email="ceo@acme.com",
         )
 
         # Assert
@@ -354,7 +372,11 @@ class TestPromotionEngine:
         assert upstream_res["destination"] == "templates/gdpr-pack/rules/legal.md"
         assert "promotion_pr_plan" in upstream_res
         assert oss_tpl_res["target_template"] == "business-base"
-        assert oss_asset_res["destination"] == "templates/business-base/assets/a.md"
+        assert oss_tpl_res["collaboration_mode"] == "oss-sanitized-pr"
+        assert oss_asset_res["destination"] == "templates/base-stack/business-base/assets/a.md"
+        assert inter_root_res["collaboration_mode"] == "inter-root-peer-pr"
+        assert "from-peer-root-squad-a/business-base.md" in str(inter_root_res["staged_proposal"])
+        assert "promotion_pr_plan" in inter_root_res
         for src, bad_kw, err_pat in (
             (
                 ".agents/rules/legal.md",
@@ -368,6 +390,9 @@ class TestPromotionEngine:
             (".agents/skills/no-fm/SKILL.md", {}, "YAML frontmatter"),
             (".agents/skills/bad-skill/SKILL.md", {}, "kebab-case name"),
             (".agents/rules/legal.md", {"target_template": "BAD_TEMPLATE"}, "Invalid target"),
+            ("BACKLOG.md", {"upstream_dir": oss_root_dir}, "OSS_PRIVATE_SURFACE_BLOCKED"),
+            ("roadmaps/q4.md", {"upstream_dir": oss_root_dir}, "OSS_PRIVATE_SURFACE_BLOCKED"),
+            ("BACKLOG.md", {"upstream_dir": peer_root_dir}, "INTER_ROOT_PRIVATE_SURFACE_BLOCKED"),
         ):
             with pytest.raises(ValueError, match=err_pat):
                 _prom(src, **bad_kw)

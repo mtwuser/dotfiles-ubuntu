@@ -184,11 +184,11 @@ class TestWorkflowEngine:
                 f'{{"layer_id":"{lid}","layer_role":"{role}","precedence":25,'
                 f'"default_stack_templates":["business-base"],'
                 f'"surface_bindings":[{{"binding_id":"legal-b","target_globs":["**"],'
-                f'"rule_files":["templates/business-base/rules/legal.md"]}}]}}',
+                f'"rule_files":["templates/base-stack/business-base/rules/legal.md"]}}]}}',
                 encoding="utf-8",
             )
-            (d / "templates/business-base/rules").mkdir(parents=True)
-            (d / "templates/business-base/rules/legal.md").write_text(
+            (d / "templates/base-stack/business-base/rules").mkdir(parents=True)
+            (d / "templates/base-stack/business-base/rules/legal.md").write_text(
                 "# Legal Compliance\n\n## GDPR Retention\nAll PII must expire within 90 days.\n",
                 encoding="utf-8",
             )
@@ -201,6 +201,14 @@ class TestWorkflowEngine:
             root_dir,
             dept_dir,
             target_layer="corp-root",
+            query="GDPR",
+            parent_dir=ws_dir,
+            dry_run=True,
+        )
+        ws_hub_res = consult_layer_ephemeral(
+            root_dir,
+            dept_dir,
+            target_layer="workstation",
             query="GDPR",
             parent_dir=ws_dir,
             dry_run=True,
@@ -219,6 +227,7 @@ class TestWorkflowEngine:
         assert dry_res["dry_run"] is True and dry_res["auto_reaped"] is True
         assert dry_res["target_layer"] == "dept-legal"
         assert parent_res["resolved_target_dir"] == str(ws_dir.resolve())
+        assert ws_hub_res["resolved_target_dir"] == str(root_dir.resolve())
         assert live_res["access_mode"] == "strictly-read-only"
         assert live_res["auto_reaped"] is True
         assert not Path(live_res["ephemeral_fork_id"]).exists()

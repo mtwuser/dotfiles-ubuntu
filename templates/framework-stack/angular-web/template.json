@@ -1,0 +1,38 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "angular-web",
+  "kind": "framework-stack",
+  "stack_group": "framework-stack",
+  "extends": "software-engineering",
+  "target_role": "department",
+  "upstream_framework": {
+    "name": "angular",
+    "repository": "https://github.com/angular/angular.git",
+    "tracking_branch": "main"
+  },
+  "description": "Angular Standalone Signals + OnPush + Strictly Typed Reactive Forms & Vitest/Playwright Frontend Architecture",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "angular-standalone-signals-architecture",
+      "description": "Standalone components, Signals-first reactivity, OnPush change detection, strict TypeScript, and 100% isolated component unit tests",
+      "mode": "transversal",
+      "target_globs": ["src/**", "tests/**", "e2e/**", "*.ts", "*.html", "*.scss", "*.css", "angular.json", "tsconfig.json"],
+      "architectural_planes": ["domain", "application", "presentation", "infrastructure", "testing"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Every Angular component is standalone: true with ChangeDetectionStrategy.OnPush and Signals-first state (signal, computed, input, output)",
+        "Feature domain facades and HTTP adapters are injected via inject() using abstract InjectionToken or interface contracts; components never call HttpClient directly",
+        "Strict TypeScript (strict: true, strictTemplates: true, noImplicitOverride: true) with zero any types and 100% isolated unit branch coverage"
+      ],
+      "rule_files": [
+        "templates/framework-stack/angular-web/rules/angular-architecture.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/angular-web/rules/angular-architecture.md",
+        "templates/framework-stack/angular-web/skills/angular-testing/SKILL.md"
+      ]
+    }
+  ]
+}

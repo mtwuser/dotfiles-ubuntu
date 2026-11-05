@@ -2,27 +2,27 @@
 
 > **Human & Architect Operator Manual (Tier 2 Progressive Disclosure)**
 >
-> Step-by-step guide to the 4-Pillar Configuration Architecture (`Pillar A..D`), 3-Tier Profile Composition (`human-core`, `technical-base`, `business-base`), Organizational Hierarchy (`Root 0 [Public Admin 1..2 | Company 10] <-> Department [1..N recursive: Statutory / Functional / Sub-Department or Unit/Squad] <-> Project / Case`), Fill-in-the-Blanks Setup Blueprints & Initial Chat Kickoff Prompts, Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/06_layer_governance_and_promotion_engines.md`](../architecture/06_layer_governance_and_promotion_engines.md)**.
+> Step-by-step guide to the 4-Pillar Configuration Architecture (`Pillar A..D`), 3 Universal Bases (`base-stack`: `human-base`, `science-base`, `business-base`) + 3 Specialization Stacks (`science-stack`, `business-stack`, `framework-stack`), Organizational Hierarchy (`Root 0 [Public Admin 1..2 | Company 10] <-> Department [1..N recursive: Statutory / Functional / Sub-Department or Unit/Squad] <-> Project / Case`), Fill-in-the-Blanks Setup Blueprints & Initial Chat Kickoff Prompts, Git Email Authority Gates, 1-Hop Horizon Radar, and Custom Skill Authoring. For normative engine contracts, see **[`docs/architecture/02_antigravity_governance_and_hooks.md`](../architecture/02_antigravity_governance_and_hooks.md)**, **[`docs/architecture/04_compaction_surface_and_promotion_engines.md`](../architecture/04_compaction_surface_and_promotion_engines.md)**, and **[`docs/architecture/06_layer_governance_and_promotion_engines.md`](../architecture/06_layer_governance_and_promotion_engines.md)**.
 
 ---
 
-## 1. Configuration Architecture (`Pillar A..D`) & 3-Tier Profile Composition
+## 1. Configuration Architecture (`Pillar A..D`) & Profile Composition
 
 Local disk materialization follows **4 Physical Context Pillars (`Pillar A..D`)** where each pillar extends the one above it (for the full **7-Axis Multidimensional Taxonomy** distinguishing `Physical Context Pillars` from `Organizational Governance Layers`, `Runtime Nodes`, and `Ephemeral Bots`, see **[`docs/reference/cross_departmental_and_human_stack_matrix.md` §0](../reference/cross_departmental_and_human_stack_matrix.md)**):
 
 ```
 Pillar A (Layer 1 — Shared Global)      ← ~/dotfiles-ubuntu/antigravity/  (symlinked to ~/.gemini/config/)
-Pillar B (Layer 2 — Templates/Subtrees) ← ~/dotfiles-ubuntu/templates/ & layers/ (3 core bases + 3 specialization stacks)
+Pillar B (Layer 2 — Templates/Subtrees) ← ~/dotfiles-ubuntu/templates/ & layers/ (3 base-stack bases + 4 specialization stacks)
 Pillar C (Layer 3 — Workspace Overlay)  ← <workspace>/.agents/            (projected rules, skills, SESSION.md & governance ledgers)
 Pillar D (Layer 4 — Navigable Corpus)   ← <workspace>/docs/               (3-tier progressive disclosure & 1:1:1 specs)
 ```
 
-### 1.1 Layer 1: Shared Global Baseline (`~/.gemini/config/`)
+### 1.1. Layer 1: Shared Global Baseline (`~/.gemini/config/`)
 
 Managed by the `antigravity/` stow module and applied to **all workspaces** automatically:
-- **`AGENTS.md`** — Default `human-core` global baseline (`< 18 KB` token budget cap), switchable via:
+- **`AGENTS.md`** — Default `human-base` global baseline (`< 18 KB` token budget cap), switchable via:
   ```bash
-  ./scripts/layer-config.sh set-global-profile <human-core|technical|business|full> --stow
+  ./scripts/layer-config.sh set-global-profile <human-base|science|technical|business|full> --stow
   ```
 - **`hooks.json` + `scripts/`** — 4 deterministic Python 3.14 lifecycle hooks:
   - `pre_tool_guard.py` (`PreToolUse`) — Blocks non-empty writes (`> 0 bytes`) to consumer `src/**/__init__.py` or `tests/**/__init__.py`, manual edits to `alembic/versions/*.py`, and direct mutations of inherited `.agents/rules/layer-*.md` across both file tools and shell commands (`heredoc`, `tee`, `sed -i`, redirections), plus automated mutating `git` (`add`, `commit`, `push`, `reset`, `rebase`, `checkout`, `merge`, `clean`, `subtree`) or `alembic` commands.
@@ -30,34 +30,38 @@ Managed by the `antigravity/` stow module and applied to **all workspaces** auto
   - `post_invocation_lint.py` (`PostInvocation`) — Enforces `< 465` lines on modified `.py`, `README.md`, and `docs/**/*.md` files, AAA test comments, `1:1:1` `Specification:` headers, `ruff check`, and `always_on` rule token budgets (`18 KB` `AGENTS.md` / `80 KB` workspace cap).
   - `stop_verify_tests.py` (`Stop`) — Runs affected unit tests before concluding a task.
 
-### 1.2 Complete 19-Skill Matrix Across the 3 Core Bases (`human-core`: 10, `technical-base`: 4) & 3 Specialization Stacks (`business-stack`: 1, `science-stack`: Epistemic Consultation, `tech-stack`: 4)
+### 1.2. Complete 23-Skill Matrix Across the 3 Universal Bases (`human-base`: 10, `science-base` + `software-engineering`: 4) & Specialization Stacks (`science-stack`: 1, `business-stack`: 1, `framework-stack`: 7)
 
-The **19 skills** are partitioned across the **3 Core Bases** and **3 Specialization Stacks** so each organizational level (`Root 0`, `Department`, `Case/Unit/Squad`, `Project`) loads only the procedural capabilities required by its active domain:
-- **10 Universal Global Skills (`~/.gemini/config/skills/` — `human-core`)**: Available in all workspaces and automatically adapting to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`).
-- **4 Core Software-Engineering Skills (`templates/technical-base/skills/`)**: Projected into `.agents/skills/` on technical workspaces or when running `make setup-dev` inside a business layer.
-- **5 Domain Specialization-Stack Skills (`templates/business-stack/` & `templates/tech-stack/`)**: Projected only into workspaces that apply `corporate-ops-ledger` (`1` skill) or `fastapi-hexagonal` (`4` skills), while `science-stack/scientific-knowledge-branch` couples its epistemic methodology rule with `make consult` (`rcap1`) and `/review`.
+The **23 skills** are partitioned across the **3 Universal Bases (`base-stack`)** and **Specialization Stacks** so each organizational level (`Root 0`, `Department`, `Case/Unit/Squad`, `Project`) loads only the procedural capabilities required by its active domain:
+- **10 Universal Global Skills (`~/.gemini/config/skills/` — `human-base`)**: Available in all workspaces and automatically adapting to `workspace_mode` (`"business"` vs. `"technical"` vs. `"hybrid"`).
+- **4 Core Software-Engineering Skills (`templates/science-stack/software-engineering/skills/`)**: Projected into `.agents/skills/` on technical workspaces (`software-engineering`, `framework-stack/*`) or when running `make setup-dev` inside a business layer.
+- **9 Domain Specialization-Stack Skills (`templates/{science-stack,business-stack,framework-stack}/`)**: Projected only into workspaces that apply `scientific-knowledge-branch` (`1` skill: `academic-tutor`), `corporate-ops-ledger` (`1` skill), `fastapi-hexagonal` (`4` skills), `angular-web` (`1` skill), `django-backend` (`1` skill), or `nist-csf-security` (`1` skill).
 
 | Skill / Command | Source Pack (`kind`) | Target Organizational Levels | When to Use & Key Actions |
 |-----------------|----------------------|------------------------------|---------------------------|
-| `/sopen` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Start of every session: runs `make status` (`./scripts/layer-config.sh status`) in a single `< 0.2s` call (`session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`) and skips `brain/` scanning when `last_conversation_id` is `null`. |
-| `/continue` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
-| `/sclose` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
-| `/release` | Global (`human-core`) | Layer Owners (`Root 0` $\rightarrow$ `Project`) | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
-| `/priority` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Audits `WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` using `1:1:1` specs/tests in `technical` mode or *Lex Superior* / SSoT ledgers (`corporate/`) in `business` mode. |
-| `/review` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Tactical `C1` incremental/target review (`/review [path\|docs\|arch\|1:1:1\|layer]`): audits the active session delta (default when called with no args) or a specific path/dimension across the 4 canonical dimensions (`docs` including Conceptual & Semantic Isomorphism, `arch`, `1:1:1`, `layer`). |
-| `/full-audit` | Global (`human-core`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Convergent `C2` closed-world repository gate (`/full-audit`): runs the 5 deterministic probes (`Probe A..E`, including `Relational Cluster Mass` $M_{\text{cluster}}$) and 4 canonical passes across 100% of the repository toward `Regime 0 (0 findings)` before `/release`. |
-| `/enrich` | Global (`human-core`) | All (`Root 0` $\rightarrow$ `Project`) | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`). |
-| `architecture-review` | Global (`human-core`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | Multi-dimensional specification & taxonomy reviews (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & policy packs in `business` mode). |
-| `governance` | Global (`human-core`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | One-way work lifecycle transitions, 1-hop downward directive delegation (`make delegate` / `delegate-to-child`), and clean-room knowledge extraction. |
-| `refactoring` | `technical-base` (`core-base`) | Technical `Squad`/`Project` & `make setup-dev` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target), `Probe E` relational clusters ($M_{\text{cluster}} \ge 1,200$), and `< 15`-module domain subpackages with `1:1:1` (`Spec <-> Test <-> Code`) parity. |
-| `testing` | `technical-base` (`core-base`) | Technical `Squad`/`Project` & `make setup-dev` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% single-file `1:1:1` isolated branch coverage audits (`0` cross-unit masking). |
-| `validation` | `technical-base` (`core-base`) | Technical `Squad`/`Project` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
-| `oss-contribute` | `technical-base` (`core-base`) | `OSS Dev` & Technical `Squad`/`Project` | Conscious `C3` workflow for empirical hot-path profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and isolated `~/Projects/oss-contrib-<repo>` upstream PRs. |
+| `/sopen` | Global (`human-base`) | All (`Root 0` $\rightarrow$ `Project`) | Start of every session: runs `make status` (`./scripts/layer-config.sh status`) in a single `< 0.2s` call (`session_state`, `priority_state`, `git_state`, `horizon`, `agent_diff`) and skips `brain/` scanning when `last_conversation_id` is `null`. |
+| `/continue` | Global (`human-base`) | All (`Root 0` $\rightarrow$ `Project`) | Mid-session checkpoint: syncs `WORKTASK.md`, `CHANGELOG.md` (`[Unreleased]`), and `.agents/SESSION.md`. |
+| `/sclose` | Global (`human-base`) | All (`Root 0` $\rightarrow$ `Project`) | End of session: consolidates completed work under `## [Unreleased]`, runs `check-authority`, and outputs ready-to-run local `git commit` blocks. |
+| `/release` | Global (`human-base`) | Layer Owners (`Root 0` $\rightarrow$ `Project`) | Explicit SemVer release (`vX.Y.Z`): verifies `check-authority --op release`, runs zero-leak/agnosticism scans and `make verify`, promotes `[Unreleased]` $\rightarrow$ `[X.Y.Z]`, and outputs commit + tag + push commands. |
+| `/priority` | Global (`human-base`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Audits `WORKTASK.md` $\rightarrow$ `WORKROAD.md` / `BACKLOG.md` $\rightarrow$ `roadmaps/` using `1:1:1` specs/tests in `technical` mode or *Lex Superior* / SSoT ledgers (`corporate/`) in `business` mode. |
+| `/review` | Global (`human-base`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Tactical `C1` incremental/target review (`/review [path\|docs\|arch\|1:1:1\|layer]`): audits the active session delta (default when called with no args) or a specific path/dimension across the 4 canonical dimensions (`docs` including Conceptual & Semantic Isomorphism, `arch`, `1:1:1`, `layer`). |
+| `/full-audit` | Global (`human-base`, Dual Mode) | All (`Root 0` $\rightarrow$ `Project`) | Convergent `C2` closed-world repository gate (`/full-audit`): runs the 5 deterministic probes (`Probe A..E`, including `Relational Cluster Mass` $M_{\text{cluster}}$) and 4 canonical passes across 100% of the repository toward `Regime 0 (0 findings)` before `/release`. |
+| `/enrich` | Global (`human-base`) | All (`Root 0` $\rightarrow$ `Project`) | Compares workspace `.agents/` against parent layers (`diff-project`), checks `inspect-horizon`, and promotes reusable rules upward (`promote-from-project`). |
+| `architecture-review` | Global (`human-base`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | Multi-dimensional specification & taxonomy reviews (`docs/architecture/*.md` in `technical` mode; `corporate/**/*.md` & policy packs in `business` mode). |
+| `governance` | Global (`human-base`, Dual Mode) | `Root 0`, `Department`, `Case/Unit/Squad` | One-way work lifecycle transitions, 1-hop downward directive delegation (`make delegate` / `delegate-to-child`), and clean-room knowledge extraction. |
+| `refactoring` | `software-engineering` (`science-stack`) | Technical `Squad`/`Project` & `make setup-dev` | Safe decomposition of code files approaching the `< 465`-line gate (`<= 400` target), `Probe E` relational clusters ($M_{\text{cluster}} \ge 1,200$), and `< 15`-module domain subpackages with `1:1:1` (`Spec <-> Test <-> Code`) parity. |
+| `testing` | `software-engineering` (`science-stack`) | Technical `Squad`/`Project` & `make setup-dev` | AAA (`Arrange-Act-Assert`) test structure, mock boundaries, and 100% single-file `1:1:1` isolated branch coverage audits (`0` cross-unit masking). |
+| `validation` | `software-engineering` (`science-stack`) | Technical `Squad`/`Project` | Structured human-agent manual UI/web QA verification tracked in `WORKVALI.md`. |
+| `oss-contribute` | `software-engineering` (`science-stack`) | `OSS Dev` & Technical `Squad`/`Project` | Conscious `C3` workflow for empirical hot-path profiling, C-backed stdlib vectorization, optional `PEP 7` C-accelerators, and isolated `~/Projects/oss-contrib-<repo>` upstream PRs. |
+| `academic-tutor` | `scientific-knowledge-branch` (`science-stack`) | `sci-*`, `gov-*`, `geo-*`, `org-uni-*` & Personal Tutors | Personalizes knowledge consumption across the Academic (`M1..M2` `docs/guides/` Socratic tutoring) $\rightarrow$ Professional (`M3` `org-*` practice) $\rightarrow$ Scientific (`M4` `sci-*` `docs/reference/` `L3` frontier) continuum using `citation_receipt`. |
 | `ledger-surface-audit` | `corporate-ops-ledger` (`business-stack`) | `Root 0`, `Department`, Business `Case/Unit` | Audits 3-ring Hexagonal Business traceability across `corporate/ledgers/` $\rightarrow$ `corporate/{policies,sops}/` $\rightarrow$ `surfaces/{web,forms,print}/` (`[DEPT]-[TYPE]-[YYYY]-[NNN]`). |
-| `start` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Initializes or resumes a Python FastAPI + Hexagonal DDD service workspace (`./venv`, `uvicorn`, health checks). |
-| `fastapi-testing` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | 4-layer hexagonal test patterns (`domain`, `application`, `adapters`, `entrypoints`) with `httpx.AsyncClient` and SQLAlchemy async fixtures (coexisting alongside `technical-base`'s `testing`). |
-| `database-migrations` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | User-gated Alembic async migration workflow, zero-touch `alembic/versions/*.py` rules, and reversible schema evolution. |
-| `frontend-patterns` | `fastapi-hexagonal` (`tech-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Clean API-contract integration, component state isolation, and accessible UI verification for FastAPI web frontends. |
+| `start` | `fastapi-hexagonal` (`framework-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Initializes or resumes a Python FastAPI + Hexagonal DDD service workspace (`./venv`, `uvicorn`, health checks). |
+| `fastapi-testing` | `fastapi-hexagonal` (`framework-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | 4-layer hexagonal test patterns (`domain`, `application`, `adapters`, `entrypoints`) with `httpx.AsyncClient` and SQLAlchemy async fixtures (coexisting alongside `software-engineering`'s `testing`). |
+| `database-migrations` | `fastapi-hexagonal` (`framework-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | User-gated Alembic async migration workflow, zero-touch `alembic/versions/*.py` rules, and reversible schema evolution. |
+| `frontend-patterns` | `fastapi-hexagonal` (`framework-stack`) | FastAPI `Squad` / `Project` (`apply-project`) | Clean API-contract integration, component state isolation, and accessible UI verification for FastAPI web frontends. |
+| `angular-testing` | `angular-web` (`framework-stack`) | Angular `Squad` / `Project` (`apply-project`) | Standalone Angular 19+ Signals, `OnPush`, and component harness unit testing. |
+| `django-testing` | `django-backend` (`framework-stack`) | Django `Squad` / `Project` (`apply-project`) | Django 5.2+ `pytest-django` service-layer isolation and `django_assert_num_queries` N+1 gates. |
+| `nist-csf-audit` | `nist-csf-security` (`framework-stack`) | Security `Department` / `Squad` (`apply-project`) | NIST CSF 2.0 (`GV/ID/PR/DE/RS/RC`) and ISO/IEC 27001 control ledger audits. |
 
 > **`/learn` (built-in Antigravity command) vs. `/enrich` (`dotfiles-ubuntu`)**:
 > `/learn` captures a lesson from the current chat into the active workspace's `.agents/`. `/enrich` evaluates matured rules across workspaces and promotes them upward (`Case/Unit/Squad/App -> Department -> Corporate Root 0 -> Open Source`) via `layer-config.sh promote-from-project`.
@@ -70,9 +74,9 @@ All daily engineering, legal, scientific, and corporate governance work runs dir
 
 | Workspace Root Opened in `antigravity-agents` | Active Rules Loaded into Context (`<= 20,000` tokens) | `Non-Workspace File Access` & Containment Boundary |
 |-----------------------------------------------|-------------------------------------------------------|----------------------------------------------------|
-| **`Corporate Root 0`** (`--role corporate`, `precedence: 10`) | Global `~/.gemini/config/AGENTS.md` (`human-core`) + `layer-10-<root>.md` (`business-base` + executive governance). Mounted child subtrees in `layers/<dept>/` are **never** auto-injected into `Root 0`'s always-on context; they are queried on demand via `make consult` (`rcap1`) or delegated via `make delegate`. | **`allow`** — Enables holistic 360° executive orchestration, cross-subtree inspection (`make status`, `make horizon`), and `1-hop` downward delegation across `layers/*`. |
-| **`Department` / `Domain-Policy`** (`precedence: 5..49`) | Global `AGENTS.md` + inherited `layer-10-<root>.md` + `layer-<NN>-<dept>.md` (+ `technical-base` when `make setup-dev` is active). | **`deny` / `ask`** — Enforces vertical and horizontal departmental isolation; cross-department queries use `make consult LAYER=<peer>` (`strictly-read-only`). |
-| **`Level 3 Unit` (`Case` / `Study` / `Squad`) & `Level 4 Project`** (`precedence: 50..80` + `85..95` `Human-Stack`) | Global `AGENTS.md` + inherited chain (`0..80`) + specialization stack (`business-stack`, `science-stack`, or `tech-stack`) + personal `Human-Stack` (`L1..L4`) in `.agents/SESSION.md`. | **`deny` / `ask`** — Confines execution strictly to the unit, case, or application repository; upward rule changes are proposed via `make promote` (`promote-from-project --create-pr`). |
+| **`Corporate Root 0`** (`--role corporate`, `precedence: 10`) | Global `~/.gemini/config/AGENTS.md` (`human-base`) + `layer-10-<root>.md` (`business-base` + executive governance). Mounted child subtrees in `layers/<dept>/` are **never** auto-injected into `Root 0`'s always-on context; they are queried on demand via `make consult` (`rcap1`) or delegated via `make delegate`. | **`allow`** — Enables holistic 360° executive orchestration, cross-subtree inspection (`make status`, `make horizon`), and `1-hop` downward delegation across `layers/*`. |
+| **`Department` / `Domain-Policy`** (`precedence: 5..49`) | Global `AGENTS.md` + inherited `layer-10-<root>.md` + `layer-<NN>-<dept>.md` (+ `science-base` + `software-engineering` when `make setup-dev` is active). | **`deny` / `ask`** — Enforces vertical and horizontal departmental isolation; cross-department queries use `make consult LAYER=<peer>` (`strictly-read-only`). |
+| **`Level 3 Unit` (`Case` / `Study` / `Squad`) & `Level 4 Project`** (`precedence: 50..80` + `85..95` `Human-Stack`) | Global `AGENTS.md` + inherited chain (`0..80`) + specialization stack (`science-stack`, `business-stack`, or `framework-stack`) + personal `Human-Stack` (`M1..M4`) in `.agents/SESSION.md`. | **`deny` / `ask`** — Confines execution strictly to the unit, case, or application repository; upward rule changes are proposed via `make promote` (`promote-from-project --create-pr`). |
 
 ---
 
@@ -80,7 +84,7 @@ All daily engineering, legal, scientific, and corporate governance work runs dir
 
 When you initialize a layer via `bootstrap-workspace` (or a project via `apply-project`), the CLI automatically generates a **fill-in-the-blanks Setup Blueprint** and a **ready-to-paste Initial Chat Kickoff Prompt** inside the new workspace's `README.md` (or `.agents/LAYER_LINEAGE.md` for projects). Complete the 5 bullet fields and paste the kickoff prompt into your first `antigravity-agents` chat to materialize your layer rules, roadmap, and child tier commands automatically.
 
-### 3.1 Level 1 — `Root 0` (`--role corporate`, `precedence: 10`)
+### 3.1. Level 1 — `Root 0` (`--role corporate`, `precedence: 10`)
 
 1. **CLI Setup (Standalone Layer Workspace or Direct Platform Fork)**:
    ```bash
@@ -105,7 +109,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    - **Layer ID & Role**: `acme-corp-root` (`corporate`, `precedence: 10`)
    - **1-Hop Upstream Parent**: `open-source-root`
    - **Active Template Packs**: `business-base`, `acme-corp-root`
-   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Specs: domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]
+   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Stack facets: domain-<area>:M1..M4 | bridge-* | soft-* | hat-*]
    - **Mission, Scope & Core Invariants**: [Fill: Organization mission, core business domain, and compliance/IP/SLA non-negotiables]
    - **Downstream Topology (Next Tier)**: [Fill: Planned child Departments (--role department / --role domain-policy)]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -115,7 +119,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/acme-corp-root/rules/acme-corp-root.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh bootstrap-workspace commands to initialize our planned child Departments.
    ```
 
-### 3.2 Level 2 — `Department` (`--role department`, `precedence: 30` / `--role domain-policy`, `precedence: 5`)
+### 3.2. Level 2 — `Department` (`--role department`, `precedence: 30` / `--role domain-policy`, `precedence: 5`)
 
 1. **CLI Setup**:
    ```bash
@@ -132,7 +136,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    - **Layer ID & Role**: `dept-legal-ip` (`domain-policy`, `precedence: 5`)
    - **1-Hop Upstream Parent**: `acme-corp-root`
    - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`
-   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Specs: domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]
+   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Stack facets: domain-<area>:M1..M4 | bridge-* | soft-* | hat-*]
    - **Mission, Scope & Core Invariants**: [Fill: Department mission, domain invariants, and target file surface globs]
    - **Downstream Topology (Next Tier)**: [Fill: Planned child Squads (--role squad, e.g. squad-patent-ops)]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -142,13 +146,13 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/dept-legal-ip/rules/dept-legal-ip.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh bootstrap-workspace commands to initialize our child Squads.
    ```
 
-### 3.3 Level 3 — `Squad`, `Case`, or `Operational Unit` (`--role squad`, `precedence: 50`)
+### 3.3. Level 3 — `Squad`, `Case`, or `Operational Unit` (`--role squad`, `precedence: 50`)
 
 1. **CLI Setup**:
    ```bash
    ./scripts/layer-config.sh bootstrap-workspace /path/to/squad-patents \
      --id squad-patent-ops --role squad --precedence 50 \
-     --parent-dir /path/to/dept-legal --templates technical-base,fastapi-hexagonal
+     --parent-dir /path/to/dept-legal --templates software-engineering,fastapi-hexagonal
    ./scripts/layer-config.sh set-authority /path/to/squad-patents \
      --owner-role "Squad Lead" --emails "lead@squad.acme.com"
    ```
@@ -157,8 +161,8 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    ## Layer Setup Blueprint (Level 3 — Squad, Case & Operational Unit Governance)
    - **Layer ID & Role**: `squad-patent-ops` (`squad`, `precedence: 50`)
    - **1-Hop Upstream Parent**: `dept-legal-ip`
-   - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`, `technical-base`, `fastapi-hexagonal`, `squad-patent-ops`
-   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Specs: domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]
+   - **Active Template Packs**: `business-base`, `acme-corp-root`, `dept-legal-ip`, `science-base`, `software-engineering`, `fastapi-hexagonal`, `squad-patent-ops`
+   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Stack facets: domain-<area>:M1..M4 | bridge-* | soft-* | hat-*]
    - **Mission, Scope & Core Invariants**: [Fill: Operational unit, case, or squad mission, bounded contexts, specialization conventions, and verification gates]
    - **Downstream Topology (Next Tier)**: [Fill: Target application or case repositories for apply-project, e.g. /path/to/patent-api]
    - **Authorized Layer Owner (`set-authority`)**: [Fill: Role title & owner email]
@@ -168,7 +172,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    Read the filled Layer Setup Blueprint in README.md, system/mcp-layer.json, and .agents/LAYER_LINEAGE.md. Tailor antigravity/.gemini/config/AGENTS.md and templates/squad-patent-ops/rules/squad-patent-ops.md with our mission and invariants without duplicating upstream rules. Run make sync && make diff, update WORKROAD.md and WORKTASK.md, and output the exact ./scripts/layer-config.sh apply-project commands for our target application repositories.
    ```
 
-### 3.4 Level 4 — `Project` (`apply-project`, Application / Service Workspace & In-Layer `make setup-dev`)
+### 3.4. Level 4 — `Project` (`apply-project`, Application / Service Workspace & In-Layer `make setup-dev`)
 
 1. **CLI Setup (Project Under a `Department` or `Squad`, or In-Layer Technical Mode via `make setup-dev`)**:
    ```bash
@@ -181,18 +185,18 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
      --parent-dir /path/to/empresa-dept-legal --template scientific-knowledge-branch --layers all
 
    # Option B: In-layer technical dev mode inside Root 0, a Department, or a Squad (local .agents/ hybrid overlay)
-   cd /path/to/dept-legal && make setup-dev   # Overlays technical-base onto business rules (make sync restores business mode)
+   cd /path/to/dept-legal && make setup-dev   # Overlays science-base + software-engineering onto business rules (make sync restores business mode)
    ```
 2. **Fill-in-the-Blanks Blueprint (`.agents/LAYER_LINEAGE.md` in `Project`)**:
    ```markdown
    ## Project Setup Blueprint (Level 4 — Application Workspace)
-   - **Applied Template Packs**: `technical-base,fastapi-hexagonal,squad-patent-ops`
-   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Specs: domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]
+   - **Applied Template Packs**: `science-base,software-engineering,fastapi-hexagonal,squad-patent-ops`
+   - **Human-Stack Profile (Optional)**: [Optional: leave blank for default, or compose Human-Stack facets: domain-<area>:M1..M4 | bridge-* | soft-* | hat-*]
    - **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]
    - **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]
    - **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]
    ```
-   > **100% Optional & Graduated `Human-Stack` Application (`precedence: 85..95`)**: A **`Human-Spec`** is a single atomic capability/maturity/style facet (`domain-<area>:L1..L4`, `bridge-*`, `soft-*`, `hat-*`), while a **`Human-Stack`** is the composed profile of $N$ `Human-Specs`. You can (0) leave it blank (`default`), (1) invoke a single `Human-Spec` on the fly in chat, (2) set your personal evolving `Human-Stack` in `.agents/SESSION.md` (local per-operator, zero `make diff` drift), or (3) pre-populate it in `README.md` / `.agents/LAYER_LINEAGE.md` as a Squad/Department onboarding directive (see [`docs/reference/cross_departmental_and_human_stack_matrix.md`](../reference/cross_departmental_and_human_stack_matrix.md#2-the-human-spec--human-stack-matrix-fluid-multidisciplinary-profiles--maturity-adaptation)).
+   > **100% Optional & Graduated `Human-Stack` Application (`precedence: 85..95`)**: A **`Human-Stack`** is a composed operator profile built from $1..N$ optional facets (`domain-<area>:M1..M4`, `bridge-*`, `soft-*`, `hat-*`). You can (0) leave it blank (`default`), (1) invoke a single `Human-Stack` facet on the fly in chat, (2) set your personal evolving `Human-Stack` in `.agents/SESSION.md` (local per-operator, zero `make diff` drift), or (3) pre-populate it in `README.md` / `.agents/LAYER_LINEAGE.md` as a Squad/Department onboarding directive (see [`docs/reference/cross_departmental_and_human_stack_matrix.md`](../reference/cross_departmental_and_human_stack_matrix.md#2-the-human-stack-matrix-4-composable-facets--mastery-adaptation-m1m4)).
 3. **Initial Chat Kickoff Prompt (`Project`)**:
    ```text
    /sopen — Read .agents/LAYER_LINEAGE.md, all inherited .agents/rules/*.md, and our Project Setup Blueprint.
@@ -200,7 +204,7 @@ When you initialize a layer via `bootstrap-workspace` (or a project via `apply-p
    then propose the Pre-Edit Scope Blueprint for Task 1.
    ```
 
-### 3.5 Authority Gate, 1-Hop Horizon Radar & Child-Contextualized Promotion
+### 3.5. Authority Gate, 1-Hop Horizon Radar & Child-Contextualized Promotion
 
 Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node only inspects its immediate `1-hop upstream` parent and its immediate `1-hop downstream` children (`layers/*`). Skipping intermediate layers (`Squad -> Corporate Root` or `Department -> Open Source`) is deterministically blocked (`CROSS_TIER_PROMOTION_BYPASS`).
 
@@ -223,14 +227,14 @@ Every layer operates with a **strict 1-hop horizon** (`inspect-horizon`): a node
 # Note: inspect-horizon and Root 0's Makefile automatically route to DOTFILES_DEV_REPO_DIR
 # (or ~/Projects/dev-<repo>) when present, keeping ~/dotfiles-ubuntu as the clean runtime clone.
 ./scripts/layer-config.sh promote-from-project /path/to/corp-root \
-  --source templates/business-base/rules/business-base.md \
+  --source templates/base-stack/business-base/rules/business-base.md \
   --upstream-dir ~/dotfiles-ubuntu --to-template business-base --create-pr \
   --org "Anonymous Organization (default)" \
   --contributors "Principal Enterprise Architect, CLO, CTO" \
   --context "Validated across Corporate Root 0 + 5 Department subtrees + Squad workspaces"
 ```
 
-### 3.6 Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`
+### 3.6. Day-to-Day Ergonomics: Slash Workflows (`/sopen`, `/enrich`) & Generated Layer `Makefile`
 
 Nobody needs to memorize long `layer-config.sh` invocations for daily operations. Every layer workspace initialized or synced via `bootstrap-workspace` / `sync-layer` provides two built-in ergonomic channels:
 
@@ -248,7 +252,7 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
      - `make authority [OP=<op>] [PARENT_DIR=<dir>]` — Checks whether `git config user.email` is authorized on the layer (or via overarching 1-hop parent authority `UPSTREAM_HIERARCHICAL_AUTHORITY` when `PARENT_DIR` has higher deontic precedence and `relationship_scope == "internal"`, sharing the same `governing_root_id`).
      - `make mcp-test` — Runs `list-templates` across the workspace and its mounted subtrees, returning discovered `templates`, `federated_mcps`, and `ephemeral_bots`.
    - **Tier `C2: guided_tactical` (Per-Task / Intra-Layer Transitions — local workspace state)**:
-     - `make setup-dev` — Overlays `technical-base` (`rules/technical-base.md` + `skills/{testing,refactoring,validation,oss-contribute}`) onto the layer's active domain/business rules in `.agents/` (`workspace_mode: "hybrid"`), enabling full software-engineering rigor inside any `Root 0`, `Department`, or `Squad` checkout without mutating `system/mcp-layer.json` (`make sync` restores `business` mode).
+     - `make setup-dev` — Overlays `science-base` + `software-engineering` (`rules/{science-base,software-engineering}.md` + `skills/{testing,refactoring,validation,oss-contribute}`) onto the layer's active domain/business rules in `.agents/` (`workspace_mode: "hybrid"`), enabling full software-engineering rigor inside any `Root 0`, `Department`, or `Squad` checkout without mutating `system/mcp-layer.json` (`make sync` restores `business` mode).
      - `make task TASK=<id> [TICKET=<id>]` — Claims a task item in `WORKTASK.md` (normalizing inline Markdown formatting, marking it `[/]`, and stamping `**[<TICKET>]**` when `TICKET` is supplied), updates `.agents/SESSION.md` (`## Active Task` with `Ticket ID` and `Origin Layer`), and outputs `git checkout -b feature/<TICKET-ID>-<slug>`.
      - `make sync [STRATEGY=reconcile|accept-upstream|keep-local|merge]` — Self-heals generated `# Role-Specialized Layer Makefile` targets (preserving any `# --- Custom Targets ---` tail) and manifest contracts (`mcp-layer-v1`, `squad`, and `target_role: "department"`), reconciles inherited template packs from the configured parent (`PARENT_DIR`) using `STRATEGY` (`reconcile` default stages diverged upstream rules in `.agents/proposals/from-upstream/`; `accept-upstream` adopts upstream; `merge` preserves local-only `# / ## / ###` headings; `keep-local` keeps local rule files), reconciles `[x]` completed child tasks from `layers/<child>/WORKTASK.md` (without mutating remote-backed child subtrees in place), and refreshes `.agents/` rules + `LAYER_LINEAGE.md`.
    - **Tier `C3: conscious_human_gated` (Low-Frequency / High-Consciousness Inter-Layer & Authority Gates)**:
@@ -259,13 +263,16 @@ Nobody needs to memorize long `layer-config.sh` invocations for daily operations
      - `make promote SOURCE=.agents/rules/<file>.md [TEMPLATE=<pack>] [TARGET_REPO=<path>]` — Promotes a generalized rule/skill 1-hop upward with `PR_FLAGS=--create-pr` (staging non-destructively at `.agents/proposals/to-<layer>/` when target files already exist or caller lacks direct release authority, unless `--force` is passed).
      - `make delegate CHILD=<layer-id> TASK="<directive>" [TICKET=<id>] [PRIORITY=P0|P1|P2]` — Delivers a 1-hop downward directive or file into the child layer's surface (`layers/<child>/`), records `- [/] **[<TICKET-ID> -> <child> (stage: delegated)]**` under `## Outbound Delegations` in the parent layer's `WORKTASK.md`, and stages existing files non-destructively at `.agents/proposals/from-<parent>/` unless `--force` is passed.
 
-### 3.7 Concrete `$HOME` vs. `Workspace` Setup Recipes Across the 5 Real-World Archetypes
+### 3.7. Concrete `$HOME` vs. `Workspace` Setup Recipes Across the 5 Real-World Archetypes
 
 Every person's environment is the combination of two clear choices:
 1. **`$HOME` (`~/dotfiles-ubuntu` $\rightarrow$ `~/.gemini/config/AGENTS.md`)**: *Which organization or department do you belong to permanently?*
-2. **`Workspace` (`<repo>/.agents/`)**: *What specific layer, case, or project are you working on today, which external layers (`layers/*`) does it cross, which specialization stack (`business-stack`, `science-stack`, `tech-stack`) does it use, and what is your contextual seniority (`Human-Stack` `L1..L4`) in that workspace?*
+2. **`Workspace` (`<repo>/.agents/`)**: *What specific layer, case, or project are you working on today, which external layers (`layers/*`) does it cross, which specialization stack (`science-stack`, `business-stack`, `framework-stack`) does it use, and what is your contextual mastery (`Human-Stack` `M1..M4`) in that workspace?*
 
-#### Archetype 1 — Public Administration Chain (Public `Root 0` $\rightarrow$ Public Department $\rightarrow$ Civil Servant)
+#### 3.7.1. Archetype 1 — Public Administration Chain (Public `Root 0` $\rightarrow$ Public Department $\rightarrow$ Civil Servant)
+
+Bootstrap a sovereign public-government `Root 0` (`precedence: 1`), child ministry/agency layers (`precedence: 3..4`), and daily administrative case workspaces:
+
 ```bash
 # A. Public Administration Root 0 Maintainer (precedence: 1, entity_kind: public-government):
 ./scripts/layer-config.sh bootstrap-workspace ~/Projects/public-gov-root \
@@ -284,9 +291,13 @@ git clone <dept-justice-repo-url> ~/dotfiles-ubuntu && cd ~/dotfiles-ubuntu && .
   --parent-dir ~/dotfiles-ubuntu --template scientific-knowledge-branch
 ```
 
-#### Archetype 2 — Company / Law Firm Member Crossing Public Administration Layers (`dept-justice` & `dept-tax`)
+#### 3.7.2. Archetype 2 — Company / Law Firm Member Crossing Public Administration Layers (`dept-justice` & `dept-tax`)
+
+Mount public statutory subtrees (`precedence: 3..4`) inside a corporate legal department (`15`) and query statutory articles on demand via `make consult`:
+
 ```bash
-# 1. Once inside empresa-dept-legal (precedence: 15, inheriting empresa-root at 10), mount public layers:
+# 1. Once inside empresa-dept-legal (precedence: 15, inheriting empresa-root at 10), mount public layers
+#    (supports pinning either default 'master' or a dedicated specialty/stage branch such as 'specialty/gdpr'):
 cd ~/Projects/empresa-dept-legal
 ~/dotfiles-ubuntu/scripts/layer-subtree.sh add dept-justice <public-dept-justice-url> master   # precedence: 3
 ~/dotfiles-ubuntu/scripts/layer-subtree.sh add dept-tax     <public-dept-tax-url>     master   # precedence: 4
@@ -299,26 +310,118 @@ git clone <empresa-dept-legal-url> ~/dotfiles-ubuntu && cd ~/dotfiles-ubuntu && 
 cd ~/Projects/recurso-fiscal-cliente-x && make consult LAYER=dept-tax QUERY="articulo aplicable IVA intracomunitario"
 ```
 
-#### Archetype 3 — Enterprise Tech Lead (`L4`) vs. Junior Squad Member (`L1`) on the Same Project
+#### 3.7.3. Archetype 3 — Enterprise Tech Lead (`M4`) vs. Junior Squad Member (`M1`) on the Same Project
+
+Share identical `0..80` architectural and test gates across the team while tailoring cognitive delivery (`M1..M4`) per operator in `.agents/SESSION.md`:
+
 ```bash
 # Both stow empresa-dept-tech (precedence: 25) in $HOME and open the same microservice workspace:
 ./scripts/layer-config.sh apply-project ~/Projects/checkout-api \
   --parent-dir ~/dotfiles-ubuntu --template fastapi-hexagonal
 # Same 100% test & hexagonal gates (0..80); each sets their contextual Human-Stack (85..95) in .agents/SESSION.md:
-# - Tech Lead (.agents/SESSION.md):   Human-Stack: domain-python:L4 | soft-deep-flow
-# - Junior Dev (.agents/SESSION.md):  Human-Stack: domain-python:L1 | soft-socratic-coach | hat-onboarding-explorer
+# - Tech Lead (.agents/SESSION.md):   Human-Stack: domain-python:M4 | soft-deep-flow
+# - Junior Dev (.agents/SESSION.md):  Human-Stack: domain-python:M1 | soft-socratic-coach | hat-onboarding-explorer
 ```
 
-#### Archetype 4 — Specialist Shifting Contexts (`science-stack` vs. `Human-Stack` Contextual Seniority)
-- **Morning (Core Discipline Workspace — `~/Projects/ensayo-clinico-fase2`)**: Applies `science-stack/scientific-knowledge-branch` with `Human-Stack: domain-biotech:L4` in `.agents/SESSION.md` $\rightarrow$ agent acts as a peer-level scientific synthesizer.
-- **Afternoon (Cross-Domain Workspace — `~/Projects/grant-tax-compliance` or `make setup-dev` script)**: Opens a workspace crossing `layers/dept-tax` (`4`) or `technical-base` (`25`) with `Human-Stack: domain-tax:L1 | domain-python:L1 | bridge-tech-for-business | soft-socratic-coach` $\rightarrow$ agent switches to didactic, step-by-step guidance while enforcing `100%` of the tax/code verification gates.
+#### 3.7.4. Archetype 4 — Specialist Shifting Contexts (`science-stack` vs. `Human-Stack` Contextual Mastery)
 
-#### Archetype 5 — Individual Professional / Freelancer (Zero Corporate Overhead)
+- **Morning (Core Discipline Workspace — `~/Projects/ensayo-clinico-fase2`)**: Applies `science-stack/scientific-knowledge-branch` with `Human-Stack: domain-biotech:M4` in `.agents/SESSION.md` $\rightarrow$ agent acts as a peer-level scientific synthesizer.
+- **Afternoon (Cross-Domain Workspace — `~/Projects/grant-tax-compliance` or `make setup-dev` script)**: Opens a workspace crossing `layers/dept-tax` (`4`) or `software-engineering` (`25`) with `Human-Stack: domain-tax:M1 | domain-python:M1 | bridge-tech-for-business | soft-socratic-coach` $\rightarrow$ agent switches to didactic, step-by-step guidance while enforcing `100%` of the tax/code verification gates.
+
+#### 3.7.5. Archetype 5 — Individual Sovereign `Root 0` (`~/<user-pc>`), Personal Child Tutor Sub-Layers & Parallel Workspaces
+
+Operate a personal `Root 0` workstation hub (`precedence: 90`) with optional child tutor sub-layers (`86`) and study/project workspaces:
+
 ```bash
-# $HOME uses the default read-only Open Source appliance (human-core):
-./scripts/workstation-sync.sh --setup
-# Apply any specialization stack directly to a personal or client repository:
-./scripts/layer-config.sh apply-project ~/Projects/my-project --template scientific-knowledge-branch
+# 1. Configure $HOME as a sovereign private personal Root 0 (~/<user-pc>, visibility_scope: private:individual:root-0):
+./scripts/workstation-sync.sh --setup --mode private --profile human-base
+
+# 2. (Optional) Bootstrap a Personal Child Tutor Sub-Layer (private:individual:department, governing_root_id: <user-pc>)
+#    that pulls Open-Source science-stack / framework-stack downward into your personal learning/career hierarchy:
+./scripts/layer-config.sh bootstrap-workspace ~/Projects/tutor-university \
+  --id tutor-university --role department --precedence 86 \
+  --parent-dir ~/dotfiles-ubuntu --templates science-base,scientific-knowledge-branch
+
+# 3. Apply any specialization stack or personal tutor layer to a study, research, or project workspace:
+./scripts/layer-config.sh apply-project ~/Projects/calculo-grado \
+  --parent-dir ~/Projects/tutor-university --template scientific-knowledge-branch
+# In .agents/SESSION.md: Human-Stack: domain-mathematics:M1 | soft-socratic-coach | hat-onboarding-explorer
+```
+
+### 3.8. Fixed vs. Ephemeral MCP, 12-Case Level/Mode/Flow Matrix & Inter-Layer Communication (`mcp_communication_mode`)
+
+Every consumer of an immediate parent layer (`Root 0` $\leftarrow$ `Department` $\leftarrow$ `Unit` $\leftarrow$ `Project`) uses a **3-tier context optimization architecture** so token consumption remains minimal (`85–90%` savings) while preserving full multi-layer governance:
+
+| Context Mechanism | Ideal Use Case Across Layers | Token & Context Cost | Where It Lives |
+|---|---|---|---|
+| **1. Static Projected Rules** | Immediate mandatory invariants from the governing layer chain (`make sync` / `apply-project --layers all`). | Always-on (`< 18 KB` / layer, `0` RPC calls) | `<repo>/.agents/rules/layer-<NN>-<id>.md` |
+| **2. Single Fixed `dotfiles-mcp` Server** | Active consumption of the workspace's immediate 1-hop parent (`PARENT_DIR`), surface weaving (`resolve_surface_governance`), and mounted `layers/*` catalog without running multiple MCP daemons. | `0` idle tokens; on-demand `rcap1` (`L0` `~15` tok $\rightarrow$ `L1` `~75` tok $\rightarrow$ `L2`/`L3`) | Registered once in `~/.gemini/config/mcp_config.json` (accepts `workspace_dir`) |
+| **3. Ephemeral `strictly-read-only` MCP Fork** | Cross-departmental audits (`layers/<dept>/`), specialist bots (`precedence: 15`), and horizontal peer `Root 0` consultations without polluting session context. | One-shot 4-Channel Digest + `rcap1` capsule; auto-reaped & crypto-shredded | `make consult LAYER=<id> QUERY="..."` (`orchestrate_ephemeral_fork`) |
+
+The table below summarizes the **Complete 12-Case Matrix of Node Levels, `visibility_scope`, `operating_state`, and Allowed vs. Blocked Flows** enforced by `_resolve_layer_entity_identity`, `_classify_inter_layer_relationship`, and `verify_single_hop_upstream`:
+
+| # | Node / Workspace Case | `visibility_scope` (`precedence`) | `operating_state` (`mcp_operating_mode`) | Allowed Downward & Intra-Tree Flows | Allowed Upward & Horizontal Flows (and Blocked Bypasses) |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | **Public Open-Source Repo** (`dotfiles-ubuntu`) | `public-oss` (`0`) | `oss-readonly-appliance` (`read-only-appliance`) | Feeds `3 Universal Bases + 3 Stacks` downward to all `Root 0`, `dev-*`, and `$HOME` clones (`workstation-sync`). | Receives tracker-free releases from `dev-*` (`make publish-oss`) and anonymized PRs (`oss-sanitized-pr`) from any `Root 0`. |
+| **2** | **Private OSS Contributor Clone** (`~/Projects/dev-<repo>`) | `private:open-source:dev` (`0`) | `oss-dev` (`full-dev-orchestrator`) | Self-cleans fork-test residue (`make setup-dev`), tracks private `WORKTASK.md` in `origin`, overlays clean committed engine into `$HOME`. | Publishes tracker-free snapshots to `public-oss` (`make publish-oss`); blocks raw tracker/ledger promotion (`OSS_PRIVATE_SURFACE_BLOCKED`). |
+| **3** | **Personal Sovereign `Root 0` Hub** (`~/<user-pc>` in `mode=private`) | `private:individual:root-0` (`90`) | `individual-root` (`personal-root-hub`) | Pulls `public-oss` stacks downward; hosts `machine/*` & `hat/*` branches; delegates 1-hop downward to personal child sub-layers (`layers/tutor-*`). | Promotes anonymized generic rules to `public-oss` (`oss-sanitized-pr`) or peer `Root 0`s (`inter-root-peer-pr`); consultable via `make consult LAYER=workstation`. |
+| **4** | **Personal Child Sub-Layer / Tutor** (`tutor-university`, `tutor-career`) | `private:individual:department` or `:unit` (`85..89`) | `department` / `squad` (`governed-layer` / `unit-execution`) | Inherits `governing_root_id: <user-pc>`; weaves `science-stack` / `framework-stack` with `Human-Stack` (`M1..M4 + soft-socratic-coach`) for study/lab projects. | Communicates with `<user-pc>` via `internal-1hop-hierarchical`; direct promotion to `public-oss` or external `Root 0` blocked (`CROSS_TIER_PROMOTION_BYPASS`). |
+| **5** | **Personal Study / Custom Project** (`~/Projects/<my-study-or-app>`) | `private:individual:project` (`85..95`) | `project` (`project-consumer`) | Consumes `<user-pc>` or `tutor-*` rules in `.agents/` while keeping `$HOME` on `master` (`human-base`) across parallel IDE windows. | Promotes learned personal patterns 1-hop upward to `tutor-*` or `<user-pc>`; blocked from skipping directly to `public-oss`. |
+| **6** | **Public Admin `Root 0`** (`public-gov-root`) | `private:public-government:root-0` (`1..2`) | `corporate-root` (`root-0-authority`) | Delegates statutory frameworks 1-hop downward to ministries/agencies (`3..4`). | Can publish public statutes (`layers/dept-*`), collaborate with peer `Root 0`s (`inter-root-peer-pr`), or promote generic templates to `public-oss`. |
+| **7** | **Public Admin Ministry / Agency** (`dept-justice`, `dept-tax`, `aepd`) | `private:public-government:department` (`3..4`) | `domain-policy` (`governed-layer`) | Stores `< 465`-line statutory corpus in `docs/`; mounted by citizens/enterprises as external *Lex Superior* (`PUBLIC_REGULATORY_COMPLIANCE_REQUIRED`). | Promotes 1-hop upward to `public-gov-root` (`internal-1hop-hierarchical`); cannot be overridden by an enterprise `Root 0` (`hierarchical_authority_granted: false`). |
+| **8** | **Enterprise Fiduciary Department** (`dept-legal-ip`, `dept-compliance`) | `private:enterprise:department` (`5..9`) | `domain-policy` / `department` (`governed-layer`) | Exercises fiduciary veto (`precedence < 10`) over corporate/tech deliverables via `surface_bindings` (`make env-gate`). | Internal to `governing_root_id` (`internal-1hop-hierarchical`); deadlocks escalate via `ESCALATE_TO_ROOT` to `Root 0` (`10`) for rule codification. |
+| **9** | **Enterprise `Root 0` Hub** (`acme-root`) | `private:enterprise:root-0` (`10`) | `corporate-root` (`root-0-authority`) | Delegates directives (`make delegate`) to internal departments (`15..45`) and reconciles child proposals (`.agents/proposals/from-<child>/`). | Sole gateway for anonymized OSS promotion (`oss-sanitized-pr`, `OSS_AGNOSTICISM_VIOLATION`) and horizontal peer `Root 0` PRs (`from-peer-root-<id>/`). |
+| **10** | **Enterprise Functional Department** (`dept-finance`, `dept-ops`, `dept-tech`, `dept-brand`, `dept-mkt`) | `private:enterprise:department` (`15..45`) | `department` (`governed-layer`) | Runs in `business` mode or overlays `software-engineering` via `make setup-dev` (`hybrid`); delegates 1-hop to squads (`40..60`). | Promotes 1-hop to `acme-root`; direct promotion to `public-oss` or external `Root 0` blocked (`CROSS_TIER_PROMOTION_BYPASS`). |
+| **11** | **Enterprise Sub-Department / Squad / Service Node** (`squad-api`, `voip-platform`) | `private:enterprise:unit` (`40..60`) | `squad` (`unit-execution`) | Packages domain templates (`framework-stack` with optional `runtime_service`) and `federated_mcps` for consumer projects. | Promotes 1-hop to parent `Department`; blocked from bypassing `Department` to `Root 0` or `public-oss`. |
+| **12** | **Enterprise Bounded-Context Project** (`checkout-api`, `recurso-cliente-x`) | `private:enterprise:project` (`80`) | `project` (`project-consumer`) | Weaves inherited `0..80` rules (`apply-project --layers all`) + contextual `Human-Stack` (`85..95` in `.agents/SESSION.md`). | Promotes novel rules 1-hop to its governing `Squad`/`Department`; `dev -> tst -> pre -> pro` gated by `make env-gate`. |
+
+And `_classify_inter_layer_relationship` governs how Git and MCP communicate across the **4 Inter-Layer Communication Modes (`mcp_communication_mode`)**:
+1. **`internal-1hop-hierarchical`** (*Same `governing_root_id`, including an individual `Root 0` and its personal child tutor/project layers*): Vertical 1-hop delegation downward (`make delegate` into `layers/<child>/`) and promotion upward (`make promote` into `.agents/proposals/from-<child>/`).
+2. **`external-root0-to-oss-sanitized`** (*`Root 0` or `dev` $\rightarrow$ `public-oss`*): Only `Root 0` (`can_expose_to_oss: true`) or `private:open-source:dev` may publish or propose generic learnings to Open Source (`make publish-oss` or `make promote --create-pr`), automatically omitting `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `WORKVALI.md`, `roadmaps/`, `.agents/`, `corporate/`, `layers/`, and personal layers (`precedence >= 85`).
+3. **`external-peer-root0-pr-and-readonly-mcp`** (*`Root 0 A` $\leftrightarrow$ `Root 0 B`*): Horizontal peer collaboration between two distinct `Root 0` nodes (`inter_root_collaboration_authorized: true`) via `.agents/proposals/from-peer-root-<source-root-id>/` Pull Requests and `strictly-read-only` MCP consultation.
+4. **`blocked-must-route-via-governing-root0`** (*Internal `department`/`unit`/`project` $\rightarrow$ External*): Blocks direct external/OSS promotion from internal tiers; learnings must ascend 1-hop at a time to their `governing_root_id` (`Root 0`).
+
+### 3.9. Mounting Federated Knowledge Libraries (`gov-*`, `sci-*`, `geo-*`, `org-*`), Citation Receipts & `Q1..Q4` Lifecycle Radar
+
+Workspaces can mount open or private **Federated Knowledge Libraries** (`gov-<country>`, `sci-<discipline>`, `geo-<territory>`, `org-<entity>`) under `layers/<library-id>/` so statutory codes, scientific corpora, and territorial baselines are queried locally at sub-millisecond speed via `dotfiles-mcp` without bloating the `dotfiles-ubuntu` base repository:
+
+| Library Prefix | Domain Classification & Default Precedence | Example Library IDs | Hybrid Resolution Cascade & Academic/Governance Usage |
+| :--- | :--- | :--- | :--- |
+| **`gov-*`** | `statutory-governance` (`precedence: 1..4`, `E3`/`E2`) | `gov-es`, `gov-eu` | `local-mcp-clone -> private-mirror-remote -> public-canonical-remote`; emits `<layer_id>::<rel_file>#<section_slug>@<h2_digest16>:<epistemic_grade>` (`citation_receipt`). |
+| **`sci-*`** | `scientific-corpus` (`precedence: 20..60`, `E3..E0`) | `sci-medicine`, `sci-physics` | Pairs with `science-base` (`E3 > E2 > E1 > E0`) + `Human-Stack` (`domain-<subject>:M1..M4` + `soft-socratic-coach`) for academic learning (`M1` primary $\rightarrow$ `M4` doctoral) without a 5th stack. |
+| **`geo-*`** | `geographical-territorial` (`precedence: 3..15`, `E3`/`E2`) | `geo-es`, `geo-es-md` | Provides territorial, cartographic, climate, and municipal baselines composable with `gov-*`, `sci-*`, and `org-*`. |
+| **`org-*`** | `organizational-enterprise` (`precedence: 10..45`, `E2`/`E1`) | `org-acme`, `org-uni` | Encapsulates corporate holding policies, university curricula, or NGO operational manuals. |
+
+- **Cryptographic Provenance (`citation_receipt`) & Drift Detection (`CITATION_DRIFT_DETECTED`)**: Every section returned by `query_governance_rules` or `unfold_context_capsule` includes a deterministic `citation_receipt` (`<layer_id>::<rel_file>#<section_slug>@<h2_digest16>:<epistemic_grade>`). Referencing `<layer_id>::docs/...` inside any rule, guide, or policy automatically populates `l3_targets` (`layers/<layer_id>/docs/...`) via `_extract_l3_links`, and passing cited receipts to `verify_epistemic_context_claims` verifies whether `@<h2_digest16>` matches (`0` drift) or flags `CITATION_DRIFT_DETECTED`.
+- **2-Layer Citation Telemetry & `Q1..Q4` `Age × Empirical Usage` Radar**: Verified citations increment `.agents/telemetry/citation_stats.json` and classify library sections in `audit_node_drift` (`citation_lifecycle_radar`) across **`Q1_HOT_CORE`** (`<= 180d`, `>= 3` citations $\rightarrow$ `L0/L1` hot cache), **`Q2_HIGH_FRICTION`** (`> 180d`, `>= 3` citations $\rightarrow$ priority modernization), **`Q3_EMERGING_NICHE`** (`<= 180d`, `< 3` citations $\rightarrow$ monitor adoption), and **`Q4_NORMATIVE_OBSOLESCENCE`** (`> 180d`, `0` citations $\rightarrow$ candidate for repeal/archival, strictly preserving `E3 > E2 > E1 > E0` with `epistemic_override_allowed: false`).
+
+#### 3.9.1. End-to-End Mixed Closed-Loop Walkthrough (`~/<user-pc>` + `org-*` + `gov-es` + `geo-es` + `sci-*`)
+
+The snippet below demonstrates how a personal `Root 0` (`~/<user-pc>`), an academic university layer (`org-uni`), and a corporate product workspace (`org-enterprise`) combine **concise stack guardrails** with **deep library references (`citation_receipt` + `l3_targets`)** and **context-adaptive comprehension (`L0 -> L3` $\times$ `M1..M4`)**:
+
+```bash
+# 1. Mount public/corporate knowledge libraries inside the enterprise or personal workspace:
+cd ~/Projects/org-enterprise-app
+~/dotfiles-ubuntu/scripts/layer-subtree.sh add gov-es       <gov-es-repo-url>       master
+~/dotfiles-ubuntu/scripts/layer-subtree.sh add geo-es       <geo-es-repo-url>       master
+~/dotfiles-ubuntu/scripts/layer-subtree.sh add sci-physics  <sci-physics-repo-url>  master
+~/dotfiles-ubuntu/scripts/layer-subtree.sh add sci-medicine <sci-medicine-repo-url> master
+
+# 2. Apply operational guardrails (Stacks) without copying 10,000-line library treatises into .agents/rules/:
+~/dotfiles-ubuntu/scripts/layer-config.sh apply-project ~/Projects/org-enterprise-app \
+  --parent-dir ~/dotfiles-ubuntu --template fastapi-hexagonal,nist-csf-security --layers all
+
+# 3. Closed-Loop Reference in Rules/Policies/Guides:
+#    Concise workspace policies cite deep library sections via canonical citation_receipts:
+#    - Statutory rule:  `gov-es::docs/reference/boe_statute.md#article-1@a1b2c3d4e5f60718:E3`
+#    - Territorial norm:`geo-es::docs/reference/territory.md#seismic-zone@1122334455667788:E2`
+#    - Physical law:    `sci-physics::docs/reference/mechanics.md#conservation@99aabbccddeeff00:E3`
+#    `_extract_l3_links` automatically links `layers/<lib>/docs/reference/...` into `l3_targets`!
+
+# 4. Context-Adaptive Comprehension (L0 -> L1 -> L2 -> L3 + M1..M4 consumer_viewpoint):
+#    - Learner (M1/M2 in tutor-university): prioritizes `docs/guides/` (E1 Socratic lessons via academic-tutor)
+#    - Practitioner (M3/M4 in org-enterprise-app): prioritizes `docs/reference/` (E3/E2 primary truth)
+make consult LAYER=sci-physics QUERY="conservation law"
 ```
 
 ---

@@ -216,7 +216,7 @@ class TestEphemeralForksE2E:
         # Arrange
         script = str(REPO_DIR / "scripts" / "layer-config.sh")
         env = {
-            "PATH": "/usr/bin:/bin",
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
             "DOTFILES_REPO_DIR": str(REPO_DIR),
             "DOTFILES_EPHEMERAL_ROOT": str(tmp_path / "cli_eph"),
         }

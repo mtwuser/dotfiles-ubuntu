@@ -1,0 +1,38 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "django-backend",
+  "kind": "framework-stack",
+  "stack_group": "framework-stack",
+  "extends": "software-engineering",
+  "target_role": "department",
+  "upstream_framework": {
+    "name": "django",
+    "repository": "https://github.com/django/django.git",
+    "tracking_branch": "main"
+  },
+  "description": "Modular Django Service-Layer & Selector Architecture (Explicit Domain Services, Read Selectors, Strict ORM Boundaries & Zero-Logic Views)",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "django-service-and-selector-architecture",
+      "description": "Explicit domain services.py and selectors.py separation, thin views/serializers, explicit select_related/prefetch_related, and isolated AAA testing",
+      "mode": "transversal",
+      "target_globs": ["src/**", "apps/**", "tests/**", "*.py", "manage.py", "pyproject.toml"],
+      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure", "testing"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Django views, templates, and REST serializers contain zero domain mutation logic; all writes execute through explicit keyword-only functions in services.py (@transaction.atomic)",
+        "All multi-table reads execute through explicit query functions in selectors.py using select_related() / prefetch_related() to prevent N+1 queries",
+        "Database migrations are never auto-generated or applied without explicit human operator approval"
+      ],
+      "rule_files": [
+        "templates/framework-stack/django-backend/rules/django-architecture.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/django-backend/rules/django-architecture.md",
+        "templates/framework-stack/django-backend/skills/django-testing/SKILL.md"
+      ]
+    }
+  ]
+}

@@ -22,6 +22,7 @@ from dotfiles_mcp.core.constants import (
     LAYER_MANIFEST_CONTRACT_REV,
     LAYER_ROLE_MAKEFILE_TARGETS,
     MAKEFILE_ROLE_HEADER_PREFIX,
+    MCP_OPERATING_MODES,
     PUBLIC_GOV_PREFIXES,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
@@ -51,19 +52,13 @@ def _resolve_layer_entity_identity(
     lid, lrole = str(m.get("layer_id", ws.name)), str(m.get("layer_role", "project"))
     prec = int(m.get("precedence", ROLE_DEFAULT_PRECEDENCE.get(lrole, 80)))
     raw_ek = str(m.get("entity_kind", "")).strip().lower()
-    if raw_ek in VALID_ENTITY_KINDS:
-        ek = raw_ek
-    elif (
-        lrole == "workstation"
-        and lid not in ("dotfiles-ubuntu-default", "dotfiles-workstation-root")
-    ) or prec >= 85:
-        ek = "individual"
-    elif _is_oss_root_manifest(m):
-        ek = "open-source"
-    elif 1 <= prec <= 4 or lid.lower().startswith(PUBLIC_GOV_PREFIXES):
-        ek = "public-government"
-    else:
-        ek = "enterprise"
+    oss_ws = ("dotfiles-ubuntu-default", "dotfiles-workstation-root")
+    is_ind_ws = (lrole == "workstation" and lid not in oss_ws) or prec >= 85
+    is_gov = 1 <= prec <= 4 or lid.lower().startswith(PUBLIC_GOV_PREFIXES)
+    ek = raw_ek if raw_ek in VALID_ENTITY_KINDS else (
+        "individual" if is_ind_ws else (
+            "open-source" if _is_oss_root_manifest(m) else (
+                "public-government" if is_gov else "enterprise")))  # fmt: skip
     cscope = "individual" if ek == "individual" else "collective"
     exp_root = str(m.get("governing_root_id", "")).strip()
     up_raw = m.get("upstream_layer")
@@ -72,36 +67,47 @@ def _resolve_layer_entity_identity(
     eff_p, p_root, p_ek = _resolve_default_parent_dir(ws, parent_dir), "", ""
     if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
         pm = _load_manifest_dict(eff_p)
-        if not _is_oss_root_manifest(pm):
-            p_id = _resolve_layer_entity_identity(eff_p, pm)
+        p_id = _resolve_layer_entity_identity(eff_p, pm)
+        if p_id["entity_kind"] != "open-source":
             p_root = str(p_id["governing_root_id"] or pm.get("layer_id", eff_p.name))
             p_ek = str(p_id["entity_kind"])
     org_pfx = re.split(r"-(?:dept|squad)-", lid)[0] if ("-dept-" in lid or "-squad-" in lid) else ""
-    up_org_pfx = (
-        re.split(r"-(?:dept|squad)-", up_lid)[0]
-        if ("-dept-" in up_lid or "-squad-" in up_lid)
-        else ""
-    )
+    up_org_pfx = re.split(r"-(?:dept|squad)-", up_lid)[0] if (
+        "-dept-" in up_lid or "-squad-" in up_lid
+    ) else ""  # fmt: skip
     conflict_pfx = bool(org_pfx and p_root and not p_root.startswith(org_pfx))
-    if ek == "individual":
-        gov_root: str | None = exp_root or None
-    elif exp_root:
-        gov_root = exp_root
-    elif lrole == "corporate" or ek == "open-source" or (ek == "public-government" and prec <= 2):
-        gov_root = lid
-    elif p_root and p_ek == ek and not conflict_pfx:
-        gov_root = p_root
-    elif up_org_pfx:
-        gov_root = f"{up_org_pfx}-root"
-    elif up_lid:
-        gov_root = up_lid
-    elif org_pfx:
-        gov_root = f"{org_pfx}-root"
-    else:
-        gov_root = lid
+    is_root_ek = lrole == "corporate" or ek == "open-source" or (
+        ek == "public-government" and prec <= 2
+    )  # fmt: skip
+    ind_rt = exp_root or (
+        None if lrole in ("workstation", "corporate") else (p_root or up_lid or None)
+    )
+    gov_root: str | None = ind_rt if ek == "individual" else (
+        exp_root if exp_root else (lid if is_root_ek else (
+            p_root if (p_root and p_ek == ek and not conflict_pfx) else (
+                f"{up_org_pfx}-root" if up_org_pfx else (
+                    up_lid if up_lid else (f"{org_pfx}-root" if org_pfx else lid))))))  # fmt: skip
     t_cls = TOPOLOGICAL_ROLE_CLASSES.get(lrole, "consumer-workspace")
+    is_rt = lrole == "corporate" or ek == "open-source" or (prec <= 2) or (
+        ek == "individual" and lrole == "workstation" and not gov_root
+    )  # fmt: skip
+    is_dev = ek == "open-source" and ws.name.startswith("dev-")
+    t_sc = "dev" if is_dev else ("root-0" if is_rt else (
+        "department" if lrole in ("department", "domain-policy") else (
+            "unit" if lrole in ("squad", "bridge", "service-node") else "project")))  # fmt: skip
+    v_sc = "public-oss" if (ek == "open-source" and not is_dev) else f"private:{ek}:{t_sc}"
+    can_oss = is_rt or (up_lid in ("root", "dotfiles-ubuntu-default"))
+    exp_b = "oss-and-inter-root-gateway" if can_oss else "1-hop-parent-only"
+    is_ro_app = lrole == "workstation" and (ws / ".workstation-state.json").is_file()
+    is_ind_st = lrole == "workstation" and (m.get("entity_kind") == "individual" or prec >= 85)
+    w_st = "individual-root" if is_ind_st else ("oss-dev" if lrole == "workstation" else (
+        "corporate-root" if lrole == "corporate" else lrole))  # fmt: skip
+    op_state = "oss-readonly-appliance" if is_ro_app else w_st
+    mcp_m = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
     return {"layer_id": lid, "layer_role": lrole, "topological_class": t_cls, "precedence": prec,
-        "entity_kind": ek, "collective_scope": cscope, "governing_root_id": gov_root}  # fmt: skip
+        "entity_kind": ek, "collective_scope": cscope, "governing_root_id": gov_root,
+        "visibility_scope": v_sc, "exposure_boundary": exp_b, "can_expose_to_oss": can_oss,
+        "operating_state": op_state, "mcp_operating_mode": mcp_m}  # fmt: skip
 
 
 def _classify_inter_layer_relationship(
@@ -110,22 +116,31 @@ def _classify_inter_layer_relationship(
     """Classify mutual relationship between layers (internal vs external collective/individual)."""
     src_ek, tgt_ek = str(source_identity["entity_kind"]), str(target_identity["entity_kind"])
     src_root, tgt_root = (
-        source_identity.get("governing_root_id"),
-        target_identity.get("governing_root_id"),
-    )
+        source_identity.get("governing_root_id"), target_identity.get("governing_root_id"),
+    )  # fmt: skip
+    eff_s = src_root or (source_identity.get("layer_id") if src_ek == "individual" else None)
+    eff_t = tgt_root or (target_identity.get("layer_id") if tgt_ek == "individual" else None)
     same_root = bool(
-        src_root
-        and src_root == tgt_root
-        and src_ek == tgt_ek
-        and source_identity["collective_scope"] == "collective"
-        and target_identity["collective_scope"] == "collective"
-    )
-    rel_scope = "internal" if same_root else "external"
-    return {"relationship_scope": rel_scope,
+        eff_s and eff_s == eff_t and src_ek == tgt_ek
+        and (source_identity["collective_scope"] == "collective" or src_root or tgt_root)
+    )  # fmt: skip
+    rel_scope, oss_ok = "internal" if same_root else "external", bool(
+        source_identity.get("can_expose_to_oss")
+    )  # fmt: skip
+    inter_root_ok = bool(oss_ok and target_identity.get("can_expose_to_oss"))
+    mcp_mode = "internal-1hop-hierarchical" if same_root else (
+        "external-root0-to-oss-sanitized" if (tgt_ek == "open-source" and oss_ok) else (
+            "external-peer-root0-pr-and-readonly-mcp" if inter_root_ok
+            else "blocked-must-route-via-governing-root0"))  # fmt: skip
+    return {"relationship_scope": rel_scope, "mcp_communication_mode": mcp_mode,
         "external_category": "internal" if same_root else f"external:{tgt_ek}",
         "same_governing_root": same_root, "source_governing_root_id": src_root,
         "target_governing_root_id": tgt_root, "target_entity_kind": tgt_ek,
-        "target_collective_scope": target_identity["collective_scope"]}  # fmt: skip
+        "target_collective_scope": target_identity["collective_scope"],
+        "source_visibility_scope": source_identity.get("visibility_scope"),
+        "target_visibility_scope": target_identity.get("visibility_scope"),
+        "oss_gateway_authorized": oss_ok,
+        "inter_root_collaboration_authorized": inter_root_ok}  # fmt: skip
 
 
 def _match_manifest_actor_role(manifest: dict[str, Any], actor_email: str) -> tuple[str, bool]:
@@ -138,26 +153,21 @@ def _match_manifest_actor_role(manifest: dict[str, Any], actor_email: str) -> tu
     def _Pool(top_key: str, roster_key: str) -> list[str]:
         top = [str(e).strip() for e in auth.get(top_key, []) if str(e).strip()]
         r_list = [
-            str(m.get("email", "")).strip()
-            for m in roster.get(roster_key, [])
+            str(m.get("email", "")).strip() for m in roster.get(roster_key, [])
             if isinstance(m, dict) and str(m.get("email", "")).strip()
-        ]
+        ]  # fmt: skip
         return list(dict.fromkeys([*top, *r_list]))
 
     owners = _Pool("authorized_emails", "owners")
     maintainers = _Pool("maintainer_emails", "maintainers")
-    validators = _Pool("validator_emails", "validators")
-    members = _Pool("member_emails", "members")
+    validators, members = _Pool("validator_emails", "validators"), _Pool("member_emails", "members")
     has_roster = bool(owners or maintainers or validators or members)
     clean_em = actor_email.strip().lower()
     if not clean_em:
         return "consumer", has_roster
-    for role_name, pool in (
-        ("owner", owners),
-        ("maintainer", maintainers),
-        ("validator", validators),
-        ("member", members),
-    ):
+    pools = (("owner", owners), ("maintainer", maintainers), ("validator", validators),
+        ("member", members))  # fmt: skip
+    for role_name, pool in pools:
         if any(fnmatchcase(clean_em, pat.lower()) for pat in pool):
             return role_name, has_roster
     return "consumer", has_roster
@@ -167,32 +177,25 @@ def _resolve_hierarchical_actor_profile(
     target_dir: Path, *, actor_email: str, parent_dir: Path | None = None
 ) -> dict[str, Any]:
     """Compute effective actor role, read-only upstream inheritance, and parent overarching auth."""
-    ws = target_dir.resolve()
-    ws_m = _load_manifest_dict(ws)
+    ws, ws_m = target_dir.resolve(), _load_manifest_dict(target_dir.resolve())
     eff_p = _resolve_default_parent_dir(ws, parent_dir)
     local_id_meta = _resolve_layer_entity_identity(ws, ws_m, eff_p)
-    lid, lrole, lprec = (
-        str(local_id_meta["layer_id"]),
-        str(local_id_meta["layer_role"]),
-        int(local_id_meta["precedence"]),
-    )
-    local_role, has_roster = _match_manifest_actor_role(ws_m, actor_email)
-    up_role, up_id, up_prec, hier_ok = "consumer", None, None, False
-    up_rel = "none"
+    lid = str(local_id_meta["layer_id"])
+    lrole, lprec = str(local_id_meta["layer_role"]), int(local_id_meta["precedence"])
+    raw_role, has_roster = _match_manifest_actor_role(ws_m, actor_email)
+    is_ind_owner = not has_roster and local_id_meta["entity_kind"] == "individual"
+    local_role = "owner" if is_ind_owner else raw_role
+    up_role, up_id, up_prec, hier_ok, up_rel = "consumer", None, None, False, "none"
     if eff_p is not None and (eff_p / "system/mcp-layer.json").is_file():
         up_m = _load_manifest_dict(eff_p)
         up_id_meta = _resolve_layer_entity_identity(eff_p, up_m)
-        up_id = str(up_id_meta["layer_id"])
-        up_prec = int(up_id_meta["precedence"])
+        up_id, up_prec = str(up_id_meta["layer_id"]), int(up_id_meta["precedence"])
         rel = _classify_inter_layer_relationship(local_id_meta, up_id_meta)
         up_rel = str(rel["external_category"])
         if not _is_oss_root_manifest(up_m):
             up_role, _ = _match_manifest_actor_role(up_m, actor_email)
-            hier_ok = (
-                up_role in ("owner", "maintainer")
-                and up_prec < lprec
-                and rel["relationship_scope"] == "internal"
-            )
+            is_int = rel["relationship_scope"] == "internal"
+            hier_ok = up_role in ("owner", "maintainer") and up_prec < lprec and is_int
     rank = {"owner": 4, "maintainer": 3, "validator": 2, "member": 1, "consumer": 0}
     eff_role = up_role if (hier_ok and rank[up_role] > rank[local_role]) else local_role
     return {"layer_id": lid, "layer_role": lrole, "precedence": lprec,
@@ -374,24 +377,34 @@ def _sync_mounted_children_into_parent(
                     shutil.copy2(src_rf, ag_rf)
     p_wt = ws / "WORKTASK.md"
     if not dry_run and p_wt.is_file() and (ws / "layers").is_dir():
+        tk_re = re.compile(r"\b([A-Z]{2,12}-\d{2,6}(?:-\d{1,6})?)\b")
         done_tks = {
-            m.group(1).lower()
-            for cwt in (ws / "layers").glob("*/WORKTASK.md")
+            m.group(1).lower() for cwt in (ws / "layers").glob("*/WORKTASK.md")
             for ln in cwt.read_text("utf-8").splitlines()
-            if re.match(r"^\s*-\s*\[[xX]\]\s+", ln)
-            and (m := re.search(r"\b([A-Z]{2,12}-\d{2,6}(?:-\d{1,6})?)\b", ln))
-        }
+            if re.match(r"^\s*-\s*\[[xX]\]\s+", ln) and (m := tk_re.search(ln))
+        }  # fmt: skip
         p_txt = p_wt.read_text("utf-8")
         p_lines = [
             re.sub(r"^(\s*-\s*\[)[ /](\])", r"\1x\2", pl).replace(
                 "stage: `delegated`", "stage: `completed (pro)`"
+            ) if re.match(r"^\s*-\s*\[[ /]\]\s+", pl) and "->" in pl and any(
+                tk in pl.lower() for tk in done_tks
+            ) else pl for pl in p_txt.splitlines()
+        ]  # fmt: skip
+        for cp in (
+            p for p in sorted((ws / "layers").glob("*/.agents/proposals/**/*.md"))
+            if not p.parent.name.startswith("from-")
+        ):  # fmt: skip
+            cname = cp.relative_to(ws / "layers").parts[0]
+            rel_p = f".agents/proposals/from-{cname}/{cp.name}"
+            (ws / f".agents/proposals/from-{cname}").mkdir(parents=True, exist_ok=True)
+            shutil.copy2(cp, ws / rel_p)
+            dec_ln = (
+                f"- [ ] **[GOVERNANCE DECISION: from-{cname}/{cp.name}]**: "
+                f"Review staged child proposal `{rel_p}` via `make decision`"
             )
-            if re.match(r"^\s*-\s*\[[ /]\]\s+", pl)
-            and "->" in pl
-            and any(tk in pl.lower() for tk in done_tks)
-            else pl
-            for pl in p_txt.splitlines()
-        ]
+            if rel_p not in "\n".join(p_lines):
+                p_lines.append(dec_ln)
         if (new_p_txt := "\n".join(p_lines) + "\n") != p_txt:
             p_wt.write_text(new_p_txt, "utf-8")
     return synced
@@ -433,23 +446,17 @@ def _render_lineage_markdown(resolved_tpl_name: str, rows: list[str]) -> str:
         "# Multi-Layer Governance Lineage (`dotfiles-ubuntu`)\n",
         f"- **Applied Template Pack**: `{tpl_label}`\n",
         "## Participating Layers (Ordered by Precedence `0..100`)\n",
-        "| Precedence | Layer | Layer ID | Role | Surface Bindings |",
-        "|---:|---|---|---|---:|",
-        *rows,
-        "",
-        "## Project Setup Blueprint (Level 4 — Application Workspace)",
+        "| Precedence | Layer | Layer ID | Role | Surface Bindings |\n|---:|---|---|---|---:|",
+        *rows, "", "## Project Setup Blueprint (Level 4 — Application Workspace)",
         f"- **Applied Template Packs**: `{tpl_label}`",
         f"- **Human-Stack Profile (Optional)**: {HUMAN_STACK_BLUEPRINT_HINT}",
         "- **Project / Service Purpose**: [Fill: Core product/service mission and bounded context]",
         "- **Architecture & Integrations**: [Fill: Domain modules, DB/APIs, and UI/CLI surface]",
         "- **Phase 1 Milestone Goal**: [Fill: Initial vertical slice or MVP deliverable]",
-        "",
-        "## Initial Chat Kickoff Prompt",
-        "```text",
+        "", "## Initial Chat Kickoff Prompt\n```text",
         "/sopen — Read .agents/LAYER_LINEAGE.md, all inherited .agents/rules/*.md, and our "
         "Project Setup Blueprint.",
         "Initialize README.md, docs/architecture/ (1:1:1 specs), WORKROAD.md, and WORKTASK.md "
-        "for Phase 1, then propose the Pre-Edit Scope Blueprint for Task 1.",
-        "```",
-    ]
+        "for Phase 1, then propose the Pre-Edit Scope Blueprint for Task 1.\n```",
+    ]  # fmt: skip
     return "\n".join(lines) + "\n"

@@ -351,3 +351,84 @@ class TestSurfaceWeaver:
         assert cons_ext["consensus_status"] == "ESCALATE_INTER_ENTITY_ROOTS"
         assert any("PUBLIC_REGULATORY_COMPLIANCE_REQUIRED" in g for g in gates_ext)
         assert any("CROSS_ENTITY_ESCALATION_REQUIRED" in g for g in gates_ext)
+
+    def test_build_citation_receipt_and_evaluate_citation_telemetry_lifecycle(
+        self, tmp_path: Path
+    ) -> None:
+        """Build citation receipts, detect drift, and classify Q1..Q4 Age x Usage quadrants."""
+        # Arrange
+        sections = [
+            {
+                "citation_receipt": "sci-medicine::docs/triage.md#HEAT_STROKE@a1b2c3d4:E2",
+                "epistemic_grade": "E2",
+                "citation_count": 12,
+                "age_days": 30,
+                "stale_citation_hits": 0,
+                "proposal_friction_count": 0,
+            },
+            {
+                "citation_receipt": "gov-es::docs/lpacap.md#ART_21@f0e1d2c3:E3",
+                "epistemic_grade": "E3",
+                "citation_count": 1,
+                "age_days": 45,
+                "stale_citation_hits": 0,
+                "proposal_friction_count": 0,
+            },
+            {
+                "citation_receipt": "gov-es::docs/tax.md#DEDUCTIONS@11223344:E2",
+                "epistemic_grade": "E2",
+                "citation_count": 5,
+                "age_days": 100,
+                "stale_citation_hits": 2,
+                "proposal_friction_count": 1,
+            },
+            {
+                "citation_receipt": "gov-es::docs/royal_decree_1978.md#LEGACY@99887766:E1",
+                "epistemic_grade": "E1",
+                "citation_count": 0,
+                "age_days": 365,
+                "stale_citation_hits": 0,
+                "proposal_friction_count": 0,
+            },
+        ]
+
+        # Act
+        empty_radar = surface_weaver.load_citation_telemetry_radar(tmp_path)
+        receipt = surface_weaver.build_citation_receipt(
+            "gov-es", "/docs/sns.md", "1.2 Coverage", "8f3a91c2", "E3"
+        )
+        drift_empty = surface_weaver._verify_citation_receipt_claim({}, "c-0")
+        drift_none = surface_weaver._verify_citation_receipt_claim(
+            {"citation_receipt": receipt, "official_digest": "8f3a91c2"}, "c-1"
+        )
+        drift_hit = surface_weaver._verify_citation_receipt_claim(
+            {"citation_receipt": receipt, "official_digest": "deadbeef"}, "c-2"
+        )
+        surface_weaver.record_citation_telemetry_event(tmp_path, receipt, age_days=20)
+        surface_weaver.record_citation_telemetry_event(
+            tmp_path,
+            "bare-section@11223344",
+            is_stale_hit=True,
+            is_proposal_friction=True,
+            age_days=200,
+        )
+        persisted_radar = surface_weaver.load_citation_telemetry_radar(tmp_path)
+        radar = surface_weaver.evaluate_citation_telemetry_lifecycle(sections)
+
+        # Assert
+        assert empty_radar["tracked_sections_count"] == 0
+        assert persisted_radar["tracked_sections_count"] == 2
+        assert persisted_radar["quadrant_counts"]["Q2_HIGH_FRICTION"] == 1
+        assert receipt == "gov-es::docs/sns.md#1-2-coverage@8f3a91c2:E3"
+        assert drift_empty is None and drift_none is None
+        assert drift_hit is not None and drift_hit["code"] == "CITATION_DRIFT_DETECTED"
+        assert radar["epistemic_override_allowed"] is False
+        assert radar["quadrant_counts"] == {
+            "Q1_HOT_CORE": 1,
+            "Q2_HIGH_FRICTION": 1,
+            "Q3_EMERGING_NICHE": 1,
+            "Q4_NORMATIVE_OBSOLESCENCE": 1,
+        }
+        assert radar["dynamic_hot_index"][0]["epistemic_grade"] == "E3"
+        assert len(radar["obsolescence_candidates"]) == 1
+        assert len(radar["high_friction_targets"]) == 1

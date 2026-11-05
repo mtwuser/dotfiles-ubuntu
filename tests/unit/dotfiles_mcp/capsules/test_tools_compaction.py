@@ -9,6 +9,10 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
+from dotfiles_mcp.capsules.tools_compaction import (
+    infer_epistemic_grade,
+    verify_epistemic_context_claims,
+)
 from dotfiles_mcp.mcp_node.server import DotfilesMCPServer
 
 if TYPE_CHECKING:
@@ -247,3 +251,137 @@ class TestCompactionToolsMixin:
         assert res_16_matches["warnings"][0]["code"] == "RESPONSE_TRUNCATED"
         assert res_multi_kw["total_matches_found"] == 15
         assert res_multi_miss["total_matches_found"] == 0
+
+    def test_query_governance_rules_with_dmcp_branch_ref_projection(self) -> None:
+        """Query governance rules from a Git branch_ref with zero checkout via DMCP."""
+        # Arrange
+        server = DotfilesMCPServer()
+
+        # Act
+        res_branch = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {
+                    "query": "AAA",
+                    "scope": "global",
+                    "resolution": "L0",
+                    "branch_ref": "HEAD",
+                },
+            )["content"][0]["text"]
+        )
+
+        # Assert
+        assert res_branch["match_count"] >= 1
+        assert res_branch["dmcp_projection"]["branch_ref"] == "HEAD"
+        assert res_branch["dmcp_projection"]["zero_checkout"] is True
+        assert len(res_branch["dmcp_projection"]["commit_sha"]) >= 7
+
+    def test_infer_epistemic_grade_and_verify_epistemic_context_claims(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Infer E3..E0 grades, filter by min_epistemic_grade, and verify epistemic claims."""
+        # Arrange
+        docs_dir = tmp_path / "docs"
+        docs_dir.mkdir()
+        l3_file = docs_dir / "substrate.md"
+        l3_file.write_text("# Deep Substrate\nFormula: x <= 10.\n", encoding="utf-8")
+        (docs_dir / "mixed.md").write_text(
+            "# Mixed\n"
+            "## Draft Idea [E0]\nepword draft\n"
+            "## Contextual Guide\nepword guide\n"
+            "## Protocol Contract\nSpecification: docs/substrate.md\nepword [L3](substrate.md)\n"
+            "## Core Invariant\n**Mandate:** epword axiom\n",
+            encoding="utf-8",
+        )
+        (docs_dir / "guides").mkdir()
+        (docs_dir / "guides/tutor.md").write_text(
+            "# Tutor Guide\n## Intro Lesson\nepword socratic lesson\n", encoding="utf-8"
+        )
+        server = DotfilesMCPServer(repo_dir=tmp_path)
+
+        # Act
+        g_e0, _ = infer_epistemic_grade("BACKLOG.md", "Item", "body")
+        g_e3, _ = infer_epistemic_grade("AGENTS.md", "Rule", "body")
+        g_e2, _ = infer_epistemic_grade("docs/reference/01.md", "Sec", "body")
+        g_e1, _ = infer_epistemic_grade("docs/guides/01.md", "Overview", "body")
+        res_all = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "epword", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
+        (tmp_path / ".agents").mkdir(exist_ok=True)
+        (tmp_path / ".agents/SESSION.md").write_text(
+            "# Session\n- **Human-Stack**: domain-physics:M1\n", encoding="utf-8"
+        )
+        res_acad = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {"query": "epword", "scope": "docs", "resolution": "L0"},
+            )["content"][0]["text"]
+        )
+        (tmp_path / ".agents/SESSION.md").unlink()
+        res_e2 = json.loads(
+            server.call_tool(
+                "query_governance_rules",
+                {
+                    "query": "epword",
+                    "scope": "docs",
+                    "resolution": "L0",
+                    "min_epistemic_grade": "E2",
+                },
+            )["content"][0]["text"]
+        )
+        l3_targets = res_e2["matches"][1]["l3_targets"]
+        proof_ok = verify_epistemic_context_claims(
+            [
+                {
+                    "claim_id": "c-ok",
+                    "epistemic_grade": "E3",
+                    "overrides_grade": "E1",
+                    "l3_targets": l3_targets,
+                    "cut_point": 10.0,
+                    "observed_value": 10.0,
+                },
+                {"claim_id": "c-minimal", "epistemic_grade": "E2"},
+            ],
+            tmp_path,
+        )
+        proof_fail = verify_epistemic_context_claims(
+            [
+                {
+                    "claim_id": "c-bad",
+                    "epistemic_grade": "E1",
+                    "overrides_grade": "E3",
+                    "l3_targets": [{"path": "docs/missing.md", "sha256_prefix": "deadbeef"}],
+                    "cut_point": 10.0,
+                    "observed_value": 11.0,
+                    "citation_receipt": "gov-es::docs/mixed.md#CORE@11112222:E3",
+                    "official_digest": "99998888",
+                }
+            ],
+            tmp_path,
+        )
+
+        # Assert
+        assert (g_e3, g_e2, g_e1, g_e0) == ("E3", "E2", "E1", "E0")
+        assert res_all["consumer_viewpoint"] == "professional-scientific-m3-m4"
+        assert [m["epistemic_grade"] for m in res_all["matches"]] == ["E3", "E2", "E1", "E1", "E0"]
+        assert res_acad["consumer_viewpoint"] == "academic-tutor-m1-m2"
+        assert res_acad["matches"][0]["file"] == "docs/guides/tutor.md"
+        assert [m["epistemic_grade"] for m in res_e2["matches"]] == ["E3", "E2"]
+        assert "citation_receipt" in res_e2["matches"][0]
+        assert l3_targets[0]["path"] == "docs/substrate.md"
+        assert proof_ok["verified"] is True and proof_ok["error_code"] is None
+        assert proof_fail["verified"] is False
+        assert [v["code"] for v in proof_fail["violations"]] == [
+            "EPISTEMIC_PRECEDENCE_VIOLATION",
+            "PRIMARY_SOURCE_HASH_MISMATCH",
+            "CUT_POINT_BOUNDARY_VIOLATION",
+            "CITATION_DRIFT_DETECTED",
+        ]
+        with pytest.raises(ValueError, match="Invalid min_epistemic_grade"):
+            server.call_tool(
+                "query_governance_rules", {"query": "epword", "min_epistemic_grade": "E9"}
+            )

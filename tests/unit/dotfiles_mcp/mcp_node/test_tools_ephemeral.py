@@ -370,3 +370,40 @@ class TestEphemeralToolsMixin:
             ][0]["text"]
         )
         assert len(reap_all["reaped_forks"]) == 16
+
+    def test_orchestrate_ephemeral_fork_dmcp_project_branch_and_grcc_chain_capsule_ref(
+        self,
+    ) -> None:
+        """Execute project-branch (nominal and fail-closed fallback) and chain-capsule-ref."""
+        # Arrange
+        server = DotfilesMCPServer()
+
+        # Act
+        dmcp_ok = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {"action": "project-branch", "branch_ref": "HEAD", "task_step_id": "t-step"},
+            )["content"][0]["text"]
+        )
+        dmcp_fail = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {"action": "project-branch", "branch_ref": "--invalid-branch"},
+            )["content"][0]["text"]
+        )
+        grcc_probe = json.loads(
+            server.call_tool(
+                "orchestrate_ephemeral_fork",
+                {
+                    "action": "chain-capsule-ref",
+                    "grcc_op": "probe",
+                    "branch_ref": "HEAD",
+                    "task_step_id": "t-step-probe",
+                },
+            )["content"][0]["text"]
+        )
+
+        # Assert
+        assert dmcp_ok["verified"] is True and dmcp_ok["zero_checkout"] is True
+        assert dmcp_fail["verified"] is False and dmcp_fail["fallback_activated"] is True
+        assert grcc_probe["action"] == "chain-capsule-ref" and grcc_probe["exists"] is False

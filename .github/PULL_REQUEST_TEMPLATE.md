@@ -19,7 +19,7 @@
 
 | Field | Value |
 | :--- | :--- |
-| **Origin Layer / Template Pack** | `e.g., enterprise-root-0 -> templates/business-base` |
+| **Origin Layer / Template Pack** | `e.g., enterprise-root-0 -> templates/base-stack/business-base` |
 | **Contributing Organization / Company (Optional)** | `Anonymous Organization (default)` |
 | **Contributors / Roles Involved (Optional)** | `e.g., Principal Enterprise Architect, CLO, CTO, CMO (@github-handles or roles)` |
 | **Real-World Validation Context** | `e.g., Validated across Root 0 + 5 Department layers + Squad workspaces` |

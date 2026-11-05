@@ -358,7 +358,14 @@ class TestLayerConfigAndPromotionE2E:
             *["--id", "acme-corporate-base", "--role", "corporate", "--templates", "business-base"]
         ]
         dept_args = [
-            *["--id", "dept-eng-platform", "--role", "department", "--templates", "technical-base"],
+            *[
+                "--id",
+                "dept-eng-platform",
+                "--role",
+                "department",
+                "--templates",
+                "software-engineering",
+            ],
             "--parent-dir",
             str(corp_dir),
         ]
@@ -423,11 +430,11 @@ class TestLayerConfigAndPromotionE2E:
         )
         assert (
             dept_boot["applied_template"]
-            == "business-base,acme-corporate-base,technical-base,dept-eng-platform"
+            == "business-base,acme-corporate-base,software-engineering,dept-eng-platform"
         )
-        assert (
-            squad_boot["applied_template"]
-            == "business-base,acme-corporate-base,technical-base,dept-eng-platform,squad-cad-core"
+        assert squad_boot["applied_template"] == (
+            "business-base,acme-corporate-base,software-engineering,"
+            "dept-eng-platform,squad-cad-core"
         )
         assert reg_res["total_mounted_layers"] == 1
         assert (squad_diff["modified_in_project"], squad_diff["novel_in_project"]) == ([], [])
@@ -438,7 +445,8 @@ class TestLayerConfigAndPromotionE2E:
         for r in (
             "business-base",
             "acme-corporate-base",
-            "technical-base",
+            "science-base",
+            "software-engineering",
             "dept-eng-platform",
             "squad-cad-core",
         ):

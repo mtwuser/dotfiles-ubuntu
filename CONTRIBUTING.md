@@ -35,9 +35,9 @@ Third-party software outside the standard Ubuntu 26.04 APT repositories lives in
 
 > **Important**: Adding a recipe to `system/external/*/*.sh` makes it available in the catalog without forcing it onto other users' machines. A machine only installs or audits recipes listed in `system/external.txt` (which `./backup.sh` populates automatically based on what is installed locally).
 
-### B. Adding or Updating an Antigravity Skill (`antigravity/.gemini/config/skills/` or `templates/technical-base/skills/`)
+### B. Adding or Updating an Antigravity Skill (`antigravity/.gemini/config/skills/` or `templates/science-stack/software-engineering/skills/`)
 
-1. Universal lifecycle, governance, and dual-mode audit skills (`10` global skills: `sopen`, `sclose`, `continue`, `release`, `enrich`, `priority`, `review`, `full-audit`, `architecture-review`, `governance`) live in `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`, software-engineering-specific skills (`4` `technical-base` skills: `testing`, `refactoring`, `validation`, `oss-contribute`) live in `templates/technical-base/skills/<skill-name>/SKILL.md`, and specialization-stack skills (`5` skills across `business-stack` and `tech-stack`) live in `templates/{business-stack,tech-stack}/*/skills/<skill-name>/SKILL.md` (`19` total skills).
+1. Universal lifecycle, governance, and dual-mode audit skills (`10` global skills: `sopen`, `sclose`, `continue`, `release`, `enrich`, `priority`, `review`, `full-audit`, `architecture-review`, `governance`) live in `antigravity/.gemini/config/skills/<skill-name>/SKILL.md`, software-engineering branch skills (`4` `software-engineering` skills: `testing`, `refactoring`, `validation`, `oss-contribute`) live in `templates/science-stack/software-engineering/skills/<skill-name>/SKILL.md`, and specialization-stack skills (`9` skills across `business-stack`, `science-stack`, and `framework-stack`) live in `templates/{business-stack,science-stack,framework-stack}/*/skills/<skill-name>/SKILL.md` (`23` total skills).
 2. Include valid YAML frontmatter at the top of `SKILL.md`:
    - `name:` **MUST** be `kebab-case` (lowercase letters, digits, and hyphens only, e.g., `name: architecture-review`).
    - `description:` A concise 1–2 sentence trigger description explaining *when* the agent should activate the skill.
@@ -69,7 +69,7 @@ Contributors modifying Python scripts, hooks, MCP/Docker tooling, or tests shoul
 ```bash
 cd ~/dotfiles-ubuntu   # or cd "$DOTFILES_DEV_REPO_DIR"
 
-# 1. Create ./venv, install requirements-dev.txt, and materialize .agents/ (technical-base + Priority-1 skills)
+# 1. Create ./venv, install requirements-dev.txt, and materialize .agents/ (science-base + software-engineering + Priority-1 skills)
 make setup-dev         # (or 'make install' for ./venv only)
 
 # 2. Check consolidated workspace status (operating_state, mcp_operating_mode, command_tiers, horizon & diff)
@@ -93,8 +93,8 @@ make docker-build && make docker-self-test
 
 ### Dual-Clone Contributing Setup (`~/dotfiles-ubuntu` Runtime vs. Dedicated Dev Clone)
 
-When contributing upward from an Enterprise `Root 0` workspace while keeping `~/dotfiles-ubuntu` as your clean workstation runtime (`human-core` stowed into `~/.gemini/config/`):
-- Maintain a dedicated development clone at `~/Projects/dev-<repo>` (or set `DOTFILES_DEV_REPO_DIR`) with `technical-base` projected into `.agents/rules/`.
+When contributing upward from an Enterprise `Root 0` workspace while keeping `~/dotfiles-ubuntu` as your clean workstation runtime (`human-base` stowed into `~/.gemini/config/`):
+- Maintain a dedicated development clone at `~/Projects/dev-<repo>` (or set `DOTFILES_DEV_REPO_DIR`) with `science-base` + `software-engineering` projected into `.agents/rules/`.
 - `inspect-horizon` and `Root 0` generated `Makefile` (`CONTRIB_REPO`) automatically detect `DOTFILES_DEV_REPO_DIR` or `~/Projects/dev-<repo>` and route upward Open-Source promotions (`promote-from-project --create-pr`) to the contributing clone while keeping `~/dotfiles-ubuntu` as the runtime `sync-layer` parent.
 - Use optional `--org "<Organization>"`, `--contributors "<Roles/Handles>"`, and `--context "<Validation Topology>"` flags when generating upward PR plans (defaults remain 100% anonymous when omitted).
 

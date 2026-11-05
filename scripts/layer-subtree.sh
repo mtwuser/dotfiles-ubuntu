@@ -97,8 +97,13 @@ if mode == "url":
     d = load_json(repo_dir / "layers" / name / "system/mcp-layer.json")
     print(d.get("repository") or d.get("upstream_layer", {}).get("repository", ""))
 elif mode == "branch":
+    rm = load_json(repo_dir / "system/mcp-layer.json")
+    for entry in rm.get("mounted_layers", []):
+        if isinstance(entry, dict) and entry.get("name") in (name, f"layers/{name}") and entry.get("branch"):
+            print(entry["branch"])
+            sys.exit(0)
     d = load_json(repo_dir / "layers" / name / "system/mcp-layer.json")
-    print(d.get("upstream_layer", {}).get("branch", "master") or "master")
+    print(d.get("branch") or d.get("upstream_layer", {}).get("branch", "master") or "master")
 elif mode == "root-url":
     print(load_json(repo_dir / "system/mcp-layer.json").get("upstream_layer", {}).get("repository", ""))
 elif mode == "root-branch":
@@ -239,7 +244,36 @@ case "$SUBCOMMAND" in
       exit 1
     fi
     echo "⬇️  Synchronizing root repository from upstream $UPSTREAM_SOURCE ($UPSTREAM_BRANCH)..."
-    run_cmd git pull --ff-only "$UPSTREAM_SOURCE" "$UPSTREAM_BRANCH"
+    if [ "$DRY_RUN" = true ]; then
+      run_cmd git pull --ff-only "$UPSTREAM_SOURCE" "$UPSTREAM_BRANCH"
+    elif ! git -C "$REPO_DIR" pull --ff-only "$UPSTREAM_SOURCE" "$UPSTREAM_BRANCH" 2>/dev/null; then
+      SAVED_STATE="$(python3 - "$REPO_DIR" <<'PY'
+import json, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+p = root / "system/mcp-layer.json"
+KEYS = ("layer_id", "layer_role", "entity_kind", "precedence", "governing_root_id", "mounted_layers", "layer_authority", "global_profile", "human_stack")
+TRKS = ("WORKTASK.md", "WORKROAD.md", "ROADMAP.md", "BACKLOG.md", "WORKVALI.md")
+d = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+trks = {t: (root / t).read_text(encoding="utf-8") for t in TRKS if (root / t).is_file()}
+print(json.dumps({"id": {k: d[k] for k in KEYS if k in d}, "trks": trks}))
+PY
+)"
+      git -C "$REPO_DIR" fetch "$UPSTREAM_SOURCE" "$UPSTREAM_BRANCH" -q
+      git -C "$REPO_DIR" merge -X theirs --no-commit --no-ff FETCH_HEAD -q 2>/dev/null || true
+      python3 - "$REPO_DIR" "$SAVED_STATE" <<'PY'
+import json, pathlib, sys
+root, state = pathlib.Path(sys.argv[1]), json.loads(sys.argv[2])
+p, saved = root / "system/mcp-layer.json", state.get("id", {})
+if p.is_file() and saved:
+    d = json.loads(p.read_text(encoding="utf-8"))
+    d.update(saved)
+    p.write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8")
+for t, body in state.get("trks", {}).items():
+    (root / t).write_text(body, encoding="utf-8")
+PY
+      git -C "$REPO_DIR" add -A 2>/dev/null || true
+      git -C "$REPO_DIR" commit --no-edit -q 2>/dev/null || git -C "$REPO_DIR" commit -m "chore(sync): merge upstream $UPSTREAM_BRANCH" -q 2>/dev/null || true
+    fi
     ;;
   *)
     echo "❌ Unknown subcommand: $SUBCOMMAND" >&2; usage >&2; exit 1 ;;

@@ -253,7 +253,7 @@ def _dispatch_c2_subcommand(
         )
         _enforce_authority(repo_dir, "scaffold-template")
         return fork_configurator.scaffold_template_pack(
-            repo_dir, template_name=rest[0], kind=str(opts.get("kind", "tech-stack")),
+            repo_dir, template_name=rest[0], kind=str(opts.get("kind", "framework-stack")),
             description=_opt_str(opts, "description"),
             register_binding=bool(opts.get("register_binding", False)),
             rule_filename=_opt_str(opts, "rule_file"), dry_run=dry_run,

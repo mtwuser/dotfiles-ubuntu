@@ -10,12 +10,14 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 ---
 
-## Core Audit Principles
+## 1. Core Audit Principles
+
+Enforce these 5 foundational audit principles across every pass:
 
 1. **Repository & Stack Agnosticism**: Never assume rules or counts from another repository. Always discover the active repository's stack, manifests, and rule hierarchy first.
 2. **4-Scope Rule Separation**:
-   - **Scope 1 (`$HOME` Read-Only Workstation Base)**: Universal cognitive, session, and commit governance (`human-core`).
-   - **Scope 2 (General Technical Baseline — `technical-base`)**: Stack-general software engineering, `1:1:1` traceability, refactoring, and testing invariants applicable to any language or framework.
+   - **Scope 1 (`$HOME` Read-Only Workstation Base)**: Universal cognitive, session, and commit governance (`human-base`).
+   - **Scope 2 (General Scientific & Technical Baseline — `science-base` & `software-engineering`)**: Universal scientific `1:1:1` traceability and stack-general software engineering, refactoring, and testing invariants applicable to any language or framework.
    - **Scope 3 (Stack-Specific Template Pack)**: Language- and framework-specific conventions (e.g., Python 3.14 PEP 695, FastAPI/HTMX, TypeScript/React, Rust, Go).
    - **Scope 4 (Repository-Local Specifications & Gates)**: Architecture specs (`docs/architecture/`), domain invariants, and verification gates specific to the active repository.
 3. **Modern Stack Currency & Zero-Backward Law**: Always target the latest stable language/framework idioms declared by the project; flag and eliminate legacy shims, aliases, and deprecated fallbacks.
@@ -28,7 +30,7 @@ description: "Execute a deep, structured, multi-pass and multi-perspective repos
 
 ---
 
-## Audit Cadence Strategy (`C0 -> C3`): 1 Matrix of 4 Dimensions $\times$ 2 Radii of Action
+## 2. Audit Cadence Strategy (`C0 -> C3`): 1 Matrix of 4 Dimensions $\times$ 2 Radii of Action
 
 Both `/review` and `/full-audit` evaluate the exact same **4 Canonical Dimensions (`1. docs`, `2. arch`, `3. 1:1:1`, `4. layer`)**, eliminating redundant sub-commands by separating strictly along **Radius of Action**:
 
@@ -41,7 +43,7 @@ Both `/review` and `/full-audit` evaluate the exact same **4 Canonical Dimension
 
 ---
 
-## Phase 0 — Closed-World Context, Stack & Deterministic Probe Discovery
+## 3. Phase 0 — Closed-World Context, Stack & Deterministic Probe Discovery
 
 // delegate: flash
 
@@ -52,7 +54,7 @@ To provide **human-grade certainty through closed-world elimination** (never heu
 2. **Classify Active Rules by Scope & Enumerate 100% of the File Universe**:
    - Read `.agents/rules/*.md`, `.agents/LAYER_LINEAGE.md`, and `docs/architecture/*.md` (or `corporate/**/*.md`).
    - Enumerate all root community/governance files (`README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `ACCESSIBILITY.md`, `CODE_OF_CONDUCT.md`, `CHANGELOG.md`), `docs/**`, `templates/**`, `scripts/**`, and `tests/**` so zero files are omitted from terminology, link, or parity scans.
-   - Separate **generic inherited rules** (`technical-base`, `business-base`) from **stack-specific rules** (`business-stack/*`, `science-stack/*`, `tech-stack/*`) and **repository-local specs**; flag any leak where repository-local counts or single-stack literals contaminate a generic rule or skill.
+   - Separate **generic inherited rules** (`science-base`, `software-engineering`, `business-base`) from **stack-specific rules** (`business-stack/*`, `science-stack/*`, `framework-stack/*`) and **repository-local specs**; flag any leak where repository-local counts or single-stack literals contaminate a generic rule or skill.
 3. **Execute the 5 Closed-World Deterministic Probes (`Probe A..E`)**:
    - **Probe A — Live Verification & Host Audit Suite**: Run `make verify` (or `make doctor` / `make diff`) **AND** live workstation/environment audit scripts (`NO_COLOR=1 ./audit.sh`, `./scripts/audit-global-config.sh` when applicable) from the active workspace to catch cross-clone or environment-boundary false positives immediately.
    - **Probe B — Bidirectional AST Symbol, Constant & Docstring Graph**: Parse all production and test modules via AST to verify: (i) 100% explicit return annotations and 100% docstrings on public functions/methods (`not name.startswith("_") or name == "__init__"`), (ii) zero `.update(k=v)` keyword packing or raw integer slices (`> 2`), and (iii) **bidirectional constant wiring** (every constant in `constants.py` / `catalogs.py` is referenced by a consumer module or test, and every policy tuple is disjoint/consistent).
@@ -62,13 +64,15 @@ To provide **human-grade certainty through closed-world elimination** (never heu
 
 ---
 
-## Phase 1 — Pass 1: Conceptual Coherence, Human Persona Journeys & 4-Perspective Lifecycle Matrix
+## 4. Phase 1 — Pass 1: Conceptual Coherence, Human Persona Journeys & 4-Perspective Lifecycle Matrix
 
 Evaluate the repository along **two orthogonal axes**:
 1. **Horizontal Technical Lifecycle Matrix (4 Perspectives)** — how every rule or component behaves across setup, runtime, testing, and federation.
 2. **Vertical Human Persona Journeys (`Human <-> AI <-> Technology` Unity)** — how real human archetypes experience the repository from entry point (`README.md` / CLI) to day-2 operations.
 
-### 1.1 Horizontal 4-Perspective Lifecycle Matrix
+### 4.1 Horizontal 4-Perspective Lifecycle Matrix
+
+Verify every repository flow across four lifecycle stages from initial scaffolding to multi-layer federation:
 
 | Perspective | Question to Verify Across Every Flow |
 | :--- | :--- |
@@ -77,7 +81,7 @@ Evaluate the repository along **two orthogonal axes**:
 | **3. Verification / Testing / Gates** | Do automated linters, parity gates, and tests actually exercise the real runtime structure (e.g., class-indented methods, multi-channel guards, isolated unit coverage)? |
 | **4. Federation / Integration / Extrapolation** | Do cross-layer interactions, MCP contracts, and shared templates remain 100% extrapolable without leaking local repository assumptions? |
 
-### 1.2 Vertical Human Persona & Use-Case Journey Matrix (`Human <-> AI <-> Technology`)
+### 4.2 Vertical Human Persona & Use-Case Journey Matrix (`Human <-> AI <-> Technology`)
 
 Identify the concrete human archetypes served by the repository and simulate each persona's end-to-end journey from first contact to completion:
 
@@ -85,28 +89,32 @@ Identify the concrete human archetypes served by the repository and simulate eac
 | :--- | :--- |
 | **P1. Individual / First-Time User** | Clones the repository, reads `README.md` Quick-Start, runs initial setup/bootstrap, and executes the health/audit command. Verify zero surprise overwrites, zero false-positive drift warnings across supported profiles, and clear next steps. |
 | **P2. Organizational / Root-0 Adopter** | Forks or bootstraps the top-level organizational/domain workspace (`Root 0`), configures authority and upstream lineage, and follows the step-by-step guide in `docs/guides/`. Verify that every documented CLI command and flag in the guide executes verbatim without error. |
-| **P3. Department / Operational Unit Integrator** | Inherits from `Root 0` (`--parent-dir` or subtree), scaffolds specialization packs (`business-stack`, `science-stack`, `tech-stack`), and uses generated `Makefile` / CLI ergonomics (`make sync`, `make diff`, `make promote`) for 1-hop upward/downward flows. |
+| **P3. Department / Operational Unit Integrator** | Inherits from `Root 0` (`--parent-dir` or subtree), scaffolds specialization packs (`business-stack`, `science-stack`, `framework-stack`), and uses generated `Makefile` / CLI ergonomics (`make sync`, `make diff`, `make promote`) for 1-hop upward/downward flows. |
 | **P4. Consumer Project Developer & Agent** | Applies templates to an application repository, works under active guardrails/hooks, runs tests, and receives actionable remediation whenever a guardrail blocks an operation. |
 | **P5. Upstream Maintainer / Operator** | Runs full verification (`make verify`), inspects diagnostics, and prepares releases (`/release`) with zero cross-tier or private identifier leaks. |
 
-### Pass 1 Checklist
+### 4.3 Pass 1 Checklist
+
+Verify all 8 conceptual, geometric, and taxonomic invariants across the 4-level documentation cascade:
+
 - [ ] **4-Level Top-Down Documentation Cascade (`1. Gateway & Contribution [README.md, CONTRIBUTING.md, SECURITY.md, ACCESSIBILITY.md, CODE_OF_CONDUCT.md, docs/README.md, .github/] -> 2. Human Guides [docs/guides/*] -> 3. Normative Specs & References [docs/architecture/*, docs/reference/*] -> 4. Templates & Skills [templates/**/README.md, rules/*.md, SKILL.md]`)**: Verify directory trees against disk (`find`/`ls`), descriptive non-numeric Markdown link labels (`len(clean_label) > 2 and not clean_label.isdigit()`), relative links (`test -f`), CLI flag tables, and `< 465`-line modularity across all 4 documentation levels.
-- [ ] **Conceptual & Semantic Documentation Reading Pass (`Concept-to-Code & Backtick-Aware Count Isomorphism`)**: Read prose tables and conceptual explanations word-for-word against the live codebase (`constants.py`, `templates/**/template.json`, `.agents/skills/*/SKILL.md`) using backtick-aware count patterns (`` `?N`? ``) to verify: (1) zero retired taxonomy terms (`VALID_TEMPLATE_KINDS`: strictly `core-base`, `business-stack`, `science-stack`, `tech-stack`) or stale backticked module/skill/role counts across `CONTRIBUTING.md`, `SECURITY.md`, and `docs/README.md`, (2) complete **19-Skill Matrix** across the 3 Core Bases + 3 Specialization Stacks, (3) domain-neutral Level 3 descriptions (**Squad, Case, Research Study, or Operational Unit**), and (4) single-surface **Antigravity 2.0 (`antigravity-agents`)** workspace execution (zero legacy IDE vs. Agents comparison).
+- [ ] **2D Geometry, `L1` Exon Readiness & `H1..H4` Hierarchy Cap**: Confirm that every `##` / `###` / `####` section opens with a **1-line executive lead sentence** before any table, diagram, or code block (`0` empty `L1` exons via `_extract_axiom_skeleton`), uses `###` (`H3`) subsections for multi-item mechanism catalogs, enforces a strict `H1..H4` depth cap (`0` `#####` `H5+` headings), uses vertical `flowchart TD` Mermaid diagrams, and orders table columns `Left -> Right` (conceptual/invariant columns left, file/test pointers right).
+- [ ] **Conceptual & Semantic Documentation Reading Pass (`Concept-to-Code, Backtick-Aware Count & Disjoint Prefix Taxonomy Isomorphism`)**: Read prose tables and conceptual explanations word-for-word against the live codebase (`constants.py`, `templates/**/template.json`, `.agents/skills/*/SKILL.md`) using backtick-aware count patterns (`` `?N`? ``) to verify: (1) zero retired taxonomy terms (`VALID_TEMPLATE_KINDS`: strictly `base-stack`, `business-stack`, `science-stack`, `framework-stack`) or stale backticked module/skill/role counts across `CONTRIBUTING.md`, `SECURITY.md`, and `docs/README.md`, (2) complete **23-Skill Matrix** across the 3 Universal Bases (`base-stack`) + Specialization Stacks, (3) domain-neutral Level 3 descriptions (**Squad, Case, Research Study, or Operational Unit**), (4) single-surface **Antigravity 2.0 (`antigravity-agents`)** workspace execution, and (5) **strictly disjoint prefix taxonomies (`L0..L3` `rcap1` capsules, `E3..E0` epistemic credibility, `M1..M4` cognitive mastery, `V1..V5` manual UI validation, `C0..C3` command/audit tiers, `Pillar A..D`, `Level 1..4`)** plus `epistemic_grade` / `l3_targets` grounding.
 - [ ] **Verbatim Human Walkthrough Parity**: Verify that every CLI command and flag sequence shown in `README.md` and `docs/guides/` matches the actual parser options and succeeds end-to-end.
 - [ ] **Modern Stack Currency**: Verify that docs, rules, templates, and code use the target modern stack version consistently (zero outdated version ranges or legacy typing syntax).
 - [ ] **Zero-Backward Law Scan**: Confirm zero `@deprecated` markers, compatibility aliases (`OldName = NewName`), dual CLI flags, or dead transition branches.
-- [ ] **Generic vs. Local Rule Purity**: Confirm that reusable base rules (`technical-base`) and shared skills contain zero hardcoded counts, paths, or assumptions tied to a single repository.
+- [ ] **Generic vs. Local Rule Purity**: Confirm that reusable base rules (`science-base`, `software-engineering`) and shared skills contain zero hardcoded counts, paths, or assumptions tied to a single repository.
 - [ ] **Outbound / Cross-Perspective Non-Restriction Check**: Confirm that tightening a rule, default, or guard in Perspective A does not restrict or pollute a valid outbound workflow in Perspective B (e.g., non-technical forks, read-only mounts, or downstream consumer repositories).
 
 Record all findings in a structured table using **descriptive domain-slugged IDs (`[P1-DOCS-<slug>]`, `[P1-LAYER-<slug>]`)** (never generic `[P1-01]` counters that look identical across audits) with severity, conflicting perspectives, exact `file:line` evidence, and clean-cutover remediation.
 
 ---
 
-## Phase 2 — Pass 2: Pragmatic Technical Architecture (`technical`) OR Ledger & Topology Consolidation (`business`)
+## 5. Phase 2 — Pass 2: Pragmatic Technical Architecture (`technical`) OR Ledger & Topology Consolidation (`business`)
 
 Once conceptual and normative requirements from Pass 1 are aligned, audit their implementation according to `workspace_mode`:
 - **In `business` mode (`Root 0` / `Department` / `business-base` / `business-stack/*` / `science-stack/*`)**: Audit (1) **Single Source of Truth (SSoT) Ledger & Corpus Consolidation** (`corporate/` tables and modular `docs/` vs. prose duplication), (2) **Full Deontic Precedence (`1..95`: Public-Admin `Root 0` & Depts `1..4` $\rightarrow$ Enterprise `Root 0` & Depts/Units `5..80` $\rightarrow$ Contextual `Human-Stack` `85..95`) & Surface Binding Coverage**, (3) **Cross-Surface Cascade (`surfaces/{web,forms,print}/`) & `< 465`-Line Modularity**, and (4) **IP Firewall & Crisis Escalation SLAs (`P0/P1/P2`)**.
-- **In `technical` or `hybrid` mode (`technical-base` / `tech-stack/*`)**, audit the **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
+- **In `technical` or `hybrid` mode (`software-engineering` / `framework-stack/*`)**, audit the **code representation** following the **Pre-Edit Reading Priority (`1. Guides/Specs -> 2. Tests [E2E -> Imp -> Unit] -> 3. Source Code`)**:
 
 1. **Floor-Version Security & Stdlib Compliance Gate**:
    - Verify the code uses modern, secure-by-default idioms of the declared language floor version (`requires-python`) and standard library primitives (`hashlib.file_digest`, `stat.S_IWUSR`, `Path.is_relative_to`) over deprecated or legacy patterns. (Keep deep hot-path profiling, optional `PEP 7` C-accelerators, and external `OSS-to-OSS` upstream PRs strictly separated in the conscious `oss-contribute` workflow.)
@@ -122,14 +130,16 @@ Record all technical improvements in a structured table using **descriptive doma
 
 ---
 
-## Phase 3 — Pass 3: `1:1:1` Symbiosis (`Spec <-> Source <-> Test` in `technical` mode; `Policy <-> Ledger <-> Sign-Off Gate` in `business` mode)
+## 6. Phase 3 — Pass 3: `1:1:1` Symbiosis (`Spec <-> Source <-> Test` in `technical` mode; `Policy <-> Ledger <-> Sign-Off Gate` in `business` mode)
+
+Audit the `1:1:1` alignment between normative specifications, source modules, and test suites:
 
 - **In `business` mode (`Root 0` / `Department`)**: Verify that every normative policy and corporate ledger (`corporate/**/*.md`, `templates/**/rules/*.md`, `docs/**/*.md`) maintains `1:1:1` alignment between (1) **Traceable Artifact & Ledger IDs (`[DEPT]-[TYPE]-[YYYY]-[NNN]`)**, (2) **Three-Part Functional Verification Structure** (`# Scope & Surface Target`, `# Normative Invariants`, `# Verification & Sign-Off Gates`), and (3) **Zero-Drift Layer Sync (`make diff` & `make horizon`)**.
 - **In `technical` or `hybrid` mode**, audit the alignment between **Normative Specifications**, **Executable Source Modules**, and **Unit Test Suites** so tests serve as self-documenting executable specifications for both **Agent** and **Human**:
 
 1. **Level 1 — Bidirectional `1:1:1` Specification Table (`docs/architecture/<spec>.md`)**:
    - Every executable source module declares `Specification: docs/architecture/<spec>.md`.
-   - Every architecture spec (`< 465` lines) maintains a `1:1:1` table mapping `Source Module <-> 1:1 Unit Test Suite (Test<Module>) <-> Functional Responsibility & Key Verified Invariants`.
+   - Every architecture spec (`< 465` lines) maintains a **Human-First `1:1:1` table** placing conceptual and functional responsibility columns on the **left** (visible without horizontal scrolling) and file pointers on the **right** (`Subpackage / Domain | Normative Section, Functional Responsibility & Key Verified Invariants | Source Module (1:1) | Unit Test Suite (1:1, Test<Module>)`).
 2. **Level 2 — Single Canonical Test Container per File (`Test<Module>`)**:
    - Every `1:1` test file (`tests/unit/**/test_<module>.*` or `<module>.test.*`) encapsulates its tests inside **one** canonical class/suite (`class Test<Module>` / `describe('<Module>')`) whose docstring/header links back to the source module and specification.
 3. **Level 3 — Self-Documenting Behavioral Test Names + 1-Line Invariant Docstrings**:
@@ -145,7 +155,7 @@ Record all technical improvements in a structured table using **descriptive doma
 
 ---
 
-## Phase 4 — Scale & Governance Spillover Gate (`WORKROAD` / `WORKTASK` / `BACKLOG`)
+## 7. Phase 4 — Scale & Governance Spillover Gate (`WORKROAD` / `WORKTASK` / `BACKLOG`)
 
 Before executing fixes, evaluate the total approved scope to prevent rushed execution or mid-audit context loss:
 

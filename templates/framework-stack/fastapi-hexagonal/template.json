@@ -1,0 +1,42 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "fastapi-hexagonal",
+  "kind": "framework-stack",
+  "stack_group": "framework-stack",
+  "extends": "software-engineering",
+  "target_role": "department",
+  "upstream_framework": {
+    "name": "fastapi",
+    "repository": "https://github.com/fastapi/fastapi.git",
+    "tracking_branch": "master"
+  },
+  "description": "Pure FastAPI + Hexagonal DDD (Ports & Adapters, Bounded Contexts, SQLAlchemy Async, Pydantic v2, httpx.AsyncClient) stack rules, skills, and governance templates",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "hexagonal-and-presentation-architecture",
+      "description": "Hexagonal bounded contexts, Protocol ports & adapters, FastAPI dependency injection, and async persistence boundaries",
+      "mode": "transversal",
+      "target_globs": ["src/**", "tests/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
+      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure", "testing"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L1",
+      "invariants": [
+        "Domain never imports from Infrastructure, Application, FastAPI, SQLAlchemy, or Pydantic",
+        "Application use cases depend exclusively on Domain typing.Protocol ports injected via constructor",
+        "FastAPI routers and dependency modules never enable from __future__ import annotations and delegate all business logic to Application use cases via Depends()"
+      ],
+      "rule_files": [
+        "templates/framework-stack/fastapi-hexagonal/rules/coding.md",
+        "templates/framework-stack/fastapi-hexagonal/rules/testing.md",
+        "templates/framework-stack/fastapi-hexagonal/rules/environment.md",
+        "templates/framework-stack/fastapi-hexagonal/rules/governance.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/fastapi-hexagonal/rules/coding.md",
+        "templates/framework-stack/fastapi-hexagonal/rules/testing.md",
+        "templates/framework-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md"
+      ]
+    }
+  ]
+}

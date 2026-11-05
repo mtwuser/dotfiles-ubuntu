@@ -16,7 +16,7 @@ Usage: ./bootstrap.sh [--all | --workstation | --antigravity | --packages | --st
 
 Modes:
   (no flag)      Interactive mode — asks before each step
-  --workstation  Configure local workstation runtime (readonly mode, human-core profile, boot auto-sync)
+  --workstation  Configure local workstation runtime (readonly mode, human-base profile, boot auto-sync)
   --antigravity  Install only Antigravity global rules, skills, and hooks (~/.gemini/config/)
   --all          Install everything without prompting
   --packages     APT + Snaps + NPM globals
@@ -47,10 +47,18 @@ case "$MODE" in
 esac
 
 prepare_antigravity_dirs() {
+  for p in "$HOME/.gemini/config/skills" "$HOME/.gemini/config" "$HOME/.gemini" "$HOME/.local/share/applications"; do
+    [ -L "$p" ] && rm -f "$p"
+  done
   mkdir -p "$HOME/.gemini/config/skills" "$HOME/.local/share/applications"
   for d in "$HOME/.gemini/config/scripts" "$HOME/.gemini/config/skills"/*; do
-    [ -e "$d" ] || continue
-    if [ -d "$d" ] && [ ! -L "$d" ] && [ -d "$SCRIPT_DIR/antigravity/${d#"$HOME"/}" ]; then
+    [ -e "$d" ] || [ -L "$d" ] || continue
+    if [ -L "$d" ]; then
+      target_real="$(readlink -f "$d" 2>/dev/null || true)"
+      if [ -z "$target_real" ] || [[ "$target_real" != "$SCRIPT_DIR/"* ]]; then
+        rm -f "$d"
+      fi
+    elif [ -d "$d" ] && [ -d "$SCRIPT_DIR/antigravity/${d#"$HOME"/}" ]; then
       echo "  backup dir: ~/${d#"$HOME"/} → ~/${d#"$HOME"/}.backup.$(date +%Y%m%d)"
       mv "$d" "${d}.backup.$(date +%Y%m%d)"
     fi
@@ -58,7 +66,7 @@ prepare_antigravity_dirs() {
 }
 
 confirm() {
-  if [ "$MODE" = "--all" ]; then return 0; fi
+  if [ "$MODE" != "interactive" ]; then return 0; fi
   read -rp "$1 (y/N): " answer
   [ "$answer" = "y" ] || [ "$answer" = "Y" ]
 }
@@ -78,14 +86,19 @@ if [ "$MODE" = "--antigravity" ]; then
   prepare_antigravity_dirs
   while IFS= read -r f; do
     [ -z "$f" ] && continue
-    if [ -f "$HOME/$f" ] && [ ! -L "$HOME/$f" ]; then
+    if [ -L "$HOME/$f" ]; then
+      target_real="$(readlink -f "$HOME/$f" 2>/dev/null || true)"
+      if [ -z "$target_real" ] || [[ "$target_real" != "$SCRIPT_DIR/"* ]]; then
+        rm -f "$HOME/$f"
+      fi
+    elif [ -f "$HOME/$f" ]; then
       echo "  backup: ~/$f → ~/${f}.backup.$(date +%Y%m%d)"
       mv "$HOME/$f" "$HOME/${f}.backup.$(date +%Y%m%d)"
     fi
   done < <(find antigravity -type f -printf '%P\n')
   stow -t "$HOME" antigravity
   if [ -x "$SCRIPT_DIR/scripts/layer-config.sh" ]; then
-    "$SCRIPT_DIR/scripts/layer-config.sh" set-global-profile "${DOTFILES_GLOBAL_PROFILE:-human-core}" --stow >/dev/null 2>&1 || true
+    "$SCRIPT_DIR/scripts/layer-config.sh" set-global-profile "${DOTFILES_GLOBAL_PROFILE:-human-base}" --stow >/dev/null 2>&1 || true
   fi
   echo "✅ Antigravity rules, skills, and hooks linked to ~/.gemini/config/"
   exit 0
@@ -158,16 +171,40 @@ if [ "$MODE" = "--all" ] || [ "$MODE" = "--stow" ] || [ "$MODE" = "interactive" 
           echo "    preserved git identity in ~/.gitconfig.local"
         fi
       fi
-      # If real files exist at target, back them up first
+      # If real files exist at target, back them up first; if foreign symlinks exist, unlink them
       while IFS= read -r f; do
         [ -z "$f" ] && continue
-        if [ -f "$HOME/$f" ] && [ ! -L "$HOME/$f" ]; then
+        if [ -L "$HOME/$f" ]; then
+          target_real="$(readlink -f "$HOME/$f" 2>/dev/null || true)"
+          if [ -z "$target_real" ] || [[ "$target_real" != "$SCRIPT_DIR/"* ]]; then
+            rm -f "$HOME/$f"
+          fi
+        elif [ -f "$HOME/$f" ]; then
           echo "    backup: ~/$f → ~/${f}.backup.$(date +%Y%m%d)"
           mv "$HOME/$f" "$HOME/${f}.backup.$(date +%Y%m%d)"
         fi
       done < <(find "$module" -type f -printf '%P\n')
       stow -t "$HOME" "$module"
     done
+    if [ "$(dirname "$SCRIPT_DIR")" = "$HOME" ] && [ "$(basename "$SCRIPT_DIR")" != "dotfiles-ubuntu" ]; then
+      if [ ! -e "$HOME/dotfiles-ubuntu" ] || [ -L "$HOME/dotfiles-ubuntu" ] || [ ! -d "$HOME/dotfiles-ubuntu/.git" ]; then
+        rm -rf "$HOME/dotfiles-ubuntu"
+        ln -snfT "$SCRIPT_DIR" "$HOME/dotfiles-ubuntu"
+      fi
+      if [ -f "$SYSTEM_DIR/mcp-layer.json" ]; then
+        python3 - "$SYSTEM_DIR/mcp-layer.json" "$(basename "$SCRIPT_DIR")" <<'PY'
+import json, pathlib, sys
+p, lid = pathlib.Path(sys.argv[1]), sys.argv[2]
+d = json.loads(p.read_text(encoding="utf-8"))
+if d.get("layer_id") in (None, "", "dotfiles-ubuntu-default"):
+    d.update({"layer_id": lid, "layer_role": "workstation", "entity_kind": "individual", "precedence": 90})
+    p.write_text(json.dumps(d, indent=2) + "\n", encoding="utf-8")
+PY
+      fi
+    fi
+    if [ -x "$SCRIPT_DIR/scripts/layer-config.sh" ]; then
+      "$SCRIPT_DIR/scripts/layer-config.sh" set-global-profile "${DOTFILES_GLOBAL_PROFILE:-human-base}" --stow >/dev/null 2>&1 || true
+    fi
   fi
 fi
 

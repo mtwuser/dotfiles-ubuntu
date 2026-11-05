@@ -10,27 +10,27 @@ description: extract and enrich shared knowledge — scan project rules/skills f
 
 ---
 
-## Rule Layer Hierarchy
+## Rule & Context Pillar Hierarchy
 
-Before scanning, the agent MUST understand the 4-layer rule model:
+Before scanning, the agent MUST understand the 4 physical context pillars (`Axis 5` of the 7-Axis Taxonomy):
 
 ```
-Layer A — Universal Global Baseline (dotfiles-ubuntu)
+Pillar A — Universal Global Baseline (dotfiles-ubuntu)
 │  Rules for ANY developer, ANY project, ANY stack.
 │  Examples: zero-residue, AAA testing, commit discipline, coverage gates.
-│  Location: ~/dotfiles-ubuntu/antigravity/.gemini/config/ & templates/{human-core,technical-base,business-base}/
+│  Location: ~/dotfiles-ubuntu/antigravity/.gemini/config/ & templates/base-stack/{human-base,science-base,business-base}/
 │
-├── Layer B — Templates, Frameworks & Mounted Subtree Layers (templates/* & layers/*)
+├── Pillar B — Templates, Frameworks & Mounted Subtree Layers (templates/* & layers/*)
 │   │  Reusable stack starter packs, departmental/domain policy packs, and cross-cutting
 │   │  subtree layers mounted under ~/dotfiles-ubuntu/layers/<layer-name>/ via layer-subtree.sh.
 │   │  Queried on demand via MCP (compare_layer_patterns) and promoted via
 │   │  layer-config.sh promote-from-project or ./scripts/layer-subtree.sh push <layer-name> <branch>.
 │   │
-│   ├── Layer C — Product / Project Workspace (<product>/.agents/)
+│   ├── Pillar C — Product / Project Workspace (<product>/.agents/)
 │   │   │  Rules and skills specific to a single product repository or squad workspace.
 │   │   │  Location: <product>/.agents/
 │   │   │
-│   │   └── Layer D — Navigable Repository Documentation (<repo>/docs/ & corporate/)
+│   │   └── Pillar D — Navigable Repository Documentation (<repo>/docs/ & corporate/)
 │   │       3-tier progressive disclosure (README.md -> docs/guides/ -> docs/architecture/ & reference/).
 │   │
 │   └── (other products using the same template pack or subtree layers)
@@ -38,15 +38,15 @@ Layer A — Universal Global Baseline (dotfiles-ubuntu)
 └── (other frameworks or standalone projects)
 ```
 
-**Promotion direction**: knowledge flows UPWARD (C → B → A) when patterns prove universal.
-**Inheritance direction**: configuration flows DOWNWARD (A → B → C) via dotfiles + git.
+**Promotion direction**: knowledge flows UPWARD (`Pillar C → Pillar B → Pillar A`) when patterns prove universal.
+**Inheritance direction**: configuration flows DOWNWARD (`Pillar A → Pillar B → Pillar C`) via dotfiles + git.
 
 ---
 
 ## §0. Pre-Flight Hierarchical Sync & Authority Gate (MANDATORY FIRST STEP)
 
 > [!IMPORTANT]
-> Before evaluating any upward promotion, `/enrich` MUST ensure the active workspace is synchronized with the latest rules from its hierarchical ancestors (`Open Source Layer A` $\rightarrow$ `Corporate Root 0` $\rightarrow$ `Department` $\rightarrow$ `Squad` $\rightarrow$ `Project`).
+> Before evaluating any upward promotion, `/enrich` MUST ensure the active workspace is synchronized with the latest rules from its hierarchical ancestors (`Upstream OSS Pillar A` $\rightarrow$ `Level 1 Root 0` $\rightarrow$ `Level 2 Department` $\rightarrow$ `Level 3 Unit/Squad` $\rightarrow$ `Level 4 Project`).
 
 1. **Run `make horizon`, `make upstream-diff`, and `make diff`** in the active workspace (or `~/dotfiles-ubuntu/scripts/layer-config.sh inspect-horizon <PROJECT_ROOT>` and `compare-upstream <PROJECT_ROOT>`).
 2. **Inspect Version, Section-Level Upstream Additions & Mounted Child Sync Status (`downward_sync_needed` & `child_sync_needed`)**:
@@ -113,7 +113,9 @@ Detect patterns that have **matured** in a project and should move up:
 | A project rule contradicts a shared rule | Drift — investigate and reconcile |
 | An inter-departmental `ESCALATE_TO_ROOT` deadlock (`BLOCKED`) was arbitrated by `Root 0` | **Consensus-to-Rule Learning Loop** — codify the resolved criterion into the parent template (`rule_learning_hint` / `make promote`) so future tasks pass automatically as `RECONCILED_FLOW` |
 
-### §2.2 Downward Sync Gaps (Shared → Project)
+### §2.2. Downward Sync Gaps (Shared → Project)
+
+Detect upstream updates in shared layers or templates that have not yet been synchronized into the active project:
 
 | Signal | What it means |
 |--------|---------------|
@@ -126,12 +128,12 @@ For each candidate, determine the exact target layer and template pack using `.a
 
 | If the rule, skill, or template pattern... | Target Layer & Day-to-Day Command (`make` or CLI) |
 |---|---|
-| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Open Source Root)**: `~/dotfiles-ubuntu/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<human-core\|technical-base\|business-base>`) |
+| Applies to ANY project regardless of domain or stack (`<= 18,000` bytes cap, promoted from `Root 0` passing `OSS_AGNOSTICISM_VIOLATION`) | **A (Universal Open Source Root)**: `~/dotfiles-ubuntu/templates/base-stack/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<human-base\|science-base\|business-base>`) |
 | Applies to a cross-cutting domain policy (`domain-policy`, e.g., Legal/Security) or department (`department`, e.g., Design/Marketing) | **B (Parent Department, Corporate Root 0, or Mounted Subtree `layers/*`)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`, or `./scripts/layer-subtree.sh push <layer-name> <branch>` when pushing a mounted subtree) |
-| Applies to any project using a specific specialization stack or template pack (`core-base`, `business-stack`, `science-stack`, `tech-stack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<layer>/templates/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<pack>`) |
-| Refines a reusable **`Human-Spec` / `Human-Stack` cognitive, maturity (`L1..L4`), or cross-discipline bridge rule (`precedence: 85..95`)** | **B / A (Living `Human-Spec` Catalog in Squad, Department, `Root 0`, or `human-core`)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`) to homogenize cross-enterprise human-agent pairing |
-| Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by Layer B (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `make diff`) |
-| Only applies to this specific product/application | **C (Stays in Project)**: `<product>/.agents/` |
+| Applies to any project using a specific specialization stack or template pack (`base-stack`, `business-stack`, `science-stack`, `framework-stack`) | **B (Framework Repo or Polymorphic Template Pack)**: `<layer>/templates/<stack>/<pack>/` (`make promote SOURCE=<path> TEMPLATE=<pack>`) |
+| Refines a reusable **`Human-Stack` cognitive, mastery (`M1..M4`), or cross-discipline bridge rule (`precedence: 85..95`)** | **B / A (Living `Human-Stack` Catalog in Squad, Department, `Root 0`, or `human-base`)**: 1-hop parent layer (`make promote SOURCE=<path> [TEMPLATE=<pack>]`) to homogenize cross-enterprise human-agent pairing |
+| Materialized lineage file (`layer-<NN>-<layer>.md`) | **Already tracked by `Pillar B` (`layers/<layer>`)** — only promote if modified in the project (`modified_in_project` in `make diff`) |
+| Only applies to this specific product/application | **`Pillar C` (Stays in Project)**: `<product>/.agents/` |
 
 > [!NOTE]
 > **Strict Boundary Between `/enrich` (Agent Meta-Governance) and `/governance` (Operational & Business Layer Governance)**:
@@ -140,10 +142,10 @@ For each candidate, determine the exact target layer and template pack using `.a
 
 > [!IMPORTANT]
 > **Strict 1-Hop Horizon & Never Bypass `Root 0`**:
-> - Never promote directly from a child layer (`squad` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Layer A`).
+> - Never promote directly from a child layer (`squad` / `squad-*`, `department` / `dept-*`, or `domain-policy`) into `dotfiles-ubuntu` (`Pillar A`).
 > - Always inspect `make horizon` (`immediate_upstream_id`, `is_oss_community_horizon`, `actor_is_layer_owner`):
 >   - **Internal Corporate Horizon (`is_oss_community_horizon: false`)**: Promote strictly **1 hop upward** (`Squad` $\rightarrow$ `Department` $\rightarrow$ `Corporate Root 0`) via `make promote SOURCE=<path> [TEMPLATE=<pack>]` (or `./scripts/layer-subtree.sh pull <layer-name>` from `Root 0`).
->   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-core|technical-base|business-base>` (or `~/dotfiles-ubuntu/scripts/layer-config.sh promote-from-project . --source <path> --to-layer dotfiles-ubuntu --template <pack> --create-pr`).
+>   - **Open-Source Community Horizon (`is_oss_community_horizon: true`, only from `Root 0`)**: Never edit `~/dotfiles-ubuntu` files directly from an external workspace; always propose an anonymized Pull Request via `make promote SOURCE=<path> TEMPLATE=<human-base|science-base|business-base>` (or `~/dotfiles-ubuntu/scripts/layer-config.sh promote-from-project . --source <path> --to-layer dotfiles-ubuntu --template <pack> --create-pr`).
 
 ---
 
@@ -189,7 +191,7 @@ After approval, distinguish strictly between **Internal Corporate Repositories**
 1. **From External Workspaces (`Root 0` $\rightarrow$ `dotfiles-ubuntu`)**:
    - **NEVER** mutate `~/dotfiles-ubuntu` directly from an external project; execute `make promote SOURCE=<path> TEMPLATE=<pack>` (which passes `--create-pr` automatically via the generated `Makefile`) to generate an anonymized Pull Request (`OSS_AGNOSTICISM_VIOLATION` gate enforced).
 2. **Inside `dotfiles-ubuntu` (`DOTFILES_DEV_REPO_DIR` / `operating_state: "oss-dev"` Direct Self-Enrichment)**:
-   - Because `DOTFILES_DEV_REPO_DIR` (`~/Projects/dev-<repo>`) IS the top-level canonical source (`Layer A`) and `.agents/` is projected from `templates/`, self-enrichment inside `DOTFILES_DEV_REPO_DIR` works by authoring learned rules/skills directly in `antigravity/.gemini/config/skills/*/SKILL.md` and `templates/{human-core,technical-base,business-base}/`, and immediately running `./scripts/layer-config.sh apply-project . --include-defaults` so `.agents/` stays `100% in_sync` (`0` drift in `make diff`).
+   - Because `DOTFILES_DEV_REPO_DIR` (`~/Projects/dev-<repo>`) IS the top-level canonical source (`Pillar A`) and `.agents/` is projected from `templates/`, self-enrichment inside `DOTFILES_DEV_REPO_DIR` works by authoring learned rules/skills directly in `antigravity/.gemini/config/skills/*/SKILL.md` and `templates/base-stack/{human-base,science-base,business-base}/` (or `templates/science-stack/software-engineering/`), and immediately running `./scripts/layer-config.sh apply-project . --include-defaults` so `.agents/` stays `100% in_sync` (`0` drift in `make diff`).
    - Run `make verify` to confirm all verification gates pass (and sync the `$HOME` appliance via `~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync` after release).
    - Log changes under `## [Unreleased]` in `CHANGELOG.md` **without bumping `VERSION`**.
    - **NEVER include `git push` on working/enrichment commits in `dotfiles-ubuntu`**. Pushing to the public Open-Source remote requires an explicit, conscious version release via `/release` (`skills/release/SKILL.md`):

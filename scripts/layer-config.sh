@@ -44,7 +44,7 @@ Commands (grouped by operational family — 26 total):
       Propagate upstream template pack improvements and re-materialize <target-dir>/.agents/.
   apply-project <target-project-dir> [--parent-dir <dir>] [--template <[layer:]name>] [--layers <all|csv>]
       Materialize template pack + 0..N participating layers into <target-project-dir>/.agents/.
-  set-global-profile <human-core|technical|business|full> [--stow]
+  set-global-profile <human-base|science|technical|business|full> [--stow]
       Compose antigravity/.gemini/config/AGENTS.md from modular base templates.
   start-task [<target-dir>] --task <id-or-text> [--tracker <tracker>] [--ticket <id>] [--prefix <pfx>]
       Claim a task item, mark it [/], update .agents/SESSION.md, and emit feature/<TICKET>-<slug>.

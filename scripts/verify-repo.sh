@@ -56,14 +56,26 @@ fi
 if python3 - <<'PYEOF'
 from pathlib import Path
 import re, sys
+sys.path.insert(0, "scripts")
+from dotfiles_mcp.capsules.capsule_engine import _extract_axiom_skeleton, _iter_markdown_sections
 
 repo = Path(".")
-link_re, latex_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)"), re.compile(r"\\text(?:tt|rm|sf|it|bf)?\{[^}]*_[^}]*\}")
+link_re, latex_re = re.compile(r"\[([^\]]+)\]\(([^)]+)\)"), re.compile(r"\\text(?:tt|rm|sf|it|bf)?\{[^}]*[_*][^}]*\}")
 broken, math_issues, checked = [], [], 0
 for md in sorted(repo.rglob("*.md")):
-    if any(p in {".git", "venv", ".venv", ".agents"} for p in md.parts):
+    if any(p in {".git", "venv", ".venv", ".agents", "roadmaps"} for p in md.parts):
         continue
-    stripped = re.sub(r"```.*?```", "", md.read_text(encoding="utf-8"), flags=re.DOTALL)
+    raw_md = md.read_text(encoding="utf-8")
+    for mm in re.finditer(r"```mermaid\s+(.*?)```", raw_md, flags=re.DOTALL):
+        if re.search(r"^\s*(?:flowchart|graph)\s+LR\b", mm.group(1), flags=re.MULTILINE):
+            broken.append(f"{md}: horizontal Mermaid diagram (flowchart/graph LR) forbidden; use flowchart TD")
+    stripped = re.sub(r"```.*?```", "", raw_md, flags=re.DOTALL)
+    if md.name not in {"CHANGELOG.md", "CODE_OF_CONDUCT.md"} and not md.name.startswith("WORK") and md.name != "BACKLOG.md" and ".github" not in md.parts:
+        if re.search(r"^#{5,}\s+", stripped, flags=re.MULTILINE):
+            broken.append(f"{md}: H5+ heading (#####) forbidden; cap hierarchy at H1..H4")
+        for hdr, _, _, sec in _iter_markdown_sections(raw_md, md.stem):
+            if hdr != md.stem and not _extract_axiom_skeleton(sec):
+                broken.append(f"{md}: empty L1 exon under '{hdr}' (add 1-line lead sentence before table/code/sub-heading)")
     for line_no, line in enumerate(stripped.splitlines(), 1):
         for m in re.finditer(r"\$\$?[^\$]+\$\$?", re.sub(r"`[^`]*`", "", line)):
             if latex_re.search(m.group(0)):
@@ -424,12 +436,13 @@ with ThreadPoolExecutor(max_workers=8) as ex:
 if errs: sys.exit("\n".join(errs))
 PYCOV
     then
-      pass "Isolated 1:1 single-file and package unit test coverage verified (100.00% on all 22 executable scripts/dotfiles_mcp modules with 0 cross-unit masking)"
+      pass "1:1 (Code <-> Test) isolated single-file unit coverage verified (100.00% on all 22 executable scripts/dotfiles_mcp modules with 0 cross-unit masking)"
     else
       echo "$UNIT_COV_OUT" >&2; fail "Isolated 1:1 unit test coverage failed on scripts/dotfiles_mcp (< 100%)"
     fi
     if PYTEST_OUT="$(PYTHONDONTWRITEBYTECODE=1 "$PYTEST_BIN" tests/unit/ tests/imp/ tests/e2e/ -q --tb=short --cov --cov-branch --cov-report=term-missing --cov-fail-under=100 2>&1)"; then
-      pass "pytest passed (tests/unit/ + tests/imp/ + tests/e2e/) with 100.00% statement and branch coverage"
+      COV_STATS="$(echo "$PYTEST_OUT" | awk '/^TOTAL[[:space:]]+/ {printf "%s stmts, %s branches", $2, $4}')"
+      pass "1:1:1 (Spec <-> Test <-> Code) verified — 100.00% statement and branch coverage (${COV_STATS:-all stmts & branches})"
     else
       echo "$PYTEST_OUT" >&2; fail "pytest suite or 100% branch coverage gate failed"
     fi

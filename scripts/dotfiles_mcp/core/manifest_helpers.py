@@ -17,11 +17,16 @@ from pathlib import Path
 from typing import Any
 
 from dotfiles_mcp.core.constants import (
+    CANONICAL_SCIENCE_TRUNKS,
+    LIBRARY_DOMAIN_TAXONOMY,
     MISSING_VERSION_SENTINEL,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
     TEMPLATE_MANIFEST_CONTRACT_REV,
     TEMPLATE_STACK_GROUP_DIRS,
+    VALID_HUMAN_MASTERY_LEVELS,
+    VALID_HUMAN_STACK_FACETS,
+    VALID_LIBRARY_PREFIXES,
     VALID_TEMPLATE_KINDS,
 )
 
@@ -208,7 +213,7 @@ def _stamp_schema_rev(json_file: Path, expected_rev: str) -> None:
             if d.get("kind") not in VALID_TEMPLATE_KINDS:
                 k_str = f"{d.get('kind', '')} {d.get('description', '')} {d.get('target_role', '')}"
                 is_biz = any(t in k_str for t in ("policy", "department", "corporate"))
-                d["kind"] = "business-stack" if is_biz else "tech-stack"
+                d["kind"] = "business-stack" if is_biz else "framework-stack"
         json_file.write_text(json.dumps(d, indent=2, ensure_ascii=False) + "\n", "utf-8")
 
 
@@ -248,8 +253,61 @@ def _load_manifest_dict(target_dir: Path) -> dict[str, Any]:
 
 def _is_oss_root_manifest(manifest: dict[str, Any]) -> bool:
     """Return True when manifest represents the Open-Source community root layer."""
+    ek = str(manifest.get("entity_kind", "")).strip().lower()
+    if ek == "individual" or int(manifest.get("precedence", 0) or 0) >= 85:
+        return False
     role = str(manifest.get("layer_role", ""))
     return str(manifest.get("layer_id", "")) == "root" or role in ("root", "workstation")
+
+
+_HUMAN_STACK_LINE_RE = re.compile(
+    r"^\s*[-*]?\s*\**Human-Stack(?:\s+Profile)?(?:\s*\(Optional\))?\**\s*:\s*(.+)$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _normalize_human_stack_tokens(raw_value: Any) -> list[str]:
+    """Parse and validate Human-Stack facets (domain-<area>:M1..M4, bridge-*, soft-*, hat-*)."""
+    parts = (
+        [str(x) for x in raw_value]
+        if isinstance(raw_value, list)
+        else re.split(r"[|,]+", str(raw_value or ""))
+    )
+    valid: list[str] = []
+    for p in parts:
+        tok = p.strip().strip("`")
+        if not tok or not tok.startswith(VALID_HUMAN_STACK_FACETS):
+            continue
+        if tok.startswith("domain-"):
+            area, _, lvl = tok.partition(":")
+            if area != "domain-" and lvl in VALID_HUMAN_MASTERY_LEVELS and tok not in valid:
+                valid.append(tok)
+        elif len(tok.split("-", 1)[1].strip("]*")) > 0 and tok not in valid:
+            valid.append(tok)
+    return valid
+
+
+def _resolve_effective_human_stack(
+    workspace_dir: Path, manifest: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Resolve Human-Stack across the 4-Scope hierarchy (SESSION -> Blueprint -> Manifest)."""
+    ws = workspace_dir.resolve()
+    m = manifest if manifest is not None else _load_manifest_dict(ws)
+    sources = (
+        ("workspace-session", ws / ".agents/SESSION.md"),
+        ("layer-blueprint", ws / ".agents/LAYER_LINEAGE.md"),
+        ("layer-blueprint", ws / "README.md"),
+    )
+    for scope_name, fpath in sources:
+        if (
+            fpath.is_file()
+            and (match := _HUMAN_STACK_LINE_RE.search(fpath.read_text("utf-8")))
+            and (tokens := _normalize_human_stack_tokens(match.group(1)))
+        ):
+            return {"facets": tokens, "scope": scope_name}
+    if m_tokens := _normalize_human_stack_tokens(m.get("human_stack")):
+        return {"facets": m_tokens, "scope": "layer-manifest"}
+    return {"facets": [], "scope": "default-none"}
 
 
 def discover_layer_template_names(layer_dir: Path) -> list[str]:
@@ -277,14 +335,17 @@ def _inspect_single_template_dir(
         else []
     )
     parent_grp = tpl_dir.parent.name if tpl_dir.parent.name in TEMPLATE_STACK_GROUP_DIRS else "core"
-    raw_k = str(meta.get("kind", "tech-stack"))
+    raw_k = str(meta.get("kind", "framework-stack"))
     return {
         "template_name": tpl_dir.name,
         "source_layer": source_layer,
-        "kind": raw_k if raw_k in VALID_TEMPLATE_KINDS else "tech-stack",
+        "kind": raw_k if raw_k in VALID_TEMPLATE_KINDS else "framework-stack",
         "stack_group": str(meta.get("stack_group", parent_grp)),
+        "extends": meta.get("extends"),
         "target_role": str(meta.get("target_role", "squad")),
         "description": str(meta.get("description", f"Template pack {tpl_dir.name}")),
+        "upstream_framework": meta.get("upstream_framework"),
+        "runtime_service": meta.get("runtime_service"),
         "rules": rules,
         "skills": skills,
         "governance_files": gov,
@@ -309,3 +370,79 @@ def discover_templates_catalog(
         for _tpl_name, tpl_dir in _iter_layer_template_dirs(ldir):
             catalog.append(_inspect_single_template_dir(tpl_dir, ldir, source_layer))
     return catalog
+
+
+def _resolve_science_trunk(slug: str) -> tuple[str, str]:
+    """Resolve canonical UNESCO/Frascati science trunk and repository granularity."""
+    if slug in CANONICAL_SCIENCE_TRUNKS:
+        return slug, "trunk-repository"
+    for trunk, branches in CANONICAL_SCIENCE_TRUNKS.items():
+        if slug in branches:
+            return trunk, "branch-repository"
+    return "custom-science", "branch-repository"
+
+
+def classify_library_domain(layer_id: str) -> dict[str, Any]:
+    """Classify a layer or library identifier against canonical knowledge library prefixes."""
+    clean_id = layer_id.strip().lower()
+    adaptation = "M1-M2:academic-tutor-guides | M3-M4:professional-scientific-reference"
+    for prefix in VALID_LIBRARY_PREFIXES:
+        if clean_id.startswith(prefix):
+            meta = LIBRARY_DOMAIN_TAXONOMY[prefix]
+            slug = clean_id.removeprefix(prefix)
+            trunk, gran = (
+                _resolve_science_trunk(slug)
+                if prefix == "sci-"
+                else (meta["library_kind"], "domain-repository")
+            )
+            return {
+                "layer_id": clean_id,
+                "is_knowledge_library": True,
+                "prefix": prefix,
+                "domain_slug": slug,
+                "library_kind": meta["library_kind"],
+                "canonical_trunk": trunk,
+                "granularity": gran,
+                "default_epistemic_grade": meta["default_epistemic_grade"],
+                "default_entity_kind": meta["default_entity_kind"],
+                "default_stack_templates": [t for t in meta["default_templates"].split(",") if t],
+                "consumer_adaptation": adaptation,
+            }
+    return {
+        "layer_id": clean_id,
+        "is_knowledge_library": False,
+        "prefix": None,
+        "domain_slug": clean_id,
+        "library_kind": "standard-layer",
+        "canonical_trunk": None,
+        "granularity": "standard-layer",
+        "default_epistemic_grade": "E1",
+        "default_entity_kind": "enterprise",
+        "default_stack_templates": [],
+        "consumer_adaptation": adaptation,
+    }
+
+
+def resolve_library_mount_endpoints(mount_entry: dict[str, Any], repo_dir: Path) -> dict[str, Any]:
+    """Resolve a knowledge library mount across local-mcp-clone, private-mirror, and public URLs."""
+    name = str(mount_entry.get("name") or mount_entry.get("layer_id") or "").strip()
+    rel_path = str(mount_entry.get("relative_path") or f"layers/{name}").strip()
+    local_dir = (repo_dir / rel_path).resolve()
+    has_local_mcp = (local_dir / "system/mcp-layer.json").is_file()
+    priv_url = str(mount_entry.get("private_mirror_url") or "").strip()
+    pub_url = str(mount_entry.get("repository") or mount_entry.get("public_url") or "").strip()
+    mode = (
+        "local-mcp-clone"
+        if has_local_mcp
+        else ("private-mirror-remote" if priv_url else "public-canonical-remote")
+    )
+    active_endpoint = str(local_dir) if has_local_mcp else (priv_url or pub_url)
+    return {
+        **classify_library_domain(name),
+        "relative_path": rel_path,
+        "local_mcp_available": has_local_mcp,
+        "resolution_mode": mode,
+        "active_endpoint": active_endpoint,
+        "private_mirror_url": priv_url or None,
+        "public_url": pub_url or None,
+    }

@@ -221,6 +221,47 @@ def run_self_test(server: DotfilesMCPServer) -> int:
         resonance_key=eph_payload["session_resonance_key"],
     )
     _require("error" in eph_revoked, "Reaped ephemeral fork capsule must be rejected")
+    dmcp_proj = _call_tool_rpc(
+        server,
+        98,
+        "orchestrate_ephemeral_fork",
+        action="project-branch",
+        branch_ref="HEAD",
+        task_step_id="self-test-dmcp",
+    )
+    _require(not dmcp_proj["result"]["isError"], "DMCP project-branch failed")  # type: ignore[index]
+    dmcp_token = json.loads(dmcp_proj["result"]["content"][0]["text"])["context_frame_token"]  # type: ignore[index]
+    grcc_seal = _call_tool_rpc(
+        server,
+        99,
+        "orchestrate_ephemeral_fork",
+        action="chain-capsule-ref",
+        grcc_op="seal",
+        branch_ref="HEAD",
+        task_step_id="self-test-grcc",
+        capsule_token=dmcp_token,
+    )
+    _require(not grcc_seal["result"]["isError"], "GRCC seal failed")  # type: ignore[index]
+    grcc_unfold = _call_tool_rpc(
+        server,
+        991,
+        "orchestrate_ephemeral_fork",
+        action="chain-capsule-ref",
+        grcc_op="unfold",
+        branch_ref="HEAD",
+        task_step_id="self-test-grcc",
+    )
+    _require(not grcc_unfold["result"]["isError"], "GRCC unfold failed")  # type: ignore[index]
+    grcc_prune = _call_tool_rpc(
+        server,
+        992,
+        "orchestrate_ephemeral_fork",
+        action="chain-capsule-ref",
+        grcc_op="prune",
+        branch_ref="HEAD",
+        task_step_id="self-test-grcc",
+    )
+    _require(not grcc_prune["result"]["isError"], "GRCC prune failed")  # type: ignore[index]
 
     # 4. Path-containment security gate verification
     traversal_attempt = _call_tool_rpc(

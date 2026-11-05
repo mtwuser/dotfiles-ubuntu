@@ -12,33 +12,43 @@
   "mounted_layers_dir": "layers",
   "mounted_layers": [],
   "default_stack_templates": [
+    "software-engineering",
     "fastapi-hexagonal"
   ],
   "baseline_guardrails": [
-    "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-    "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
-    "AGENTS.md §3 & §4 (Verification Integrity & Atomic Deliverable Inclusion — 100% branch coverage & AAA pattern)",
-    "AGENTS.md §7 (Zero-Backward Law — no legacy shims or aliases)"
+    "AGENTS.md \u00a71 (Reusability First \u2014 scan workspace before creating duplicates)",
+    "AGENTS.md \u00a72 & \u00a75 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
+    "AGENTS.md \u00a73 & \u00a74 (Verification Integrity & Atomic Deliverable Inclusion \u2014 100% branch coverage & AAA pattern)",
+    "AGENTS.md \u00a77 (Zero-Backward Law \u2014 no legacy shims or aliases)"
   ],
   "surface_bindings": [
     {
       "binding_id": "universal-engineering-baseline",
       "description": "Universal software quality, typing, 1:1:1 traceability, and clean-cutover rules across all planes and scopes",
       "mode": "transversal",
-      "target_globs": ["*"],
-      "architectural_planes": ["*"],
-      "scopes": ["*"],
-      "traits": ["*"],
+      "target_globs": [
+        "*"
+      ],
+      "architectural_planes": [
+        "*"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
       "default_resolution": "L1",
       "invariants": [
-        "AGENTS.md §1 (Reusability First — scan workspace before creating duplicates)",
-        "AGENTS.md §2 & §5 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
-        "AGENTS.md §3 & technical-base.md (Verification Integrity & Strict Linter/Typing — zero warnings)",
-        "AGENTS.md §7 (Zero-Backward Law — no legacy shims, aliases, or deprecated branches)"
+        "AGENTS.md \u00a71 (Reusability First \u2014 scan workspace before creating duplicates)",
+        "AGENTS.md \u00a72 & \u00a75 (< 465-line modularity across source/tests/docs & canonical specification hierarchy)",
+        "AGENTS.md \u00a73 & software-engineering.md (Verification Integrity & Strict Linter/Typing \u2014 zero warnings)",
+        "AGENTS.md \u00a77 (Zero-Backward Law \u2014 no legacy shims, aliases, or deprecated branches)"
       ],
       "rule_files": [
         "antigravity/.gemini/config/AGENTS.md",
-        "templates/technical-base/rules/technical-base.md"
+        "templates/base-stack/science-base/rules/science-base.md",
+        "templates/science-stack/software-engineering/rules/software-engineering.md"
       ],
       "canonical_templates": []
     },
@@ -46,23 +56,46 @@
       "binding_id": "hexagonal-and-presentation-architecture",
       "description": "Hexagonal domain boundaries, semantic types, and zero-build presentation patterns",
       "mode": "transversal",
-      "target_globs": ["src/**", "templates/**", "static/**", "*.py", "*.html", "*.css"],
-      "architectural_planes": ["schema", "domain", "application", "presentation", "infrastructure"],
-      "scopes": ["*"],
-      "traits": ["*"],
+      "target_globs": [
+        "src/**",
+        "templates/**",
+        "static/**",
+        "*.py",
+        "*.html",
+        "*.css"
+      ],
+      "architectural_planes": [
+        "schema",
+        "domain",
+        "application",
+        "presentation",
+        "infrastructure"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
       "default_resolution": "L1",
       "invariants": [
         "Domain never imports from Infrastructure or Application",
         "Consumer src/**/__init__.py and tests/**/__init__.py files must remain 0 bytes"
       ],
-      "rule_files": ["templates/tech-stack/fastapi-hexagonal/rules/coding.md"],
-      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/rules/coding.md"],
+      "rule_files": [
+        "templates/framework-stack/fastapi-hexagonal/rules/coding.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/fastapi-hexagonal/rules/coding.md"
+      ],
       "ephemeral_fork_policy": {
         "bot_role": "dept-hexagonal-architect",
         "trigger": "on_surface_match",
         "model_tier": "inherit",
         "access_mode": "strictly-read-only",
-        "mount_templates": ["fastapi-hexagonal"],
+        "mount_templates": [
+          "fastapi-hexagonal"
+        ],
         "resolution": "L2",
         "ttl_seconds": 300,
         "handback_contract": "4-channel-digest+rcap1"
@@ -72,23 +105,38 @@
       "binding_id": "automated-testing-and-aaa-gate",
       "description": "100% statement and branch coverage with explicit AAA test structure",
       "mode": "transversal",
-      "target_globs": ["tests/**", "*test*"],
-      "architectural_planes": ["testing"],
-      "scopes": ["*"],
-      "traits": ["*"],
+      "target_globs": [
+        "tests/**",
+        "*test*"
+      ],
+      "architectural_planes": [
+        "testing"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
       "default_resolution": "L1",
       "invariants": [
         "Every test method must contain explicit # Arrange, # Act, and # Assert comments",
         "Maintain 100% statement and branch coverage with < 1s per unit test"
       ],
-      "rule_files": ["templates/tech-stack/fastapi-hexagonal/rules/testing.md"],
-      "canonical_templates": ["templates/tech-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md"],
+      "rule_files": [
+        "templates/framework-stack/fastapi-hexagonal/rules/testing.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/fastapi-hexagonal/skills/fastapi-testing/SKILL.md"
+      ],
       "ephemeral_fork_policy": {
         "bot_role": "dept-qa-test-auditor",
         "trigger": "on_surface_match",
         "model_tier": "flash",
         "access_mode": "strictly-read-only",
-        "mount_templates": ["fastapi-hexagonal"],
+        "mount_templates": [
+          "fastapi-hexagonal"
+        ],
         "resolution": "L2",
         "ttl_seconds": 300,
         "handback_contract": "4-channel-digest+rcap1"
@@ -101,8 +149,8 @@
       "access_mode": "read-write-local",
       "requirements_file": "requirements-dev.txt",
       "default_guardrails": [
-        "AGENTS.md §4 (Absolute Test Inclusion — 100% branch coverage)",
-        "AGENTS.md §8 (Mandatory Pre-Commit Hygiene Scan)"
+        "AGENTS.md \u00a74 (Absolute Test Inclusion \u2014 100% branch coverage)",
+        "AGENTS.md \u00a78 (Mandatory Pre-Commit Hygiene Scan)"
       ]
     },
     "tst": {
@@ -149,9 +197,10 @@
       "when_to_invoke": "Invoke on demand when verifying official Google Cloud, Gemini, Android, Firebase, or Web API specifications.",
       "avoid_when": "Do not invoke when inspecting local repository code, internal domain models, or offline unit tests.",
       "required_guardrails": [
-        "AGENTS.md §5 (Specification Hierarchy & Discrepancy Scans)",
-        "technical-base.md §4 (Generated Output Verification)"
+        "AGENTS.md \u00a75 (Specification Hierarchy & Discrepancy Scans)",
+        "software-engineering.md \u00a71 (Generated Output Verification)"
       ]
     }
-  ]
+  ],
+  "entity_kind": "open-source"
 }

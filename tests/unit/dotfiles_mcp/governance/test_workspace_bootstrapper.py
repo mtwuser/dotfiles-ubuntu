@@ -25,17 +25,22 @@ class TestWorkspaceBootstrapper:
     """1:1 unit test suite for workspace_bootstrapper.py."""
 
     def test_set_global_agents_profile_supports_all_profiles_and_stow(self, tmp_path: Path) -> None:
-        """Compose human-core, technical, business, and full profiles cleanly."""
+        """Compose human-base, technical, business, and full profiles cleanly."""
         # Arrange
         for tpl_id, fname, body in (
             (
-                "human-core",
-                "human-core.md",
-                "---\ntrigger: always_on\n---\n# Human Core\n\n> Base quote\n\n---\n\nCore rule 1.",
+                "human-base",
+                "human-base.md",
+                "---\ntrigger: always_on\n---\n# Human Base\n\n> Base quote\n\n---\n\nCore rule 1.",
             ),
             (
-                "technical-base",
-                "technical-base.md",
+                "science-base",
+                "science-base.md",
+                "---\ntrigger: always_on\n---\n# Science Base\n\n> Sci quote\n\n---\n\nSci rule 1.",
+            ),
+            (
+                "software-engineering",
+                "software-engineering.md",
                 "---\ntrigger: always_on\n---\n# Tech Base\n\n> Tech quote\n\n---\n\nTech rule 1.",
             ),
             (
@@ -49,7 +54,13 @@ class TestWorkspaceBootstrapper:
             (rdir / fname).write_text(body, encoding="utf-8")
 
         # Act
-        dry_res = set_global_agents_profile(tmp_path, "human-core", dry_run=True)
+        dry_res = set_global_agents_profile(tmp_path, "human-base", dry_run=True)
+        (tmp_path / "system").mkdir(parents=True)
+        (tmp_path / "system/mcp-layer.json").write_text(
+            '{"layer_id": "user-pc", "layer_role": "workstation", '
+            '"entity_kind": "individual", "precedence": 90}',
+            encoding="utf-8",
+        )
         tech_res = set_global_agents_profile(tmp_path, "technical", run_stow=False)
         biz_res = set_global_agents_profile(tmp_path, "business", run_stow=False)
         with patch("dotfiles_mcp.governance.workspace_bootstrapper.subprocess.run") as mock_run:
@@ -65,11 +76,13 @@ class TestWorkspaceBootstrapper:
         assert dry_res["dry_run"] is True
         assert dry_res["stow_executed"] is False
         assert tech_res["profile"] == "technical"
-        assert len(tech_res["source_files"]) == 2
+        assert len(tech_res["source_files"]) == 3
         assert biz_res["profile"] == "business"
         assert full_res["profile"] == "full"
         assert full_res["stow_executed"] is True
         assert repeat_res["stow_executed"] is True
+        saved_m = json.loads((tmp_path / "system/mcp-layer.json").read_text(encoding="utf-8"))
+        assert saved_m["global_profile"] == "full"
         mcp_cfg = json.loads(
             (tmp_path / "home/.gemini/config/mcp_config.json").read_text(encoding="utf-8")
         )
@@ -89,20 +102,20 @@ class TestWorkspaceBootstrapper:
     ) -> None:
         """Accept exact 18,000-byte AGENTS.md cap and reject 18,001 bytes or invalid profiles."""
         # Arrange
-        rdir = tmp_path / "templates" / "human-core" / "rules"
+        rdir = tmp_path / "templates" / "human-base" / "rules"
         rdir.mkdir(parents=True)
         exact_text = "A" * (AGENTS_MD_MAX_BYTES - 1)
-        (rdir / "human-core.md").write_text(exact_text, encoding="utf-8")
+        (rdir / "human-base.md").write_text(exact_text, encoding="utf-8")
 
         # Act
-        exact_res = set_global_agents_profile(tmp_path, "human-core")
-        (rdir / "human-core.md").write_text("A" * AGENTS_MD_MAX_BYTES, encoding="utf-8")
+        exact_res = set_global_agents_profile(tmp_path, "human-base")
+        (rdir / "human-base.md").write_text("A" * AGENTS_MD_MAX_BYTES, encoding="utf-8")
 
         # Assert
         assert exact_res["size_bytes"] == AGENTS_MD_MAX_BYTES
         assert exact_res["headroom_bytes"] == 0
         with pytest.raises(ValueError, match="exceeds 18000-byte cap"):
-            set_global_agents_profile(tmp_path, "human-core")
+            set_global_agents_profile(tmp_path, "human-base")
         with pytest.raises(ValueError, match="Invalid global profile"):
             set_global_agents_profile(tmp_path, "unknown-profile")
         with pytest.raises(ValueError, match="Missing profile template rule file"):
@@ -174,24 +187,24 @@ class TestWorkspaceBootstrapper:
         """Bootstrap and sync hierarchical corporate, department, and squad layer workspaces."""
         # Arrange
         repo_dir = tmp_path / "platform"
-        bdir = repo_dir / "templates" / "business-base" / "rules"
+        bdir = repo_dir / "templates" / "base-stack" / "business-base" / "rules"
         bdir.mkdir(parents=True)
-        (repo_dir / "templates" / "business-base" / "template.json").write_text(
+        (repo_dir / "templates" / "base-stack" / "business-base" / "template.json").write_text(
             '{"schema_version": "template-pack-v1", "template_id": "business-base", '
-            '"kind": "core-base"}',
+            '"kind": "base-stack"}',
             encoding="utf-8",
         )
         (bdir / "business-base.md").write_text("# Business Base\n", encoding="utf-8")
-        hdir = repo_dir / "templates" / "human-core" / "rules"
+        hdir = repo_dir / "templates" / "base-stack" / "human-base" / "rules"
         hdir.mkdir(parents=True)
-        (repo_dir / "templates" / "human-core" / "template.json").write_text(
-            '{"schema_version": "template-pack-v1", "template_id": "human-core", '
-            '"kind": "core-base"}',
+        (repo_dir / "templates" / "base-stack" / "human-base" / "template.json").write_text(
+            '{"schema_version": "template-pack-v1", "template_id": "human-base", '
+            '"kind": "base-stack"}',
             encoding="utf-8",
         )
-        (hdir / "human-core.md").write_text("# Human Core\n", encoding="utf-8")
+        (hdir / "human-base.md").write_text("# Human Base\n", encoding="utf-8")
         target_dir = tmp_path / "dept-legal-ip"
-        (target_dir / "templates" / "business-base").mkdir(parents=True)
+        (target_dir / "templates" / "base-stack" / "business-base").mkdir(parents=True)
         (target_dir / ".gitignore").write_text("logs/\n", encoding="utf-8")
 
         # Act
@@ -217,7 +230,7 @@ class TestWorkspaceBootstrapper:
             layer_role="domain-policy",
             precedence=5,
             upstream_repo="https://example.com/root.git",
-            templates=["business-base", "human-core"],
+            templates=["business-base", "human-base"],
             scaffold_own_template=True,
             dry_run=False,
         )
@@ -253,16 +266,18 @@ class TestWorkspaceBootstrapper:
             layer_id="squad-patent-ops",
             layer_role="squad",
             parent_dir=target_dir,
-            templates=["human-core", "scientific-knowledge-branch"],
+            templates=["human-base", "scientific-knowledge-branch"],
             scaffold_own_template=True,
             dry_run=False,
         )
         (bdir / "business-base.md").write_text("# Business Base v2\n", encoding="utf-8")
         (squad_dir / "templates/local-only").mkdir(parents=True)
-        (target_dir / ".agents/rules/technical-base.md").write_text("# Temp\n", encoding="utf-8")
+        (target_dir / ".agents/rules/software-engineering.md").write_text(
+            "# Temp\n", encoding="utf-8"
+        )
         (target_dir / ".agents/skills/testing").mkdir(parents=True, exist_ok=True)
         sync_dry = sync_layer_workspace(
-            repo_dir, target_dir, templates=["human-core"], dry_run=True
+            repo_dir, target_dir, templates=["human-base"], dry_run=True
         )
         sync_dept = sync_layer_workspace(repo_dir, target_dir, dry_run=False)
         sync_squad = sync_layer_workspace(repo_dir, squad_dir, parent_dir=target_dir, dry_run=False)
@@ -273,15 +288,33 @@ class TestWorkspaceBootstrapper:
             '"layer_role": "corporate", "default_stack_templates": []}',
             encoding="utf-8",
         )
+        app_tpl = repo_dir / "templates/framework-stack/custom-app-service"
+        app_tpl.mkdir(parents=True)
+        (app_tpl / "template.json").write_text(
+            '{"schema_version": "template-pack-v1", "template_id": "custom-app-service", '
+            '"kind": "framework-stack", "extends": "business-base", '
+            '"runtime_service": {"app_id": "custom-app-service"}}',
+            encoding="utf-8",
+        )
         sync_bare = sync_layer_workspace(repo_dir, bare_layer, templates=[""], dry_run=False)
         sync_bare_add = sync_layer_workspace(
-            repo_dir, bare_layer, templates=["business-base", "technical-base"], dry_run=False
+            repo_dir,
+            bare_layer,
+            templates=["software-engineering", "custom-app-service"],
+            dry_run=False,
         )
         (target_dir / ".agents/SESSION.md").write_text(
-            "## Session Log\n- Conv: 3fcd5708-4b9b-4d2b-b187-f224a76165de\n",
+            "## Session Log\n- Conv: 00000000-0000-4000-8000-000000000001\n",
             encoding="utf-8",
         )
         ws_status = inspect_workspace_status(repo_dir, repo_dir)
+        (repo_dir / "system/mcp-layer.json").write_text(
+            '{"schema_version": "mcp-layer-v1", "layer_id": "user-pc", '
+            '"layer_role": "workstation", "entity_kind": "individual", '
+            '"precedence": 90, "global_profile": "full"}',
+            encoding="utf-8",
+        )
+        ind_status = inspect_workspace_status(repo_dir, repo_dir)
         (repo_dir / ".workstation-state.json").write_text('{"mode": "readonly"}', encoding="utf-8")
         ro_status = inspect_workspace_status(repo_dir, repo_dir)
         (repo_dir / ".workstation-state.json").unlink()
@@ -293,6 +326,12 @@ class TestWorkspaceBootstrapper:
         assert ws_status["operating_state"] == "oss-dev"
         assert ws_status["mcp_operating_mode"] == "self-test-and-dev-only"
         assert ws_status["is_oss_dev_workspace"] is True
+        assert ind_status["operating_state"] == "individual-root"
+        assert ind_status["mcp_operating_mode"] == "personal-root-hub"
+        assert ind_status["is_oss_dev_workspace"] is False
+        assert ind_status["global_profile"] == "full"
+        assert "task" in ind_status["available_makefile_targets"]
+        assert "consult" in ind_status["available_makefile_targets"]
         assert "setup-dev" in ws_status["available_makefile_targets"]
         assert "verify" in ws_status["command_tiers"]["auto_reflexive"]
         assert "setup-dev" in ws_status["command_tiers"]["guided_tactical"]
@@ -315,7 +354,7 @@ class TestWorkspaceBootstrapper:
         assert dry_res["scaffolded_template"] is None
         assert dry_res["precedence"] == 50
         assert live_res["precedence"] == 5
-        assert live_res["copied_templates"] == ["business-base", "human-core"]
+        assert live_res["copied_templates"] == ["business-base", "human-base"]
         assert live_res["scaffolded_template"] == "dept-legal-ip"
         assert "VERSION" not in live_res["baseline_files_created"]
         assert ".gitignore" not in live_res["baseline_files_created"]
@@ -344,14 +383,15 @@ class TestWorkspaceBootstrapper:
         assert ".agents/rules/layer-50-root.md" not in squad_res["files_materialized"]
         assert sync_dry["dry_run"] is True
         assert "business-base" in sync_dept["synced_templates"]
-        assert not (target_dir / ".agents/rules/technical-base.md").exists()
+        assert not (target_dir / ".agents/rules/software-engineering.md").exists()
         assert not (target_dir / ".agents/skills/testing").exists()
         assert "business-base" in sync_squad["synced_templates"]
         assert (squad_dir / ".agents/rules/business-base.md").read_text(encoding="utf-8") == (
             '---\ntrigger: always_on\ndescription: "Business Base v2"\n---\n# Business Base v2\n'
         )
         assert sync_bare["synced_templates"] == []
-        assert sync_bare_add["synced_templates"] == ["business-base"]
+        assert sync_bare_add["synced_templates"] == ["business-base", "custom-app-service"]
+        assert sync_bare_add["app_services_redeployed"][0]["app_id"] == "custom-app-service"
         (bare_layer / "Makefile").write_text(
             "# Role-Specialized Layer Makefile — bare-layer\nhelp:\n\t@echo old\n\n"
             "# --- Custom Targets ---\ncustom-target:\n\t@echo custom\n",
@@ -366,7 +406,7 @@ class TestWorkspaceBootstrapper:
         own_tj = bare_layer / "templates/bare-layer/template.json"
         own_tj.parent.mkdir(parents=True, exist_ok=True)
         own_tj.write_text('{"schema_version": "1.0", "description": "Own — ±"}', encoding="utf-8")
-        local_bb = bare_layer / "templates/business-base/rules/business-base.md"
+        local_bb = bare_layer / "templates/base-stack/business-base/rules/business-base.md"
         local_bb.write_text("# Local Override\n\n## Custom Section\nKeep.\n", encoding="utf-8")
         (bdir / "business-base.md").write_text("# Business Base v3\n", encoding="utf-8")
         sync_conflict = sync_layer_workspace(
@@ -387,7 +427,7 @@ class TestWorkspaceBootstrapper:
         assert dept_status["workspace_mode"] == "business"
         assert dept_status["git_state"]["is_git_repo"] is True
         assert dept_status["session_state"]["last_conversation_id"] == (
-            "3fcd5708-4b9b-4d2b-b187-f224a76165de"
+            "00000000-0000-4000-8000-000000000001"
         )
         assert dept_status["priority_state"]["active_tracker"] == "WORKTASK.md"
         assert dept_status["git_governance"]["active_environment"] == "dev"

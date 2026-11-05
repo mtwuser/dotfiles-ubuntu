@@ -142,6 +142,8 @@ class TestGitGovernanceEngine:
         st_tst = inspect_git_governance_state(ws, current_branch="env/tst")
         st_pre = inspect_git_governance_state(ws, current_branch="pre/rc1")
         st_pro = inspect_git_governance_state(ws, current_branch="release/v1.0.0")
+        st_spec = inspect_git_governance_state(ws, current_branch="specialty/data-privacy")
+        st_hat = inspect_git_governance_state(ws, current_branch="hat/legal-auditor")
         prop_file = stage_non_destructive_proposal(
             ws,
             scope_tag="to-root",
@@ -156,6 +158,8 @@ class TestGitGovernanceEngine:
 
         # Assert
         assert dry_cfg["dry_run"] is True and no_co_cfg["codeowners_file"] is None
+        assert cfg_res["git_governance"]["protected_specialty_prefix"] == "specialty/"
+        assert cfg_res["git_governance"]["capsule_ref_namespace"] == "refs/capsules/"
         assert r_noop["roster"]["owners"] == []
         assert cfg_res["codeowners_owners"] == "lead@acme.com"
         assert r_dry["dry_run"] is True and r_val["validator_emails"] == ["qa@acme.com"]
@@ -168,19 +172,35 @@ class TestGitGovernanceEngine:
             manage_layer_roster(ws, add_email="x@acme.com", member_role="admin")
         assert (
             st_fallback["current_branch"],
+            st_fallback["branch_category"],
             st_fallback["is_protected_branch"],
             st_fallback["active_process_stage"],
             st_fallback["active_environment"],
-        ) == ("main", True, "protected-main", "pro")
+        ) == ("main", "protected-trunk-or-env", True, "protected-main", "pro")
         assert (
             st_git["current_branch"],
+            st_git["branch_category"],
             st_git["active_process_stage"],
             st_git["active_environment"],
-        ) == ("feature/SHM-01-sensor", "feature", "dev")
+        ) == ("feature/SHM-01-sensor", "tactical-process", "feature", "dev")
         assert st_tst["active_environment"] == "tst"
         assert st_pre["active_environment"] == "pre"
-        assert st_pro["active_environment"] == "pro" and st_pro["is_protected_branch"] is False
-        assert st_with_prop["staged_proposals"] == [".agents/proposals/to-root/rule.md"]
+        assert (
+            st_pro["active_environment"] == "pro"
+            and st_pro["branch_category"] == "governance-pr"
+            and st_pro["is_protected_branch"] is False
+        )
+        assert (
+            st_spec["branch_category"] == "specialty-lens"
+            and st_spec["is_protected_branch"] is True
+        )
+        assert (
+            st_hat["branch_category"] == "personal-workstation"
+            and st_hat["capsule_ref_namespace"] == "refs/capsules/"
+        )
+        assert st_with_prop["branch_category"] == "custom" and st_with_prop["staged_proposals"] == [
+            ".agents/proposals/to-root/rule.md"
+        ]
         assert st_with_prop["stale_proposals"] == []
         assert st_stale_prop["stale_proposals"] == [".agents/proposals/to-root/rule.md"]
         assert st_stale_prop["staleness_thresholds_days"] == {

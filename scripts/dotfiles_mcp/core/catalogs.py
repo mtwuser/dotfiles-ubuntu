@@ -13,6 +13,8 @@ from dotfiles_mcp.core.constants import (
     VALID_EPHEMERAL_ACCESS_MODES,
     VALID_EPHEMERAL_ACTIONS,
     VALID_EPHEMERAL_SCOPES,
+    VALID_EPISTEMIC_GRADES,
+    VALID_GRCC_OPERATIONS,
     VALID_ROSTER_ROLES,
 )
 
@@ -31,7 +33,7 @@ MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "uri": "dotfiles://governance/rules",
-        "name": "Layer A Global Engineering Rules (AGENTS.md)",
+        "name": "Pillar A Global Engineering Rules (AGENTS.md)",
         "description": "Universal behavioral mandates, strict typing, AAA testing, and governance.",
         "mimeType": "text/markdown",
     },
@@ -49,7 +51,7 @@ MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "uri": "dotfiles://governance/templates",
-        "name": "Layer B Stack Starter Templates",
+        "name": "Pillar B Stack Starter Templates",
         "description": "Inventory of reusable project starter templates available in templates/.",
         "mimeType": "application/json",
     },
@@ -76,6 +78,29 @@ MCP_RESOURCES_CATALOG: tuple[dict[str, Any], ...] = (
 _WS_DIR_PROP: dict[str, str] = {
     "type": "string",
     "description": "Optional target workspace directory (defaults to server repo_dir).",
+}
+_BRANCH_REF_PROP: dict[str, str] = {
+    "type": "string",
+    "description": "Optional Git branch/ref for zero-checkout DMCP projection.",
+}
+_ENV_PROP: dict[str, Any] = {
+    "type": "string",
+    "enum": ["dev", "tst", "pre", "pro"],
+    "description": "Optional target environment ('dev', 'tst', 'pre', or 'pro').",
+}
+_LAYER_ALL_PROP: dict[str, str] = {
+    "type": "string",
+    "default": "all",
+    "description": "Target layer filter.",
+}
+_INCLUDE_CAPSULES_PROP: dict[str, Any] = {
+    "type": "boolean",
+    "default": True,
+    "description": "Whether to mint and attach rcap1 capsule_token envelopes.",
+}
+_RES_KEY_PROP: dict[str, str] = {
+    "type": "string",
+    "description": "Optional rcap1 session resonance key.",
 }
 
 MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
@@ -117,6 +142,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                 "workspace_dir": _WS_DIR_PROP,
                 "relative_path": {"type": "string", "description": "Path relative to layer root."},
                 "layer": {"type": "string", "description": "Optional layer ('root' or subtree)."},
+                "branch_ref": _BRANCH_REF_PROP,
             },
             "required": ["relative_path"],
             "additionalProperties": False,
@@ -124,7 +150,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
     },
     {
         "name": "query_governance_rules",
-        "description": "Search Layer A rules, templates, and docs with L0/L1/L2 rcap1 compaction.",
+        "description": "Search Pillar A rules, templates, and docs with L0/L1/L2 rcap1 compaction.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -136,28 +162,23 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "default": "all",
                     "description": "Subset of layer documentation to search.",
                 },
-                "layer": {
-                    "type": "string",
-                    "default": "all",
-                    "description": "Target layer filter.",
-                },
+                "layer": _LAYER_ALL_PROP,
                 "resolution": {
                     "type": "string",
                     "enum": ["L0", "L1", "L2"],
                     "default": "L2",
                     "description": "Compaction depth ('L0', 'L1', or 'L2'; default 'L2').",
                 },
-                "environment": {
+                "environment": _ENV_PROP,
+                "resonance_key": _RES_KEY_PROP,
+                "target_path": {"type": "string", "description": "Optional prioritized file path."},
+                "branch_ref": _BRANCH_REF_PROP,
+                "min_epistemic_grade": {
                     "type": "string",
-                    "enum": ["dev", "tst", "pre", "pro"],
-                    "description": "Optional environment binding ('dev', 'tst', 'pre', or 'pro').",
+                    "enum": list(VALID_EPISTEMIC_GRADES),
+                    "description": "Optional minimum epistemic grade filter (E3, E2, E1, or E0).",
                 },
-                "resonance_key": {"type": "string", "description": "Optional rcap1 secret key."},
-                "include_capsules": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Whether to mint and attach rcap1 capsule_token envelopes.",
-                },
+                "include_capsules": _INCLUDE_CAPSULES_PROP,
             },
             "required": ["query"],
             "additionalProperties": False,
@@ -182,12 +203,8 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "default": "inherit",
                     "description": "Calling agent tier per AGENTS.md §12 (flash, inherit, pro).",
                 },
-                "environment": {
-                    "type": "string",
-                    "enum": ["dev", "tst", "pre", "pro"],
-                    "description": "Optional target environment ('dev', 'tst', 'pre', or 'pro').",
-                },
-                "resonance_key": {"type": "string", "description": "Optional secret key."},
+                "environment": _ENV_PROP,
+                "resonance_key": _RES_KEY_PROP,
             },
             "required": ["capsule_token"],
             "additionalProperties": False,
@@ -201,16 +218,8 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
             "properties": {
                 "workspace_dir": _WS_DIR_PROP,
                 "filter_role": {"type": "string", "description": "Optional role substring filter."},
-                "environment": {
-                    "type": "string",
-                    "enum": ["dev", "tst", "pre", "pro"],
-                    "description": "Optional environment filter ('dev', 'tst', 'pre', or 'pro').",
-                },
-                "layer": {
-                    "type": "string",
-                    "default": "all",
-                    "description": "Target layer filter.",
-                },
+                "environment": _ENV_PROP,
+                "layer": _LAYER_ALL_PROP,
             },
             "additionalProperties": False,
         },
@@ -232,11 +241,7 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "items": {"type": "string"},
                     "description": "Skill names in the project (e.g. ['start']).",
                 },
-                "layer": {
-                    "type": "string",
-                    "default": "all",
-                    "description": "Target layer filter.",
-                },
+                "layer": _LAYER_ALL_PROP,
             },
             "additionalProperties": False,
         },
@@ -260,22 +265,14 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "items": {"type": "string"},
                     "description": "Optional semantic cross-cutting tags (e.g. ['pii']).",
                 },
-                "environment": {
-                    "type": "string",
-                    "enum": ["dev", "tst", "pre", "pro"],
-                    "description": "Optional target environment ('dev', 'tst', 'pre', 'pro').",
-                },
+                "environment": _ENV_PROP,
                 "resolution_override": {
                     "type": "string",
                     "enum": ["L0", "L1", "L2"],
                     "description": "Optional resolution override ('L0', 'L1', or 'L2').",
                 },
-                "resonance_key": {"type": "string", "description": "Optional rcap1 secret key."},
-                "include_capsules": {
-                    "type": "boolean",
-                    "default": True,
-                    "description": "Whether to attach rcap1 capsule_token envelopes.",
-                },
+                "resonance_key": _RES_KEY_PROP,
+                "include_capsules": _INCLUDE_CAPSULES_PROP,
             },
             "additionalProperties": False,
         },
@@ -368,6 +365,44 @@ MCP_TOOLS_CATALOG: tuple[dict[str, Any], ...] = (
                     "type": "boolean",
                     "default": True,
                     "description": "Whether action='evaluate' auto-reaps its ephemeral fork.",
+                },
+                "branch_ref": _BRANCH_REF_PROP,
+                "task_step_id": {
+                    "type": "string",
+                    "description": "Decision-tree step ID for DMCP/GRCC chaining.",
+                },
+                "context_frame_token": {
+                    "type": "string",
+                    "description": "Incoming rcap1 DMCP context_frame_token to verify/chain.",
+                },
+                "grcc_op": {
+                    "type": "string",
+                    "enum": list(VALID_GRCC_OPERATIONS),
+                    "description": "GRCC operation ('probe', 'seal', 'unfold', or 'prune').",
+                },
+                "capsule_token": {
+                    "type": "string",
+                    "description": "Sealed rcap1 capsule token for verify-return or GRCC seal.",
+                },
+                "digest": {
+                    "type": "object",
+                    "description": "4-Channel Executive Digest for action='seal-return'.",
+                },
+                "environment": {
+                    "type": "string",
+                    "description": "Optional environment filter ('dev', 'tst', 'pre', 'pro').",
+                },
+                "family": {
+                    "type": "string",
+                    "description": "Optional bot archetype family filter for action='catalog'.",
+                },
+                "resonance_key": {
+                    "type": "string",
+                    "description": "Optional rcap1 session resonance key for DMCP/GRCC.",
+                },
+                "remote": {
+                    "type": "string",
+                    "description": "Optional Git remote name/URL for GRCC ls-remote probe.",
                 },
             },
             "additionalProperties": False,

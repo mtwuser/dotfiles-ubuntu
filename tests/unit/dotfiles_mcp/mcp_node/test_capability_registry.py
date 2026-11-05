@@ -5,10 +5,16 @@ Specification: docs/architecture/05_ephemeral_forks_and_department_bots.md
 
 from __future__ import annotations
 
+import subprocess
+
 import pytest
 from dotfiles_mcp.capsules.capsule_engine import CapsuleError
+from dotfiles_mcp.core.constants import REPO_DIR
 from dotfiles_mcp.mcp_node.capability_registry import (
+    compute_grcc_scope_fingerprint,
+    orchestrate_dmcp_branch_projection,
     orchestrate_ephemeral_return_capsule,
+    orchestrate_grcc_capsule_ref,
     resolve_bot_archetype,
     resolve_mcp_capability_profile,
 )
@@ -149,3 +155,106 @@ class TestCapabilityRegistry:
                 meta_resolver=_resolver,
                 arguments={"capsule_token": sealed["capsule_token"]},
             )
+
+    def test_orchestrate_dmcp_branch_projection_and_grcc_capsule_ref_lifecycle(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Execute DMCP context frame chaining and GRCC probe, seal, unfold, and prune."""
+        # Arrange
+        fp, ref = compute_grcc_scope_fingerprint("dept-sec", "HEAD", "unit-grcc-scope")
+        step1 = orchestrate_dmcp_branch_projection(
+            REPO_DIR,
+            "dept-sec",
+            {"branch_ref": "HEAD", "task_step_id": "step-1", "target_globs": ["src/**"]},
+            default_secret=fp,
+        )
+        step2 = orchestrate_dmcp_branch_projection(
+            REPO_DIR,
+            "dept-sec",
+            {
+                "branch_ref": "HEAD",
+                "task_step_id": "step-2",
+                "context_frame_token": step1["context_frame_token"],
+                "target_path": "src/a.py",
+            },
+            default_secret=fp,
+        )
+        bad_in = orchestrate_dmcp_branch_projection(
+            REPO_DIR,
+            "dept-sec",
+            {"branch_ref": "HEAD", "context_frame_token": "invalid-token"},
+            default_secret=fp,
+        )
+        bad_ref = orchestrate_dmcp_branch_projection(
+            REPO_DIR,
+            "dept-sec",
+            {"branch_ref": "--bad-ref"},
+            default_secret=fp,
+        )
+
+        # Act
+        probe_miss = orchestrate_grcc_capsule_ref(
+            REPO_DIR, "dept-sec", {"grcc_op": "probe", "branch_ref": "HEAD", "task_step_id": fp}
+        )
+        sealed_1 = orchestrate_grcc_capsule_ref(
+            REPO_DIR,
+            "dept-sec",
+            {
+                "grcc_op": "seal",
+                "branch_ref": "HEAD",
+                "task_step_id": fp,
+                "capsule_token": step1["context_frame_token"],
+            },
+        )
+        sealed_2 = orchestrate_grcc_capsule_ref(
+            REPO_DIR,
+            "dept-sec",
+            {
+                "grcc_op": "seal",
+                "branch_ref": "HEAD",
+                "task_step_id": fp,
+                "capsule_token": step2["context_frame_token"],
+            },
+        )
+        probe_hit = orchestrate_grcc_capsule_ref(
+            REPO_DIR, "dept-sec", {"grcc_op": "probe", "branch_ref": "HEAD", "task_step_id": fp}
+        )
+        unfolded = orchestrate_grcc_capsule_ref(
+            REPO_DIR, "dept-sec", {"grcc_op": "unfold", "branch_ref": "HEAD", "task_step_id": fp}
+        )
+        pruned = orchestrate_grcc_capsule_ref(
+            REPO_DIR, "dept-sec", {"grcc_op": "prune", "branch_ref": "HEAD", "task_step_id": fp}
+        )
+        monkeypatch.setattr(
+            "dotfiles_mcp.mcp_node.capability_registry._run_git_plumbing",
+            lambda _r, _a, **_k: subprocess.CompletedProcess(
+                args=[], returncode=0, stdout=f"deadbeef\t{ref}\n", stderr=""
+            ),
+        )
+        remote_probe = orchestrate_grcc_capsule_ref(
+            REPO_DIR,
+            "dept-sec",
+            {"grcc_op": "probe", "branch_ref": "HEAD", "task_step_id": fp, "remote": "origin"},
+        )
+
+        # Assert
+        assert step1["verified"] is True and step2["parent_frame_hash"] == step1["frame_hash"]
+        assert bad_in["fallback_activated"] is True and bad_ref["fallback_activated"] is True
+        assert probe_miss["exists"] is False and probe_hit["exists"] is True
+        assert sealed_1["parent_commit_sha"] is None
+        assert sealed_2["parent_commit_sha"] == sealed_1["commit_sha"]
+        assert unfolded["capsule_token"] == step2["context_frame_token"]
+        assert pruned["pruned"] is True and remote_probe["commit_sha"] == "deadbeef"
+        with pytest.raises(ValueError, match="Invalid grcc_op"):
+            orchestrate_grcc_capsule_ref(REPO_DIR, "dept-sec", {"grcc_op": "bad"})
+        with pytest.raises(ValueError, match="Missing required 'capsule_token'"):
+            orchestrate_grcc_capsule_ref(REPO_DIR, "dept-sec", {"grcc_op": "seal"})
+        monkeypatch.setattr(
+            "dotfiles_mcp.mcp_node.capability_registry._run_git_plumbing",
+            lambda _r, _a, **_k: subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="", stderr=""
+            ),
+        )
+        with pytest.raises(ValueError, match="GRCC_CAPSULE_REF_NOT_FOUND"):
+            orchestrate_grcc_capsule_ref(REPO_DIR, "dept-sec", {"grcc_op": "unfold"})

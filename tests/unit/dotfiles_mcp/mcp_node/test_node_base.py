@@ -228,3 +228,27 @@ class TestMCPNodeBase:
             "TEMPLATE_PACK_MISSING",
             "SUBTREE_LINEAGE_WARNING",
         ]
+
+    def test_git_branch_document_reading_and_markdown_listing(self) -> None:
+        """Read documents and list markdown files from a Git branch_ref without git checkout."""
+        # Arrange
+        server = DotfilesMCPServer()
+
+        # Act
+        doc_text, commit_sha = server._read_git_branch_document("docs/README.md", "HEAD")
+        sha_global, docs_global = server._list_git_branch_markdown_files(
+            "HEAD", scope="global", target_path="README.md"
+        )
+        with pytest.raises(ValueError, match="Invalid or unsafe branch_ref"):
+            server._read_git_branch_document("docs/README.md", "--bad-flag")
+        with pytest.raises(ValueError, match="DMCP_BRANCH_REF_NOT_FOUND"):
+            server._read_git_branch_document("docs/README.md", "nonexistent-branch-xyz")
+        with pytest.raises(FileNotFoundError, match="not found on branch_ref"):
+            server._read_git_branch_document("docs/missing_file_xyz.md", "HEAD")
+
+        # Assert
+        assert "Documentation Index" in doc_text
+        assert len(commit_sha) >= 7 and sha_global == commit_sha
+        paths = [p for p, _ in docs_global]
+        assert "antigravity/.gemini/config/AGENTS.md" in paths
+        assert "README.md" in paths

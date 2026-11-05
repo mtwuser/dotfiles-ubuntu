@@ -1,4 +1,4 @@
-# 05 — Ephemeral Scoped Forks, OOP Capability Rings & Symbiotic Bots (`capability_registry.py`, `ephemeral_fork_engine.py`, `tools_ephemeral.py`)
+# Architecture 05: Ephemeral Scoped Forks, OOP Capability Rings & Symbiotic Bots (`capability_registry.py`, `ephemeral_fork_engine.py`, `tools_ephemeral.py`)
 
 > **Navigation**: [`docs/README.md`](../README.md) · [`03_contextual_mcp_and_federation.md`](03_contextual_mcp_and_federation.md) · [`04_compaction_surface_and_promotion_engines.md`](04_compaction_surface_and_promotion_engines.md) · [`06_layer_governance_and_promotion_engines.md`](06_layer_governance_and_promotion_engines.md) · [`contextual_mcp_and_multi_service_orchestration.md`](../reference/contextual_mcp_and_multi_service_orchestration.md)
 
@@ -8,11 +8,13 @@ This document specifies the **Ephemeral Sandbox & Department Bot Dimension** (`A
 
 ## 1. `1:1:1` Source $\leftrightarrow$ Unit Test $\leftrightarrow$ Specification Traceability Matrix
 
-| Source Module (`< 465` lines) | `1:1` Unit Test (`< 465` lines) | Primary Responsibility |
-|-------------------------------|---------------------------------|------------------------|
-| [`scripts/dotfiles_mcp/mcp_node/capability_registry.py`](../../scripts/dotfiles_mcp/mcp_node/capability_registry.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_capability_registry.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_capability_registry.py) (`TestCapabilityRegistry`) | OOP MCP permission rings (`MCP_PERMISSION_RINGS`), 4-family hierarchical bot catalog (`BOT_ARCHETYPE_CATALOG`), Permanent $\leftrightarrow$ Ephemeral symbiosis resolver (`resolve_mcp_capability_profile`), and `rcap1` return digest orchestration (`orchestrate_ephemeral_return_capsule`) |
-| [`scripts/dotfiles_mcp/mcp_node/ephemeral_fork_engine.py`](../../scripts/dotfiles_mcp/mcp_node/ephemeral_fork_engine.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_ephemeral_fork_engine.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_ephemeral_fork_engine.py) (`TestEphemeralForkEngine`) | Zero-copy ephemeral fork materialization (`spawn_ephemeral_fork`), cross-project rule bridging (`mount_project_rules_from`), advisory extraction (`extract_ephemeral_advisories`), 4-Channel subagent brief generation (`build_subagent_invocation_brief`), and TTL garbage collection (`reap_expired_ephemeral_forks`, `reap_ephemeral_fork`) |
-| [`scripts/dotfiles_mcp/mcp_node/tools_ephemeral.py`](../../scripts/dotfiles_mcp/mcp_node/tools_ephemeral.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_tools_ephemeral.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_tools_ephemeral.py) (`TestEphemeralToolsMixin`) | MCP Tool #9 (`orchestrate_ephemeral_fork`: actions `"spawn"`, `"inspect"`, `"evaluate"`, `"reap"`, `"catalog"`, `"seal-return"`, `"verify-return"`), live scoped evaluation with `rcap1` capsule minting, and structured alert emission (`EPHEMERAL_FORK_LIMIT_REACHED`, `EPHEMERAL_FORK_EXPIRED`) |
+Every module in `scripts/dotfiles_mcp/mcp_node/` governing capability rings and ephemeral forks maintains a strict `1:1:1` alignment with its isolated unit test suite (`100.00%` branch coverage, `< 465` lines) and its bidirectional docstring pointer (`Specification: docs/architecture/05_ephemeral_forks_and_department_bots.md`):
+
+| Subpackage & Domain | Normative Section & Primary Responsibility | Source Module (`< 465` lines) | `1:1` Unit Test (`< 465` lines) |
+|---|---|---|---|
+| **`mcp_node/` — OOP Capability Rings, Bot Catalog & Symbiosis** | **§2, §3 & §5**: OOP MCP permission rings (`MCP_PERMISSION_RINGS`), 4-family hierarchical bot catalog (`BOT_ARCHETYPE_CATALOG`), Permanent $\leftrightarrow$ Ephemeral symbiosis resolver (`resolve_mcp_capability_profile`), `rcap1` return digest orchestration (`orchestrate_ephemeral_return_capsule`), `DMCP` zero-checkout context frame projection (`orchestrate_dmcp_branch_projection`), and `GRCC` capsule ref chaining (`compute_grcc_scope_fingerprint`, `orchestrate_grcc_capsule_ref`) | [`scripts/dotfiles_mcp/mcp_node/capability_registry.py`](../../scripts/dotfiles_mcp/mcp_node/capability_registry.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_capability_registry.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_capability_registry.py) (`TestCapabilityRegistry`) |
+| **`mcp_node/` — Hardlink-Isolated Ephemeral Fork Engine** | **§2, §3 & §4**: Zero-copy ephemeral fork materialization (`spawn_ephemeral_fork`), cross-project rule bridging (`mount_project_rules_from`), advisory extraction (`extract_ephemeral_advisories`), 4-Channel subagent brief generation (`build_subagent_invocation_brief`), and TTL garbage collection (`reap_expired_ephemeral_forks`, `reap_ephemeral_fork`) | [`scripts/dotfiles_mcp/mcp_node/ephemeral_fork_engine.py`](../../scripts/dotfiles_mcp/mcp_node/ephemeral_fork_engine.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_ephemeral_fork_engine.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_ephemeral_fork_engine.py) (`TestEphemeralForkEngine`) |
+| **`mcp_node/` — Ephemeral Orchestration MCP Tool (#9)** | **§4 & §5**: MCP Tool #9 (`orchestrate_ephemeral_fork`: actions `"spawn"`, `"inspect"`, `"evaluate"`, `"reap"`, `"catalog"`, `"seal-return"`, `"verify-return"`, `"project-branch"`, `"chain-capsule-ref"`), live scoped evaluation with `rcap1` capsule minting, and structured alert emission (`EPHEMERAL_FORK_LIMIT_REACHED`, `EPHEMERAL_FORK_EXPIRED`, `DMCP_CONTEXT_FRAME_INVALID`) | [`scripts/dotfiles_mcp/mcp_node/tools_ephemeral.py`](../../scripts/dotfiles_mcp/mcp_node/tools_ephemeral.py) | [`tests/unit/dotfiles_mcp/mcp_node/test_tools_ephemeral.py`](../../tests/unit/dotfiles_mcp/mcp_node/test_tools_ephemeral.py) (`TestEphemeralToolsMixin`) |
 
 ---
 
@@ -69,7 +71,7 @@ Any `surface_binding` in `system/mcp-layer.json` (or `template.json` `recommende
 
 ---
 
-## 3B. Bounded `operating_state × mcp_operating_mode` Matrix & Dual Ephemeral Scope (`inter-layer` vs. `intra-layer`)
+### 3.1. Bounded `operating_state × mcp_operating_mode` Matrix & Dual Ephemeral Scope (`inter-layer` vs. `intra-layer`)
 
 To prevent operational ambiguity between the **Non-MCP Static Plane** (`layer-config.sh` / `make`) and the **Contextual MCP Plane** (`dotfiles_mcp_server.py`), every repository `operating_state` maps to a bounded **`mcp_operating_mode`** (`MCP_OPERATING_MODES` in `constants.py`), surfaced identically by `inspect_workspace_status` (`make status`) and `get_layer_overview`:
 
@@ -94,6 +96,8 @@ Furthermore, `spawn_ephemeral_fork` and `orchestrate_ephemeral_fork` enforce two
 
 ## 4. MCP Tool #9 (`orchestrate_ephemeral_fork`) & Zero-Residue Invariants
 
+The `orchestrate_ephemeral_fork` MCP tool (and its `scripts/layer-config.sh` CLI counterparts) manages the complete lifecycle of hardlink-isolated ephemeral forks with deterministic TTL reaping and zero standing residue:
+
 ```mermaid
 sequenceDiagram
     participant Agent as Primary Agent (L0/L1)
@@ -108,18 +112,23 @@ sequenceDiagram
     MCP-->>Agent: Returns subagent_invocation_brief + ephemeral_capsule + ephemeral_capsules (auto-reaps if one_shot=true)
 ```
 
-1. **Hardlink-Isolated Materialization, Read-Only Container Fallback & Path Containment (`default_ephemeral_root`)**:
-   - Ephemeral forks reside under `logs/ephemeral_forks/<fork_id>/` by default (git-ignored and wiped by `make clean`), or automatically fall back to `/tmp/dotfiles_ephemeral_forks/<fork_id>/` (and in-memory `_ephemeral_memory_store` if `/tmp` is non-writable) when the repository is mounted read-only (`:ro` in Docker/Kubernetes).
-   - Instead of OS directory symlinks (which would cause `Path.resolve().is_relative_to(fork_dir)` to escape back to the parent repository), `_copy_zero_copy` constructs real directory trees and hardlinks files via `os.link` (falling back to `shutil.copy2` across filesystem boundaries). In `_prepare_project_bridge`, every candidate `.agents/rules/*.md` is verified via `rf.resolve().is_relative_to(proj)` to block outbound symlink escapes.
-   - `action="evaluate"` returns both the primary `ephemeral_capsule` and the complete `ephemeral_capsules` catalog (including bridged project rules). While an ephemeral fork is active (or preserved in `_ephemeral_memory_store` for `one_shot=True` bridged rules), the parent `DotfilesMCPServer` can unfold (`L0 → L3`) any `rcap1` capsule minted by that fork (`iss="eph-..."` via `_resolve_ephemeral_issuer_meta`), automatically revoking unfolding once the fork is reaped or its TTL expires.
-2. **Deterministic Garbage Collection & Capacity Cap**:
-   - Every invocation of `orchestrate_ephemeral_fork` first executes `reap_expired_ephemeral_forks`, deleting any fork whose `expires_at_epoch <= time.time()` and emitting `EPHEMERAL_FORK_EXPIRED` when a targeted `fork_id` has expired.
-   - Active ephemeral forks are capped at `MAX_ACTIVE_EPHEMERAL_FORKS = 16` (emitting `EPHEMERAL_FORK_LIMIT_REACHED` if exceeded).
-3. **CLI Parity (`scripts/layer-config.sh`)**:
-   - `consult-layer [<target-dir>] --layer <layer-or-template> --query <text> [--path <rel-path>] [--tier <flash|inherit|pro>]` (`make consult LAYER=<id> QUERY="..."` — one-shot `strictly-read-only` inter-layer consultation returning a 4-Channel Digest + `rcap1` capsules and auto-reaping immediately)
-   - `spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>] [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]`
-   - `inspect-ephemeral [--id <fork-id>] [--catalog] [--family <fam>]`
-   - `reap-ephemeral --id <fork-id|all>`
+### 4.1. Hardlink-Isolated Materialization, Read-Only Container Fallback & Path Containment (`default_ephemeral_root`)
+
+- Ephemeral forks reside under `logs/ephemeral_forks/<fork_id>/` by default (git-ignored and wiped by `make clean`), or automatically fall back to `/tmp/dotfiles_ephemeral_forks/<fork_id>/` (and in-memory `_ephemeral_memory_store` if `/tmp` is non-writable) when the repository is mounted read-only (`:ro` in Docker/Kubernetes).
+- Instead of OS directory symlinks (which would cause `Path.resolve().is_relative_to(fork_dir)` to escape back to the parent repository), `_copy_zero_copy` constructs real directory trees and hardlinks files via `os.link` (falling back to `shutil.copy2` across filesystem boundaries). In `_prepare_project_bridge`, every candidate `.agents/rules/*.md` is verified via `rf.resolve().is_relative_to(proj)` to block outbound symlink escapes.
+- `action="evaluate"` returns both the primary `ephemeral_capsule` and the complete `ephemeral_capsules` catalog (including bridged project rules). While an ephemeral fork is active (or preserved in `_ephemeral_memory_store` for `one_shot=True` bridged rules), the parent `DotfilesMCPServer` can unfold (`L0 → L3`) any `rcap1` capsule minted by that fork (`iss="eph-..."` via `_resolve_ephemeral_issuer_meta`), automatically revoking unfolding once the fork is reaped or its TTL expires.
+
+### 4.2. Deterministic Garbage Collection & Capacity Cap (`MAX_ACTIVE_EPHEMERAL_FORKS = 16`)
+
+- Every invocation of `orchestrate_ephemeral_fork` first executes `reap_expired_ephemeral_forks`, deleting any fork whose `expires_at_epoch <= time.time()` and emitting `EPHEMERAL_FORK_EXPIRED` when a targeted `fork_id` has expired.
+- Active ephemeral forks are capped at `MAX_ACTIVE_EPHEMERAL_FORKS = 16` (emitting `EPHEMERAL_FORK_LIMIT_REACHED` if exceeded).
+
+### 4.3. CLI Parity (`scripts/layer-config.sh`)
+
+- `consult-layer [<target-dir>] --layer <layer-or-template> --query <text> [--path <rel-path>] [--tier <flash|inherit|pro>]` (`make consult LAYER=<id> QUERY="..."` — one-shot `strictly-read-only` inter-layer consultation returning a 4-Channel Digest + `rcap1` capsules and auto-reaping immediately)
+- `spawn-ephemeral --role <bot-role> [--templates <csv>] [--layers <csv>] [--globs <csv>] [--project-bridge <dir>] [--tier <flash|inherit|pro>] [--ttl <sec>]`
+- `inspect-ephemeral [--id <fork-id>] [--catalog] [--family <fam>]`
+- `reap-ephemeral --id <fork-id|all>`
 
 ---
 
@@ -128,7 +137,7 @@ sequenceDiagram
 [`capability_registry.py`](../../scripts/dotfiles_mcp/mcp_node/capability_registry.py) models MCP servers using object-oriented capability inheritance on top of [`MCPNodeBase`](../../scripts/dotfiles_mcp/mcp_node/node_base.py):
 
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph OOP["1. OOP Capability Inheritance (MCPNodeBase -> Rings)"]
         R0["R0_DISCOVERY (read)\nResourcesMixin + FederationToolsMixin"]
         R1["R1_COMPACTION (read, filter)\nCompactionToolsMixin + SurfaceToolsMixin"]
@@ -138,18 +147,23 @@ flowchart LR
         R0 --> R1 --> R2 --> WE --> WG
     end
 
-    subgraph Symbiosis["2. Permanent <-> Ephemeral Symbiosis & rcap1 Membrane"]
-        PERM["Permanent Layer MCP\n• get_layer_overview / topology\n• symbiotic_state: basal vs augmented"]
-        EPH["Ephemeral Bot Fork (eph-*)\n• 4 Families (precedence: 15)\n• TTL Lease + session_resonance_key"]
-        PERM -->|"Injects 0..80 lineage + L2/L3 rcap1"| EPH
-        EPH -->|"Hot-plugs lease + seal-return (rcap1)"| PERM
-        PERM -->|"verify-return + Crypto-Shredding on reap"| PERM
+    subgraph Symbiosis["2. Bidirectional Static MCP <-> Ephemeral MCP Symbiosis via rcap1"]
+        PERM["Permanent Static Layer MCP (dotfiles-mcp)\n• Keeps primary agent context light at L0/L1\n• symbiotic_state: basal-permanent-only <-> ephemeral-augmented"]
+        EPH["Ephemeral Bot / Consultation Fork (eph-* / make consult)\n• Zero-copy hardlink sandbox (TTL=300s, surface_globs)\n• Unfolds L2/L3 rules with session_resonance_key (kr: true)"]
+        DIG["Sealed rcap1 Return Capsule (kind: ephemeral-digest)\n• 4-Channel Executive Digest + HMAC-SHA256 + surface_globs proof"]
+        SHRED["verify-return & Crypto-Shredding on Reap\n• Validates signature + surface_globs boundary\n• Reaps fork & revokes session_resonance_key (Zero Standing Privileges)"]
+        PERM -->|"1. Forward: Injects 0..80 lineage + rcap1 (kr: true)"| EPH
+        EPH -->|"2. Hot-plugs active lease + evaluates L2/L3"| DIG
+        DIG -->|"3. Inbound: seal-return -> verify-return"| PERM
+        PERM -->|"4. Reap & Crypto-Shred lease"| SHRED
     end
 
     OOP --> Symbiosis
 ```
 
-### 5.1 Standard CRUD Capability Rings (`MCP_PERMISSION_RINGS`)
+### 5.1. Standard CRUD Capability Rings (`MCP_PERMISSION_RINGS`)
+
+`MCP_PERMISSION_RINGS` organizes the 9 MCP tools into 5 cumulative CRUD capability rings from read-only discovery (`R0_DISCOVERY`) to ephemeral sandbox orchestration (`W_EPHEMERAL_SANDBOX`) and upward governance proposals (`W_GOVERNANCE_PROPOSAL`):
 
 | Ring ID | CRUD Permissions | Persistence Mode | Extension Mixin(s) | Tools Exposed |
 |---------|------------------|------------------|--------------------|---------------|
@@ -161,7 +175,7 @@ flowchart LR
 
 - **Environment & Layer Gating (`resolve_mcp_capability_profile`)**: In `pro` (or any environment declaring `access_mode: "strictly-read-only"`), granted rings are restricted to `["R0_DISCOVERY", "R1_COMPACTION", "R2_CRYPTO_UNFOLD"]`. In `dev`/`pre`, all 5 rings are active.
 
-### 5.2 Hierarchical Bot Archetype Catalog (`BOT_ARCHETYPE_CATALOG`)
+### 5.2. Hierarchical Bot Archetype Catalog (`BOT_ARCHETYPE_CATALOG`)
 
 Bots (`precedence: 15`) are categorized into **4 Functional Families** queryable via `orchestrate_ephemeral_fork(action="catalog", family="<family>")`:
 1. **`"audit-and-compliance"`**: `security-auditor-bot` (`inherit`, `L2`, `R0..R2`), `doc-coherence-bot` (`flash`, `L1`, `R0..R1`).
@@ -169,10 +183,14 @@ Bots (`precedence: 15`) are categorized into **4 Functional Families** queryable
 3. **`"data-and-operations"`**: `ops-ledger-bot` (`flash`, `L1`, `R0..R1`).
 4. **`"scientific-and-normative"`**: `normative-analyst-bot` (`pro`, `L2`, `R0..R2`).
 
-### 5.3 Bidirectional Permanent $\leftrightarrow$ Ephemeral Symbiosis & `rcap1` Return Membrane
+### 5.3. Bidirectional Permanent $\leftrightarrow$ Ephemeral Symbiosis & `rcap1` Return Membrane
 
-1. **Permanent $\rightarrow$ Ephemeral Augmentation**: The Permanent Layer MCP injects inherited `0..80` lineage, baseline guardrails, and surface-filtered `rcap1` capsules into each spawned Ephemeral Bot without cold-start re-indexing.
-2. **Ephemeral $\rightarrow$ Permanent Hot-Plug Lease (`symbiotic_state`)**: While an ephemeral fork (`eph-*`) is alive (`now < expires_at_epoch`), `resolve_mcp_capability_profile` transitions from `"basal-permanent-only"` to `"ephemeral-augmented"`, mounting the ephemeral lease's bridged project rules and `session_resonance_key` into the Permanent MCP. When the lease expires or is reaped, all hot-plugged capabilities and keys vanish automatically (*Zero Standing Privileges*).
-3. **Cryptographic Return Digest Membrane (`action="seal-return"` & `action="verify-return"`)**:
-   - [`seal_ephemeral_digest_capsule`](../../scripts/dotfiles_mcp/capsules/capsule_engine.py) seals an Ephemeral Bot's 4-Channel Executive Digest (`channel_1_domain_state`..`channel_4_actionable_delta`) into an HMAC-SHA256 signed, keystream-encrypted `rcap1` token (`kind: "ephemeral-digest"`) bound to `(fork_id, bot_role, parent_layer_id, surface_globs)`.
-   - [`unseal_ephemeral_digest_capsule`](../../scripts/dotfiles_mcp/capsules/capsule_engine.py) verifies the return capsule in the Permanent MCP, rejecting expired/reaped leases (`EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED` — *Crypto-Shredding*), invalid signatures (`CAPSULE_SIGNATURE_INVALID`), or reported file modifications in `channel_2_affected_surface` that escape the bot's leased `surface_globs` (`SURFACE_BOUNDARY_VIOLATION`).
+From a human operator's perspective, **Static Fixed MCP (`dotfiles-mcp`)** and **Ephemeral MCP (`eph-*` / `make consult`)** act as a **two-way cryptographic airlock** powered by `rcap1` compaction and unfolding:
+- **Why Both Are Needed**: The **Static MCP** remains permanently attached to the workspace with a tiny token footprint (`L0`/`L1`), while an **Ephemeral MCP** is spawned on demand for seconds (`TTL=300s`) to absorb heavy `L2`/`L3` departmental rules (`Legal`, `Security`, `Hexagonal Architecture`), do the deep analysis in an isolated sandbox, and hand back only a compact, cryptographically verified **4-Channel Executive Digest** before vanishing.
+
+1. **Direction 1 — Outbound Forward Capsule Injection (`Permanent Static MCP -> Ephemeral Bot`)**: The Permanent Layer MCP injects inherited `0..80` lineage, baseline guardrails, and surface-filtered `rcap1` capsules (`kr: true`) into each spawned Ephemeral Bot without cold-start re-indexing, unfolding `L2`/`L3` only inside the isolated ephemeral sandbox.
+2. **Direction 2 — Hot-Plug Lease & Inbound Return Membrane (`Ephemeral Bot -> Permanent Static MCP`)**:
+   - **Hot-Plug Lease (`symbiotic_state`)**: While an ephemeral fork (`eph-*`) is alive (`now < expires_at_epoch`), `resolve_mcp_capability_profile` transitions from `"basal-permanent-only"` to `"ephemeral-augmented"`, mounting the ephemeral lease's bridged project rules and `session_resonance_key` into the Permanent MCP.
+   - **Sealed Return Digest (`action="seal-return"` $\rightarrow$ `action="verify-return"`)**: [`seal_ephemeral_digest_capsule`](../../scripts/dotfiles_mcp/capsules/capsule_engine.py) compresses and encrypts the Ephemeral Bot's 4-Channel Executive Digest (`channel_1_domain_state`..`channel_4_actionable_delta`) into an HMAC-SHA256 signed `rcap1` token (`kind: "ephemeral-digest"`) bound to `(fork_id, bot_role, parent_layer_id, surface_globs)`. [`unseal_ephemeral_digest_capsule`](../../scripts/dotfiles_mcp/capsules/capsule_engine.py) unseals and verifies it in the Permanent MCP, rejecting expired/reaped leases (`EPHEMERAL_LEASE_EXPIRED_OR_SHREDDED` — *Crypto-Shredding*), invalid signatures (`CAPSULE_SIGNATURE_INVALID`), or any file in `channel_2_affected_surface` that escapes the bot's leased `surface_globs` (`SURFACE_BOUNDARY_VIOLATION`). When the lease expires or is reaped, all hot-plugged capabilities and keys vanish automatically (*Zero Standing Privileges*).
+3. **Closed-World Autonomous Emulation Labs (Preventive & Reactive Security Rehearsal)**:
+   - Combining `spawn-ephemeral` zero-copy forks (`eph-*`), the 4-family Bot Catalog (`security-auditor-bot`, `architecture-reviewer-bot`, `normative-analyst-bot`, `refactoring-surgeon-bot`), and air-gapped sandboxes (`--read-only --network=none`) enables organizations to run closed, auditable multi-agent simulations across departments and stacks—rehearsing preventive red-team/blue-team security audits and reactive autonomous containment while keeping every action bounded by `surface_globs`, `rcap1` return verification, and human final decision gates (`record-decision`). See [Cross-Departmental & Human-Stack Matrix (`§3`)](../reference/cross_departmental_and_human_stack_matrix.md) for the complete co-evolution and branch-isolation model.

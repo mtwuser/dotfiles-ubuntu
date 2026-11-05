@@ -1,4 +1,4 @@
-.PHONY: help status venv install install-dev install-runtime setup-dev workstation-setup workstation-sync workstation-status test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
+.PHONY: help status task complete consult horizon sync diff promote delegate decision venv install install-dev install-runtime setup-dev reset-dev publish-oss workstation-setup workstation-sync workstation-status test test-unit test-imp test-e2e test-cov test-all lint format typecheck verify audit layer-list layer-pull-all docker-build docker-self-test docker-mcp clean
 
 export PYTHONDONTWRITEBYTECODE := 1
 
@@ -12,11 +12,22 @@ GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
 help:
 	@echo "dotfiles-ubuntu development & verification targets:"
 	@echo "  make install            Create ./venv and install requirements-dev.txt (chains -r requirements.txt)"
-	@echo "  make setup-dev          Initialize ./venv and materialize local .agents/ (technical-base overlay)"
-	@echo "  make workstation-setup  Configure local workstation runtime (readonly mode, human-core, boot auto-sync)"
-	@echo "  make workstation-sync   Pull latest fast-forward release, apply global profile, and re-stow"
+	@echo "  make setup-dev          Clean .agents/ residue and materialize clean software-engineering dev environment"
+	@echo "  make reset-dev          Alias for make setup-dev (purge local fork test residue & restore dev baseline)"
+	@echo "  make publish-oss        Export clean tracker-free Open-Source release to upstream"
+	@echo "  make workstation-setup  Configure local workstation runtime (private/readonly mode, human-base, boot auto-sync)"
+	@echo "  make workstation-sync   Sync workstation runtime (origin -> upstream OSS -> clean committed local dev) and re-stow"
 	@echo "  make workstation-status Show local workstation configuration and runtime status JSON"
 	@echo "  make status             Show consolidated workspace status digest (./scripts/layer-config.sh status)"
+	@echo "  make task               Claim a task in WORKTASK.md and emit feature branch (TASK=\"<query>\")"
+	@echo "  make complete           Mark task [x] in WORKTASK.md (TASK=\"<query>\")"
+	@echo "  make consult            Run zero-residue read-only consultation (LAYER=<id> QUERY=\"<text>\")"
+	@echo "  make horizon            Inspect 1-hop upstream/downstream horizon radar"
+	@echo "  make sync               Synchronize layer templates and mounted subtrees"
+	@echo "  make diff               Compare workspace .agents/ against governing layers"
+	@echo "  make promote            Promote workspace asset upward (SOURCE=<rel-path>)"
+	@echo "  make delegate           Delegate 1-hop directive into layers/<child>/ (CHILD=<id> TASK=\"<text>\")"
+	@echo "  make decision           Record governance decision (ITEM=\"<ref>\" DEC=approve|reject REASON=\"<text>\")"
 	@echo "  make install-runtime    Create ./venv and install only runtime base requirements.txt"
 	@echo "  make test             Run all unit, implementation, and end-to-end tests"
 	@echo "  make test-unit        Run unit tests (tests/unit/)"
@@ -41,9 +52,12 @@ $(VENV_BIN)/pytest:
 
 venv install install-dev: $(VENV_BIN)/pytest
 
-setup-dev: $(VENV_BIN)/pytest
-	./scripts/layer-config.sh apply-project $(CURDIR) --template technical-base
-	mkdir -p $(CURDIR)/.agents/skills && cp -rf $(CURDIR)/antigravity/.gemini/config/skills/* $(CURDIR)/.agents/skills/
+setup-dev reset-dev: $(VENV_BIN)/pytest
+	rm -rf $(CURDIR)/.agents/rules $(CURDIR)/.agents/skills $(CURDIR)/.agents/assets $(CURDIR)/.agents/proposals $(CURDIR)/WORKVALI.md
+	./scripts/layer-config.sh apply-project $(CURDIR) --template software-engineering
+
+publish-oss:
+	./scripts/workstation-sync.sh --publish-oss $(if $(RELEASE_VERSION),--release-version $(RELEASE_VERSION),$(if $(CREATE_PR),--create-pr,--dry-run))
 
 workstation-setup:
 	./scripts/workstation-sync.sh --setup
@@ -56,6 +70,33 @@ workstation-status:
 
 status:
 	./scripts/layer-config.sh status $(CURDIR)
+
+task:
+	./scripts/layer-config.sh start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)
+
+complete:
+	./scripts/layer-config.sh complete-task $(CURDIR) $(if $(PARENT_SYNC),--parent-dir $(PARENT_DIR),) --task "$(TASK)" $(if $(DELIVERABLE),--deliverable "$(DELIVERABLE)",) $(if $(SUMMARY),--summary "$(SUMMARY)",) $(if $(CREATE_PR),--create-pr,)
+
+consult:
+	./scripts/layer-config.sh consult-layer $(CURDIR) --layer $(LAYER) --query "$(QUERY)" $(if $(PATH_TARGET),--path $(PATH_TARGET),) $(if $(TIER),--tier $(TIER),)
+
+horizon:
+	./scripts/layer-config.sh inspect-horizon $(CURDIR)
+
+sync:
+	./scripts/layer-config.sh sync-layer $(CURDIR) $(if $(STRATEGY),--strategy $(STRATEGY),)
+
+diff:
+	./scripts/layer-config.sh diff-project $(CURDIR)
+
+promote:
+	./scripts/layer-config.sh promote-from-project $(CURDIR) --source $(SOURCE) $(if $(TARGET_REPO),--upstream-dir $(TARGET_REPO),) $(if $(LAYER),--to-layer $(LAYER),) $(if $(TEMPLATE),--to-template $(TEMPLATE),) $(PR_FLAGS)
+
+delegate:
+	./scripts/layer-config.sh delegate-to-child $(CURDIR) --to-child $(CHILD) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),) $(if $(PRIORITY),--priority $(PRIORITY),) $(if $(SURFACE),--surface $(SURFACE),) $(if $(SOURCE),--source $(SOURCE),) $(if $(CREATE_PR),--create-pr,)
+
+decision:
+	./scripts/layer-config.sh record-decision $(CURDIR) --item "$(ITEM)" --decision $(DEC) --reason "$(REASON)"
 
 install-runtime:
 	$(PYTHON) -m venv $(VENV_DIR)

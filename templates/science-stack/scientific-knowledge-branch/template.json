@@ -3,7 +3,7 @@
   "template_id": "scientific-knowledge-branch",
   "kind": "science-stack",
   "stack_group": "science-stack",
-  "extends": "business-base",
+  "extends": "science-base",
   "target_role": "department",
   "description": "Scientific, legal, and territorial knowledge-branch pack: lightweight epistemic routing rules, 3-tier indexed reference docs (docs/), Trunk -> Branch -> Specialty taxonomy, SI/ISO precision, and on-demand consultation (make consult)",
   "recommended_surface_bindings": [
@@ -25,7 +25,8 @@
         "templates/science-stack/scientific-knowledge-branch/rules/scientific-methodology.md"
       ],
       "canonical_templates": [
-        "templates/science-stack/scientific-knowledge-branch/rules/scientific-methodology.md"
+        "templates/science-stack/scientific-knowledge-branch/rules/scientific-methodology.md",
+        "templates/science-stack/scientific-knowledge-branch/skills/academic-tutor/SKILL.md"
       ]
     }
   ]

@@ -1,0 +1,49 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "nist-csf-security",
+  "kind": "framework-stack",
+  "stack_group": "framework-stack",
+  "extends": "business-base",
+  "target_role": "department",
+  "upstream_framework": {
+    "name": "nist-csf-2.0",
+    "repository": "https://www.nist.gov/cyberframework",
+    "tracking_branch": "v2.0"
+  },
+  "description": "NIST Cybersecurity Framework (CSF 2.0) Governance, Control Ledgers (GV, ID, PR, DE, RS, RC), Threat Response Playbooks & Zero-Trust Verification",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "nist-csf-control-ledger-and-playbooks",
+      "description": "NIST CSF 2.0 6-function control mapping (GV/ID/PR/DE/RS/RC), immutable security evidence ledgers, and Business AAA incident response SOPs",
+      "mode": "transversal",
+      "target_globs": ["corporate/**", "surfaces/**", "docs/**", "src/**", "scripts/**", "*.py", "*.ts", "*.sh", "Dockerfile", "*.md", "*.json"],
+      "architectural_planes": ["*"],
+      "scopes": ["*"],
+      "traits": ["*"],
+      "default_resolution": "L2",
+      "ephemeral_fork_policy": {
+        "bot_role": "dept-secops-auditor",
+        "trigger": "on_surface_match",
+        "model_tier": "inherit",
+        "access_mode": "strictly-read-only",
+        "mount_templates": ["nist-csf-security", "software-engineering"],
+        "resolution": "L2",
+        "ttl_seconds": 300,
+        "handback_contract": "4-channel-digest+rcap1"
+      },
+      "invariants": [
+        "Every security policy, control, or audit statement maps 1:1 to a NIST CSF 2.0 subcategory ID (GV.*, ID.*, PR.*, DE.*, RS.*, RC.*) recorded in corporate/ledgers/security-controls.md",
+        "Incident response and zero-trust verification playbooks follow the Three-Part Business AAA structure (# Scope & Surface Target, # Normative Invariants, # Verification & Sign-Off Gates)",
+        "Secrets, private keys, and internal network topologies never cross into public surfaces/ or outbound promotion diffs",
+        "Technological application surfaces (src/**, scripts/**, Dockerfile) and custom MCP capabilities enforce OWASP ASVS boundary validation, non-root containers, PATH_CONTAINMENT_VIOLATION guards, and strictly-read-only subagent sandboxes"
+      ],
+      "rule_files": [
+        "templates/framework-stack/nist-csf-security/rules/nist-csf-controls.md"
+      ],
+      "canonical_templates": [
+        "templates/framework-stack/nist-csf-security/rules/nist-csf-controls.md",
+        "templates/framework-stack/nist-csf-security/skills/nist-csf-audit/SKILL.md"
+      ]
+    }
+  ]
+}

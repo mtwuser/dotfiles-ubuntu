@@ -12,15 +12,15 @@ description: restore session state and initialize workspace — first command in
 ## 0. Single-Shot Global Sync & Consolidated Workspace Status
 
 // delegate: flash
-1. **Run ONE combined command** in `<PROJECT_ROOT>` to fast-forward `~/dotfiles-ubuntu` and collect the entire workspace status digest in `< 0.2s`:
+1. **Run ONE combined command** in `<PROJECT_ROOT>` to fast-forward `~/dotfiles-ubuntu` (which resolves to `$DOTFILES_RUNTIME_DIR` / `~/<user-pc>` via canonical symlink) and collect the entire workspace status digest in `< 0.2s`:
    ```bash
    ~/dotfiles-ubuntu/scripts/workstation-sync.sh --sync 2>/dev/null || true
    ~/dotfiles-ubuntu/scripts/layer-config.sh status "<PROJECT_ROOT>"
    ```
    *(If `Makefile` defines `status:`, `make status` runs `layer-config.sh status` with `PARENT_DIR` automatically.)*
 2. **Parse the returned JSON digest** — it provides in a single call:
-   - `operating_state` (`"oss-readonly-appliance"` | `"oss-dev"` | `"corporate-root"` | `"domain-policy"` | `"department"` | `"squad"` | `"project"`), `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `layer_id`, `layer_role`, `precedence`, `active_templates`, `active_rules`, and `command_tiers` (`auto_reflexive`, `guided_tactical`, `conscious_human_gated`)
-   - **Read-Only Appliance Gate**: If `operating_state == "oss-readonly-appliance"` (`~/dotfiles-ubuntu` with `.workstation-state.json`), warn immediately that `$HOME/dotfiles-ubuntu` is a read-only runtime appliance and redirect any authoring to `DOTFILES_DEV_REPO_DIR` (`make setup-dev`).
+   - `operating_state` (`"oss-readonly-appliance"` | `"oss-dev"` | `"individual-root"` | `"corporate-root"` | `"domain-policy"` | `"department"` | `"squad"` | `"project"`), `workspace_mode` (`"business"` | `"technical"` | `"hybrid"`), `layer_id`, `layer_role`, `precedence`, `active_templates`, `active_rules`, and `command_tiers` (`auto_reflexive`, `guided_tactical`, `conscious_human_gated`)
+   - **Read-Only Appliance vs. Personal Sovereign Hub Gate**: If `operating_state == "oss-readonly-appliance"` (`mode=readonly`), warn immediately that `$HOME/dotfiles-ubuntu` is a read-only runtime appliance and redirect any authoring to `DOTFILES_DEV_REPO_DIR` (`make setup-dev`). When `operating_state == "individual-root"` (`~/<user-pc>`, `mode=private`), the operator's personal `$HOME` hub is mutable for personal tasks, `Human-Stack`, and mounted `layers/*` libraries, while upstream `dotfiles-ubuntu` engine/base edits still belong in `DOTFILES_DEV_REPO_DIR`.
    - `has_project_start_skill` (`bool` — if `false`, do NOT search for `.agents/skills/start/SKILL.md`)
    - `session_state` (`exists`, `last_conversation_id`, and `excerpt` of `.agents/SESSION.md`)
    - `priority_state` (`active_tracker` and `excerpt` of `WORKTASK.md` / `WORKROAD.md` / `ROADMAP.md` / `BACKLOG.md` / `README.md`)
@@ -68,7 +68,7 @@ description: restore session state and initialize workspace — first command in
    - If any entry has a **Resume from** note → this is the exact continuation point
 2. **Adopt the Operator's Optional `Human-Stack Profile` (`precedence: 85..95`)**:
    - Inspect `.agents/SESSION.md` (*Case 2: personal evolving `Human-Stack`*), `.agents/LAYER_LINEAGE.md` or `README.md` (*Case 3: Squad/Department onboarding directive*), or any punctual in-chat request (*Case 1*) using the specificity chain `In-Chat Override -> Personal .agents/SESSION.md -> Team Blueprint -> Default (Case 0 when blank/omitted)`.
-   - When one or more atomic `Human-Specs` (`domain-<area>:L1..L4`, `bridge-*`, `soft-*`, `hat-*`) are declared, adapt explanation depth, cross-discipline vocabulary bridges (`bridge-tech-for-business` / `bridge-business-for-tech`), and Socratic guidance accordingly while keeping all organizational and technical gates (`precedence: 0..80`) strictly invariant.
+   - When one or more `Human-Stack` facets (`domain-<area>:M1..M4`, `bridge-*`, `soft-*`, `hat-*`) are declared, adapt explanation depth, cross-discipline vocabulary bridges (`bridge-tech-for-business` / `bridge-business-for-tech`), and Socratic guidance accordingly while keeping all organizational and technical gates (`precedence: 0..80`) strictly invariant.
 
 3. **Cross-reference against Tier 1 artifacts**:
    - If `walkthrough.md` documents verified work not in any Session Log entry → SESSION.md missed it

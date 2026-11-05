@@ -119,7 +119,7 @@ if [ -d "$DOTFILES_DIR/skills" ]; then
             echo "❌ BROKEN: skills/$skill_name → $target"
             broken=$((broken + 1))
         else
-            echo "⚠️  MISSING LINK: skills/$skill_name (run: cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity)"
+            echo "⚠️  MISSING LINK: skills/$skill_name (run: cd $REPO_DIR && stow -t ~ -R antigravity)"
             orphans=$((orphans + 1))
         fi
     done
@@ -133,7 +133,7 @@ echo "  Broken:  $broken"
 
 if [ "$orphans" -gt 0 ] || [ "$broken" -gt 0 ]; then
     echo ""
-    echo "Action: Move orphans to $DOTFILES_DIR and run 'cd ~/dotfiles-ubuntu && stow -t ~ -R antigravity'."
+    echo "Action: Move orphans to $DOTFILES_DIR and run 'cd $REPO_DIR && stow -t ~ -R antigravity'."
     exit 1
 fi
 

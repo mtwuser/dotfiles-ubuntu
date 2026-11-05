@@ -7,18 +7,28 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
+from pathlib import Path
 from typing import Any
 
+from dotfiles_mcp.capsules.surface_weaver import load_citation_telemetry_radar
 from dotfiles_mcp.core.constants import (
     AGENTS_MD_MAX_BYTES,
     ANSI_ESCAPE_RE,
+    CANONICAL_SCIENCE_TRUNKS,
+    CAPSULE_ABSTRACTION_LAYERS,
+    CAPSULE_REF_NAMESPACE,
     CHARS_PER_TOKEN_ESTIMATE,
+    CITATION_LIFECYCLE_QUADRANTS,
+    DEFAULT_SPECIALTY_BRANCH_PREFIX,
+    EPISTEMIC_GRADE_LABELS,
+    GIT_CMD_TIMEOUT_SECONDS,
     MAX_RECOMMENDED_MCP_FANOUT,
-    MCP_OPERATING_MODES,
     REPO_DIR,
     VALID_ENVIRONMENTS,
+    VALID_LIBRARY_PREFIXES,
 )
 from dotfiles_mcp.core.layer_topology_helpers import _resolve_layer_entity_identity
 from dotfiles_mcp.core.manifest_helpers import (
@@ -29,7 +39,10 @@ from dotfiles_mcp.core.manifest_helpers import (
     _read_non_empty_lines,
     _read_os_pretty_name,
     _read_version,
+    _resolve_effective_human_stack,
+    classify_library_domain,
     discover_layer_template_names,
+    resolve_library_mount_endpoints,
 )
 from dotfiles_mcp.governance.promotion_engine import compare_project_patterns_multilayer
 from dotfiles_mcp.mcp_node.capability_registry import resolve_mcp_capability_profile
@@ -39,6 +52,49 @@ from dotfiles_mcp.mcp_node.node_base import MCPNodeBase
 
 class FederationToolsMixin(MCPNodeBase):
     """Implements overview, drift audit, document reading, and federation MCP tools."""
+
+    def _discover_deep_context_index(
+        self, target_dir: Path, mounted: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        git_bin = shutil.which("git") or "git"
+        proc = subprocess.run(  # noqa: S603
+            [
+                git_bin,
+                "-C",
+                str(target_dir),
+                "for-each-ref",
+                "--format=%(refname)",
+                f"refs/heads/{DEFAULT_SPECIALTY_BRANCH_PREFIX}",
+                CAPSULE_REF_NAMESPACE,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=GIT_CMD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        lines = proc.stdout.splitlines() if proc.returncode == 0 else []
+        spec_branches = [
+            ln.removeprefix("refs/heads/").strip()
+            for ln in lines
+            if ln.strip().startswith(f"refs/heads/{DEFAULT_SPECIALTY_BRANCH_PREFIX}")
+        ]
+        grcc_refs = [ln.strip() for ln in lines if ln.strip().startswith(CAPSULE_REF_NAMESPACE)]
+        libraries = [
+            resolve_library_mount_endpoints(m, target_dir)
+            for m in mounted
+            if classify_library_domain(str(m.get("name") or ""))["is_knowledge_library"]
+        ]
+        return {
+            "specialty_branches": spec_branches,
+            "grcc_capsule_refs": grcc_refs,
+            "mounted_subtrees_count": len(mounted),
+            "knowledge_libraries": libraries,
+            "supported_library_prefixes": list(VALID_LIBRARY_PREFIXES),
+            "canonical_science_trunks": {k: list(v) for k, v in CANONICAL_SCIENCE_TRUNKS.items()},
+            "epistemic_grades": dict(EPISTEMIC_GRADE_LABELS),
+            "abstraction_gradient": dict(CAPSULE_ABSTRACTION_LAYERS),
+            "citation_lifecycle_quadrants": dict(CITATION_LIFECYCLE_QUADRANTS),
+        }
 
     def _tool_get_layer_overview(self, args: dict[str, Any]) -> dict[str, Any]:
         target_dir = self._resolve_layer_dir(args.get("layer"))
@@ -65,17 +121,7 @@ class FederationToolsMixin(MCPNodeBase):
         agents_bytes = agents_file.stat().st_size if agents_file.is_file() else 0
         warnings = self._evaluate_layer_warnings(target_dir, agents_bytes)
         role = str(manifest.get("layer_role") or "project")
-        is_ro = role == "workstation" and (target_dir / ".workstation-state.json").is_file()
-        op_state = (
-            "oss-readonly-appliance"
-            if is_ro
-            else (
-                "oss-dev"
-                if role == "workstation"
-                else ("corporate-root" if role == "corporate" else role)
-            )
-        )
-        mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
+        ent_id = _resolve_layer_entity_identity(target_dir, manifest)
         cap_profile = resolve_mcp_capability_profile(
             manifest,
             active_ephemeral_forks=inspect_ephemeral_forks(target_dir)["forks"],
@@ -85,9 +131,9 @@ class FederationToolsMixin(MCPNodeBase):
                 "version": _read_version(target_dir),
                 "layer_id": manifest.get("layer_id"),
                 "layer_role": role,
-                "entity_identity": _resolve_layer_entity_identity(target_dir, manifest),
-                "operating_state": op_state,
-                "mcp_operating_mode": mcp_mode,
+                "entity_identity": ent_id,
+                "operating_state": ent_id["operating_state"],
+                "mcp_operating_mode": ent_id["mcp_operating_mode"],
                 "hostname": socket.gethostname(),
                 "in_container": _is_running_in_container(),
                 "os_pretty_name": _read_os_pretty_name(),
@@ -101,6 +147,8 @@ class FederationToolsMixin(MCPNodeBase):
                 },
             },
             "channel_2_governance_and_stack_contracts": {
+                "global_profile": str(manifest.get("global_profile", "human-base")),
+                "human_stack": _resolve_effective_human_stack(target_dir, manifest),
                 "global_skills_count": len(skills_names),
                 "global_skills": skills_names,
                 "stack_templates": template_names,
@@ -127,7 +175,8 @@ class FederationToolsMixin(MCPNodeBase):
             "channel_4_navigable_docs_and_federated_mcps": {
                 "docs_index": "docs/README.md",
                 "documents": docs_files,
-                "mounted_layers": self._discover_mounted_layers(),
+                "mounted_layers": (mounted_layers := self._discover_mounted_layers()),
+                "deep_context_index": self._discover_deep_context_index(target_dir, mounted_layers),
                 "supported_environments": list(manifest.get("environments", {}).keys()),
                 "federated_mcps": manifest.get("federated_mcps", []),
                 "oop_capability_inheritance": cap_profile["oop_capability_inheritance"],
@@ -195,6 +244,7 @@ class FederationToolsMixin(MCPNodeBase):
             ]
         else:
             results["warnings"] = []
+        results["citation_lifecycle_radar"] = load_citation_telemetry_radar(self.repo_dir)
         return {
             "content": [{"type": "text", "text": json.dumps(results, indent=2)}],
             "isError": False,
@@ -203,8 +253,12 @@ class FederationToolsMixin(MCPNodeBase):
     def _tool_read_layer_document(self, args: dict[str, Any]) -> dict[str, Any]:
         rel_path = str(args.get("relative_path", ""))
         target_dir = self._resolve_layer_dir(args.get("layer"))
-        target = self._resolve_safe_path(rel_path, target_dir)
-        content = target.read_text(encoding="utf-8")
+        branch_ref = str(args.get("branch_ref") or "").strip()
+        if branch_ref:
+            content, _ = self._read_git_branch_document(rel_path, branch_ref, target_dir)
+        else:
+            target = self._resolve_safe_path(rel_path, target_dir)
+            content = target.read_text(encoding="utf-8")
         return {
             "content": [{"type": "text", "text": content}],
             "isError": False,

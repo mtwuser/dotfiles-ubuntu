@@ -22,7 +22,6 @@ from dotfiles_mcp.core.constants import (
     LAYER_ROLE_MAKEFILE_TARGETS,
     MAKEFILE_CUSTOM_TARGETS_MARKER,
     MAKEFILE_ROLE_HEADER_PREFIX,
-    MCP_OPERATING_MODES,
     ROLE_DEFAULT_PRECEDENCE,
     SCIENCE_MODE_TEMPLATES,
     STATUS_EXCERPT_MAX_LINES,
@@ -43,9 +42,11 @@ from dotfiles_mcp.core.layer_topology_helpers import (
 from dotfiles_mcp.core.manifest_helpers import (
     _iter_layer_template_dirs,
     _merge_unique_strings,
+    _resolve_effective_human_stack,
     _resolve_template_dest_dir,
     _resolve_template_dir,
     _stamp_schema_rev,
+    classify_library_domain,
 )
 from dotfiles_mcp.governance.fork_configurator import (
     apply_fork_to_project,
@@ -59,16 +60,14 @@ from dotfiles_mcp.governance.horizon_engine import (
 )
 from dotfiles_mcp.governance.promotion_engine import diff_project_against_layers
 
-VALID_GLOBAL_PROFILES = ("human-core", "technical", "business", "full")
-_HC = ("human-core", "human-core.md")
-_TB = ("technical-base", "technical-base.md")
+VALID_GLOBAL_PROFILES = ("human-base", "science", "technical", "business", "full")
+_HB, _SB = ("human-base", "human-base.md"), ("science-base", "science-base.md")
+_SE = ("software-engineering", "software-engineering.md")
 _BB = ("business-base", "business-base.md")
 PROFILE_TEMPLATE_CHAIN: dict[str, tuple[tuple[str, str], ...]] = {
-    "human-core": (_HC,),
-    "technical": (_HC, _TB),
-    "business": (_HC, _BB),
-    "full": (_HC, _TB, _BB),
-}
+    "human-base": (_HB,), "science": (_HB, _SB), "technical": (_HB, _SB, _SE),
+    "business": (_HB, _BB), "full": (_HB, _SB, _SE, _BB),
+}  # fmt: skip
 
 
 def _strip_frontmatter(markdown_text: str) -> str:
@@ -90,10 +89,8 @@ def _strip_secondary_header(markdown_text: str) -> str:
 
 def _ensure_fixed_mcp_registered(repo_dir: Path, target_home: Path) -> None:
     """Idempotently register dotfiles-mcp in <home>/.gemini/{config,antigravity}/mcp_config.json."""
-    cfg_p, ag_p = (
-        target_home / ".gemini/config/mcp_config.json",
-        target_home / ".gemini/antigravity/mcp_config.json",
-    )
+    cfg_p = target_home / ".gemini/config/mcp_config.json"
+    ag_p = target_home / ".gemini/antigravity/mcp_config.json"
     cfg_p.parent.mkdir(parents=True, exist_ok=True)
     data: dict[str, Any] = json.loads(cfg_p.read_text("utf-8")) if cfg_p.is_file() else {}
     srv_arg = str((repo_dir / "scripts/dotfiles_mcp_server.py").resolve())
@@ -113,28 +110,31 @@ def set_global_agents_profile(
         raise ValueError(f"Invalid global profile {profile!r}; must be in {VALID_GLOBAL_PROFILES}")
     sections, source_files = [], []
     for idx, (tpl_id, rule_filename) in enumerate(PROFILE_TEMPLATE_CHAIN[profile]):
-        rule_path = repo_dir / "templates" / tpl_id / "rules" / rule_filename
+        tdir = _resolve_template_dir(repo_dir, tpl_id) or (repo_dir / "templates" / tpl_id)
+        rule_path = tdir / "rules" / rule_filename
         if not rule_path.is_file():
-            raise ValueError(
-                f"Missing profile template rule file: {rule_path.relative_to(repo_dir)}"
-            )
+            rel_r = rule_path.relative_to(repo_dir)
+            raise ValueError(f"Missing profile template rule file: {rel_r}")
         source_files.append(str(rule_path.relative_to(repo_dir)))
         raw_text = rule_path.read_text(encoding="utf-8").strip()
-        sections.append(
-            _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
-        )
+        sec = _strip_frontmatter(raw_text) if idx == 0 else _strip_secondary_header(raw_text)
+        sections.append(sec)
 
     composed = "\n\n---\n\n".join(sections) + "\n"
     composed_bytes, cap = len(composed.encode("utf-8")), AGENTS_MD_MAX_BYTES
     if composed_bytes > cap:
         raise ValueError(f"Composed AGENTS.md size ({composed_bytes} bytes) exceeds {cap}-byte cap")
     target_agents, stow_executed = repo_dir / "antigravity/.gemini/config/AGENTS.md", False
+    m_path = repo_dir / "system/mcp-layer.json"
     if not dry_run:
         target_agents.parent.mkdir(parents=True, exist_ok=True)
         target_agents.write_text(composed, encoding="utf-8")
+        m_data = json.loads(m_path.read_text("utf-8")) if m_path.is_file() else {}
+        if m_data.get("entity_kind") == "individual" or int(m_data.get("precedence", 10)) >= 85:
+            m_data["global_profile"] = profile
+            m_path.write_text(json.dumps(m_data, indent=2, ensure_ascii=False) + "\n", "utf-8")
         if run_stow:
-            target_home = home_dir or Path.home()
-            stow_bin = shutil.which("stow") or "/usr/bin/stow"
+            target_home, stow_bin = home_dir or Path.home(), shutil.which("stow") or "/usr/bin/stow"
             cmd = [stow_bin, "-t", str(target_home), "-R", "antigravity"]
             subprocess.run(cmd, cwd=repo_dir, check=True, capture_output=True, text=True)  # noqa: S603
             _ensure_fixed_mcp_registered(repo_dir, target_home)
@@ -184,11 +184,20 @@ def _sync_templates_from_roots(
     """Copy or reconcile template packs from effective_parent and repo_dir into target_dir."""
     same_root = effective_parent.resolve() == repo_dir.resolve()
     roots = [repo_dir] if same_root else [effective_parent, repo_dir]
-    copied: list[str] = []
-    conflicts: list[dict[str, Any]] = []
-    for tpl_name in tpl_names:
-        if tpl_name == skip_id:
-            continue
+    expanded = list(dict.fromkeys(t for t in tpl_names if t and t != skip_id))
+    for tpl_name in list(expanded):
+        cur = tpl_name
+        while src_d := next((d for r in roots if (d := _resolve_template_dir(r, cur))), None):
+            tj = src_d / "template.json"
+            ext = (
+                str(json.loads(tj.read_text("utf-8")).get("extends") or "") if tj.is_file() else ""
+            )
+            if not ext or ext == skip_id or ext in expanded:
+                break
+            expanded.insert(expanded.index(tpl_name), ext)
+            cur = ext
+    copied, conflicts = list[str](), list[dict[str, Any]]()
+    for tpl_name in expanded:
         src_tpl = next((d for r in roots if (d := _resolve_template_dir(r, tpl_name))), None)
         dest_tpl = _resolve_template_dest_dir(target_dir, tpl_name, src_tpl=src_tpl)
         local_tpl = _resolve_template_dir(target_dir, tpl_name) or dest_tpl
@@ -218,20 +227,20 @@ def bootstrap_layer_workspace(
         raise ValueError(f"Invalid layer_id {layer_id!r}")
     if layer_role not in VALID_LAYER_ROLES:
         raise ValueError(f"Invalid layer_role {layer_role!r}")
-    effective_prec = (
-        precedence
-        if precedence is not None
-        else ROLE_DEFAULT_PRECEDENCE.get(layer_role, ROLE_DEFAULT_PRECEDENCE["service-node"])
-    )
+    def_prec = ROLE_DEFAULT_PRECEDENCE.get(layer_role, ROLE_DEFAULT_PRECEDENCE["service-node"])
+    effective_prec = precedence if precedence is not None else def_prec
     effective_parent = parent_dir if parent_dir is not None else repo_dir
     parent_manifest_path = effective_parent / "system" / "mcp-layer.json"
     inherited_templates: list[str] = []
     if parent_manifest_path.is_file():
         parent_manifest = json.loads(parent_manifest_path.read_text(encoding="utf-8"))
-        if parent_manifest.get("layer_role") not in (None, "workstation"):
-            p_entity = _resolve_layer_entity_identity(effective_parent, parent_manifest)
-            entity_kind = entity_kind or str(p_entity["entity_kind"])
-            governing_root_id = governing_root_id or str(p_entity["governing_root_id"])
+        p_ent = _resolve_layer_entity_identity(effective_parent, parent_manifest)
+        if p_ent["entity_kind"] != "open-source" and (
+            parent_dir is not None or parent_manifest.get("layer_role") not in (None, "workstation")
+        ):
+            entity_kind = entity_kind or str(p_ent["entity_kind"])
+            p_fb = parent_manifest.get("layer_id", effective_parent.name)
+            governing_root_id = governing_root_id or str(p_ent["governing_root_id"] or p_fb)
             upstream_layer_id = upstream_layer_id or parent_manifest.get("layer_id")
             upstream_repo = upstream_repo or parent_manifest.get("repository")
             if not upstream_repo and (effective_parent / ".git").exists():
@@ -243,7 +252,8 @@ def bootstrap_layer_workspace(
                 upstream_repo = proc.stdout.strip() or None
             def_tpls = [str(pt) for pt in parent_manifest.get("default_stack_templates", [])]
             inherited_templates = _merge_unique_strings(def_tpls)
-    requested_templates = _merge_unique_strings(inherited_templates, templates or [])
+    dom_def = classify_library_domain(layer_id)["default_stack_templates"]
+    requested_templates = _merge_unique_strings(inherited_templates, templates or dom_def)
     copied_templates, _ = _sync_templates_from_roots(
         target_dir, effective_parent, repo_dir, requested_templates, dry_run=dry_run
     )
@@ -262,43 +272,38 @@ def bootstrap_layer_workspace(
         m_data["default_stack_templates"] = list(all_tpls)
         m_path.write_text(json.dumps(m_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
-    is_tech_sq = layer_role == "squad" and any(
-        t in requested_templates for t in TECHNICAL_MODE_TEMPLATES
-    )
-    is_sci = any(t in requested_templates for t in SCIENCE_MODE_TEMPLATES)
-    own_kind = "tech-stack" if is_tech_sq else ("science-stack" if is_sci else "business-stack")
+    is_tech_sq = layer_role == "squad" and bool(set(requested_templates) & set(TECHNICAL_MODE_TEMPLATES))  # noqa: E501  # fmt: skip
+    is_sci = bool(set(requested_templates) & set(SCIENCE_MODE_TEMPLATES))
+    own_kind = "framework-stack" if is_tech_sq else ("science-stack" if is_sci else "business-stack")  # noqa: E501  # fmt: skip
     scaf_kw: dict[str, Any] = {"template_name": own_tpl_id, "kind": own_kind, "dry_run": dry_run,
         "description": description or f"{layer_id} ({layer_role}) governance pack",
         "register_binding": True, "rule_filename": f"{own_tpl_id}.md"}  # fmt: skip
     scaffold_res = scaffold_template_pack(target_dir, **scaf_kw) if scaffold_own_template else None
-    ag_rule = (
-        f"---\ntrigger: always_on\n"
-        f'description: "Layer governance rules for {layer_id} ({layer_role})."\n---\n\n'
-        f"# {layer_id} Layer Rules (`{layer_role}`, `precedence: {effective_prec}`)\n\n"
-        f"> Governed by `system/mcp-layer.json` (`layer_id: {layer_id}`).\n\n"
-        f"## Scope & Surface Target\n"
-        f"- Governs `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`).\n\n"
-        f"## Normative Invariants\n"
-        f"- Respect *Lex Superior* (`0..100`) and `templates/{own_tpl_id}/` contracts.\n\n"
-        "## Verification & Sign-Off Gates\n"
-        "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.\n"
+    ag_rule = "\n".join([
+        "---", "trigger: always_on",
+        f'description: "Layer governance rules for {layer_id} ({layer_role})."', "---", "",
+        f"# {layer_id} Layer Rules (`{layer_role}`, `precedence: {effective_prec}`)", "",
+        f"> Governed by `system/mcp-layer.json` (`layer_id: {layer_id}`).", "",
+        "## Scope & Surface Target",
+        f"- Governs `{layer_id}` (`{layer_role}`, `precedence: {effective_prec}`).", "",
+        "## Normative Invariants",
+        f"- Respect *Lex Superior* (`0..100`) and `templates/{own_tpl_id}/` contracts.", "",
+        "## Verification & Sign-Off Gates",
+        "- [ ] Verify `.agents/LAYER_LINEAGE.md` and `diff-project` parity before commit.", "",
+    ])  # fmt: skip
+    readme_md = _render_layer_onboarding_readme(
+        layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
     )
-    baseline_files = {
-        ".gitignore": "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n",
-        "layers/.gitkeep": "",
-        "Makefile": _render_layer_makefile(layer_id, layer_role, effective_parent, repo_dir),
-        "README.md": _render_layer_onboarding_readme(
-            layer_id, layer_role, effective_prec, own_tpl_id, all_tpls, upstream_layer_id
-        ),
-        "CHANGELOG.md": (
-            f"# Changelog — {layer_id}\n\n## [Unreleased]\n- Initial layer bootstrap.\n"
-        ),
-        "WORKTASK.md": (
-            f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap.\n"
-            "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
-        ),
-        "antigravity/.gemini/config/AGENTS.md": ag_rule,
-    }
+    wt_md = (
+        f"# Active Work Tasks — {layer_id}\n\n- [x] Initial layer bootstrap.\n"
+        "- [ ] Complete `Layer Setup Blueprint` in `README.md` and run Kickoff Prompt.\n"
+    )
+    git_ign = "__pycache__/\n*.pyc\n.ruff_cache/\n.mypy_cache/\n.pytest_cache/\nlogs/\n"
+    chg_md = f"# Changelog — {layer_id}\n\n## [Unreleased]\n- Initial bootstrap.\n"
+    mk_txt = _render_layer_makefile(layer_id, layer_role, effective_parent, repo_dir)
+    baseline_files = {".gitignore": git_ign, "layers/.gitkeep": "", "README.md": readme_md,
+        "WORKTASK.md": wt_md, "CHANGELOG.md": chg_md, "Makefile": mk_txt,
+        "antigravity/.gemini/config/AGENTS.md": ag_rule}  # fmt: skip
     created_baseline: list[str] = []
     for rel_path, content in baseline_files.items():
         dest_file = target_dir / rel_path
@@ -307,16 +312,14 @@ def bootstrap_layer_workspace(
             if not dry_run:
                 dest_file.parent.mkdir(parents=True, exist_ok=True)
                 dest_file.write_text(content, encoding="utf-8")
+    for sub_d in ("reference", "architecture", "guides") if not dry_run else ():
+        (target_dir / "docs" / sub_d).mkdir(parents=True, exist_ok=True)
+        (target_dir / "docs" / sub_d / ".gitkeep").touch(exist_ok=True)
 
     tpl_ref_arg = ",".join(all_tpls) if all_tpls else None
     empty_apply: dict[str, Any] = {"applied_template": tpl_ref_arg, "files_materialized": []}
-    apply_res: dict[str, Any] = (
-        apply_fork_to_project(
-            target_dir, target_dir, template_ref=tpl_ref_arg, layers_filter=["all"], dry_run=False
-        )
-        if not dry_run
-        else empty_apply
-    )
+    ap_kw: dict[str, Any] = {"template_ref": tpl_ref_arg, "layers_filter": ["all"], "dry_run": False}  # noqa: E501  # fmt: skip
+    apply_res = apply_fork_to_project(target_dir, target_dir, **ap_kw) if not dry_run else empty_apply  # noqa: E501  # fmt: skip
     scaf_id = scaffold_res["template_id"] if scaffold_res else None
     return {"target_dir": str(target_dir), "layer_id": layer_id, "dry_run": dry_run,
         "layer_role": layer_role, "precedence": effective_prec,
@@ -337,23 +340,15 @@ def sync_layer_workspace(
     if not manifest_path.is_file():
         raise ValueError(f"Missing target layer manifest: {manifest_path}")
     manifest: dict[str, Any] = json.loads(manifest_path.read_text(encoding="utf-8"))
-    own_id = str(manifest.get("layer_id") or "")
-    raw_role = str(manifest.get("layer_role") or "department")
+    own_id, raw_role = str(manifest.get("layer_id") or ""), str(manifest.get("layer_role") or "department")  # noqa: E501  # fmt: skip
     own_role = "squad" if raw_role == "team" else raw_role
     def_tpls = [str(t) for t in manifest.get("default_stack_templates", [])]
     stack_templates = _merge_unique_strings(def_tpls, templates or [])
-    needs_m_save = (
-        manifest.get("schema_version") != LAYER_MANIFEST_CONTRACT_REV
-        or raw_role == "team"
-        or bool(templates)
-    )
-    if not dry_run and needs_m_save:
-        manifest["schema_version"] = LAYER_MANIFEST_CONTRACT_REV
-        manifest["layer_role"] = own_role
+    stale_rev = manifest.get("schema_version") != LAYER_MANIFEST_CONTRACT_REV
+    if not dry_run and (stale_rev or raw_role == "team" or bool(templates)):
+        manifest["schema_version"], manifest["layer_role"] = LAYER_MANIFEST_CONTRACT_REV, own_role
         manifest["default_stack_templates"] = list(stack_templates)
-        manifest_path.write_text(
-            json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-        )
+        manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", "utf-8")
 
     existing_tpls = [name for name, _p in _iter_layer_template_dirs(target_dir)]
     candidate_tpls = list(dict.fromkeys([*stack_templates, *existing_tpls]))
@@ -377,12 +372,19 @@ def sync_layer_workspace(
     mk_ok = not cur_mk or cur_mk.startswith(MAKEFILE_ROLE_HEADER_PREFIX)
     mk_upgraded = mk_ok and cur_mk != new_mk
     if not dry_run:
-        if "technical-base" not in stack_templates:
-            (target_dir / ".agents/rules/technical-base.md").unlink(missing_ok=True)
+        if not (set(stack_templates) & set(TECHNICAL_MODE_TEMPLATES)):
+            for rf in ("science-base.md", "software-engineering.md"):
+                (target_dir / ".agents/rules" / rf).unlink(missing_ok=True)
             for sk in ("testing", "refactoring", "validation", "oss-contribute"):
                 shutil.rmtree(target_dir / ".agents/skills" / sk, ignore_errors=True)
         if mk_upgraded:
             makefile_path.write_text(new_mk, encoding="utf-8")
+    app_svcs = [
+        {"template": t, **rs} for t in candidate_tpls
+        if (td := _resolve_template_dir(target_dir, t) or _resolve_template_dir(repo_dir, t))
+        and (tj := td / "template.json").is_file()
+        and isinstance(rs := json.loads(tj.read_text("utf-8")).get("runtime_service"), dict)
+    ]  # fmt: skip
     tpl_ref = ",".join(stack_templates) if stack_templates else None
     apply_res = apply_fork_to_project(
         target_dir, target_dir, template_ref=tpl_ref, layers_filter=["all"], dry_run=dry_run
@@ -391,7 +393,7 @@ def sync_layer_workspace(
         "target_dir": str(target_dir), "layer_id": own_id, "strategy": strategy,
         "dry_run": dry_run, "makefile_upgraded": mk_upgraded,
         "synced_templates": synced_templates, "reconciliation_conflicts": conflicts,
-        "synced_mounted_layers": synced_children,
+        "synced_mounted_layers": synced_children, "app_services_redeployed": app_svcs,
         "applied_template": apply_res.get("applied_template"),
         "files_materialized": apply_res.get("files_materialized", []),
         "participating_layers": apply_res.get("participating_layers", []),
@@ -413,11 +415,9 @@ def inspect_workspace_status(
         set(TECHNICAL_MODE_RULE_FILES) & set(rules) or set(TECHNICAL_MODE_TEMPLATES) & set(tpls)
     )
     has_biz = bool(
-        set(BUSINESS_MODE_RULE_FILES) & set(rules)
-        or set(BUSINESS_MODE_TEMPLATES) & set(tpls)
-        or role in ("corporate", "domain-policy")
-        or (ws / "corporate").is_dir()
-    )
+        set(BUSINESS_MODE_RULE_FILES) & set(rules) or set(BUSINESS_MODE_TEMPLATES) & set(tpls)
+        or role in ("corporate", "domain-policy") or (ws / "corporate").is_dir()
+    )  # fmt: skip
     mode = "hybrid" if (has_tech and has_biz) else ("business" if has_biz else "technical")
     s_file = ws / ".agents/SESSION.md"
     s_txt = s_file.read_text(encoding="utf-8") if s_file.is_file() else ""
@@ -430,26 +430,26 @@ def inspect_workspace_status(
     def _git_lines(*args: str) -> list[str]:
         if not is_git:
             return []
-        proc = subprocess.run(  # noqa: S603
-            [git_bin, *args], cwd=ws, check=False, capture_output=True, text=True,
-        )  # fmt: skip
+        proc = subprocess.run([git_bin, *args], cwd=ws, check=False, capture_output=True, text=True)  # noqa: S603
         return proc.stdout.splitlines()
 
-    g_stat, g_log = (
-        _git_lines("status", "--short", "--branch"),
-        _git_lines("log", "--oneline", "-5"),
-    )
+    g_stat = _git_lines("status", "--short", "--branch")
+    g_log = _git_lines("log", "--oneline", "-5")
     lim, last_cid = STATUS_EXCERPT_MAX_LINES, uuid_m.group(0) if uuid_m else None
     s_ex, p_ex = "\n".join(s_txt.splitlines()[:lim]), "\n".join(trk_txt.splitlines()[:lim])
     mk_t = list(LAYER_ROLE_MAKEFILE_TARGETS.get(role, LAYER_ROLE_MAKEFILE_TARGETS["project"]))
-    is_ro_app = role == "workstation" and (ws / ".workstation-state.json").is_file()
-    op_map = {"workstation": "oss-dev", "corporate": "corporate-root"}
-    op_state = "oss-readonly-appliance" if is_ro_app else op_map.get(role, role)
-    mcp_mode = MCP_OPERATING_MODES.get(op_state, "project-consumer-only")
+    ent_id = _resolve_layer_entity_identity(ws, m, parent_dir=parent_dir)
+    op_state, mcp_mode = str(ent_id["operating_state"]), str(ent_id["mcp_operating_mode"])
+    hs = _resolve_effective_human_stack(ws, m)
     cmd_tiers = {k: [t for t in v if t in mk_t] for k, v in COMMAND_CONSCIOUSNESS_TIERS.items()}
     s_st = {"exists": s_file.is_file(), "last_conversation_id": last_cid, "excerpt": s_ex}
     a_root = ws if is_layer else (parent_dir or repo_dir)
     return {"workspace_dir": str(ws), "layer_id": lid, "layer_role": role,
+        "entity_identity": ent_id, "visibility_scope": ent_id["visibility_scope"],
+        "exposure_boundary": ent_id["exposure_boundary"],
+        "can_expose_to_oss": ent_id["can_expose_to_oss"],
+        "global_profile": str(m.get("global_profile", "human-base")),
+        "human_stack": hs["facets"], "human_stack_scope": hs["scope"],
         "operating_state": op_state, "mcp_operating_mode": mcp_mode, "precedence": prec,
         "workspace_mode": mode, "is_oss_dev_workspace": op_state == "oss-dev",
         "command_tiers": cmd_tiers, "active_templates": tpls, "active_rules": rules,

@@ -59,6 +59,8 @@ STOW_OK=0
 STOW_ISSUES=0
 if [ -n "${DOTFILES_RUNTIME_DIR:-}" ] && [ -d "$DOTFILES_RUNTIME_DIR" ]; then
   STOW_BASE_DIR="$(cd "$DOTFILES_RUNTIME_DIR" && pwd)"
+elif [ -L "$HOME/.bashrc" ]; then
+  STOW_BASE_DIR="$(cd "$(dirname "$(readlink -f "$HOME/.bashrc")")/.." 2>/dev/null && pwd || echo "$SCRIPT_DIR")"
 else
   REPO_BASE="$(basename "$SCRIPT_DIR")"
   if [[ "$REPO_BASE" == dev-* ]] && [ -d "$HOME/${REPO_BASE#dev-}" ]; then
@@ -321,7 +323,7 @@ fi
 section "Residual Files"
 FOUND_RESIDUALS=false
 BACKUPS="$(find "$HOME" -maxdepth 4 -name '*.backup.*' \
-  -not -path '*/dotfiles-ubuntu/*' -not -path '*/.git/*' 2>/dev/null || true)"
+  -not -path '*/dotfiles-ubuntu/*' -not -path "$SCRIPT_DIR/*" -not -path '*/.git/*' 2>/dev/null || true)"
 
 if [ -n "$BACKUPS" ]; then
   FOUND_RESIDUALS=true
@@ -374,14 +376,14 @@ fi
 section "Repo Status"
 cd "$SCRIPT_DIR"
 WORKSTATION_CONF="${DOTFILES_WORKSTATION_CONF:-$HOME/.config/dotfiles-ubuntu/workstation.conf}"
-ACTIVE_PROFILE="human-core"
+ACTIVE_PROFILE="human-base"
 if [ -f "$WORKSTATION_CONF" ]; then
   # shellcheck disable=SC1090
   . "$WORKSTATION_CONF"
-  ACTIVE_PROFILE="${DOTFILES_GLOBAL_PROFILE:-human-core}"
+  ACTIVE_PROFILE="${DOTFILES_GLOBAL_PROFILE:-human-base}"
 fi
 STATUS_LINES="$(git status --porcelain 2>/dev/null || true)"
-if [ "$ACTIVE_PROFILE" != "human-core" ] && [ "$STATUS_LINES" = " M antigravity/.gemini/config/AGENTS.md" ]; then
+if [ "$ACTIVE_PROFILE" != "human-base" ] && [ "$STATUS_LINES" = " M antigravity/.gemini/config/AGENTS.md" ]; then
   ok "Working tree clean (composed global profile: $ACTIVE_PROFILE)"
 elif [ -n "$STATUS_LINES" ]; then
   warn "Uncommitted changes:"

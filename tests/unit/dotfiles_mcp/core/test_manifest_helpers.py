@@ -237,12 +237,12 @@ class TestManifestHelpers:
         sibling_contrib = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
         monkeypatch.setenv("DOTFILES_DEV_REPO_DIR", str(env_contrib))
         env_resolved = manifest_helpers._resolve_oss_contrib_repo_dir(up_repo)
-        src_tech_tpl = tmp_path / "src_repo/templates/tech-stack/fastapi-hexagonal"
+        src_tech_tpl = tmp_path / "src_repo/templates/framework-stack/fastapi-hexagonal"
         src_tech_tpl.mkdir(parents=True)
-        (tmp_path / "src_repo/templates/tech-stack/.gitkeep").write_text("", encoding="utf-8")
+        (tmp_path / "src_repo/templates/framework-stack/.gitkeep").write_text("", encoding="utf-8")
         (up_repo / "templates/fastapi-hexagonal").mkdir(parents=True)
         iter_tpls = manifest_helpers._iter_layer_template_dirs(tmp_path / "src_repo")
-        empty_resolved = manifest_helpers._resolve_template_dir(up_repo, "tech-stack")
+        empty_resolved = manifest_helpers._resolve_template_dir(up_repo, "framework-stack")
         dest_from_src = manifest_helpers._resolve_template_dest_dir(
             up_repo, "fastapi-hexagonal", src_tpl=src_tech_tpl
         )
@@ -262,14 +262,14 @@ class TestManifestHelpers:
         assert plain_no_h1.read_text(encoding="utf-8") == "Body without heading.\n"
         assert res_existing.startswith("---\ntrigger: model_decision\n---\n")
         assert '"target_role": "department"' in stale_tpl_biz.read_text(encoding="utf-8")
-        assert '"kind": "tech-stack"' in stale_tpl_tech.read_text(encoding="utf-8")
+        assert '"kind": "framework-stack"' in stale_tpl_tech.read_text(encoding="utf-8")
         assert '"kind": "business-stack"' in stale_tpl_pol.read_text(encoding="utf-8")
         assert fallback_contrib == up_repo
         assert sibling_contrib == dev_sibling.resolve()
         assert env_resolved == env_contrib.resolve()
         assert iter_tpls == [("fastapi-hexagonal", src_tech_tpl)]
         assert empty_resolved is None
-        assert dest_from_src == up_repo / "templates/tech-stack/fastapi-hexagonal"
+        assert dest_from_src == up_repo / "templates/framework-stack/fastapi-hexagonal"
         assert dest_existing_flat == up_repo / "templates/fastapi-hexagonal"
         assert dest_from_kind == up_repo / "templates/business-stack/crm-ops"
 
@@ -287,18 +287,11 @@ class TestManifestHelpers:
         (root_tpl / "assets").mkdir(parents=True)
         (tmp_path / "templates" / ".hidden").mkdir(parents=True)
         (tmp_path / "templates" / "not-a-dir.txt").write_text("ignore", encoding="utf-8")
-        (root_tpl / "template.json").write_text(
-            json.dumps(
-                {
-                    "schema_version": "template-pack-v1",
-                    "template_id": "web-stack",
-                    "kind": "tech-stack",
-                    "target_role": "squad",
-                    "description": "Web starter pack",
-                }
-            ),
-            encoding="utf-8",
-        )
+        web_meta = {
+            "schema_version": "template-pack-v1", "template_id": "web-stack",
+            "kind": "framework-stack", "target_role": "squad", "description": "Web starter pack",
+        }  # fmt: skip
+        (root_tpl / "template.json").write_text(json.dumps(web_meta), encoding="utf-8")
         (root_tpl / "rules" / "coding.md").write_text("# Coding\n", encoding="utf-8")
         (root_tpl / "skills" / "web-start" / "SKILL.md").write_text(
             "---\nname: web-start\ndescription: start\n---\n", encoding="utf-8"
@@ -325,8 +318,42 @@ class TestManifestHelpers:
         found_names = manifest_helpers.discover_layer_template_names(tmp_path)
         catalog = manifest_helpers.discover_templates_catalog(tmp_path, mounted)
         is_oss = manifest_helpers._is_oss_root_manifest({"layer_role": "workstation"})
+        is_ind = manifest_helpers._is_oss_root_manifest(
+            {"layer_role": "workstation", "entity_kind": "individual", "precedence": 90}
+        )
         is_corp = manifest_helpers._is_oss_root_manifest(
             {"layer_id": "acme-root", "layer_role": "corporate"}
+        )
+        hs_str = manifest_helpers._normalize_human_stack_tokens(
+            "domain-python:M1 | soft-socratic-coach | domain-python:\x4c1 | invalid-tok | bridge-"
+        )
+        hs_list = manifest_helpers._normalize_human_stack_tokens(
+            ["domain-law:M4", "bridge-tech-for-business", "domain-law:M4"]
+        )
+        hs_none = manifest_helpers._resolve_effective_human_stack(tmp_path)
+        hs_manifest = manifest_helpers._resolve_effective_human_stack(
+            tmp_path, {"human_stack": ["domain-finance:M4", "soft-executive-storyteller"]}
+        )
+        (tmp_path / "README.md").write_text(
+            "- **Human-Stack Profile (Optional)**: [Optional: leave blank]\n", encoding="utf-8"
+        )
+        hs_placeholder = manifest_helpers._resolve_effective_human_stack(
+            tmp_path, {"human_stack": ["domain-finance:M4"]}
+        )
+        (tmp_path / ".agents").mkdir(exist_ok=True)
+        (tmp_path / ".agents/LAYER_LINEAGE.md").write_text(
+            "- **Human-Stack Profile (Optional)**: `domain-stack:M2 | soft-red-team-critic`\n",
+            encoding="utf-8",
+        )
+        hs_blueprint = manifest_helpers._resolve_effective_human_stack(
+            tmp_path, {"human_stack": ["domain-finance:M4"]}
+        )
+        (tmp_path / ".agents/SESSION.md").write_text(
+            "# Session\n- **Human-Stack**: domain-python:M1 | soft-socratic-coach\n",
+            encoding="utf-8",
+        )
+        hs_session = manifest_helpers._resolve_effective_human_stack(
+            tmp_path, {"human_stack": ["domain-finance:M4"]}
         )
         w_empty = manifest_helpers._count_result_warnings({})
         w_nonjson = manifest_helpers._count_result_warnings({"content": [{"text": "plain"}]})
@@ -364,11 +391,74 @@ class TestManifestHelpers:
         assert len(sha_hex) == 64 and stale_missing is False
         assert empty_names == []
         assert empty_m == {}
-        assert is_oss is True
+        assert is_oss is True and is_ind is False
         assert is_corp is False
+        assert hs_str == ["domain-python:M1", "soft-socratic-coach"]
+        assert hs_list == ["domain-law:M4", "bridge-tech-for-business"]
+        assert hs_none == {"facets": [], "scope": "default-none"}
+        assert hs_manifest == {
+            "facets": ["domain-finance:M4", "soft-executive-storyteller"],
+            "scope": "layer-manifest",
+        }
+        assert hs_placeholder == {"facets": ["domain-finance:M4"], "scope": "layer-manifest"}
+        assert hs_blueprint == {
+            "facets": ["domain-stack:M2", "soft-red-team-critic"],
+            "scope": "layer-blueprint",
+        }
+        assert hs_session == {
+            "facets": ["domain-python:M1", "soft-socratic-coach"],
+            "scope": "workspace-session",
+        }
         assert found_names == ["web-stack"]
         assert len(catalog) == 3
         assert catalog[0]["template_name"] == "web-stack"
         assert catalog[0]["assets"] == ["templates/web-stack/assets/base.html"]
         assert catalog[1]["template_name"] == "gdpr-pack"
         assert catalog[2]["template_name"] == "no-meta-pack"
+
+    def test_classify_library_domain_and_resolve_library_mount_endpoints(
+        self, tmp_path: Path
+    ) -> None:
+        """Classify gov-*, sci-*, geo-*, org-* libraries and resolve local/private/public mounts."""
+        # Arrange
+        local_gov = tmp_path / "layers/gov-es/system"
+        local_gov.mkdir(parents=True)
+        (local_gov / "mcp-layer.json").write_text('{"layer_id": "gov-es"}', encoding="utf-8")
+
+        # Act
+        c_gov = manifest_helpers.classify_library_domain("gov-es")
+        c_sci = manifest_helpers.classify_library_domain("sci-medicine")
+        c_sci_trunk = manifest_helpers.classify_library_domain("sci-health")
+        c_sci_custom = manifest_helpers.classify_library_domain("sci-astrobiology")
+        c_geo = manifest_helpers.classify_library_domain("geo-es")
+        c_org = manifest_helpers.classify_library_domain("org-acme")
+        c_std = manifest_helpers.classify_library_domain("dept-legal")
+        m_local = manifest_helpers.resolve_library_mount_endpoints(
+            {"name": "gov-es", "repository": "https://example.org/gov-es.git"}, tmp_path
+        )
+        priv_entry = {
+            "name": "sci-medicine",
+            "private_mirror_url": "git@internal.example.org:sci-medicine.git",
+            "repository": "https://example.org/sci-medicine.git",
+        }
+        m_priv = manifest_helpers.resolve_library_mount_endpoints(priv_entry, tmp_path)
+        m_pub = manifest_helpers.resolve_library_mount_endpoints(
+            {"name": "geo-es", "public_url": "https://example.org/geo-es.git"}, tmp_path
+        )
+
+        # Assert
+        assert c_gov["library_kind"] == "jurisdictional-normative"
+        assert "science-base" in c_gov["default_stack_templates"]
+        assert c_sci["library_kind"] == "scientific-epistemic"
+        assert c_sci["default_epistemic_grade"] == "E2" and "M1-M2" in c_sci["consumer_adaptation"]
+        assert c_sci["canonical_trunk"] == "health" and c_sci["granularity"] == "branch-repository"
+        assert c_sci_trunk["granularity"] == "trunk-repository"
+        assert c_sci_custom["canonical_trunk"] == "custom-science"
+        assert (c_geo["library_kind"], c_org["library_kind"]) == (
+            "territorial-empirical", "organizational-operational"
+        )  # fmt: skip
+        assert c_std["is_knowledge_library"] is False and c_std["default_stack_templates"] == []
+        assert m_local["resolution_mode"] == "local-mcp-clone" and m_local["local_mcp_available"]
+        assert (m_priv["resolution_mode"], m_pub["resolution_mode"]) == (
+            "private-mirror-remote", "public-canonical-remote"
+        )  # fmt: skip

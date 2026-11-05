@@ -103,6 +103,10 @@ class TestFederationToolsMixin:
 
         # Act
         matched = server.call_tool("discover_federated_mcps", {"filter_role": "documentation"})
+        branch_doc = server.call_tool(
+            "read_layer_document",
+            {"relative_path": "docs/README.md", "branch_ref": "HEAD"},
+        )
         unmatched = server.call_tool("discover_federated_mcps", {"filter_role": "nonexistent-role"})
         env_filtered = server.call_tool(
             "discover_federated_mcps", {"environment": "pre", "layer": "root"}
@@ -111,6 +115,7 @@ class TestFederationToolsMixin:
             server.call_tool("discover_federated_mcps", {"environment": "staging-invalid"})
 
         # Assert
+        assert "Documentation Index" in branch_doc["content"][0]["text"]
         assert json.loads(matched["content"][0]["text"])["federated_mcp_count"] == 1
         assert json.loads(unmatched["content"][0]["text"])["federated_mcp_count"] == 0
         env_payload = json.loads(env_filtered["content"][0]["text"])
@@ -260,6 +265,12 @@ class TestFederationToolsMixin:
 
         sub_no_manifest = tmp_path / "layers" / "sub-no-manifest"
         sub_no_manifest.mkdir(parents=True)
+        gov_es_sys = tmp_path / "layers" / "gov-es" / "system"
+        gov_es_sys.mkdir(parents=True)
+        (gov_es_sys / "mcp-layer.json").write_text(
+            json.dumps({"layer_id": "gov-es", "upstream_layer": {"layer_id": "corp-root"}}),
+            encoding="utf-8",
+        )
         sub_empty_up = tmp_path / "layers" / "sub-empty-upstream" / "system"
         sub_empty_up.mkdir(parents=True)
         (sub_empty_up / "mcp-layer.json").write_text(
@@ -303,6 +314,12 @@ class TestFederationToolsMixin:
         assert (log_dir / "mcp_events.jsonl").is_file()
         assert (log_dir / "mcp_alerts.jsonl").is_file()
         overview_data = json.loads(overview_resp["result"]["content"][0]["text"])
+        d_idx = overview_data["channel_4_navigable_docs_and_federated_mcps"]["deep_context_index"]
+        assert d_idx["knowledge_libraries"][0]["layer_id"] == "gov-es"
+        assert d_idx["knowledge_libraries"][0]["resolution_mode"] == "local-mcp-clone"
+        assert d_idx["supported_library_prefixes"] == ["gov-", "sci-", "geo-", "org-"]
+        assert "medicine" in d_idx["canonical_science_trunks"]["health"]
+        assert "software" in d_idx["canonical_science_trunks"]["engineering"]
         codes = [
             w["code"] for w in overview_data["channel_3_active_invariants_and_hooks"]["warnings"]
         ]

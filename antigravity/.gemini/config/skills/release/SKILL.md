@@ -47,8 +47,9 @@ Execute this workflow **ONLY** when the user explicitly requests cutting or publ
 
 ## 4. Deliver Explicit Release Commit, Tag & Push Block
 
-Never execute mutating git commands automatically. Substitute `<branch>` with the exact output of `git branch --show-current` (`master` or `main`), and append `./scripts/workstation-sync.sh --sync` when releasing from `DOTFILES_DEV_REPO_DIR`:
+Never execute mutating git commands automatically. Substitute `<branch>` with the exact output of `git branch --show-current` (`master` or `main`).
 
+- **Standard Repository (`origin` only)**:
 ```bash
 ### Release vX.Y.Z (<Repo Name>)
 cd <REPO_PATH>
@@ -56,4 +57,17 @@ git add -A
 git commit -m "chore(release): publish vX.Y.Z"
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin <branch> --follow-tags
+```
+
+- **Dual-Remote Private Dev Workspace (`dev-<repo>` $\rightarrow$ Private `origin` + Public Open-Source `upstream`)**:
+  When releasing an Open-Source upstream repository, **always execute the release from `DOTFILES_DEV_REPO_DIR` (`dev-dotfiles-ubuntu`, `entity_kind: "open-source"`), NEVER from a personal or corporate runtime clone (`~/<user-pc>`)** (`OSS_PERSONAL_REPO_PUBLISH_BLOCKED`). Push the full working commit (with `WORKTASK.md`, `WORKROAD.md`, `BACKLOG.md`, `roadmaps/`) to private `origin`, then run `make publish-oss RELEASE_VERSION=X.Y.Z` (which enforces `entity_kind == "open-source"`, `--release-version X.Y.Z == VERSION`, zero unversioned `[Unreleased]` entries, `check-authority --op release`, and immutable remote tags; external contributors must use `make publish-oss CREATE_PR=1`) to export the clean, tracker-free release snapshot and tag `vX.Y.Z` to public `upstream`, and sync the local workstation runtime:
+```bash
+### Release vX.Y.Z (dev-<repo> -> Private Origin + Public Open-Source Upstream)
+cd <DEV_REPO_PATH>
+git add -A
+git commit -m "chore(release): publish vX.Y.Z"
+git tag -a vX.Y.Z -m "Release vX.Y.Z"
+git push origin <branch> --follow-tags
+make publish-oss RELEASE_VERSION=X.Y.Z
+./scripts/workstation-sync.sh --sync
 ```

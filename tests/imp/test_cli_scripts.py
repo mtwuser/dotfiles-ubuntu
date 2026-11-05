@@ -5,6 +5,7 @@ Specification: docs/architecture/01_system_and_stow_engine.md
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -108,46 +109,22 @@ class TestCLIScripts:
         # Arrange
         script = str(REPO_DIR / "scripts" / "layer-config.sh")
         init_cmd = [
-            script,
-            "--dry-run",
-            "init-fork",
-            "--id",
-            "acme-dept-design",
-            "--role",
-            "department",
-            "--prune-default-templates",
-        ]
+            script, "--dry-run", "init-fork", "--id", "acme-dept-design",
+            "--role", "department", "--prune-default-templates",
+        ]  # fmt: skip
         scaf_cmd = [
-            script,
-            "--dry-run",
-            "scaffold-template",
-            "brand-tokens",
-            "--kind",
-            "business-stack",
-            "--register-binding",
-        ]
+            script, "--dry-run", "scaffold-template", "brand-tokens",
+            "--kind", "business-stack", "--register-binding",
+        ]  # fmt: skip
         apply_cmd = [
-            script,
-            "--dry-run",
-            "apply-project",
-            str(tmp_path / "target_proj"),
-            "--template",
-            "fastapi-hexagonal",
-        ]
+            script, "--dry-run", "apply-project", str(tmp_path / "target_proj"),
+            "--template", "fastapi-hexagonal",
+        ]  # fmt: skip
         boot_cmd = [
-            script,
-            "--dry-run",
-            "bootstrap-workspace",
-            str(tmp_path / "dept_ws"),
-            "--id",
-            "dept-legal-ip",
-            "--role",
-            "domain-policy",
-            "--precedence",
-            "5",
-            "--templates",
-            "business-base",
-        ]
+            script, "--dry-run", "bootstrap-workspace", str(tmp_path / "dept_ws"),
+            "--id", "dept-legal-ip", "--role", "domain-policy",
+            "--precedence", "5", "--templates", "business-base",
+        ]  # fmt: skip
 
         # Act
         list_proc = subprocess.run(
@@ -169,7 +146,10 @@ class TestCLIScripts:
 
         # Assert
         assert list_proc.returncode == 0
-        for tpl in ("fastapi-hexagonal", "human-core", "technical-base", "business-base"):
+        for tpl in (
+            "fastapi-hexagonal", "angular-web", "django-backend", "nist-csf-security",
+            "human-base", "science-base", "software-engineering", "business-base",
+        ):  # fmt: skip
             assert tpl in list_proc.stdout
         assert init_proc.returncode == 0 and '"precedence": 30' in init_proc.stdout
         assert scaffold_proc.returncode == 0 and '"template_id": "brand-tokens"' in (
@@ -259,8 +239,9 @@ class TestCLIScripts:
         )
         no_ver_dir = tmp_path / "no_ver_repo"
         no_ver_dir.mkdir(parents=True)
-        env = {"PATH": "/usr/bin:/bin", "DOTFILES_REPO_DIR": str(tmp_path)}
-        no_ver_env = {"PATH": "/usr/bin:/bin", "DOTFILES_REPO_DIR": str(no_ver_dir)}
+        sys_path = os.environ.get("PATH", "/usr/bin:/bin")
+        env = {"PATH": sys_path, "DOTFILES_REPO_DIR": str(tmp_path)}
+        no_ver_env = {"PATH": sys_path, "DOTFILES_REPO_DIR": str(no_ver_dir)}
 
         # Act
         no_ver_proc = subprocess.run(
@@ -334,13 +315,9 @@ class TestCLIScripts:
         for ign in (".git/", "venv/", "tests/"):
             assert ign in di_text
         for target in (
-            "docker-build:",
-            "docker-self-test:",
-            "docker-mcp:",
-            "workstation-setup:",
-            "workstation-sync:",
-            "workstation-status:",
-        ):
+            "docker-build:", "docker-self-test:", "docker-mcp:", "setup-dev reset-dev:",
+            "publish-oss:", "workstation-setup:", "workstation-sync:", "workstation-status:",
+        ):  # fmt: skip
             assert target in mk_text
 
     def test_workstation_sync_script_setup_status_and_auto(self, tmp_path: Path) -> None:
@@ -354,32 +331,18 @@ class TestCLIScripts:
         stamp_dir = tmp_path / "runtime"
         stamp_dir.mkdir(parents=True)
         env = {
-            "PATH": "/usr/bin:/bin",
-            "HOME": str(tmp_path),
-            "DOTFILES_RUNTIME_DIR": str(runtime_dir),
-            "DOTFILES_WORKSTATION_CONF": str(conf_file),
-            "XDG_RUNTIME_DIR": str(stamp_dir),
-            "DOTFILES_SKIP_PULL": "1",
-            "DOTFILES_SKIP_STOW": "1",
-        }
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(tmp_path),
+            "DOTFILES_RUNTIME_DIR": str(runtime_dir), "DOTFILES_WORKSTATION_CONF": str(conf_file),
+            "XDG_RUNTIME_DIR": str(stamp_dir), "DOTFILES_SKIP_PULL": "1", "DOTFILES_SKIP_STOW": "1",
+        }  # fmt: skip
 
         # Act
+        setup_cmd = [
+            script, "--setup", "--mode", "readonly", "--profile",
+            "science", "--auto-sync", "boot", "--no-sync",
+        ]  # fmt: skip
         setup_proc = subprocess.run(
-            [
-                script,
-                "--setup",
-                "--mode",
-                "readonly",
-                "--profile",
-                "human-core",
-                "--auto-sync",
-                "boot",
-                "--no-sync",
-            ],
-            cwd=REPO_DIR,
-            env=env,
-            capture_output=True,
-            text=True,
+            setup_cmd, cwd=REPO_DIR, env=env, capture_output=True, text=True
         )
         auto_proc = subprocess.run(
             [script, "--auto"], cwd=REPO_DIR, env=env, capture_output=True, text=True
@@ -387,15 +350,46 @@ class TestCLIScripts:
         status_proc = subprocess.run(
             [script, "--status"], cwd=REPO_DIR, env=env, capture_output=True, text=True
         )
+        pub_env = {**env, "DOTFILES_SKIP_VERIFY": "1"}
+        pub_proc = subprocess.run(
+            [script, "--publish-oss", "--dry-run", "--remote", str(runtime_dir)],
+            cwd=REPO_DIR, env=pub_env, capture_output=True, text=True,
+        )  # fmt: skip
+        blk_no_ver = subprocess.run(
+            [script, "--publish-oss", "--remote", str(runtime_dir)],
+            cwd=REPO_DIR, env=pub_env, capture_output=True, text=True,
+        )  # fmt: skip
+        unrel_cl = tmp_path / "CHANGELOG_UNREL.md"
+        unrel_cl.write_text("## [Unreleased]\n- Pending item\n", encoding="utf-8")
+        cur_ver = (REPO_DIR / "VERSION").read_text(encoding="utf-8").strip()
+        blk_unrel = subprocess.run(
+            [script, "--publish-oss", "--release-version", cur_ver, "--remote", str(runtime_dir)],
+            cwd=REPO_DIR, env={**pub_env, "DOTFILES_CHANGELOG_PATH": str(unrel_cl)},
+            capture_output=True, text=True,
+        )  # fmt: skip
+        pers_env = {
+            **pub_env, "DOTFILES_WORKSTATION_CONF": str(tmp_path / "none.conf"),
+            "DOTFILES_WORKSTATION_MODE": "private", "DOTFILES_RUNTIME_DIR": str(REPO_DIR),
+        }  # fmt: skip
+        blk_pers = subprocess.run(
+            [script, "--publish-oss", "--dry-run"],
+            cwd=REPO_DIR, env=pers_env, capture_output=True, text=True,
+        )  # fmt: skip
 
         # Assert
-        assert setup_proc.returncode == 0
-        assert "Workstation configuration written to" in setup_proc.stdout
-        assert auto_proc.returncode == 0
-        assert status_proc.returncode == 0
-        assert '"mode": "readonly"' in status_proc.stdout
-        assert '"profile": "human-core"' in status_proc.stdout
-        assert '"boot_synced": true' in status_proc.stdout
+        assert setup_proc.returncode == 0 and "Workstation configuration" in setup_proc.stdout
+        assert (
+            auto_proc.returncode == 0 and status_proc.returncode == 0 and pub_proc.returncode == 0
+        )
+        assert blk_no_ver.returncode == 2 and "OSS_PUBLISH_GUARD_BLOCKED" in blk_no_ver.stderr
+        assert blk_unrel.returncode == 2 and "OSS_UNRELEASED_CHANGELOG_BLOCKED" in blk_unrel.stderr
+        assert blk_pers.returncode == 2 and "OSS_PERSONAL_REPO_PUBLISH_BLOCKED" in blk_pers.stderr
+        assert (
+            '"mode": "readonly"' in status_proc.stdout
+            and '"profile": "science"' in status_proc.stdout
+            and '"boot_synced": true' in status_proc.stdout
+            and "[publish-oss --dry-run]" in pub_proc.stdout
+        )
 
     def test_workstation_sync_never_locks_dev_repo_pushurl_and_heals_stale_guard(
         self, tmp_path: Path
@@ -403,38 +397,43 @@ class TestCLIScripts:
         """Ensure workstation-sync.sh routes dev-* clones to runtime and heals dev pushurl."""
         # Arrange
         script = str(REPO_DIR / "scripts" / "workstation-sync.sh")
-        runtime_dir = tmp_path / "sample-repo"
-        dev_dir = tmp_path / "Projects" / "dev-sample-repo"
+        runtime_dir, dev_dir = tmp_path / "sample-repo", tmp_path / "Projects" / "dev-sample-repo"
         (runtime_dir / "system").mkdir(parents=True)
+        (runtime_dir / "templates" / "obsolete-dir").mkdir(parents=True)
+        (runtime_dir / "templates" / "obsolete-dir" / "stale.md").write_text(
+            "x\n", encoding="utf-8"
+        )
         (dev_dir / "system").mkdir(parents=True)
         (runtime_dir / "VERSION").write_text("2.4.0\n", encoding="utf-8")
-        (dev_dir / "system/mcp-layer.json").write_text("{}", encoding="utf-8")
+        (runtime_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "workstation-user-pc", "entity_kind": "individual", "precedence": 90}\n',
+            encoding="utf-8",
+        )
+        (dev_dir / "VERSION").write_text("3.0.3\n", encoding="utf-8")
+        (dev_dir / "WORKTASK.md").write_text("# Private Dev Task\n", encoding="utf-8")
+        (dev_dir / "system/mcp-layer.json").write_text(
+            '{"layer_id": "dotfiles-ubuntu-default", "precedence": 10}\n',
+            encoding="utf-8",
+        )
+        git_cmds = (
+            ["init", "-q"], ["config", "user.email", "t@e.com"],
+            ["config", "user.name", "T"], ["add", "-A"], ["commit", "-m", "i", "-q"],
+            ["remote", "add", "origin", "https://example.com/repo.git"],
+        )  # fmt: skip
         for rdir in (runtime_dir, dev_dir):
-            subprocess.run(["/usr/bin/git", "init", "-q"], cwd=rdir, check=True)
-            subprocess.run(
-                ["/usr/bin/git", "remote", "add", "origin", "https://example.com/repo.git"],
-                cwd=rdir,
-                check=True,
-            )
+            for c in git_cmds:
+                subprocess.run(["/usr/bin/git", *c], cwd=rdir, check=True)
+        guard_val = "VALIDATION_BLOCKED_READONLY_RUNTIME"
         subprocess.run(
-            [
-                "/usr/bin/git",
-                "config",
-                "remote.origin.pushurl",
-                "VALIDATION_BLOCKED_READONLY_RUNTIME",
-            ],
-            cwd=dev_dir,
-            check=True,
+            ["/usr/bin/git", "config", "remote.origin.pushurl", guard_val], cwd=dev_dir, check=True
         )
         env = {
-            "PATH": "/usr/bin:/bin",
-            "HOME": str(tmp_path),
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(tmp_path),
             "DOTFILES_RUNTIME_DIR": str(runtime_dir),
             "DOTFILES_WORKSTATION_CONF": str(tmp_path / "workstation.conf"),
             "XDG_RUNTIME_DIR": str(tmp_path / "rt"),
-            "DOTFILES_SKIP_PULL": "1",
-            "DOTFILES_SKIP_STOW": "1",
-        }
+            "DOTFILES_SKIP_PULL": "1", "DOTFILES_SKIP_STOW": "1",
+        }  # fmt: skip
 
         # Act
         sync_proc = subprocess.run(
@@ -442,19 +441,20 @@ class TestCLIScripts:
         )
         rt_pushurl = subprocess.run(
             ["/usr/bin/git", "config", "--get", "remote.origin.pushurl"],
-            cwd=runtime_dir,
-            capture_output=True,
-            text=True,
-        )
+            cwd=runtime_dir, capture_output=True, text=True,
+        )  # fmt: skip
         dev_pushurl = subprocess.run(
             ["/usr/bin/git", "config", "--get", "remote.origin.pushurl"],
-            cwd=dev_dir,
-            capture_output=True,
-            text=True,
-        )
+            cwd=dev_dir, capture_output=True, text=True,
+        )  # fmt: skip
 
         # Assert
         assert sync_proc.returncode == 0
-        assert rt_pushurl.stdout.strip() == "VALIDATION_BLOCKED_READONLY_RUNTIME"
-        assert dev_pushurl.returncode != 0
-        assert dev_pushurl.stdout.strip() == ""
+        assert (runtime_dir / "VERSION").read_text(encoding="utf-8").strip() == "3.0.3"
+        assert not (runtime_dir / "WORKTASK.md").exists()
+        assert not (runtime_dir / "templates" / "obsolete-dir").exists()
+        assert '"layer_id": "workstation-user-pc"' in (
+            runtime_dir / "system/mcp-layer.json"
+        ).read_text(encoding="utf-8")
+        assert rt_pushurl.stdout.strip() == guard_val
+        assert dev_pushurl.returncode != 0 and dev_pushurl.stdout.strip() == ""

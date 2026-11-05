@@ -1,7 +1,7 @@
 [project]
 name = "dotfiles-ubuntu"
-version = "3.0.3"
-description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 Human-AI governance suite (AGENTS.md, hooks, skills), and zero-dependency Contextual MCP Server (N-layer surface projection, rcap1 context compaction, ephemeral forks & Docker)."
+version = "4.0.0"
+description = "Declarative Ubuntu 26.04 LTS system engine, Google Antigravity 2.0 Human-AI governance suite (AGENTS.md, hooks, skills, 3 bases + 3 stacks), and zero-dependency Contextual MCP Server (5 capability rings, N-layer consensus, rcap1 capsules, ephemeral forks & Docker)."
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.14"
@@ -17,6 +17,8 @@ keywords = [
     "ai-governance",
     "pair-programming",
     "context-compaction",
+    "epistemic-governance",
+    "federated-libraries",
     "git-subtree",
 ]
 classifiers = [

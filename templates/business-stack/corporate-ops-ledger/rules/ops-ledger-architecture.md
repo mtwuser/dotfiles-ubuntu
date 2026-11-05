@@ -14,7 +14,9 @@ description: "Hexagonal business workspace layout (corporate/ledgers/ -> corpora
 - **Template Pack**: `templates/business-stack/corporate-ops-ledger/` (`kind: "business-stack"`, `extends: "business-base"`).
 - **Applies**: Corporate holding repositories, departmental workspaces (`dept-legal`, `dept-finance`, `dept-ops`, `dept-brand`), and cross-functional business projects governing `corporate/**` and `surfaces/**`.
 
-### Canonical Hexagonal Business Directory Structure
+### 1.1. Canonical Hexagonal Business Directory Structure
+
+Organize the workspace into inner factual ledgers (`corporate/ledgers/`), application policies/SOPs (`corporate/{policies,sops}/`), and external channel surfaces (`surfaces/`):
 
 ```text
 <workspace-root>/
@@ -72,11 +74,14 @@ surfaces/{web,forms,print}  ──cites──►  corporate/{policies,sops}  ─
      ```
 3. **`CORP-OPS-03` — Cross-Surface Cascade & Zero Orphan Claims**:
    - Updating a price, specification, or legal term in `corporate/ledgers/` requires updating all dependent documents in `surfaces/{web,forms,print}/` in the same task (or logging a `P0`/`P1` outbound delegation in `WORKTASK.md`).
+4. **`CORP-OPS-04` — Federated Statutory/Territorial Library Grounding (`gov-*`, `geo-*`, `org-*`) & `Q1..Q4` Lifecycle Radar**:
+   - Corporate policies, contracts, and compliance SOPs that depend on external statutory (`gov-<country>`), territorial/zoning (`geo-<territory>`), or holding-federation (`org-<holding>`) corpora MUST record the canonical `citation_receipt` (`<layer_id>::<rel_file>#<section_slug>@<h2_digest16>:<epistemic_grade>`) emitted by `query_governance_rules` / `unfold_context_capsule`.
+   - Before promoting a policy or surface change (`make env-gate`), verify that `verify_epistemic_context_claims` reports zero `CITATION_DRIFT_DETECTED` violations against mounted `layers/{gov-*,geo-*,org-*}` clones (`local-mcp-clone -> private-mirror-remote -> public-canonical-remote`), and review `Q4_NORMATIVE_OBSOLESCENCE` (`> 180d` and `0` citations in `.agents/telemetry/citation_stats.json`) for policy consolidation or repeal without overriding higher epistemic authority (`E3 > E2 > E1 > E0`, `epistemic_override_allowed: false`).
 
 ---
 
 ## 3. Verification & Sign-Off Gates
 
 - [ ] Every policy and SOP under `corporate/{policies,sops}/` contains explicit `## Scope & Surface Target`, `## Normative Invariants`, and `## Verification & Sign-Off Gates` sections.
-- [ ] Every quantitative figure, percentage, or regulatory claim in `surfaces/{web,forms,print}/` cites an active `[DEPT]-[TYPE]-[YYYY]-[NNN]` entry in `corporate/ledgers/`.
+- [ ] Every quantitative figure, percentage, or regulatory claim in `surfaces/{web,forms,print}/` cites an active `[DEPT]-[TYPE]-[YYYY]-[NNN]` entry in `corporate/ledgers/` (and a verified `citation_receipt` when grounded in mounted `gov-*`, `geo-*`, or `org-*` libraries).
 - [ ] Zero unfiled patent mechanisms or trade-secret compositions appear in `surfaces/**`.

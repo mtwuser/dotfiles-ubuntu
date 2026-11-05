@@ -1,0 +1,44 @@
+{
+  "schema_version": "template-pack-v1",
+  "template_id": "science-base",
+  "kind": "base-stack",
+  "stack_group": "base",
+  "target_role": "squad",
+  "description": "Universal Scientific & Academic Degree Rigor: Trunk -> Branch -> Specialty Epistemic Taxonomy, 1:1:1 Theory-Proof-Corpus Traceability, AAA Hypothesis-Method-Proof Verification, SI/ISO Precision & M1..M4 Knowledge Progression",
+  "recommended_surface_bindings": [
+    {
+      "binding_id": "science-base-epistemic-and-verification-rigor",
+      "description": "Trunk -> Branch -> Specialty epistemic routing, 1:1:1 theory-proof-corpus symmetry, AAA verification, and N vs N ± 1 boundary precision",
+      "mode": "transversal",
+      "target_globs": [
+        "src/**",
+        "scripts/**",
+        "tests/**",
+        "docs/**",
+        "*.py",
+        "*.sh",
+        "*.md",
+        "*.json"
+      ],
+      "architectural_planes": [
+        "*"
+      ],
+      "scopes": [
+        "*"
+      ],
+      "traits": [
+        "*"
+      ],
+      "default_resolution": "L2",
+      "invariants": [
+        "Enforce universal 1:1:1 Theory/Specification <-> Verification/Proof <-> Implementation/Corpus traceability across all scientific and engineering modules (< 465 lines)",
+        "Structure disciplinary knowledge via Trunk -> Branch -> Specialty epistemic routing in .agents/rules/ backed by 3-tier indexed reference corpora in docs/ queried via make consult",
+        "Verify every hypothesis, boundary, or algorithm via explicit AAA (Hypothesis/Arrange -> Method/Act -> Proof/Assert) with SI/ISO precision and N vs N ± 1 cut-points"
+      ],
+      "rule_files": [
+        "templates/base-stack/science-base/rules/science-base.md"
+      ],
+      "canonical_templates": []
+    }
+  ]
+}

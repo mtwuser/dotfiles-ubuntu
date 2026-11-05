@@ -40,8 +40,8 @@ class TestHorizonEngine:
             "# Role-Specialized Layer Makefile — corp-root\nhelp:\n\t@echo ok\n",
             encoding="utf-8",
         )
-        src_tpl = tmp_path / "upstream/templates/business-base"
-        dest_tpl = ws / "templates/business-base"
+        src_tpl = tmp_path / "upstream/templates/base-stack/business-base"
+        dest_tpl = ws / "templates/base-stack/business-base"
         (src_tpl / "rules").mkdir(parents=True)
         (dest_tpl / "rules").mkdir(parents=True)
         (src_tpl / "rules/business-base.md").write_text(
@@ -53,7 +53,7 @@ class TestHorizonEngine:
         )
         (dest_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
         (src_tpl / "rules/same.md").write_text("## Shared\nSame.\n", encoding="utf-8")
-        src_grouped = tmp_path / "upstream/templates/tech-stack/fastapi-hexagonal"
+        src_grouped = tmp_path / "upstream/templates/framework-stack/fastapi-hexagonal"
         (src_grouped / "rules").mkdir(parents=True)
         (src_grouped / "rules/coding.md").write_text("# Coding\n\n## Core\nUp.\n", encoding="utf-8")
         flat_leg = ws / "templates/fastapi-hexagonal"
@@ -61,7 +61,7 @@ class TestHorizonEngine:
         (flat_leg / "rules/coding.md").write_text(
             "# Coding\n\n## Core\nOld.\n\n## Custom Hex\nLocal.\n", encoding="utf-8"
         )
-        dest_grouped = ws / "templates/tech-stack/fastapi-hexagonal"
+        dest_grouped = ws / "templates/framework-stack/fastapi-hexagonal"
 
         # Act
         st_outdated = inspect_git_governance_state(ws)
@@ -166,37 +166,37 @@ class TestHorizonEngine:
                 f'{{"layer_id":"{lid}","default_stack_templates":["business-base","missing-tpl"]}}',
                 encoding="utf-8",
             )
-            (d / "templates/business-base/rules").mkdir(parents=True)
-        (up_dir / "templates/business-base/rules/sync.md").write_text(
+            (d / "templates/base-stack/business-base/rules").mkdir(parents=True)
+        (up_dir / "templates/base-stack/business-base/rules/sync.md").write_text(
             "---\ntrigger: always_on\n---\n# Sync\nSame body\n", encoding="utf-8"
         )
-        (ws_dir / "templates/business-base/rules/sync.md").write_text(
+        (ws_dir / "templates/base-stack/business-base/rules/sync.md").write_text(
             "# Sync\nSame body\n", encoding="utf-8"
         )
-        (up_dir / "templates/business-base/rules/up-only.md").write_text(
+        (up_dir / "templates/base-stack/business-base/rules/up-only.md").write_text(
             "Preamble line\n# New Upstream File\nBody\n", encoding="utf-8"
         )
-        (ws_dir / "templates/business-base/rules/loc-only.md").write_text(
+        (ws_dir / "templates/base-stack/business-base/rules/loc-only.md").write_text(
             "# Local File\nLocal body\n", encoding="utf-8"
         )
-        (up_dir / "templates/business-base/rules/mixed.md").write_text(
+        (up_dir / "templates/base-stack/business-base/rules/mixed.md").write_text(
             "# Core\nSame\n\n## Diverged\nUpstream v2\n\n## Upstream Added\nNew rule\n",
             encoding="utf-8",
         )
-        (ws_dir / "templates/business-base/rules/mixed.md").write_text(
+        (ws_dir / "templates/base-stack/business-base/rules/mixed.md").write_text(
             "# Core\nSame\n\n## Diverged\nLocal v1\n\n## Local Custom\nCustom rule\n",
             encoding="utf-8",
         )
-        (up_dir / "templates/business-base/rules/add-only.md").write_text(
+        (up_dir / "templates/base-stack/business-base/rules/add-only.md").write_text(
             "# Base\nSame\n\n## Extra\nAdded\n", encoding="utf-8"
         )
-        (ws_dir / "templates/business-base/rules/add-only.md").write_text(
+        (ws_dir / "templates/base-stack/business-base/rules/add-only.md").write_text(
             "# Base\nSame\n", encoding="utf-8"
         )
-        (up_dir / "templates/business-base/rules/loc-sec.md").write_text(
+        (up_dir / "templates/base-stack/business-base/rules/loc-sec.md").write_text(
             "# Base\nSame\n", encoding="utf-8"
         )
-        (ws_dir / "templates/business-base/rules/loc-sec.md").write_text(
+        (ws_dir / "templates/base-stack/business-base/rules/loc-sec.md").write_text(
             "# Base\nSame\n\n## Local Sec\nCustom\n", encoding="utf-8"
         )
 
@@ -210,7 +210,7 @@ class TestHorizonEngine:
             apply_upstream_only=True,
             dry_run=True,
         )
-        dry_up_existed = (ws_dir / "templates/business-base/rules/up-only.md").exists()
+        dry_up_existed = (ws_dir / "templates/base-stack/business-base/rules/up-only.md").exists()
         live_cmp = compare_upstream_templates(
             up_dir, ws_dir, apply_upstream_only=True, dry_run=False
         )
@@ -220,8 +220,10 @@ class TestHorizonEngine:
         assert dry_cmp["dry_run"] is True and dry_up_existed is False
         assert live_cmp["summary"]["files_compared"] == 6
         assert live_cmp["summary"]["in_sync_files"] == 1
-        assert (ws_dir / "templates/business-base/rules/up-only.md").is_file()
-        mixed_txt = (ws_dir / "templates/business-base/rules/mixed.md").read_text(encoding="utf-8")
+        assert (ws_dir / "templates/base-stack/business-base/rules/up-only.md").is_file()
+        mixed_txt = (ws_dir / "templates/base-stack/business-base/rules/mixed.md").read_text(
+            encoding="utf-8"
+        )
         assert "## Upstream Added" in mixed_txt and "## Local Custom" in mixed_txt
         assert "Local v1" in mixed_txt
         by_file = {f["rule_file"].split("/")[-1]: f for f in live_cmp["file_comparisons"]}
@@ -234,7 +236,11 @@ class TestHorizonEngine:
         """Inspect 1-hop horizon across OSS and internal parent layers with mtime cut-points."""
         # Arrange
         repo_dir, proj_dir, oss_dir = tmp_path / "fork", tmp_path / "proj", tmp_path / "oss"
-        for sub in ("system", "templates/business-base/rules", "templates/business-base/assets"):
+        for sub in (
+            "system",
+            "templates/base-stack/business-base/rules",
+            "templates/base-stack/business-base/assets",
+        ):
             (oss_dir / sub).mkdir(parents=True)
             (proj_dir / sub).mkdir(parents=True)
             (repo_dir / sub).mkdir(parents=True)
@@ -243,7 +249,9 @@ class TestHorizonEngine:
             '{"layer_id":"root","layer_role":"root"}', encoding="utf-8"
         )
         for name, txt in (("business-base.md", "# v1\n"), ("same.md", "# s\n"), ("p.md", "# v1\n")):
-            (oss_dir / "templates/business-base/rules" / name).write_text(txt, encoding="utf-8")
+            (oss_dir / "templates/base-stack/business-base/rules" / name).write_text(
+                txt, encoding="utf-8"
+            )
         (proj_dir / "VERSION").write_text("0.2.0\n", encoding="utf-8")
         (proj_dir / "system/mcp-layer.json").write_text(
             '{"layer_id":"corp-zyxwvut-root","layer_role":"corporate",'
@@ -255,15 +263,19 @@ class TestHorizonEngine:
             ("same.md", "# s\n"),
             ("p.md", "# Mentions zyxwvut\n"),
         ):
-            rf = proj_dir / "templates/business-base/rules" / name
+            rf = proj_dir / "templates/base-stack/business-base/rules" / name
             rf.write_text(txt, encoding="utf-8")
-            ts = (oss_dir / "templates/business-base/rules" / name).stat().st_mtime_ns
+            ts = (oss_dir / "templates/base-stack/business-base/rules" / name).stat().st_mtime_ns
             os.utime(rf, ns=(ts, ts))
-        up_p_sha = manifest_helpers._sha256_file(oss_dir / "templates/business-base/rules/p.md")
-        (proj_dir / "templates/business-base/template.json").write_text(
+        up_p_sha = manifest_helpers._sha256_file(
+            oss_dir / "templates/base-stack/business-base/rules/p.md"
+        )
+        (proj_dir / "templates/base-stack/business-base/template.json").write_text(
             f'{{"reconciled_upstream_sha256": {{"p.md": "{up_p_sha}"}}}}', encoding="utf-8"
         )
-        (proj_dir / "templates/business-base/assets/a.md").write_text("# A\n", encoding="utf-8")
+        (proj_dir / "templates/base-stack/business-base/assets/a.md").write_text(
+            "# A\n", encoding="utf-8"
+        )
         (proj_dir / "WORKTASK.md").write_text(
             "- [ ] **[P1 · Delegated from `root`]**: Review policy\n"
             "- [/] **[P1]**: Local active task\n\n"
@@ -276,23 +288,38 @@ class TestHorizonEngine:
         child_wt.write_text(
             "- [x] **[P1 · Delegated from `corp-zyxwvut-root`]**: Child done\n", encoding="utf-8"
         )
+        child_prop = proj_dir / "layers/dept-legal/.agents/proposals/to-root/privacy-clause.md"
+        child_prop.parent.mkdir(parents=True, exist_ok=True)
+        child_prop.write_text("# Privacy Clause Proposal\n", encoding="utf-8")
+        imported_child_prop = proj_dir / ".agents/proposals/from-dept-legal/imported.md"
+        imported_child_prop.parent.mkdir(parents=True, exist_ok=True)
+        imported_child_prop.write_text("# Imported Child Proposal\n", encoding="utf-8")
+        up_prop = proj_dir / ".agents/proposals/from-upstream/up-rule.md"
+        up_prop.parent.mkdir(parents=True, exist_ok=True)
+        up_prop.write_text("# Upstream Rule\n", encoding="utf-8")
 
         # Act
         oss_tpl_res = promote_project_asset_to_layer(
-            oss_dir, proj_dir, source_rel_path="templates/business-base/rules/business-base.md",
-            upstream_dir=oss_dir, dry_run=True,
-        )  # fmt: skip
+            oss_dir,
+            proj_dir,
+            source_rel_path="templates/base-stack/business-base/rules/business-base.md",
+            upstream_dir=oss_dir,
+            dry_run=True,
+        )
         oss_asset_res = promote_project_asset_to_layer(
-            oss_dir, proj_dir, source_rel_path="templates/business-base/assets/a.md",
-            upstream_dir=oss_dir, dry_run=True,
-        )  # fmt: skip
+            oss_dir,
+            proj_dir,
+            source_rel_path="templates/base-stack/business-base/assets/a.md",
+            upstream_dir=oss_dir,
+            dry_run=True,
+        )
         hz_oss = inspect_layer_horizon(oss_dir, proj_dir)
         hz_int = inspect_layer_horizon(repo_dir, proj_dir, parent_dir=repo_dir)
-        new_sk = oss_dir / "templates/business-base/skills/new-sk/SKILL.md"
+        new_sk = oss_dir / "templates/base-stack/business-base/skills/new-sk/SKILL.md"
         new_sk.parent.mkdir(parents=True)
         new_sk.write_text('---\nname: new-sk\ndescription: "ok"\n---\n', encoding="utf-8")
         hz_miss_sk = inspect_layer_horizon(oss_dir, proj_dir)
-        up_b = oss_dir / "templates/business-base/rules/business-base.md"
+        up_b = oss_dir / "templates/base-stack/business-base/rules/business-base.md"
         up_b.write_text("# v3 upstream\n", encoding="utf-8")
         os.utime(up_b, ns=(ts + 1_000_000, ts + 1_000_000))
         hz_after_up = inspect_layer_horizon(oss_dir, proj_dir)
@@ -300,7 +327,7 @@ class TestHorizonEngine:
         # Assert
         assert (
             oss_tpl_res["target_template"] == "business-base"
-            and oss_asset_res["destination"] == "templates/business-base/assets/a.md"
+            and oss_asset_res["destination"] == "templates/base-stack/business-base/assets/a.md"
         )
         assert (
             hz_oss["is_oss_community_horizon"],
@@ -315,3 +342,9 @@ class TestHorizonEngine:
             hz_miss_sk["downward_sync_needed"] is True
             and hz_after_up["downward_sync_needed"] is True
         )
+        in_down = hz_oss["layer_report"]["inbound_from_downstream"]["staged_child_proposals"]
+        in_up_stg = hz_oss["layer_report"]["inbound_from_upstream"]["staged_proposals"]
+        assert "layers/dept-legal/.agents/proposals/to-root/privacy-clause.md" in in_down
+        assert ".agents/proposals/from-dept-legal/imported.md" in in_down
+        assert ".agents/proposals/from-upstream/up-rule.md" in in_up_stg
+        assert ".agents/proposals/from-dept-legal/imported.md" not in in_up_stg

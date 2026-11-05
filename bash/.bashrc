@@ -138,14 +138,20 @@ export PATH="$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.config/dotfiles-ubuntu/workstation.conf" ]; then
     . "$HOME/.config/dotfiles-ubuntu/workstation.conf"
 fi
-if [ -x "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" ]; then
+_dotfiles_rt="${DOTFILES_RUNTIME_DIR:-}"
+if [ -z "$_dotfiles_rt" ] && [ -L "$HOME/.bashrc" ]; then
+    _dotfiles_rt="$(cd "$(dirname "$(readlink -f "$HOME/.bashrc")")/.." 2>/dev/null && pwd)"
+fi
+_dotfiles_rt="${_dotfiles_rt:-$HOME/dotfiles-ubuntu}"
+if [ -x "$_dotfiles_rt/scripts/workstation-sync.sh" ]; then
     dotfiles-sync() {
-        "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" "$@"
+        "$_dotfiles_rt/scripts/workstation-sync.sh" "$@"
     }
     if [ "${DOTFILES_AUTO_SYNC:-boot}" = "always" ] || { [ "${DOTFILES_AUTO_SYNC:-boot}" = "boot" ] && [ ! -f "${XDG_RUNTIME_DIR:-/tmp}/dotfiles-ubuntu-${UID}.synced" ]; }; then
-        "$HOME/dotfiles-ubuntu/scripts/workstation-sync.sh" --auto
+        "$_dotfiles_rt/scripts/workstation-sync.sh" --auto
     fi
 fi
+unset _dotfiles_rt
 
 # Load machine-local overrides if present (not tracked in git)
 if [ -f ~/.bashrc.local ]; then

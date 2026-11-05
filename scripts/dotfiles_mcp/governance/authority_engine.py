@@ -28,7 +28,11 @@ from dotfiles_mcp.core.constants import (
     ROLE_DEFAULT_PRECEDENCE,
     VALIDATOR_ALLOWED_OPS,
 )
-from dotfiles_mcp.core.layer_topology_helpers import _resolve_hierarchical_actor_profile
+from dotfiles_mcp.core.layer_topology_helpers import (
+    _classify_inter_layer_relationship,
+    _resolve_hierarchical_actor_profile,
+    _resolve_layer_entity_identity,
+)
 from dotfiles_mcp.core.manifest_helpers import _is_oss_root_manifest, _load_manifest_dict
 from dotfiles_mcp.governance.git_governance_engine import record_governance_event
 
@@ -244,30 +248,51 @@ def verify_oss_promotion_agnosticism(project_dir: Path, content: str, source_rel
 def verify_single_hop_upstream(
     project_dir: Path, upstream_dir: Path, *, actor_email: str | None = None
 ) -> None:
-    """Enforce the 1-hop upstream boundary and Root 0 owner gate for Open-Source promotions."""
+    """Enforce 1-hop upstream, Root 0 OSS gateway, and horizontal Peer Root 0 promotion gates."""
     proj_m, up_m = _load_manifest_dict(project_dir), _load_manifest_dict(upstream_dir)
     up_cfg = proj_m.get("upstream_layer")
     expected_up_id = str(up_cfg.get("layer_id", "")).strip() if isinstance(up_cfg, dict) else ""
     actual_up_id = str(up_m.get("layer_id", "")).strip()
+    src_meta = _resolve_layer_entity_identity(project_dir, proj_m)
+    up_meta = _resolve_layer_entity_identity(upstream_dir, up_m)
+    rel = _classify_inter_layer_relationship(src_meta, up_meta)
     is_corp = str(proj_m.get("layer_role", "")) == "corporate"
+    is_src_root0 = bool(proj_m.get("layer_id")) and src_meta["visibility_scope"].endswith(
+        (":root-0", ":dev")
+    )
+    is_up_root0 = bool(up_m.get("layer_id")) and up_meta["visibility_scope"].endswith(
+        (":root-0", ":dev")
+    )
     both_oss = (
-        is_corp or expected_up_id == "root" or "dotfiles-ubuntu" in expected_up_id
+        is_corp or is_src_root0 or expected_up_id == "root" or "dotfiles-ubuntu" in expected_up_id
     ) and _is_oss_root_manifest(up_m)
-    if expected_up_id and actual_up_id and expected_up_id != actual_up_id and not both_oss:
+    inter_root_peer = (
+        not _is_oss_root_manifest(up_m)
+        and is_src_root0
+        and is_up_root0
+        and rel["mcp_communication_mode"] == "external-peer-root0-pr-and-readonly-mcp"
+    )
+    if (
+        expected_up_id
+        and actual_up_id
+        and expected_up_id != actual_up_id
+        and not both_oss
+        and not inter_root_peer
+    ):
         src_id = str(proj_m.get("layer_id", project_dir.name))
         raise ValueError(
             f"CROSS_TIER_PROMOTION_BYPASS: Layer '{src_id}' can only promote to "
             f"immediate upstream_layer '{expected_up_id}' (1-hop), not '{actual_up_id}'."
         )
-    if (
-        _is_oss_root_manifest(up_m)
-        and not (
-            v := verify_layer_operation_authority(
-                project_dir, operation="release", actor_email=actor_email
-            )
-        )["allowed"]
-    ):
-        raise ValueError(f"UNAUTHORIZED_OSS_PROMOTION: Root 0 owner required ({v['remediation']}).")
+    if (_is_oss_root_manifest(up_m) or inter_root_peer) and not (
+        v := verify_layer_operation_authority(
+            project_dir, operation="release", actor_email=actor_email
+        )
+    )["allowed"]:
+        code = "UNAUTHORIZED_OSS_PROMOTION" if _is_oss_root_manifest(up_m) else (
+            "UNAUTHORIZED_INTER_ROOT_PROMOTION"
+        )  # fmt: skip
+        raise ValueError(f"{code}: Root 0 owner required ({v['remediation']}).")
 
 
 def build_upward_promotion_pr_plan(

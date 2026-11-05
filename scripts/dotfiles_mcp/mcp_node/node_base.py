@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import contextlib
 import json
+import shutil
+import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,10 +19,12 @@ from dotfiles_mcp.core.constants import (
     AGENTS_MD_WARN_BYTES,
     ALLOWED_READ_PREFIXES,
     ALLOWED_ROOT_FILES,
+    GIT_CMD_TIMEOUT_SECONDS,
     LAYER_MANIFEST_CONTRACT_REV,
     MAX_LOG_FILE_BYTES,
     REPO_DIR,
     ROLE_DEFAULT_PRECEDENCE,
+    SAFE_GIT_REF_RE,
 )
 from dotfiles_mcp.core.manifest_helpers import (
     _read_version,
@@ -241,7 +245,9 @@ class MCPNodeBase:
                 return (self.repo_dir / str(entry["relative_path"])).resolve()
         raise ValueError(f"Unknown or unmounted layer: {layer!r}")
 
-    def _resolve_safe_path(self, relative_path: str, base_dir: Path | None = None) -> Path:
+    def _validate_safe_rel_path(
+        self, relative_path: str, base_dir: Path | None = None
+    ) -> tuple[Path, Path, str]:
         target_base = (base_dir or self.repo_dir).resolve()
         clean_rel = relative_path.strip().lstrip("/")
         if not clean_rel or ".." in Path(clean_rel).parts:
@@ -258,9 +264,105 @@ class MCPNodeBase:
                 f"Access denied for {relative_path!r}: only docs/, templates/, "
                 "antigravity/, system/, and root documentation files are readable."
             )
+        return target_base, candidate, rel_str
+
+    def _resolve_safe_path(self, relative_path: str, base_dir: Path | None = None) -> Path:
+        _, candidate, rel_str = self._validate_safe_rel_path(relative_path, base_dir)
         if not candidate.is_file():
             raise FileNotFoundError(f"Document not found: {rel_str}")
         return candidate
+
+    def _resolve_git_branch_commit_sha(
+        self, branch_ref: str, target_base: Path
+    ) -> tuple[str, str, str]:
+        clean_ref = branch_ref.strip()
+        if (
+            not clean_ref
+            or ".." in clean_ref
+            or clean_ref.startswith("-")
+            or not SAFE_GIT_REF_RE.match(clean_ref)
+        ):
+            raise ValueError(f"Invalid or unsafe branch_ref: {branch_ref!r}")
+        git_bin = shutil.which("git") or "git"
+        sha_proc = subprocess.run(  # noqa: S603
+            [git_bin, "-C", str(target_base), "rev-parse", "--verify", f"{clean_ref}^{{commit}}"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_CMD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if sha_proc.returncode != 0:
+            raise ValueError(
+                f"DMCP_BRANCH_REF_NOT_FOUND: Git ref {clean_ref!r} not found in {target_base.name}"
+            )
+        return git_bin, clean_ref, sha_proc.stdout.strip()
+
+    def _read_git_branch_document(
+        self, relative_path: str, branch_ref: str, base_dir: Path | None = None
+    ) -> tuple[str, str]:
+        target_base, _, rel_str = self._validate_safe_rel_path(relative_path, base_dir)
+        git_bin, clean_ref, commit_sha = self._resolve_git_branch_commit_sha(
+            branch_ref, target_base
+        )
+        blob_proc = subprocess.run(  # noqa: S603
+            [git_bin, "-C", str(target_base), "show", f"{clean_ref}:{rel_str}"],
+            capture_output=True,
+            text=True,
+            timeout=GIT_CMD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        if blob_proc.returncode != 0:
+            raise FileNotFoundError(f"Document {rel_str!r} not found on branch_ref {clean_ref!r}")
+        return blob_proc.stdout, commit_sha
+
+    def _list_git_branch_markdown_files(
+        self,
+        branch_ref: str,
+        *,
+        scope: str = "all",
+        target_path: str = "",
+        base_dir: Path | None = None,
+    ) -> tuple[str, list[tuple[str, str]]]:
+        target_base = (base_dir or self.repo_dir).resolve()
+        git_bin, clean_ref, commit_sha = self._resolve_git_branch_commit_sha(
+            branch_ref, target_base
+        )
+        tree_proc = subprocess.run(  # noqa: S603
+            [git_bin, "-C", str(target_base), "ls-tree", "-r", "--name-only", clean_ref],
+            capture_output=True,
+            text=True,
+            timeout=GIT_CMD_TIMEOUT_SECONDS,
+            check=False,
+        )
+        clean_tpath = target_path.strip().lstrip("/")
+        docs_out: list[tuple[str, str]] = []
+        for raw_line in tree_proc.stdout.splitlines():
+            rel_p = raw_line.strip()
+            if not rel_p.endswith(".md"):
+                continue
+            in_scope = (
+                (rel_p == clean_tpath)
+                or (scope in ("all", "global") and rel_p == "antigravity/.gemini/config/AGENTS.md")
+                or (scope in ("all", "templates") and rel_p.startswith("templates/"))
+                or (
+                    scope in ("all", "docs")
+                    and (
+                        rel_p.startswith("docs/")
+                        or (
+                            scope == "all"
+                            and (
+                                rel_p == "README.md"
+                                or rel_p.startswith(("corporate/", "surfaces/"))
+                            )
+                        )
+                    )
+                )
+            )
+            if in_scope:
+                with contextlib.suppress(ValueError, FileNotFoundError):
+                    txt, _ = self._read_git_branch_document(rel_p, clean_ref, target_base)
+                    docs_out.append((rel_p, txt))
+        return commit_sha, docs_out
 
     def list_prompts(self) -> list[dict[str, Any]]:
         """Return the catalog of MCP prompts exposed by this layer node."""

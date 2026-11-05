@@ -17,12 +17,26 @@
 4. **GNU Stow Tree Unfolding (`~/.gemini/config/`)**:
    - Directories that mix tracked global assets with machine-local state (`~/.gemini/config/`, `~/.gemini/config/skills/`, `~/.local/share/applications/`) are pre-created as real directories before invoking `stow -t "$HOME"`, forcing GNU Stow to create granular file/subfolder symlinks instead of folding the parent directory.
 
+### 1.1. `1:1:1` Source $\leftrightarrow$ Implementation Test $\leftrightarrow$ Specification Traceability Matrix
+
+Every shell orchestrator and system manifest in Subsystem 1 is verified by a `1:1` implementation test suite (`Specification: docs/architecture/01_system_and_stow_engine.md`):
+
+| Subsystem & Functional Responsibility | Source Script / Engine | `1:1` Implementation Test Suite (`Specification: docs/architecture/01_system_and_stow_engine.md`) |
+|---|---|---|
+| **Declarative System Lifecycle, Stow & Workstation Sync**: Verifies `--help`/`--version` flags (including `antigravity-install.sh [--agents \| --cli \| --ide \| --all]`), unknown-option rejection, `bash -n` syntax across all 19 shell scripts, `workstation-sync.sh` (`--setup`, `--auto`, `--status`, `dev-*` pushurl guard healing & unified 3-step `origin -> upstream -> clean committed dev` sync cascade), `STOW_BASE_DIR` runtime resolution in `audit.sh`, and `Dockerfile` / `Makefile` contracts. | [`bootstrap.sh`](../../bootstrap.sh), [`backup.sh`](../../backup.sh), [`audit.sh`](../../audit.sh), [`scripts/workstation-sync.sh`](../../scripts/workstation-sync.sh), [`scripts/audit-global-config.sh`](../../scripts/audit-global-config.sh), [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh) | [`tests/imp/test_cli_scripts.py`](../../tests/imp/test_cli_scripts.py) (`TestCLIScripts`) |
+| **8-Stage Repository Verification & Parity Gates**: Enforces 8-stage repository verification, `0-byte` `__init__.py` markers, `< 465`-line modularity cap, `1:1:1` spec pointers, English language purity, and AST anti-deception gates. | [`scripts/verify-repo.sh`](../../scripts/verify-repo.sh), `system/*` manifests | [`tests/imp/test_repo_parity_gates.py`](../../tests/imp/test_repo_parity_gates.py) (`TestRepoParityGates`) |
+
 ---
 
 ## 2. Tripartite Lifecycle (`backup.sh` $\leftrightarrow$ `audit.sh` $\leftrightarrow$ `bootstrap.sh`)
 
+The declarative workstation engine operates as a closed three-script loop between the live Ubuntu 26.04 machine and the `~/dotfiles-ubuntu` repository:
+- **`./backup.sh` (Snapshot & Filter)**: Captures manual APT packages, Snap applications, NPM globals, external recipes, and GNOME `dconf` state into `system/*`.
+- **`./audit.sh` (Bidirectional Diff)**: Compares live machine state against `system/*` manifests and GNU Stow symlinks in `$HOME` without mutating the system.
+- **`./bootstrap.sh` (Provision & Restore)**: Installs missing packages/snaps/external recipes, applies GNOME settings, and links GNU Stow modules into `$HOME`.
+
 ```mermaid
-flowchart LR
+flowchart TD
     subgraph Machine["Live Ubuntu 26.04 Workstation"]
         APT["APT Manual Packages\n(apt-mark showmanual)"]
         SNAP["Snap Applications\n(snap list)"]
@@ -48,6 +62,8 @@ flowchart LR
 ---
 
 ## 3. Subsystem Specifications
+
+Subsystem 1 filters Ubuntu APT packages, Snap runtimes, and third-party recipes through three deterministic pipelines:
 
 ### 3.1. APT 3-Stage Filtering Pipeline (`backup.sh` & `audit.sh`)
 
@@ -84,6 +100,8 @@ Each recipe category implements a strict variable/function contract:
 
 ## 4. GNU Stow Modules & Non-Stow Directory Invariant
 
+GNU Stow links tracked dotfile modules (`bash/`, `git/`, `antigravity/`) into `$HOME` while isolating non-stow repository directories and preserving local machine identity:
+
 ### 4.1. Stow vs. Non-Stow Root Directories
 
 Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level directories (`for module in */; do`). Directories that are **not** GNU Stow modules **MUST** be explicitly skipped in both scripts:
@@ -109,7 +127,7 @@ Both `bootstrap.sh` (Step 3) and `audit.sh` (Section 1) iterate over top-level d
 | `antigravity/` | **Stow Module** | `~/.gemini/config/*`, `~/.local/share/applications/*` | Uses `prepare_antigravity_dirs()` to enforce tree unfolding |
 | `system/` | Non-Stow | — | Declarative package & GNOME manifests + `external/` catalog |
 | `scripts/` | Non-Stow | — | `antigravity-install.sh`, `audit-global-config.sh`, `workstation-sync.sh`, `dotfiles_mcp_server.py`, `layer-config.sh`, `layer-subtree.sh`, `verify-repo.sh` |
-| `templates/` | Non-Stow | — | Polymorphic template packs (`human-core/`, `technical-base/`, `business-base/`, `business-stack/corporate-ops-ledger/`, `science-stack/scientific-knowledge-branch/`, `tech-stack/fastapi-hexagonal/`) |
+| `templates/` | Non-Stow | — | 2-level polymorphic template packs (`base-stack/*`, `science-stack/*`, `business-stack/*`, `framework-stack/*`) |
 | `docs/` | Non-Stow | — | Navigable architecture & reference documentation |
 | `layers/` | Non-Stow (Optional) | — | Mounted `git subtree` context forks (`layers/<name>/` managed via `scripts/layer-subtree.sh` & queried via MCP) |
 | `logs/` | Non-Stow (Ignored) | — | Structured JSONL audit & alert logs generated in MCP mode (`logs/mcp_events.jsonl`, `logs/mcp_alerts.jsonl`) |
@@ -122,14 +140,13 @@ Before invoking `stow -t "$HOME" "$module"`, `bootstrap.sh` enforces three safet
 1. **Git Identity Preservation**: If `~/.gitconfig` is a real file containing `user.name` or `user.email` and `~/.gitconfig.local` does not exist yet, `bootstrap.sh` extracts those values into `~/.gitconfig.local` before backing up `~/.gitconfig`.
 2. **Tree-Unfolding Directory Preparation (`prepare_antigravity_dirs`)**: Creates `~/.gemini/config/skills` and `~/.local/share/applications` as real directories, and backs up any real (non-symlink) `scripts/` or colliding `skills/<name>/` directories to `*.backup.YYYYMMDD`.
 3. **File Collision Backup**: Any real file at `$HOME/$relpath` is moved to `$HOME/${relpath}.backup.YYYYMMDD` before `stow` runs, ensuring `stow` never fails with a conflict error and zero user data is lost.
-4. **Contributor `dev-*` Workspace Stow Resolution & Local Appliance Fast-Forward (`audit.sh` & `workstation-sync.sh`)**: When `audit.sh` (`make audit`) or `scripts/workstation-sync.sh` runs inside a dedicated contributor clone (`$DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>`), `STOW_BASE_DIR` / `RUNTIME_DIR` automatically resolves to the machine-global runtime appliance (`${DOTFILES_RUNTIME_DIR:-$HOME/dotfiles-ubuntu}`) so `$HOME` symlinks pointing to the runtime appliance validate cleanly without false-positive target drift, and `workstation-sync.sh --sync` fast-forwards `~/dotfiles-ubuntu` directly to `$DOTFILES_DEV_REPO_DIR` when local `[Unreleased]` commits exist ahead of `origin/master`.
-5. **Automated Antigravity 2.0 (`antigravity-agents`), `agy` CLI & Optional IDE Installer (`scripts/antigravity-install.sh`)**: Supports `--agents` (recommended: queries the official release feed `resolve_latest_agents_url`, downloads the latest `linux-x64/Antigravity.tar.gz` into `~/Downloads/` with manual `https://antigravity.google/download` fallback, installs `/opt/antigravity-agents`, and refreshes `~/.local/bin/agy`), `--cli` (standalone `install_or_update_cli` backing up/replacing `~/.local/bin/agy` via `https://antigravity.google/cli/install.sh`), `--ide` (optional `/opt/antigravity-ide`), and `--all`.
 
----
+### 4.3. Contributor `dev-*` Workspace Stow Resolution, Sovereign `$HOME` Workstation Forks, Unified 3-Step `workstation-sync` Cascade & Open-Source Publication (`audit.sh`, `bootstrap.sh`, `layer-subtree.sh` & `workstation-sync.sh`)
 
-## 5. `1:1:1` Source $\leftrightarrow$ Implementation Test $\leftrightarrow$ Specification Traceability Matrix
+- When `audit.sh` (`make audit`) or `scripts/workstation-sync.sh` runs inside a dedicated contributor clone (`$DOTFILES_DEV_REPO_DIR` / `~/Projects/dev-<repo>`) or when the `$HOME` runtime clone is named `~/<user-pc>` instead of `~/dotfiles-ubuntu`, `STOW_BASE_DIR` / `RUNTIME_DIR` automatically resolves via `DOTFILES_RUNTIME_DIR` or `readlink -f "$HOME/.bashrc"` (and `bootstrap.sh` / `workstation-sync.sh` maintain a `~/dotfiles-ubuntu -> ~/<user-pc>` symlink when `basename != "dotfiles-ubuntu"`).
+- Running `dotfiles-sync` (`make workstation-sync` / `./scripts/workstation-sync.sh --sync`) executes a single automatic **3-step cascade**: **(1) `origin` sync** (pulls the user's personal workstation fork in `private`/`mutable` mode or resets to `origin` in `readonly` mode), **(2) `upstream` Open-Source release sync** (when `upstream` is configured, runs `layer-subtree.sh sync-upstream` to merge the latest Open-Source release while preserving the fork's `system/mcp-layer.json`), and **(3) clean committed `dev` engine overlay** (when `~/Projects/dev-<repo>` exists locally and its Git working tree is 100% committed and clean, copies tracker-free engine files into `RUNTIME_DIR`; if `dev` has uncommitted changes, skips Step 3 with a warning).
+- Finally, `publish-oss` (`make publish-oss`) exports tracker-free Open-Source releases (`excluding WORKTASK.md, WORKROAD.md, ROADMAP.md, BACKLOG.md, WORKVALI.md, roadmaps/, .agents/, corporate/, layers/`) to `upstream`.
 
-| Source Script / Engine | Implementation Test Suite (`Specification: docs/architecture/01_system_and_stow_engine.md`) | Functional Responsibility & Key Verified Invariants |
-|---|---|---|
-| [`bootstrap.sh`](../../bootstrap.sh), [`backup.sh`](../../backup.sh), [`audit.sh`](../../audit.sh), [`scripts/workstation-sync.sh`](../../scripts/workstation-sync.sh), [`scripts/audit-global-config.sh`](../../scripts/audit-global-config.sh), [`scripts/antigravity-install.sh`](../../scripts/antigravity-install.sh) | [`tests/imp/test_cli_scripts.py`](../../tests/imp/test_cli_scripts.py) (`TestCLIScripts`) | Verifies `--help`/`--version` flags (including `antigravity-install.sh [--agents \| --cli \| --ide \| --all]`), unknown-option rejection, `bash -n` syntax across all 19 shell scripts, `workstation-sync.sh` (`--setup`, `--auto`, `--status`, `dev-*` pushurl guard healing & local fast-forward), `STOW_BASE_DIR` runtime resolution in `audit.sh`, and `Dockerfile` / `Makefile` contracts. |
-| [`scripts/verify-repo.sh`](../../scripts/verify-repo.sh), `system/*` manifests | [`tests/imp/test_repo_parity_gates.py`](../../tests/imp/test_repo_parity_gates.py) (`TestRepoParityGates`) | Enforces 8-stage repository verification, `0-byte` `__init__.py` markers, `< 465`-line modularity cap, `1:1:1` spec pointers, English language purity, and AST anti-deception gates. |
+### 4.4. Automated Antigravity 2.0 (`antigravity-agents`), `agy` CLI & Optional IDE Installer (`scripts/antigravity-install.sh`)
+
+- Supports `--agents` (recommended: queries the official release feed `resolve_latest_agents_url`, downloads the latest `linux-x64/Antigravity.tar.gz` into `~/Downloads/` with manual `https://antigravity.google/download` fallback, installs `/opt/antigravity-agents`, and refreshes `~/.local/bin/agy`), `--cli` (standalone `install_or_update_cli` backing up/replacing `~/.local/bin/agy` via `https://antigravity.google/cli/install.sh`), `--ide` (optional `/opt/antigravity-ide`), and `--all`.

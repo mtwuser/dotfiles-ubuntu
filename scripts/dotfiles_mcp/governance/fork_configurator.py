@@ -125,7 +125,7 @@ def configure_fork_manifest(
 
 
 def scaffold_template_pack(
-    repo_dir: Path, *, template_name: str, kind: str = "tech-stack",
+    repo_dir: Path, *, template_name: str, kind: str = "framework-stack",
     description: str | None = None, register_binding: bool = False,
     rule_filename: str | None = None, scopes: list[str] | None = None,
     planes: list[str] | None = None, traits: list[str] | None = None,
@@ -144,7 +144,7 @@ def scaffold_template_pack(
         raise ValueError(f"Template directory already exists: templates/{template_name}")
     tpl_dir = _resolve_template_dest_dir(repo_dir, template_name)
     rel_tpl = str(tpl_dir.relative_to(repo_dir)).replace("\\", "/")
-    is_tech = kind == "tech-stack"
+    is_tech = kind == "framework-stack"
 
     desc = description or f"{template_name} ({kind}) governance and template pack"
     mode = "transversal" if is_tech else "authoritative"
@@ -161,6 +161,16 @@ def scaffold_template_pack(
         "invariants": [f"Enforce {template_name} ({kind}) rules and canonical assets"],
         "rule_files": [f"{rel_tpl}/rules/{effective_rule}"],
         "canonical_templates": ([f"{rel_tpl}/assets/canonical_snippet.md"] if not is_tech else []),
+        "ephemeral_fork_policy": {
+            "bot_role": f"{template_name}-guardian",
+            "trigger": "on_surface_match",
+            "model_tier": "flash" if is_tech else "inherit",
+            "access_mode": "strictly-read-only",
+            "mount_templates": [template_name],
+            "resolution": default_res,
+            "ttl_seconds": 300,
+            "handback_contract": "4-channel-digest+rcap1",
+        },
     }
     tpl_manifest = {
         "schema_version": TEMPLATE_MANIFEST_CONTRACT_REV,
@@ -276,7 +286,7 @@ def apply_fork_to_project(
 
     resolved_templates: list[tuple[str, Path]] = []
     def_tpls = [
-        str(t) for t in root_manifest.get("default_stack_templates", []) if str(t) != "human-core"
+        str(t) for t in root_manifest.get("default_stack_templates", []) if str(t) != "human-base"
     ]
     if template_ref:
         raw_list = [r.strip() for r in template_ref.split(",") if r.strip()]
@@ -308,13 +318,14 @@ def apply_fork_to_project(
     resolved_tpl_name = ",".join(t[0] for t in resolved_templates)
     mat_templates = list(resolved_templates)
     seen_names = {t[0] for t in mat_templates}
-    for grps, base_id in (
-        (("tech-stack",), "technical-base"),
-        (("business-stack", "science-stack"), "business-base"),
+    for p_names, tpl_names, base_id in (
+        (("framework-stack",), ("nist-csf-security",), "software-engineering"),
+        (("framework-stack", "science-stack"), ("nist-csf-security",), "science-base"),
+        (("business-stack",), ("nist-csf-security",), "business-base"),
     ):
         if (
             base_id not in seen_names
-            and any(d.parent.name in grps for _n, d in resolved_templates)
+            and any(d.parent.name in p_names or n in tpl_names for n, d in resolved_templates)
             and (
                 base_dir := _resolve_template_dir(repo_dir, base_id)
                 or _resolve_template_dir(REPO_DIR, base_id)
@@ -380,6 +391,11 @@ def apply_fork_to_project(
         if name == "root" and repo_dir.resolve() == target_project_dir.resolve():
             if not dry_run:
                 dest_rule.unlink(missing_ok=True)
+            root_skills = ldir / "antigravity/.gemini/config/skills"
+            for sf in sorted(root_skills.glob("*/SKILL.md")):
+                dest_sk = agents_dir / "skills" / sf.parent.name / "SKILL.md"
+                copied_files.append(str(dest_sk.relative_to(target_project_dir)))
+                _copy_file(sf, dest_sk)
         elif layer_agents.is_file():
             copied_files.append(str(dest_rule.relative_to(target_project_dir)))
             _copy_file(layer_agents, dest_rule, fm=True)

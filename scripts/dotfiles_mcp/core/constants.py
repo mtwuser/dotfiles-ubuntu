@@ -28,6 +28,7 @@ TOPOLOGICAL_ROLE_CLASSES: dict[str, str] = {
 MCP_OPERATING_MODES: dict[str, str] = {
     "oss-readonly-appliance": "workstation-baseline-provider",
     "oss-dev": "self-test-and-dev-only",
+    "individual-root": "personal-root-hub",
     "corporate-root": "enterprise-governance-hub",
     "domain-policy": "departmental-policy-hub",
     "department": "departmental-policy-hub",
@@ -41,20 +42,20 @@ VALID_ENVIRONMENTS = ("dev", "tst", "pre", "pro")
 DEFAULT_PROTECTED_BRANCHES: tuple[str, ...] = (
     "main", "master", "env/tst", "env/pre", "env/pro",
 )  # fmt: skip
+DEFAULT_SPECIALTY_BRANCH_PREFIX: str = "specialty/"
+DEFAULT_PERSONAL_BRANCH_PREFIXES: dict[str, str] = {"hat": "hat/", "machine": "machine/"}
 DEFAULT_PROCESS_BRANCH_PREFIXES: dict[str, str] = {
-    "feature": "feature/",
-    "task": "task/",
-    "analysis": "analysis/",
-    "validate": "validate/",
-    "promote": "promote/",
-    "directive": "directive/",
-}
+    "feature": "feature/", "task": "task/", "analysis": "analysis/",
+    "validate": "validate/", "promote": "promote/", "directive": "directive/",
+}  # fmt: skip
+DEFAULT_GOVERNANCE_PR_PREFIXES: dict[str, str] = {
+    "promote": "promote/", "directive": "directive/", "peer_root": "peer-root/",
+    "contrib": "contrib/", "release": "release/",
+}  # fmt: skip
+CAPSULE_REF_NAMESPACE: str = "refs/capsules/"
 DEFAULT_ENV_BRANCH_MAP: dict[str, str] = {
-    "dev": "feature/*",
-    "tst": "env/tst",
-    "pre": "env/pre",
-    "pro": "main",
-}
+    "dev": "feature/*", "tst": "env/tst", "pre": "env/pre", "pro": "main",
+}  # fmt: skip
 VALID_GOVERNANCE_DECISIONS: tuple[str, ...] = ("approve", "reject", "defer", "blocked")
 VALID_SYNC_STRATEGIES: tuple[str, ...] = ("reconcile", "accept-upstream", "keep-local", "merge")
 MAKEFILE_ROLE_HEADER_PREFIX: str = "# Role-Specialized Layer Makefile"
@@ -119,100 +120,70 @@ JSONRPC_PARSE_ERROR = -32700
 JSONRPC_METHOD_NOT_FOUND = -32601
 JSONRPC_INVALID_PARAMS = -32602
 JSONRPC_INTERNAL_ERROR = -32603
-TEMPLATE_STACK_GROUP_DIRS = ("business-stack", "science-stack", "tech-stack")
+TEMPLATE_STACK_GROUP_DIRS = (
+    "base-stack", "business-stack", "science-stack", "framework-stack",
+)  # fmt: skip
 PRUNABLE_STARTER_TEMPLATES = (
-    "business-base", "corporate-ops-ledger", "fastapi-hexagonal",
-    "human-core", "scientific-knowledge-branch", "technical-base",
+    "angular-web", "business-base", "corporate-ops-ledger", "django-backend",
+    "fastapi-hexagonal", "human-base", "nist-csf-security",
+    "science-base", "scientific-knowledge-branch", "software-engineering",
 )  # fmt: skip
-BUSINESS_MODE_TEMPLATES = ("business-base", "corporate-ops-ledger", "scientific-knowledge-branch")
+BUSINESS_MODE_TEMPLATES = (
+    "business-base", "corporate-ops-ledger", "nist-csf-security", "scientific-knowledge-branch",
+)  # fmt: skip
 BUSINESS_MODE_RULE_FILES = (
-    "business-base.md", "ops-ledger-architecture.md", "scientific-methodology.md",
+    "business-base.md", "ops-ledger-architecture.md",
+    "nist-csf-controls.md", "scientific-methodology.md",
 )  # fmt: skip
-TECHNICAL_MODE_TEMPLATES = ("technical-base", "fastapi-hexagonal")
-SCIENCE_MODE_TEMPLATES = ("scientific-knowledge-branch",)
-TECHNICAL_MODE_RULE_FILES = ("technical-base.md", "coding.md")
-VALID_TEMPLATE_KINDS = ("core-base", "business-stack", "science-stack", "tech-stack")
+TECHNICAL_MODE_TEMPLATES = (
+    "science-base", "software-engineering", "fastapi-hexagonal",
+    "angular-web", "django-backend",
+)  # fmt: skip
+SCIENCE_MODE_TEMPLATES = ("science-base", "scientific-knowledge-branch", "software-engineering")
+TECHNICAL_MODE_RULE_FILES = (
+    "science-base.md", "software-engineering.md", "coding.md",
+    "angular-architecture.md", "django-architecture.md",
+)  # fmt: skip
+VALID_TEMPLATE_KINDS = (
+    "base-stack", "business-stack", "science-stack", "framework-stack",
+)  # fmt: skip
 ROLE_DEFAULT_PRECEDENCE: dict[str, int] = {
-    "domain-policy": 5,
-    "corporate": 10,
-    "workstation": 10,
-    "ephemeral-bot": 15,
-    "bridge": 20,
-    "department": 30,
-    "squad": 50,
-    "service-node": 60,
-    "environment-cluster": 70,
-    "project": 80,
-}
+    "domain-policy": 5, "corporate": 10, "workstation": 10, "ephemeral-bot": 15,
+    "bridge": 20, "department": 30, "squad": 50, "service-node": 60,
+    "environment-cluster": 70, "project": 80,
+}  # fmt: skip
 VALID_ARCHITECTURAL_PLANES = (
-    "schema",
-    "domain",
-    "application",
-    "presentation",
-    "infrastructure",
-    "testing",
-)
+    "schema", "domain", "application", "presentation", "infrastructure", "testing",
+)  # fmt: skip
 PLANE_PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("testing", ("tests/", "e2e/", "__tests__/", "test_", "_test.", ".spec.")),
     (
         "presentation",
         (
-            "templates/",
-            "static/",
-            "ui/",
-            "views/",
-            "components/",
-            "pages/",
-            ".html",
-            ".css",
-            ".scss",
-            ".tsx",
-            ".jsx",
-            ".vue",
+            "templates/", "static/", "ui/", "views/", "components/", "pages/",
+            ".html", ".css", ".scss", ".tsx", ".jsx", ".vue",
         ),
     ),
     (
         "schema",
         (
-            "models.py",
-            "schema.py",
-            "schemas/",
-            "migrations/",
-            "alembic/",
-            "entities/",
-            ".sql",
-            ".prisma",
+            "models.py", "schema.py", "schemas/", "migrations/",
+            "alembic/", "entities/", ".sql", ".prisma",
         ),
     ),
     ("domain", ("service.py", "domain.py", "ports.py", "domain/", "services/", "policies/")),
     (
         "application",
         (
-            "router.py",
-            "controller.py",
-            "use_cases.py",
-            "tasks.py",
-            "dependencies.py",
-            "application/",
-            "use_cases/",
-            "routers/",
-            "api/",
-            "handlers/",
+            "router.py", "controller.py", "use_cases.py", "tasks.py", "dependencies.py",
+            "application/", "use_cases/", "routers/", "api/", "handlers/",
         ),
     ),
-    (
-        "infrastructure",
-        (
-            "repository.py",
-            "dockerfile",
-            "repositories/",
-            "adapters/",
-            "infrastructure/",
-            "infra/",
-            "db/",
-        ),
-    ),
-)
+    ("infrastructure", (
+        "repository.py", "dockerfile", "repositories/", "adapters/",
+        "infrastructure/", "infra/", "db/",
+    )),
+)  # fmt: skip
 STRUCTURAL_PATH_SEGMENTS = frozenset({
     "src", "app", "internal", "pkg", "lib", "templates", "static", "partials", "components",
     "css", "js", "tests", "unit", "imp", "e2e", "docs", "architecture", "reference", "guides",
@@ -224,18 +195,20 @@ VALID_RESOLUTIONS = ("L0", "L1", "L2")
 VALID_CAPSULE_LEVELS = ("L0", "L1", "L2", "L3")
 VALID_AGENT_TIERS = ("flash", "inherit", "pro")
 VALID_EPHEMERAL_ACTIONS = (
-    "spawn", "inspect", "evaluate", "reap", "catalog", "seal-return", "verify-return",
+    "spawn", "inspect", "evaluate", "reap", "catalog",
+    "seal-return", "verify-return", "project-branch", "chain-capsule-ref",
 )  # fmt: skip
+VALID_GRCC_OPERATIONS: tuple[str, ...] = ("probe", "seal", "unfold", "prune")
+GRCC_CAPSULE_BLOB_PATH: str = ".agents/capsule.rcap1"
+SAFE_GIT_REF_RE = re.compile(r"^[a-zA-Z0-9._/-]+$")
 DIGEST_REQUIRED_CHANNELS = (
     "channel_1_domain_state", "channel_2_affected_surface",
     "channel_3_invariants_and_constraints", "channel_4_actionable_delta",
 )  # fmt: skip
 VALID_EPHEMERAL_SCOPES: tuple[str, ...] = ("inter-layer", "intra-layer")
 VALID_EPHEMERAL_ACCESS_MODES = (
-    "strictly-read-only",
-    "read-and-test-trigger",
-    "read-write-scoped",
-)
+    "strictly-read-only", "read-and-test-trigger", "read-write-scoped",
+)  # fmt: skip
 DEFAULT_EPHEMERAL_TTL_SECONDS = 300
 MIN_EPHEMERAL_TTL_SECONDS = 10
 MAX_EPHEMERAL_TTL_SECONDS = 3600
@@ -249,7 +222,8 @@ AGENTS_MD_MAX_BYTES = 18000
 MCP_PAYLOAD_WARN_BYTES = 16000
 MAX_LOG_FILE_BYTES = 524288
 ALLOWED_READ_PREFIXES = (
-    "docs/", "templates/", "antigravity/", "system/", "corporate/", "surfaces/", "roadmaps/",
+    "docs/", "templates/", "antigravity/", "system/",
+    "corporate/", "surfaces/", "roadmaps/", "layers/",
 )  # fmt: skip
 ALLOWED_ROOT_FILES = {
     "README.md", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md",
@@ -260,6 +234,7 @@ KEBAB_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 MATERIALIZED_RULE_RE = re.compile(r"^layer-(\d{2})-([a-z0-9-]+)\.md$")
 MD_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 BACKTICK_PATH_RE = re.compile(r"`([a-zA-Z0-9_./-]+\.(?:md|html|j2|css))`")
+CITATION_RECEIPT_REF_RE = re.compile(r"\b([a-z0-9-]+)::(docs/[a-zA-Z0-9_./-]+\.md)")
 BOLD_TERM_RE = re.compile(r"\*\*([^*]{3,40})\*\*")
 WORD_TOKEN_RE = re.compile(r"[a-zA-Z0-9][a-zA-Z0-9_-]{2,}")
 CODON_STOPWORDS = frozenset({
@@ -287,8 +262,9 @@ ROLE_ENVIRONMENT_PERMISSIONS: dict[str, tuple[str, ...]] = {
     "consumer": (),
 }
 _WORKSTATION_DEV_TARGETS: tuple[str, ...] = (
-    "status", "setup-dev", "verify", "audit", "test", "test-unit",
-    "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
+    "status", "setup-dev", "task", "complete", "consult", "horizon", "sync",
+    "diff", "promote", "delegate", "decision", "verify", "audit", "test",
+    "test-unit", "test-imp", "test-e2e", "lint", "format", "workstation-sync", "docker-build",
 )  # fmt: skip
 _FULL_LAYER_TARGETS: tuple[str, ...] = (
     "status", "setup-dev", "task", "complete", "consult", "horizon", "sync", "upstream-diff",
@@ -321,7 +297,9 @@ _CLI_RUN = "\t@$(DOTFILES_DIR)/scripts/layer-config.sh"
 _PF = "$(CURDIR) $(PARENT_FLAG)"
 LAYER_MAKEFILE_RECIPES: dict[str, str] = {
     "status": f"{_CLI_RUN} status {_PF}",
-    "setup-dev": f"{_CLI_RUN} apply-project $(CURDIR) --template technical-base --include-defaults",
+    "setup-dev": (
+        f"{_CLI_RUN} apply-project $(CURDIR) --template software-engineering --include-defaults"
+    ),
     "task": (
         f'{_CLI_RUN} start-task $(CURDIR) --task "$(TASK)" $(if $(TICKET),--ticket $(TICKET),)'
     ),
@@ -423,7 +401,64 @@ ROLE_ONBOARDING_SPECS: dict[str, tuple[str, str, str, str]] = {
     ),
     "squad": DEFAULT_SQUAD_ONBOARDING_SPEC,
 }
+VALID_HUMAN_MASTERY_LEVELS: tuple[str, ...] = ("M1", "M2", "M3", "M4")
+VALID_HUMAN_STACK_FACETS: tuple[str, ...] = ("domain-", "bridge-", "soft-", "hat-")
 HUMAN_STACK_BLUEPRINT_HINT = (
-    "[Optional: leave blank for default, or compose Human-Specs: "
-    "domain-<area>:L1..L4 | bridge-* | soft-* | hat-*]"
+    "[Optional: leave blank for default, or compose Human-Stack facets: "
+    "domain-<area>:M1..M4 | bridge-* | soft-* | hat-*]"
 )
+VALID_EPISTEMIC_GRADES: tuple[str, ...] = ("E3", "E2", "E1", "E0")
+EPISTEMIC_GRADE_RANK: dict[str, int] = {"E3": 3, "E2": 2, "E1": 1, "E0": 0}
+EPISTEMIC_GRADE_LABELS: dict[str, str] = {
+    "E3": "inviolable-axiom-or-law", "E2": "canonical-contract-or-standard",
+    "E1": "contextual-guideline-or-theory", "E0": "provisional-hypothesis-or-draft",
+}  # fmt: skip
+CAPSULE_ABSTRACTION_LAYERS: dict[str, str] = {
+    "L0": "discovery-codon", "L1": "contextual-overview",
+    "L2": "operational-contract", "L3": "first-principles-substrate",
+}  # fmt: skip
+VALID_LIBRARY_PREFIXES: tuple[str, ...] = ("gov-", "sci-", "geo-", "org-")
+LIBRARY_DOMAIN_TAXONOMY: dict[str, dict[str, str]] = {
+    "gov-": {
+        "library_kind": "jurisdictional-normative", "default_epistemic_grade": "E3",
+        "default_entity_kind": "public-government",
+        "default_templates": "business-base,corporate-ops-ledger,science-base",
+    },
+    "sci-": {
+        "library_kind": "scientific-epistemic", "default_epistemic_grade": "E2",
+        "default_entity_kind": "enterprise",
+        "default_templates": "science-base,scientific-knowledge-branch",
+    },
+    "geo-": {
+        "library_kind": "territorial-empirical", "default_epistemic_grade": "E3",
+        "default_entity_kind": "public-government",
+        "default_templates": "science-base,scientific-knowledge-branch",
+    },
+    "org-": {
+        "library_kind": "organizational-operational", "default_epistemic_grade": "E2",
+        "default_entity_kind": "enterprise",
+        "default_templates": "business-base,corporate-ops-ledger",
+    },
+}  # fmt: skip
+CANONICAL_SCIENCE_TRUNKS: dict[str, tuple[str, ...]] = {
+    "formal": ("math", "logic", "statistics", "cs-theory"),
+    "nature": ("physics", "chemistry", "earth", "biology", "astronomy", "ecology"),
+    "health": (
+        "medicine", "pharmacology", "nursing", "public-health",
+        "nutrition", "psychology", "veterinary",
+    ),
+    "engineering": (
+        "civil", "industrial", "mechanical", "electrical", "telecom",
+        "aerospace", "chemical", "software", "security",
+    ),
+    "social": ("economics", "sociology", "demographics", "education", "pedagogy", "jurisprudence"),
+    "humanities": ("philosophy", "ethics", "history", "linguistics", "arts"),
+}  # fmt: skip
+HOT_CITATION_THRESHOLD: int = 3
+CITATION_TELEMETRY_REL_PATH: str = ".agents/telemetry/citation_stats.json"
+CITATION_LIFECYCLE_QUADRANTS: dict[str, str] = {
+    "Q1_HOT_CORE": "pre_seal_grcc_hot_index",
+    "Q2_HIGH_FRICTION": "prioritize_normative_clarification_or_sync",
+    "Q3_EMERGING_NICHE": "retain_standard_l1_l2_index",
+    "Q4_NORMATIVE_OBSOLESCENCE": "review_for_deregulation_consolidation_or_prune",
+}

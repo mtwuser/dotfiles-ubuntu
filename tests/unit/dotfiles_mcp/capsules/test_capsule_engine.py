@@ -49,6 +49,7 @@ class TestCapsuleEngine:
             "x = 1",
             "```",
             "- Bullet 1",
+            "  - Indented Sub-Bullet 1a folded",
             "- Bullet 2",
             "- Bullet 3",
             "- Bullet 4",
@@ -65,18 +66,46 @@ class TestCapsuleEngine:
             "Prose", ["## Prose", "First prose line.", "Second prose line."]
         )
         secs = capsule_engine._iter_markdown_sections(
-            ["# Title", "Intro", "## Sub 1", "Body 1", "### Sub 2", "Body 2"], "Default"
+            [
+                "# Title",
+                "Intro",
+                "```markdown",
+                "## Ignored In Code",
+                "```",
+                "## Sub 1",
+                "Body 1",
+                "### Sub 2",
+                "Body 2",
+            ],
+            "Default",
         )
         empty_secs = capsule_engine._iter_markdown_sections([], "Default")
+        hier_lines = [
+            "# Root Title",
+            "```bash",
+            "# Ignored Code Comment",
+            "```",
+            "## Section A",
+            "### Sub A1",
+            "#### Deep A1a",
+            "## Section B",
+        ]
+        d_deep, p_deep = capsule_engine._resolve_section_hierarchy(hier_lines, 7, "Deep A1a")
+        d_reset, p_reset = capsule_engine._resolve_section_hierarchy(hier_lines, 8, "Section B")
+        d_none, p_none = capsule_engine._resolve_section_hierarchy(["Plain line"], 1, "Fallback")
 
         # Assert
         assert "Core mandate quote" in skeleton
         assert "- Bullet 4" in skeleton
+        assert "Indented Sub-Bullet 1a" not in skeleton
         assert "Bullet 5" not in skeleton
         assert "folded in rcap1:L1]" in skeleton
         assert "[+" not in unfolded_skeleton
         assert "First prose line." in prose_first
         assert len(secs) == 3 and empty_secs == []
+        assert (d_deep, p_deep) == (4, "Root Title > Section A > Sub A1 > Deep A1a")
+        assert (d_reset, p_reset) == (2, "Root Title > Section B")
+        assert (d_none, p_none) == (1, "Fallback")
 
     def test_seal_and_parse_capsule_envelope_roundtrip_and_invalid_tokens(
         self,
@@ -93,6 +122,9 @@ class TestCapsuleEngine:
         docs_dir.mkdir()
         linked = docs_dir / "linked.md"
         linked.write_text("# Linked\n", encoding="utf-8")
+        lib_ref = tmp_path / "layers/sci-physics/docs/reference"
+        lib_ref.mkdir(parents=True)
+        (lib_ref / "law.md").write_text("# Law\n", encoding="utf-8")
         (tmp_path / "secret.txt").write_text("deny\n", encoding="utf-8")
 
         # Act
@@ -102,7 +134,8 @@ class TestCapsuleEngine:
         links = capsule_engine._extract_l3_links(
             docs_dir / "source.md",
             "See [Linked](linked.md), [Dup](docs/linked.md), [Secret](secret.txt), "
-            "[Missing](missing.md), and [Web](https://example.com).",
+            "[Missing](missing.md), `sci-physics::docs/reference/law.md#sec@11223344:E3`, "
+            "and [Web](https://example.com).",
             tmp_path,
         )
         with pytest.raises(ValueError, match="Malformed rcap1"):
@@ -117,8 +150,10 @@ class TestCapsuleEngine:
         assert signing_prefix.startswith("rcap1.")
         assert len(cipher_bytes) > 0
         assert len(sig_hex) == 24
-        assert len(links) == 1
-        assert links[0]["path"] == "docs/linked.md"
+        assert [item["path"] for item in links] == [
+            "docs/linked.md",
+            "layers/sci-physics/docs/reference/law.md",
+        ]
 
     def test_seal_and_unseal_ephemeral_digest_capsule_enforces_crypto_and_surface_gates(
         self,
@@ -195,4 +230,77 @@ class TestCapsuleEngine:
                 escaped_sealed["capsule_token"],
                 expected_parent_layer_id="dept-sec",
                 active_fork_meta=meta,
+            )
+
+    def test_seal_and_verify_dmcp_context_frame_enforces_lineage_ttl_and_fallback(
+        self,
+    ) -> None:
+        """Seal and verify DMCP context frames and fail-closed to master on any violation."""
+        # Arrange
+        sealed = capsule_engine.seal_dmcp_context_frame(
+            "dept-sec",
+            "specialty/pci",
+            "abc1234",
+            "step-1",
+            ["src/api/**"],
+            now_epoch=1000.0,
+            ttl_seconds=120,
+            session_key="k-dmcp-1",
+        )
+        token = sealed["context_frame_token"]
+
+        # Act
+        ok_no_target = capsule_engine.verify_dmcp_context_frame(
+            token, expected_repo_id="dept-sec", session_key="k-dmcp-1", now_epoch=1050.0
+        )
+        ok = capsule_engine.verify_dmcp_context_frame(
+            token,
+            expected_repo_id="dept-sec",
+            session_key="k-dmcp-1",
+            target_path="src/api/pay.py",
+            expected_parent_frame_hash="genesis",
+            now_epoch=1050.0,
+        )
+        bad_env = capsule_engine.verify_dmcp_context_frame(
+            "not-a-capsule", expected_repo_id="dept-sec", session_key="k-dmcp-1"
+        )
+        bad_iss = capsule_engine.verify_dmcp_context_frame(
+            token, expected_repo_id="wrong-repo", session_key="k-dmcp-1"
+        )
+        bad_hmac = capsule_engine.verify_dmcp_context_frame(
+            token, expected_repo_id="dept-sec", session_key="wrong-key"
+        )
+        expired = capsule_engine.verify_dmcp_context_frame(
+            token, expected_repo_id="dept-sec", session_key="k-dmcp-1", now_epoch=2000.0
+        )
+        bad_parent = capsule_engine.verify_dmcp_context_frame(
+            token,
+            expected_repo_id="dept-sec",
+            session_key="k-dmcp-1",
+            expected_parent_frame_hash="other-parent",
+            now_epoch=1050.0,
+        )
+        escaped = capsule_engine.verify_dmcp_context_frame(
+            token,
+            expected_repo_id="dept-sec",
+            session_key="k-dmcp-1",
+            target_path="secrets/db.env",
+            now_epoch=1050.0,
+        )
+
+        # Assert
+        assert ok["verified"] is True and ok_no_target["verified"] is True
+        assert ok["effective_branch_ref"] == "specialty/pci"
+        for failed in (bad_env, bad_iss, bad_hmac, expired, bad_parent, escaped):
+            assert failed["verified"] is False
+            assert failed["error_code"] == "DMCP_CONTEXT_FRAME_INVALID"
+            assert failed["effective_branch_ref"] == "master"
+            assert failed["fallback_activated"] is True
+        with pytest.raises(ValueError, match="Missing required DMCP"):
+            capsule_engine.seal_dmcp_context_frame(
+                "", "master", "sha", "step", [], session_key="k-dmcp-1"
+            )
+        with pytest.raises(ValueError, match="Missing session_resonance_key"):
+            capsule_engine.seal_dmcp_context_frame(
+                "dept-sec", "master", "sha", "step", [], session_key="   "
             )
